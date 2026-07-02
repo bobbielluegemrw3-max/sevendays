@@ -26,7 +26,7 @@ async function insertHorse(ownerId: string, overrides: Record<string, unknown> =
     owner_user_id: ownerId,
     status: 'ACTIVE',
     current_day: 0,
-    name: 'Royal Thunder',
+    name: `Test Horse ${randomUUID().slice(0, 13)}`, // names are unique (Decision 055)
     horse_type: 'SPRINTER',
     rarity: 'COMMON',
     dna_hash: randomUUID().replaceAll('-', ''),

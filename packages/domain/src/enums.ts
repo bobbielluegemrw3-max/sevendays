@@ -51,6 +51,10 @@ export type BuffStatus = (typeof BUFF_STATUSES)[number];
 export const WEATHERS = ['SUNNY', 'RAIN', 'CLOUDY', 'STORM'] as const;
 export type Weather = (typeof WEATHERS)[number];
 
+/** Track condition, same derivation mechanism as weather (Decision 053). */
+export const TRACK_CONDITIONS = ['FAST', 'GOOD', 'SOFT', 'HEAVY'] as const;
+export type TrackCondition = (typeof TRACK_CONDITIONS)[number];
+
 export const PURCHASE_SESSION_STATUSES = [
   'PENDING_ASSIGNMENT',
   'ASSIGNED',

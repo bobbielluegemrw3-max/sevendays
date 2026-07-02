@@ -193,6 +193,89 @@ export function trainingModifierV1(horseType: HorseType, training: TrainingType 
 export const RECOVERY_TRAINING_FATIGUE_BONUS = 1.0;
 
 // ---------------------------------------------------------------------------
+// Weather / Track v1.0 (Decision 053)
+// ---------------------------------------------------------------------------
+
+export const WEATHER_PROBABILITY_V1 = {
+  SUNNY: '0.40',
+  CLOUDY: '0.30',
+  RAIN: '0.20',
+  STORM: '0.10',
+} as const;
+
+export const TRACK_PROBABILITY_V1 = {
+  GOOD: '0.40',
+  FAST: '0.25',
+  SOFT: '0.25',
+  HEAVY: '0.10',
+} as const;
+
+export type TrackConditionName = keyof typeof TRACK_PROBABILITY_V1;
+
+export const WEATHER_MODIFIER_V1: Readonly<
+  Record<keyof typeof WEATHER_PROBABILITY_V1, Record<HorseType, number>>
+> = {
+  SUNNY: { SPRINTER: 2.0, POWER: 0.5, BALANCED: 1.0, ENDURANCE: 0.0, LUCK: 0.5 },
+  CLOUDY: { SPRINTER: 0.5, POWER: 0.5, BALANCED: 1.0, ENDURANCE: 0.5, LUCK: 0.5 },
+  RAIN: { SPRINTER: -1.5, POWER: 2.0, BALANCED: 0.0, ENDURANCE: 1.0, LUCK: 0.5 },
+  STORM: { SPRINTER: -2.0, POWER: 1.0, BALANCED: -0.5, ENDURANCE: 2.0, LUCK: 1.0 },
+};
+
+export const TRACK_MODIFIER_V1: Readonly<
+  Record<TrackConditionName, Record<HorseType, number>>
+> = {
+  FAST: { SPRINTER: 2.0, POWER: 0.0, BALANCED: 0.5, ENDURANCE: -1.0, LUCK: 0.5 },
+  GOOD: { SPRINTER: 0.5, POWER: 0.5, BALANCED: 1.0, ENDURANCE: 0.5, LUCK: 0.5 },
+  SOFT: { SPRINTER: -1.0, POWER: 2.0, BALANCED: 0.0, ENDURANCE: 1.0, LUCK: 0.5 },
+  HEAVY: { SPRINTER: -2.0, POWER: 1.0, BALANCED: -0.5, ENDURANCE: 2.0, LUCK: 1.0 },
+};
+
+/**
+ * horse_type_modifier (formula term, range -3.00..+3.00): type strengths are
+ * fully expressed through the weather/track affinity tables above, so v1.0
+ * fixes this term at 0.00 to avoid double-counting (P8, pending owner
+ * reconfirmation).
+ */
+export const HORSE_TYPE_MODIFIER_V1 = 0.0;
+
+// ---------------------------------------------------------------------------
+// Condition / Fatigue v1.0 (Decisions 040, 054)
+// ---------------------------------------------------------------------------
+
+export const CONDITION_FATIGUE_V1 = {
+  initialCondition: 80.0,
+  initialFatigue: 0.0,
+  min: 0.0,
+  max: 100.0,
+  trainingCost: { SPEED_TRAINING: 8, POWER_TRAINING: 8, RECOVERY_TRAINING: 3 },
+  trainingEffect: { SPEED_TRAINING: 1, POWER_TRAINING: 1, RECOVERY_TRAINING: 3 },
+  dailyNaturalRecovery: 5,
+  recoveryTrainingAdditionalRecovery: 7,
+  raceFatigueCost: 5,
+} as const;
+
+/** condition value -> condition_modifier (Decision 054). */
+export function conditionModifierV1(condition: number): number {
+  if (condition >= 90) return 3;
+  if (condition >= 80) return 2;
+  if (condition >= 70) return 1;
+  if (condition >= 50) return 0;
+  if (condition >= 30) return -1;
+  if (condition >= 10) return -2;
+  return -3;
+}
+
+/** fatigue value -> fatigue_modifier before the RECOVERY_TRAINING bonus (Decision 054). */
+export function fatigueModifierV1(fatigue: number): number {
+  if (fatigue <= 10) return 0;
+  if (fatigue <= 25) return -1;
+  if (fatigue <= 40) return -2;
+  if (fatigue <= 60) return -3;
+  if (fatigue <= 80) return -4;
+  return -5;
+}
+
+// ---------------------------------------------------------------------------
 // Economy Status thresholds v1.0 (04_ECONOMY_ENGINE.md)
 // ---------------------------------------------------------------------------
 
