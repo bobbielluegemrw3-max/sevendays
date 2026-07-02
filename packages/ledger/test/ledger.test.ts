@@ -375,4 +375,31 @@ describe('admin adjustment (dual approval + audit)', () => {
       'DUAL_APPROVAL_REQUIRED',
     );
   });
+
+  it('rejects non-ACTIVE approvers even with valid roles', async () => {
+    const finance = await newUser();
+    const superAdmin = await newUser();
+    await grantRole(finance, 'FINANCE_ADMIN');
+    await grantRole(superAdmin, 'SUPER_ADMIN');
+    await client.query(`update users set status = 'BANNED' where id = $1`, [superAdmin]);
+
+    const user = await newUser();
+    const accounts = await ensureUserAccounts(client, user);
+    const operating = await getPlatformAccountId(client, 'PLATFORM_OPERATING_RESERVE');
+
+    await expectLedgerError(
+      postAdminAdjustment(client, {
+        type: 'ADMIN_ADJUSTMENT',
+        idempotencyKey: randomUUID(),
+        reason: 'x',
+        approvedBy1: finance,
+        approvedBy2: superAdmin, // BANNED
+        entries: [
+          { accountId: accounts.available, direction: 'DEBIT', amount: Money.of('1') },
+          { accountId: operating, direction: 'CREDIT', amount: Money.of('1') },
+        ],
+      }),
+      'DUAL_APPROVAL_REQUIRED',
+    );
+  });
 });

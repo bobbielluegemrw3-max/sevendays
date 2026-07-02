@@ -697,11 +697,11 @@ describe('batch steps and recovery', () => {
        values ($1, 8, 'RUN_RACE_ENGINE', false, 'COMPLETED', $2) returning id`,
       [batch, randomUUID()],
     );
+    // completed steps are final for ANY status change (migration 22 hardening)
     await expectDbError(
       db.query(`update batch_steps set status = 'PENDING' where id = $1`, [r.rows[0]!.id]),
-      'RETRY_FORBIDDEN',
+      'BATCH_STEP_FINAL',
     );
-    // completed steps are final for any status change
     await expectDbError(
       db.query(`update batch_steps set status = 'FAILED' where id = $1`, [r.rows[0]!.id]),
       'BATCH_STEP_FINAL',
@@ -727,6 +727,32 @@ describe('batch steps and recovery', () => {
     await db.query(
       `update batch_steps set status = 'RUNNING', retry_count = retry_count + 1 where id = $1`,
       [r.rows[0]!.id],
+    );
+  });
+
+  it('failed non-retryable steps cannot be rewritten to COMPLETED', async () => {
+    const batch = await insertBatchRun('2031-01-04');
+    const r = await db.query<{ id: string }>(
+      `insert into batch_steps (batch_run_id, step_number, step_key, retryable, status, idempotency_key)
+       values ($1, 13, 'SELECT_BURN_TARGETS', false, 'FAILED', $2) returning id`,
+      [batch, randomUUID()],
+    );
+    await expectDbError(
+      db.query(`update batch_steps set status = 'COMPLETED' where id = $1`, [r.rows[0]!.id]),
+      'RETRY_FORBIDDEN',
+    );
+  });
+
+  it('failed retryable steps cannot jump straight to COMPLETED', async () => {
+    const batch = await insertBatchRun('2031-01-05');
+    const r = await db.query<{ id: string }>(
+      `insert into batch_steps (batch_run_id, step_number, step_key, retryable, status, idempotency_key)
+       values ($1, 20, 'PAY_DUE_BUYBACKS', true, 'FAILED', $2) returning id`,
+      [batch, randomUUID()],
+    );
+    await expectDbError(
+      db.query(`update batch_steps set status = 'COMPLETED' where id = $1`, [r.rows[0]!.id]),
+      'INVALID_BATCH_STATE',
     );
   });
 

@@ -1,3 +1,4 @@
+import { Money } from '@sevendays/shared';
 import type { SqlClient } from './types.js';
 
 /**
@@ -44,7 +45,7 @@ export async function reconcile(client: SqlClient): Promise<ReconciliationReport
      where a.account_type = 'PLATFORM_SETTLEMENT_CLEARING'`,
   );
   const clearingBalance = clearing.rows[0]?.balance ?? '0';
-  if (Number(clearingBalance) !== 0) {
+  if (!Money.of(clearingBalance).isZero()) {
     issues.push({
       check: 'SETTLEMENT_CLEARING_ZERO',
       detail: `settlement clearing balance is ${clearingBalance}`,

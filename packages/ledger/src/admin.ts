@@ -40,6 +40,15 @@ export async function postAdminAdjustment(
       'Dual approval requires two distinct approvers',
     );
   }
+  // Approvers must be ACTIVE users — a suspended/banned admin cannot approve.
+  const statuses = await client.query<{ id: string; status: string }>(
+    `select id, status::text as status from users where id in ($1, $2)`,
+    [input.approvedBy1, input.approvedBy2],
+  );
+  const activeIds = new Set(statuses.rows.filter((r) => r.status === 'ACTIVE').map((r) => r.id));
+  if (!activeIds.has(input.approvedBy1) || !activeIds.has(input.approvedBy2)) {
+    throw new LedgerError('DUAL_APPROVAL_REQUIRED', 'Approvers must be ACTIVE users');
+  }
   const roles1 = await activeRolesOf(client, input.approvedBy1);
   const roles2 = await activeRolesOf(client, input.approvedBy2);
   const combined = new Set<AdminRole>([...roles1, ...roles2]);
@@ -58,15 +67,16 @@ export async function postAdminAdjustment(
       { manageTransaction: false },
     );
     if (!posted.alreadyPosted) {
+      const metadata = JSON.stringify({ reason: input.reason });
       await client.query(
-        `insert into audit_logs (actor_type, actor_id, action, reference_type, reference_id, after_hash)
+        `insert into audit_logs (actor_type, actor_id, action, reference_type, reference_id, metadata_json)
          values ('ADMIN', $1, 'ADMIN_LEDGER_ADJUSTMENT', 'ledger_transaction', $2, $3)`,
-        [input.approvedBy1, posted.transactionId, input.reason],
+        [input.approvedBy1, posted.transactionId, metadata],
       );
       await client.query(
-        `insert into audit_logs (actor_type, actor_id, action, reference_type, reference_id, after_hash)
+        `insert into audit_logs (actor_type, actor_id, action, reference_type, reference_id, metadata_json)
          values ('ADMIN', $1, 'ADMIN_LEDGER_ADJUSTMENT_APPROVAL', 'ledger_transaction', $2, $3)`,
-        [input.approvedBy2, posted.transactionId, input.reason],
+        [input.approvedBy2, posted.transactionId, metadata],
       );
     }
     await client.query('commit');
