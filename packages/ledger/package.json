@@ -1,5 +1,5 @@
 {
-  "name": "@sevendays/domain",
+  "name": "@sevendays/ledger",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,12 @@
     "test": "vitest run",
     "lint": "eslint src test"
   },
+  "dependencies": {
+    "@sevendays/domain": "workspace:*",
+    "@sevendays/shared": "workspace:*"
+  },
   "devDependencies": {
+    "@sevendays/database": "workspace:*",
     "eslint": "^9.28.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.33.0",

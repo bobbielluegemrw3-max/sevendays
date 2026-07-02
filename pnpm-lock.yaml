@@ -61,6 +61,31 @@ importers:
         specifier: ^3.2.0
         version: 3.2.6
 
+  packages/ledger:
+    dependencies:
+      '@sevendays/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@sevendays/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../database
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.6
+
   packages/shared:
     dependencies:
       decimal.js:
