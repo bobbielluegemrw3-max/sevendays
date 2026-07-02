@@ -1,20 +1,7 @@
 import type { Money } from '@sevendays/shared';
 import type { EntryDirection, TransactionType } from '@sevendays/domain';
 
-/**
- * Minimal SQL client interface. Both PGlite (tests) and the Cloud Run
- * Postgres client satisfy this shape. Transaction control is issued through
- * plain `begin`/`commit`/`rollback` statements, so the client MUST represent
- * a single connection, not a pool.
- */
-export interface QueryResult<T> {
-  rows: T[];
-  affectedRows?: number;
-}
-
-export interface SqlClient {
-  query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<QueryResult<T>>;
-}
+export type { QueryResult, SqlClient } from '@sevendays/shared';
 
 export type LedgerErrorCode =
   | 'LEDGER_UNBALANCED'
