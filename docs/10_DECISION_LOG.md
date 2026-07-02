@@ -91,6 +91,10 @@
 
 056. horse_type_modifier is fixed at 0.00 in Race Engine v1.0 (resolves P8). Horse type strengths are already expressed through weather_modifier, track_modifier, training_modifier, and the LUCK-type random range adjustment; an independent horse_type_modifier would double-count type traits. The term remains in the final_score formula but its value is always 0.00 in v1.0. AI/Admin/User cannot change it. A future race_engine_version (v1.1+) may reintroduce a non-zero value.
 
+## Decision 057 (2026-07-03, Owner)
+
+057. Revenge Buff applies to exactly ONE race (resolves P9, option a). The buff auto-applies to the horse received in the user's next successful Assignment, is saved into that horse's next Race Participant Snapshot as the buff snapshot, adds +4/+7/+10 to that race's final_score, and becomes CONSUMED after that race regardless of Survive or Burn. Failed/refunded assignments do not consume it. Lifecycle: ACTIVE -> APPLIED (on assignment) -> snapshotted for the next race -> CONSUMED. Rationale: matches the Expected Buff Modifier +6.7 design; multi-race protection would inflate Day7 arrival rate and Buyback liability; keeps replay/audit simple.
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:

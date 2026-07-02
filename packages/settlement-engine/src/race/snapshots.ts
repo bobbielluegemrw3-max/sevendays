@@ -22,8 +22,9 @@ import {
  * Idempotent: a horse with an existing snapshot for this race is skipped
  * entirely (state advance happens exactly once).
  *
- * NOTE: revenge_buff_snapshot is NULL pending owner decision P9 (buff
- * consumption semantics at assignment, Phase 8).
+ * Revenge Buff (Decision 057): a buff APPLIED to this horse is frozen into
+ * the snapshot and marked CONSUMED — snapshot inclusion irreversibly commits
+ * the buff to exactly this one race, whatever the outcome.
  */
 
 export interface CreateSnapshotsInput {
@@ -73,6 +74,18 @@ export async function createParticipantSnapshots(
     const trainingRow = training.rows[0] ?? null;
     const trainingType = trainingRow?.training_type ?? null;
 
+    // Buff bound to this horse via the owner's last successful assignment.
+    const buff = await client.query<{ id: string; buff_rarity: string; buff_bonus_score: string }>(
+      `select id, buff_rarity::text as buff_rarity, buff_bonus_score::text as buff_bonus_score
+       from revenge_buffs
+       where applied_horse_id = $1 and user_id = $2 and status = 'APPLIED'`,
+      [horse.id, horse.owner_user_id],
+    );
+    const buffRow = buff.rows[0] ?? null;
+    const buffSnapshot = buffRow
+      ? { buff_rarity: buffRow.buff_rarity, bonus_score: Number(buffRow.buff_bonus_score) }
+      : null;
+
     // Advance the daily state (deterministic order, Decision 054).
     const state = computeDailyState({
       prevCondition: Number(horse.condition),
@@ -106,6 +119,7 @@ export async function createParticipantSnapshots(
       horse.dna_hash,
       JSON.stringify(abilitySnapshot),
       JSON.stringify(trainingSnapshot),
+      JSON.stringify(buffSnapshot),
       weather,
       track,
       input.raceEngineVersion,
@@ -118,11 +132,11 @@ export async function createParticipantSnapshots(
          weather, track_condition, race_engine_version, liquidity_policy_version,
          price_table_version, race_seed_hash, snapshot_hash
        )
-       select $1, $2, $3, $4, $5::horse_type, $6::rarity, $7, $8, $9, null,
-              $10::weather, $11::track_condition, $12, $13, $14,
+       select $1, $2, $3, $4, $5::horse_type, $6::rarity, $7, $8, $9, $10,
+              $11::weather, $12::track_condition, $13, $14, $15,
               (select commit_hash from randomness_commits rc
                  join races r on r.seed_commit_id = rc.id where r.id = $1),
-              $15
+              $16
        on conflict (race_id, horse_id) do nothing
        returning id`,
       [
@@ -135,6 +149,7 @@ export async function createParticipantSnapshots(
         horse.dna_hash,
         JSON.stringify(abilitySnapshot),
         trainingSnapshot ? JSON.stringify(trainingSnapshot) : null,
+        buffSnapshot ? JSON.stringify(buffSnapshot) : null,
         weather,
         track,
         input.raceEngineVersion,
@@ -155,6 +170,13 @@ export async function createParticipantSnapshots(
       await client.query(
         `update training_sessions set snapshot_included_at = now() where id = $1`,
         [trainingRow.id],
+      );
+    }
+    if (buffRow) {
+      // Exactly one race (Decision 057): snapshot inclusion consumes the buff.
+      await client.query(
+        `update revenge_buffs set status = 'CONSUMED', consumed_at = now() where id = $1`,
+        [buffRow.id],
       );
     }
   }

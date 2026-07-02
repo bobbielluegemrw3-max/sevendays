@@ -123,8 +123,9 @@ export async function finalizeAndBurn(
       burnEventId,
       buffPolicyVersion: input.buffPolicyVersion,
     });
+    // One live buff per user across ACTIVE and APPLIED (refresh, never duplicate).
     const existing = await client.query<{ id: string }>(
-      `select id from revenge_buffs where user_id = $1 and status = 'ACTIVE'`,
+      `select id from revenge_buffs where user_id = $1 and status in ('ACTIVE', 'APPLIED')`,
       [ownerId],
     );
     if (existing.rows.length > 0) {

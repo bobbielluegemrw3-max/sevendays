@@ -258,6 +258,102 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
     expect(buffs.rows[0]!.refreshed_at).not.toBeNull();
   });
 
+  it('APPLIED buff boosts exactly one race, then is CONSUMED (Decision 057)', async () => {
+    await client.query(`update horses set status = 'BURNED' where status = 'ACTIVE'`);
+    const owner = await newUser();
+    const horse = await newHorse(owner, 1); // POWER
+    // buff bound to this horse by a (simulated) successful assignment
+    await client.query(
+      `insert into revenge_buffs (user_id, buff_rarity, buff_bonus_score, buff_policy_version,
+                                  deterministic_buff_roll, status, applied_horse_id, applied_at)
+       values ($1, 'SR', 10, 'buff_policy_v1.0', 'roll', 'APPLIED', $2, now())`,
+      [owner, horse],
+    );
+
+    raceDateCounter += 1;
+    const batchDate = `2033-03-${String(raceDateCounter).padStart(2, '0')}`;
+    const batch = await client.query<{ id: string }>(
+      `insert into batch_runs (batch_date, batch_algorithm_version) values ($1, 'batch_v1.0') returning id`,
+      [batchDate],
+    );
+    const raceSeed = `buff-race-${batchDate}`;
+    const commit = await client.query<{ id: string }>(
+      `insert into randomness_commits (reference_type, reference_id, commit_hash)
+       values ('RACE', $1, $2) returning id`,
+      [randomUUID(), sha256(raceSeed)],
+    );
+    const race = await client.query<{ id: string }>(
+      `insert into races (batch_run_id, race_engine_version, seed_commit_id, status)
+       values ($1, $2, $3, 'SEED_COMMITTED') returning id`,
+      [batch.rows[0]!.id, VERSION, commit.rows[0]!.id],
+    );
+    const raceId = race.rows[0]!.id;
+
+    await createParticipantSnapshots(client, {
+      raceId,
+      raceSeed,
+      raceEngineVersion: VERSION,
+      liquidityPolicyVersion: 'liquidity_policy_v1.0',
+      priceTableVersion: 'price_table_v1.0',
+      batchDate,
+    });
+
+    // buff frozen into the snapshot and consumed immediately
+    const snap = await client.query<{ buff: { buff_rarity: string } | null }>(
+      `select revenge_buff_snapshot_json as buff from race_participant_snapshots
+       where race_id = $1 and horse_id = $2`,
+      [raceId, horse],
+    );
+    expect(snap.rows[0]!.buff?.buff_rarity).toBe('SR');
+    const buffState = await client.query<{ status: string }>(
+      `select status::text as status from revenge_buffs where user_id = $1`,
+      [owner],
+    );
+    expect(buffState.rows[0]!.status).toBe('CONSUMED');
+
+    // the score includes exactly +10 for this race
+    await runRaceScores(client, { raceId, raceSeed, raceEngineVersion: VERSION });
+    const scored = await client.query<{ revenge_buff_modifier: string }>(
+      `select revenge_buff_modifier::text as revenge_buff_modifier
+       from race_participant_snapshots where race_id = $1 and horse_id = $2`,
+      [raceId, horse],
+    );
+    expect(Number(scored.rows[0]!.revenge_buff_modifier)).toBe(10);
+
+    // next race: no buff in the snapshot (one race only)
+    raceDateCounter += 1;
+    const batchDate2 = `2033-03-${String(raceDateCounter).padStart(2, '0')}`;
+    const batch2 = await client.query<{ id: string }>(
+      `insert into batch_runs (batch_date, batch_algorithm_version) values ($1, 'batch_v1.0') returning id`,
+      [batchDate2],
+    );
+    const raceSeed2 = `buff-race-${batchDate2}`;
+    const commit2 = await client.query<{ id: string }>(
+      `insert into randomness_commits (reference_type, reference_id, commit_hash)
+       values ('RACE', $1, $2) returning id`,
+      [randomUUID(), sha256(raceSeed2)],
+    );
+    const race2 = await client.query<{ id: string }>(
+      `insert into races (batch_run_id, race_engine_version, seed_commit_id, status)
+       values ($1, $2, $3, 'SEED_COMMITTED') returning id`,
+      [batch2.rows[0]!.id, VERSION, commit2.rows[0]!.id],
+    );
+    await createParticipantSnapshots(client, {
+      raceId: race2.rows[0]!.id,
+      raceSeed: raceSeed2,
+      raceEngineVersion: VERSION,
+      liquidityPolicyVersion: 'liquidity_policy_v1.0',
+      priceTableVersion: 'price_table_v1.0',
+      batchDate: batchDate2,
+    });
+    const snap2 = await client.query<{ buff: unknown }>(
+      `select revenge_buff_snapshot_json as buff from race_participant_snapshots
+       where race_id = $1 and horse_id = $2`,
+      [race2.rows[0]!.id, horse],
+    );
+    expect(snap2.rows[0]!.buff).toBeNull();
+  });
+
   it('training is frozen into the snapshot and daily state advances exactly once', async () => {
     const owner = await newUser();
     const horse = await newHorse(owner, 0); // SPRINTER
