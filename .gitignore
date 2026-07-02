@@ -15,6 +15,14 @@ coverage/
 .env
 .env.*
 !.env.example
+*supabase情報*.txt
+
+# Turborepo
+.turbo/
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
 
 # Logs
 *.log
