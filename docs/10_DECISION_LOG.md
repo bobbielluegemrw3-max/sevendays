@@ -87,6 +87,10 @@
 
 055. Horse Name Generator (resolves P3): 40 prefixes and 40 suffixes fixed by owner (see packages/race-engine name generator). Display name = Prefix + Suffix; Bloodline is an internal attribute that weights vocabulary pools. Duplicate names are NOT allowed: collisions append Roman numerals (Royal Thunder II, III, ...), and beyond the Roman range a short generation code is appended (Royal Thunder G7).
 
+## Decision 056 (2026-07-03, Owner)
+
+056. horse_type_modifier is fixed at 0.00 in Race Engine v1.0 (resolves P8). Horse type strengths are already expressed through weather_modifier, track_modifier, training_modifier, and the LUCK-type random range adjustment; an independent horse_type_modifier would double-count type traits. The term remains in the final_score formula but its value is always 0.00 in v1.0. AI/Admin/User cannot change it. A future race_engine_version (v1.1+) may reintroduce a non-zero value.
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:

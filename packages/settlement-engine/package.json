@@ -21,6 +21,7 @@
     "@sevendays/domain": "workspace:*",
     "@sevendays/economy-engine": "workspace:*",
     "@sevendays/ledger": "workspace:*",
+    "@sevendays/race-engine": "workspace:*",
     "@sevendays/shared": "workspace:*"
   },
   "devDependencies": {

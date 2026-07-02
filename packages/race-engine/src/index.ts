@@ -6,3 +6,5 @@ export * from './condition.js';
 export * from './score.js';
 export * from './ranking.js';
 export * from './replay.js';
+export * from './burn.js';
+export * from './buff.js';

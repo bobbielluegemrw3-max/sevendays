@@ -147,6 +147,9 @@ importers:
       '@sevendays/ledger':
         specifier: workspace:*
         version: link:../ledger
+      '@sevendays/race-engine':
+        specifier: workspace:*
+        version: link:../race-engine
       '@sevendays/shared':
         specifier: workspace:*
         version: link:../shared
