@@ -1,4 +1,4 @@
-import { sha256Parts } from '@sevendays/shared';
+import { hashToUnitInterval, sha256Parts } from '@sevendays/shared';
 import {
   ABILITY_DISTRIBUTION_V1,
   ABILITY_NAMES,
@@ -60,10 +60,11 @@ export function generateHorse(input: HorseGenerationInput): GeneratedHorse {
     ABILITY_NAMES.reduce((sum, name) => sum + abilities[name] * ABILITY_WEIGHTS_V1[name], 0),
   );
 
-  // DNA: SHA-256(mint_seed + horse_uuid + user_uuid + version), modifier in [-2, +2].
+  // DNA: SHA-256(mint_seed + horse_uuid + user_uuid + version).
+  // dna_modifier derives DIRECTLY from dna_hash (spec-literal, audit fix F-B).
   const dnaHash = sha256Parts(mintSeed, horseUuid, userUuid, version);
   const dnaModifier = uniformInRange(
-    unitFromParts(mintSeed, horseUuid, userUuid, version, 'dna_modifier'),
+    hashToUnitInterval(dnaHash),
     DNA_MODIFIER_RANGE_V1.min,
     DNA_MODIFIER_RANGE_V1.max,
   );

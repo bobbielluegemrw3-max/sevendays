@@ -125,8 +125,13 @@ export async function createParticipantSnapshots(
       input.raceEngineVersion,
     );
 
-    const inserted = await client.query<{ id: string }>(
-      `insert into race_participant_snapshots (
+    // Per-horse atomicity: snapshot insert, state advance, training lock and
+    // buff consumption commit together or not at all — a crash can never
+    // leave a snapshot without its side effects (audit fix F-E).
+    await client.query('begin');
+    try {
+      const inserted = await client.query<{ id: string }>(
+        `insert into race_participant_snapshots (
          race_id, horse_id, owner_user_id, current_day, horse_type, rarity, dna_hash,
          ability_snapshot_json, training_snapshot_json, revenge_buff_snapshot_json,
          weather, track_condition, race_engine_version, liquidity_policy_version,
@@ -159,25 +164,30 @@ export async function createParticipantSnapshots(
       ],
     );
 
-    if (inserted.rows.length === 0) continue; // already snapshotted — skip state advance
-    created += 1;
-
-    await client.query(
-      `update horses set condition = $2, fatigue = $3 where id = $1`,
-      [horse.id, state.condition, state.fatigue],
-    );
-    if (trainingRow) {
-      await client.query(
-        `update training_sessions set snapshot_included_at = now() where id = $1`,
-        [trainingRow.id],
-      );
-    }
-    if (buffRow) {
-      // Exactly one race (Decision 057): snapshot inclusion consumes the buff.
-      await client.query(
-        `update revenge_buffs set status = 'CONSUMED', consumed_at = now() where id = $1`,
-        [buffRow.id],
-      );
+      if (inserted.rows.length > 0) {
+        created += 1;
+        await client.query(
+          `update horses set condition = $2, fatigue = $3 where id = $1`,
+          [horse.id, state.condition, state.fatigue],
+        );
+        if (trainingRow) {
+          await client.query(
+            `update training_sessions set snapshot_included_at = now() where id = $1`,
+            [trainingRow.id],
+          );
+        }
+        if (buffRow) {
+          // Exactly one race (Decision 057): snapshot inclusion consumes the buff.
+          await client.query(
+            `update revenge_buffs set status = 'CONSUMED', consumed_at = now() where id = $1`,
+            [buffRow.id],
+          );
+        }
+      }
+      await client.query('commit');
+    } catch (error) {
+      await client.query('rollback').catch(() => undefined);
+      throw error;
     }
   }
 

@@ -41,6 +41,32 @@ export interface RunBatchOptions {
 
 export async function runBatch(client: SqlClient, options: RunBatchOptions): Promise<BatchResult> {
   const { batchDate } = options;
+
+  // Single-runner guarantee (audit fix F-A): a session-scoped advisory lock
+  // prevents two runners (scheduler retry + manual trigger) from executing
+  // the same batch concurrently. A crashed runner's lock is released
+  // automatically when its connection dies, so takeover needs no lease table.
+  const lock = await client.query<{ acquired: boolean }>(
+    `select pg_try_advisory_lock(hashtext('sevendays_batch:' || $1)) as acquired`,
+    [batchDate],
+  );
+  if (!lock.rows[0]?.acquired) {
+    throw new BatchError(
+      'INVALID_BATCH_STATE',
+      `Batch ${batchDate} is already being executed by another runner`,
+    );
+  }
+  try {
+    return await runBatchLocked(client, options);
+  } finally {
+    await client
+      .query(`select pg_advisory_unlock(hashtext('sevendays_batch:' || $1))`, [batchDate])
+      .catch(() => undefined);
+  }
+}
+
+async function runBatchLocked(client: SqlClient, options: RunBatchOptions): Promise<BatchResult> {
+  const { batchDate } = options;
   const handlers = options.handlers ?? {};
   const traceId = newUuid();
   const batchRunId = await createBatchRun(client, batchDate);
