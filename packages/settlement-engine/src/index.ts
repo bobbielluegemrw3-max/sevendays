@@ -8,3 +8,7 @@ export * from './burn/execute.js';
 export * from './buyback/day7.js';
 export * from './buyback/payments.js';
 export * from './buyback/memorial.js';
+export * from './assignment/tiebreak.js';
+export * from './assignment/sessions.js';
+export * from './assignment/queues.js';
+export * from './assignment/execute.js';
