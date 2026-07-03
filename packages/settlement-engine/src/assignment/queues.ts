@@ -49,7 +49,12 @@ export async function buildHorseQueue(
      from market_listings l
      join horses h on h.id = l.horse_id
      where l.status = 'LISTED' and h.status = 'ACTIVE'
-       and l.current_day between 1 and 6`,
+       and l.current_day between 1 and 6
+       -- crash-resume safety (F-H): a horse already paired in this batch is
+       -- reserved for its interrupted assignment and never re-queued
+       and not exists (select 1 from ownership_assignments oa
+                       where oa.horse_id = l.horse_id and oa.batch_run_id = $1)`,
+    [batchRunId],
   );
   const queue: QueuedHorse[] = listings.rows.map((l) => ({
     listingId: l.id,

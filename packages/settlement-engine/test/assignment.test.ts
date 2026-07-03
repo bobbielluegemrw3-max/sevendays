@@ -416,6 +416,79 @@ describe('assignment execution', () => {
     expect(report.issues).toEqual([]);
   });
 
+  it('crash-resume (F-H): interrupted settlement resumes to the identical outcome, no stuck funds', async () => {
+    const batch = await newBatch();
+    const seller = await newUser();
+    const listing = await newListedHorse(seller, 3, batch, '2035-08-01T00:00:00Z'); // 133.10
+
+    const buyer = await newUser();
+    await fund(buyer, '200');
+    const session = await createPurchaseSession(client, { userId: buyer, idempotencyKey: randomUUID() });
+    await lockSessionsIntoBatch(client, batch);
+
+    // Simulate a crash mid-settlement: assignment row exists and the ledger
+    // settlement is posted, but refund/ownership/listing/session were never
+    // reached (the exact window found in the audit).
+    const { assignmentSettlement } = await import('@sevendays/ledger');
+    const crashed = await client.query<{ id: string }>(
+      `insert into ownership_assignments
+         (batch_run_id, purchase_session_id, market_listing_id, horse_id, buyer_user_id, seller_user_id, assigned_price)
+       values ($1, $2, $3, $4, $5, $6, 133.10) returning id`,
+      [batch, session.sessionId, listing.listingId, listing.horseId, buyer, seller],
+    );
+    await assignmentSettlement(client, {
+      buyerUserId: buyer,
+      sellerUserId: seller,
+      price: Money.of('133.10'),
+      idempotencyKey: `assign:${session.sessionId}`,
+      referenceType: 'ownership_assignment',
+      referenceId: crashed.rows[0]!.id,
+    });
+    // crash state: buyer has 22.84 available, 44.06 stranded in locked
+    const buyerAccounts = await ensureUserAccounts(client, buyer);
+    expect(await getBalance(client, buyerAccounts.locked)).toBe('44.06000000');
+
+    // a second buyer joins the same batch: must NOT be given the crashed horse
+    const buyer2 = await newUser();
+    await fund(buyer2, '200');
+    await createPurchaseSession(client, { userId: buyer2, idempotencyKey: randomUUID() });
+    await lockSessionsIntoBatch(client, batch);
+
+    const result = await executeAssignment(client, {
+      batchRunId: batch,
+      assignmentAlgorithmVersion: ALGO,
+      priceTable: PRICE_TABLE,
+      allowDay0Mint: false,
+      dailyDay0MintLimit: 0,
+      horseGenerationVersion: GEN,
+    });
+    // buyer1 resumed onto its recorded horse; buyer2 found no inventory
+    expect(result.p2pAssignments).toBe(1);
+    expect(result.unassigned).toBe(1);
+
+    // resume completed everything: refund released, ownership moved, no double-pay
+    expect(await getBalance(client, buyerAccounts.locked)).toBe('0.00000000');
+    expect(await getBalance(client, buyerAccounts.available)).toBe('66.90000000'); // 22.84 + 44.06
+    const sellerAccounts = await ensureUserAccounts(client, seller);
+    expect(await getBalance(client, sellerAccounts.available)).toBe('133.10000000'); // exactly once
+    const horse = await client.query<{ owner_user_id: string }>(
+      `select owner_user_id from horses where id = $1`,
+      [listing.horseId],
+    );
+    expect(horse.rows[0]!.owner_user_id).toBe(buyer);
+    const ps = await client.query<{ status: string; refund_amount: string }>(
+      `select status::text as status, refund_amount::text as refund_amount
+       from purchase_sessions where id = $1`,
+      [session.sessionId],
+    );
+    expect(ps.rows[0]!.status).toBe('ASSIGNED');
+    expect(Money.of(ps.rows[0]!.refund_amount).eq('44.06')).toBe(true);
+
+    await refundUnassignedSessions(client, batch);
+    const report = await reconcile(client);
+    expect(report.issues).toEqual([]);
+  });
+
   it('mint disabled -> everything refunds (Day0 exists only as fallback)', async () => {
     const batch = await newBatch();
     const buyer = await newUser();

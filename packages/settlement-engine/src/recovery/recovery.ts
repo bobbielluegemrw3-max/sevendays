@@ -267,6 +267,8 @@ export interface TimedOutRecovery {
   batchRunId: string;
   batchDate: string;
   hoursOpen: number;
+  /** The evaluation date the EMERGENCY record actually landed on (F-K). */
+  emergencyRecordedFor: string | null;
 }
 
 /**
@@ -293,27 +295,56 @@ export async function checkRecoveryTimeouts(
 
   const timedOut: TimedOutRecovery[] = [];
   for (const row of stale.rows) {
-    timedOut.push({
-      recoveryId: row.id,
-      batchRunId: row.batch_run_id,
-      batchDate: row.batch_date,
-      hoursOpen: Number(row.hours_open),
-    });
     await client.query(
       `insert into audit_logs (actor_type, action, reference_type, reference_id, metadata_json)
        values ('SYSTEM', 'RECOVERY_TIMEOUT_EMERGENCY', 'recovery_snapshot', $1, $2)`,
       [row.id, JSON.stringify({ batch_date: row.batch_date, hours_open: row.hours_open })],
     );
-    await client.query(
-      `insert into economy_status_evaluations
-         (evaluation_date, economy_policy_version, metrics_json, recommended_status, final_status, consecutive_match_days)
-       values ($1, 'economy_policy_v1.0', $2, 'EMERGENCY', 'EMERGENCY', 1)
-       on conflict (evaluation_date) do nothing`,
-      [asOfDate, JSON.stringify({ reason: 'RECOVERY_TIMEOUT', recovery_id: row.id })],
-    );
+
+    // Evaluations are immutable, so an existing record for a date cannot be
+    // overridden. Land the EMERGENCY on the first free date so the
+    // escalation is never silently dropped (F-K).
+    let emergencyRecordedFor: string | null = null;
+    for (let offset = 0; offset <= 3; offset += 1) {
+      const candidate = offset === 0 ? asOfDate : shiftDate(asOfDate, offset);
+      const existing = await client.query<{ final_status: string }>(
+        `select final_status::text as final_status from economy_status_evaluations
+         where evaluation_date = $1`,
+        [candidate],
+      );
+      if (existing.rows[0]?.final_status === 'EMERGENCY') {
+        emergencyRecordedFor = candidate; // already escalated
+        break;
+      }
+      if (!existing.rows[0]) {
+        await client.query(
+          `insert into economy_status_evaluations
+             (evaluation_date, economy_policy_version, metrics_json, recommended_status, final_status, consecutive_match_days)
+           values ($1, 'economy_policy_v1.0', $2, 'EMERGENCY', 'EMERGENCY', 1)
+           on conflict (evaluation_date) do nothing`,
+          [candidate, JSON.stringify({ reason: 'RECOVERY_TIMEOUT', recovery_id: row.id })],
+        );
+        emergencyRecordedFor = candidate;
+        break;
+      }
+    }
+
     await log(client, row.id, row.batch_run_id, null, 'TIMEOUT_EMERGENCY', {
-      result: `open ${Number(row.hours_open).toFixed(1)}h > ${RECOVERY_TIMEOUT_HOURS}h`,
+      result: `open ${Number(row.hours_open).toFixed(1)}h > ${RECOVERY_TIMEOUT_HOURS}h; emergency recorded for ${emergencyRecordedFor ?? 'NONE'}`,
+    });
+    timedOut.push({
+      recoveryId: row.id,
+      batchRunId: row.batch_run_id,
+      batchDate: row.batch_date,
+      hoursOpen: Number(row.hours_open),
+      emergencyRecordedFor,
     });
   }
   return timedOut;
+}
+
+function shiftDate(dateString: string, days: number): string {
+  const base = new Date(`${dateString}T00:00:00.000Z`);
+  base.setUTCDate(base.getUTCDate() + days);
+  return base.toISOString().slice(0, 10);
 }

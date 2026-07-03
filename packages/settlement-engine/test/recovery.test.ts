@@ -205,6 +205,7 @@ describe('24-hour recovery timeout', () => {
     const timedOut = await checkRecoveryTimeouts(client, '2037-05-02');
     expect(timedOut.map((t) => t.recoveryId)).toContain(recoveryId);
     expect(timedOut[0]!.hoursOpen).toBeGreaterThan(24);
+    expect(timedOut[0]!.emergencyRecordedFor).toBe('2037-05-02');
 
     const audit = await client.query<{ count: string }>(
       `select count(*)::text as count from audit_logs

@@ -98,12 +98,21 @@ export async function createPurchaseSession(
     return { sessionId, alreadyExists: false };
   } catch (error) {
     await client.query('rollback').catch(() => undefined);
+    const message = error instanceof Error ? error.message : String(error);
     // The non-negative balance check is a DEFERRED trigger — with an
     // externally-managed transaction it fires at COMMIT, outside
     // postTransaction's own mapping. Map it here.
-    const message = error instanceof Error ? error.message : String(error);
     if (message.includes('NEGATIVE_BALANCE_FORBIDDEN')) {
       throw new LedgerError('INSUFFICIENT_BALANCE', `Insufficient balance to lock ${PURCHASE_LOCK_AMOUNT} USDT`);
+    }
+    // Concurrent duplicate (F-G): another request with the same idempotency
+    // key won the race — return its session, exactly like a replay.
+    if (message.includes('duplicate key') && message.includes('idempotency')) {
+      const winner = await client.query<{ id: string }>(
+        `select id from purchase_sessions where idempotency_key = $1`,
+        [input.idempotencyKey],
+      );
+      if (winner.rows[0]) return { sessionId: winner.rows[0].id, alreadyExists: true };
     }
     throw error;
   }

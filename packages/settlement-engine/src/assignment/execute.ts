@@ -20,11 +20,16 @@ import { buildBuyerQueue, buildHorseQueue } from './queues.js';
  *   2. Day0 Mint fallback — only if the liquidity policy allows
  *   3. Refund
  *
- * Sequential one-to-one: Purchase #i <- Horse #i. Platform fee is ALWAYS 0:
- * buyer payment == seller proceeds. Ownership transfers ONLY after ledger
- * settlement (Ledger First, Ownership Second). A successful assignment
- * moves the buyer's ACTIVE revenge buff to APPLIED, bound to the received
- * horse (Decision 057).
+ * Sequential one-to-one: Purchase #i <- Horse #i. Platform fee is ALWAYS 0.
+ * Ownership transfers ONLY after ledger settlement (Ledger First,
+ * Ownership Second). A successful assignment moves the buyer's ACTIVE
+ * revenge buff to APPLIED, bound to the received horse (Decision 057).
+ *
+ * Crash safety (audit fix F-H): every settlement step is idempotent and the
+ * session's ASSIGNED status is the FINAL marker. A session with an existing
+ * assignment row RESUMES its recorded pairing (never consumes a new horse),
+ * and the horse queue excludes horses already paired in this batch — an
+ * interrupted run can always be re-executed to the identical outcome.
  */
 
 export interface ExecuteAssignmentInput {
@@ -42,6 +47,14 @@ export interface ExecuteAssignmentResult {
   unassigned: number;
 }
 
+interface AssignmentRow {
+  id: string;
+  horse_id: string;
+  market_listing_id: string | null;
+  seller_user_id: string | null;
+  assigned_price: string;
+}
+
 export async function executeAssignment(
   client: SqlClient,
   input: ExecuteAssignmentInput,
@@ -55,28 +68,140 @@ export async function executeAssignment(
   let mintedThisBatch = await countBatchMints(client, input.batchRunId);
 
   for (const buyer of buyers) {
-    // Skip sessions already settled (retry safety).
     const fresh = await client.query<{ status: string }>(
       `select status::text as status from purchase_sessions where id = $1`,
       [buyer.sessionId],
     );
     if (fresh.rows[0]?.status !== 'PENDING_ASSIGNMENT') continue;
 
-    if (horseIndex < horses.length) {
-      const horse = horses[horseIndex]!;
-      horseIndex += 1;
-      await settleP2pAssignment(client, input, buyer.sessionId, buyer.userId, horse);
-      p2p += 1;
-    } else if (input.allowDay0Mint && mintedThisBatch < input.dailyDay0MintLimit) {
-      await settleDay0Mint(client, input, buyer.sessionId, buyer.userId);
-      mints += 1;
-      mintedThisBatch += 1;
+    // Resume an interrupted pairing before consuming anything new (F-H).
+    let assignment = await loadAssignment(client, buyer.sessionId);
+
+    if (!assignment) {
+      if (horseIndex < horses.length) {
+        const horse = horses[horseIndex]!;
+        horseIndex += 1;
+        const price = getPrice(input.priceTable, horse.currentDay);
+        await client.query(
+          `insert into ownership_assignments
+             (batch_run_id, purchase_session_id, market_listing_id, horse_id, buyer_user_id, seller_user_id, assigned_price)
+           values ($1, $2, $3, $4, $5, $6, $7)
+           on conflict (purchase_session_id) do nothing`,
+          [input.batchRunId, buyer.sessionId, horse.listingId, horse.horseId, buyer.userId, horse.sellerUserId, price.toFixed8()],
+        );
+      } else if (input.allowDay0Mint && mintedThisBatch < input.dailyDay0MintLimit) {
+        const horseId = await mintHorseAtomically(client, input, buyer.sessionId, buyer.userId);
+        await client.query(
+          `insert into ownership_assignments
+             (batch_run_id, purchase_session_id, market_listing_id, horse_id, buyer_user_id, seller_user_id, assigned_price)
+           values ($1, $2, null, $3, $4, null, $5)
+           on conflict (purchase_session_id) do nothing`,
+          [input.batchRunId, buyer.sessionId, horseId, buyer.userId, Money.of(DAY0_MINT_PRICE).toFixed8()],
+        );
+        mintedThisBatch += 1;
+      } else {
+        continue; // Step 27 will refund and expire
+      }
+      assignment = await loadAssignment(client, buyer.sessionId);
     }
-    // else: left PENDING for Step 27 (refund -> EXPIRED)
+
+    if (!assignment) continue; // defensive: should not happen
+    await completeSettlement(client, buyer.sessionId, buyer.userId, assignment);
+    if (assignment.market_listing_id === null) mints += 1;
+    else p2p += 1;
   }
 
   const unassigned = buyers.length - p2p - mints;
   return { p2pAssignments: p2p, day0Mints: mints, unassigned };
+}
+
+async function loadAssignment(client: SqlClient, sessionId: string): Promise<AssignmentRow | null> {
+  const r = await client.query<AssignmentRow>(
+    `select id, horse_id, market_listing_id, seller_user_id, assigned_price::text as assigned_price
+     from ownership_assignments where purchase_session_id = $1`,
+    [sessionId],
+  );
+  return r.rows[0] ?? null;
+}
+
+/**
+ * Idempotent settlement sequence — safe to re-run from any interruption
+ * point. Session ASSIGNED is the final marker; the caller only invokes this
+ * while the session is still PENDING_ASSIGNMENT.
+ */
+async function completeSettlement(
+  client: SqlClient,
+  sessionId: string,
+  buyerUserId: string,
+  assignment: AssignmentRow,
+): Promise<void> {
+  const price = Money.of(assignment.assigned_price);
+
+  // 1. Ledger First (idempotency key: one settlement per session, ever).
+  const settlement =
+    assignment.seller_user_id === null
+      ? await day0MintSettlement(client, {
+          buyerUserId,
+          idempotencyKey: `assign:${sessionId}`,
+          referenceType: 'ownership_assignment',
+          referenceId: assignment.id,
+        })
+      : await assignmentSettlement(client, {
+          buyerUserId,
+          sellerUserId: assignment.seller_user_id,
+          price,
+          idempotencyKey: `assign:${sessionId}`,
+          referenceType: 'ownership_assignment',
+          referenceId: assignment.id,
+        });
+
+  // 2. Refund the lock difference (idempotent by key).
+  const session = await client.query<{ locked_amount: string }>(
+    `select locked_amount::text as locked_amount from purchase_sessions where id = $1`,
+    [sessionId],
+  );
+  const refund = Money.of(session.rows[0]!.locked_amount).sub(price);
+  if (!refund.isZero()) {
+    await purchaseRefund(client, {
+      userId: buyerUserId,
+      amount: refund,
+      idempotencyKey: `assignrefund:${sessionId}`,
+      referenceType: 'purchase_session',
+      referenceId: sessionId,
+    });
+  }
+
+  // 3. Ownership Second.
+  await client.query(`update horses set owner_user_id = $2 where id = $1`, [
+    assignment.horse_id,
+    buyerUserId,
+  ]);
+  if (assignment.market_listing_id !== null) {
+    await client.query(`update market_listings set status = 'ASSIGNED' where id = $1`, [
+      assignment.market_listing_id,
+    ]);
+  }
+  await client.query(
+    `update ownership_assignments set status = 'SETTLED', ledger_transaction_id = $2 where id = $1`,
+    [assignment.id, settlement.transactionId],
+  );
+
+  // 4. Buff: ACTIVE -> APPLIED bound to the received horse (Decision 057).
+  await client.query(
+    `update revenge_buffs
+     set status = 'APPLIED', applied_horse_id = $2, applied_at = now()
+     where user_id = $1 and status = 'ACTIVE'`,
+    [buyerUserId, assignment.horse_id],
+  );
+
+  // 5. Final marker.
+  await client.query(
+    `update purchase_sessions
+     set status = 'ASSIGNED', assigned_price = $2, refund_amount = $3,
+         settled_at = now(), funds_locked = false
+     where id = $1 and status = 'PENDING_ASSIGNMENT'`,
+    [sessionId, price.toFixed8(), refund.isZero() ? null : refund.toFixed8()],
+  );
 }
 
 async function countBatchMints(client: SqlClient, batchRunId: string): Promise<number> {
@@ -88,72 +213,22 @@ async function countBatchMints(client: SqlClient, batchRunId: string): Promise<n
   return Number(r.rows[0]!.count);
 }
 
-async function settleP2pAssignment(
+/**
+ * Day0 Mint (audit fix F-I): horse row, commit hash, and seed reveal are
+ * one transaction — a horse can never exist without its verifiable
+ * commit-reveal record. Horse id derives from the session, so retries
+ * never mint twice (a pre-existing horse short-circuits).
+ */
+async function mintHorseAtomically(
   client: SqlClient,
   input: ExecuteAssignmentInput,
   sessionId: string,
   buyerUserId: string,
-  horse: { listingId: string; horseId: string; sellerUserId: string; currentDay: number },
-): Promise<void> {
-  // P2P assignment price is ALWAYS price_table[current_day] (02_BUSINESS_MODEL.md).
-  const price = getPrice(input.priceTable, horse.currentDay);
-
-  const assignment = await client.query<{ id: string }>(
-    `insert into ownership_assignments
-       (batch_run_id, purchase_session_id, market_listing_id, horse_id, buyer_user_id, seller_user_id, assigned_price)
-     values ($1, $2, $3, $4, $5, $6, $7)
-     on conflict (purchase_session_id) do nothing
-     returning id`,
-    [input.batchRunId, sessionId, horse.listingId, horse.horseId, buyerUserId, horse.sellerUserId, price.toFixed8()],
-  );
-  if (assignment.rows.length === 0) return; // already assigned (retry)
-  const assignmentId = assignment.rows[0]!.id;
-
-  // Ledger First: buyer locked -> seller available, fee 0.
-  const settlement = await assignmentSettlement(client, {
-    buyerUserId,
-    sellerUserId: horse.sellerUserId,
-    price,
-    idempotencyKey: `assign:${sessionId}`,
-    referenceType: 'ownership_assignment',
-    referenceId: assignmentId,
-  });
-  await refundLockDifference(client, sessionId, buyerUserId, price);
-
-  // Ownership Second.
-  await client.query(
-    `update horses set owner_user_id = $2 where id = $1`,
-    [horse.horseId, buyerUserId],
-  );
-  await client.query(
-    `update market_listings set status = 'ASSIGNED' where id = $1`,
-    [horse.listingId],
-  );
-  await client.query(
-    `update ownership_assignments set status = 'SETTLED', ledger_transaction_id = $2 where id = $1`,
-    [assignmentId, settlement.transactionId],
-  );
-  await client.query(
-    `update purchase_sessions
-     set status = 'ASSIGNED', assigned_price = $2, settled_at = now(), funds_locked = false
-     where id = $1`,
-    [sessionId, price.toFixed8()],
-  );
-  await applyRevengeBuff(client, buyerUserId, horse.horseId);
-}
-
-async function settleDay0Mint(
-  client: SqlClient,
-  input: ExecuteAssignmentInput,
-  sessionId: string,
-  buyerUserId: string,
-): Promise<void> {
-  const price = Money.of(DAY0_MINT_PRICE);
-
-  // Deterministic horse id per session -> retries never mint twice.
+): Promise<string> {
   const horseId = uuidFromParts('mint', input.batchRunId, sessionId);
+  const existing = await client.query<{ id: string }>(`select id from horses where id = $1`, [horseId]);
+  if (existing.rows[0]) return horseId;
 
-  // Commit-reveal mint seed (03_GAME_DESIGN.md): commit hash, generate, reveal.
   const mintSeed = generateSecureSeedHex();
   const mintSeedHash = sha256Hex(mintSeed);
   const generated = generateHorse({
@@ -173,27 +248,26 @@ async function settleDay0Mint(
   );
   const name = resolveNameCollision(baseName, Number(taken.rows[0]!.count));
 
-  const inserted = await client.query<{ id: string }>(
-    `insert into horses (id, owner_user_id, name, horse_type, rarity, dna_hash, dna_modifier,
-                         horse_generation_version, mint_seed_hash, ability_json)
-     values ($1, $2, $3, $4::horse_type, $5::rarity, $6, $7, $8, $9, $10)
-     on conflict (id) do nothing
-     returning id`,
-    [
-      horseId,
-      buyerUserId,
-      name,
-      generated.horseType,
-      generated.rarity,
-      generated.dnaHash,
-      generated.dnaModifier,
-      input.horseGenerationVersion,
-      mintSeedHash,
-      JSON.stringify({ ...generated.abilities, base_ability_score: generated.baseAbilityScore }),
-    ],
-  );
-  if (inserted.rows.length > 0) {
-    // Record + reveal the mint seed (verifiable: SHA-256(seed) == hash).
+  await client.query('begin');
+  try {
+    await client.query(
+      `insert into horses (id, owner_user_id, name, horse_type, rarity, dna_hash, dna_modifier,
+                           horse_generation_version, mint_seed_hash, ability_json)
+       values ($1, $2, $3, $4::horse_type, $5::rarity, $6, $7, $8, $9, $10)
+       on conflict (id) do nothing`,
+      [
+        horseId,
+        buyerUserId,
+        name,
+        generated.horseType,
+        generated.rarity,
+        generated.dnaHash,
+        generated.dnaModifier,
+        input.horseGenerationVersion,
+        mintSeedHash,
+        JSON.stringify({ ...generated.abilities, base_ability_score: generated.baseAbilityScore }),
+      ],
+    );
     await client.query(
       `insert into randomness_commits (reference_type, reference_id, commit_hash)
        values ('MINT', $1, $2)
@@ -205,84 +279,12 @@ async function settleDay0Mint(
        where reference_type = 'MINT' and reference_id = $1 and reveal_seed is null`,
       [horseId, mintSeed],
     );
+    await client.query('commit');
+  } catch (error) {
+    await client.query('rollback').catch(() => undefined);
+    throw error;
   }
-
-  const assignment = await client.query<{ id: string }>(
-    `insert into ownership_assignments
-       (batch_run_id, purchase_session_id, market_listing_id, horse_id, buyer_user_id, seller_user_id, assigned_price)
-     values ($1, $2, null, $3, $4, null, $5)
-     on conflict (purchase_session_id) do nothing
-     returning id`,
-    [input.batchRunId, sessionId, horseId, buyerUserId, price.toFixed8()],
-  );
-  if (assignment.rows.length === 0) return;
-  const assignmentId = assignment.rows[0]!.id;
-
-  // Ledger First: buyer locked -> platform mint revenue (Day0 Mint = the
-  // ONLY platform revenue source).
-  const settlement = await day0MintSettlement(client, {
-    buyerUserId,
-    idempotencyKey: `assign:${sessionId}`,
-    referenceType: 'ownership_assignment',
-    referenceId: assignmentId,
-  });
-  await refundLockDifference(client, sessionId, buyerUserId, price);
-
-  await client.query(
-    `update ownership_assignments set status = 'SETTLED', ledger_transaction_id = $2 where id = $1`,
-    [assignmentId, settlement.transactionId],
-  );
-  await client.query(
-    `update purchase_sessions
-     set status = 'ASSIGNED', assigned_price = $2, settled_at = now(), funds_locked = false
-     where id = $1`,
-    [sessionId, price.toFixed8()],
-  );
-  await applyRevengeBuff(client, buyerUserId, horseId);
-}
-
-/** refund_amount = locked_amount - assigned_price (05_SETTLEMENT_ENGINE.md). */
-async function refundLockDifference(
-  client: SqlClient,
-  sessionId: string,
-  buyerUserId: string,
-  price: Money,
-): Promise<void> {
-  const session = await client.query<{ locked_amount: string }>(
-    `select locked_amount::text as locked_amount from purchase_sessions where id = $1`,
-    [sessionId],
-  );
-  const refund = Money.of(session.rows[0]!.locked_amount).sub(price);
-  if (refund.isZero()) return;
-  await purchaseRefund(client, {
-    userId: buyerUserId,
-    amount: refund,
-    idempotencyKey: `assignrefund:${sessionId}`,
-    referenceType: 'purchase_session',
-    referenceId: sessionId,
-  });
-  await client.query(
-    `update purchase_sessions set refund_amount = $2 where id = $1`,
-    [sessionId, refund.toFixed8()],
-  );
-}
-
-/**
- * Decision 057: a successful assignment moves the buyer's ACTIVE buff to
- * APPLIED, bound to the received horse. Failed/refunded assignments never
- * reach this call.
- */
-async function applyRevengeBuff(
-  client: SqlClient,
-  buyerUserId: string,
-  horseId: string,
-): Promise<void> {
-  await client.query(
-    `update revenge_buffs
-     set status = 'APPLIED', applied_horse_id = $2, applied_at = now()
-     where user_id = $1 and status = 'ACTIVE'`,
-    [buyerUserId, horseId],
-  );
+  return horseId;
 }
 
 /**
