@@ -80,7 +80,8 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 - **Phase 13監査(90点)→ F-V〜F-Z修正済み**(`d7580bd`): プール接続のロールバック保護/stale email衝突のプロビジョニング詰み/リカバリ承認スロットの同時実行ガード/非ACTIVE馬のトレーニング拒否(`HORSE_NOT_ACTIVE` 409を追加)/RSC認証のReact cache化+pool 10。**未対応LOW**: トレーニングのOPEN確認→insert間のTOCTOU微小窓/サインアップのメール確認UX/`read_at`更新APIなし(07_API未定義)/admin layoutの二重プローブ/recovery execute・batch retryのVercel同期実行(タイムアウトリスク→Phase 14でCloud Run側へ、既存負債③と同族)
 - **ホスティングはRenderに変更(Decision 068)**: リポジトリ直下の `render.yaml`(Blueprint、Singaporeリージョン・`/healthz`ヘルスチェック・ビルドにバンドル検査組込)。必要な環境変数4つは `apps/web/.env.example`。`next start` 実起動+healthz応答はローカル検証済み。デプロイはRenderダッシュボードでリポジトリ接続→Blueprint適用→環境変数投入
 - **デプロイ済み**: **https://sevendaysderby.com**(www→ルートに301。Cloudflare DNS、CNAME 2本・DNS onlyモード)。Render Web Service `sevendays`(内部URL sevendays-l151.onrender.com)。手動作成のためビルド/起動コマンドは**ダッシュボード側が正**: `npm install -g pnpm@10.18.1 && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@sevendays/web` / `cd apps/web && pnpm exec next start`。Auto-Deploy=mainへのpush
-- **残**: Supabase AuthのSite URLを `https://sevendaysderby.com` に設定/サインアップ実機確認→admin_role_grants付与/ブラウザE2E/Marketplaceリアルタイム反映
+- **本番動作確認済み**(2026-07-03): サインアップ→ログイン→ダッシュボード表示まで実機確認。**トークンはES256署名(Supabase新JWT Signing Keys)**のためJWKS検証を実装済み(HS256レガシーもフォールバック対応。`6ebbab9`)。オーナーアカウント(bobbielluegemrw3@gmail.com / e54dd629-…)にFINANCE_ADMIN+SUPER_ADMIN付与済み
+- **残**: 2人目の管理者アカウント(二重承認は別人2名がDB強制のため1人では完結不可)/ブラウザE2E/Marketplaceリアルタイム反映
 
 ### Phase 14: 総仕上げ
 - services/*(Cloud Runワーカー)の薄いHTTPラッパー化+Pub/Sub+Scheduler(20:00 MYT=12:00 UTC)+監視11種アラート
