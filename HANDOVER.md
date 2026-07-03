@@ -79,7 +79,8 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 - **Decision 065-067適用済み**(オーナー回答 2026-07-03): 通知13種+日本語テンプレート(`NOTIFICATION_TEMPLATES_V1`)を全イベントサイトで発火(決定論的`dedupe_key`で冪等・最終マーカー前に通知でクラッシュ自己修復・MARKETPLACE系は`user_id null`のブロードキャスト行)/ `POST /horses/{id}/training`(1日1回・ロック中は締切・当日バッチ完了後は翌日向け)+馬詳細のトレーニングUI / Admin Recovery一覧・詳細・approve・executeエンドポイント+リカバリUI。07_API.mdもオーナー指示で更新済み
 - **Phase 13監査(90点)→ F-V〜F-Z修正済み**(`d7580bd`): プール接続のロールバック保護/stale email衝突のプロビジョニング詰み/リカバリ承認スロットの同時実行ガード/非ACTIVE馬のトレーニング拒否(`HORSE_NOT_ACTIVE` 409を追加)/RSC認証のReact cache化+pool 10。**未対応LOW**: トレーニングのOPEN確認→insert間のTOCTOU微小窓/サインアップのメール確認UX/`read_at`更新APIなし(07_API未定義)/admin layoutの二重プローブ/recovery execute・batch retryのVercel同期実行(タイムアウトリスク→Phase 14でCloud Run側へ、既存負債③と同族)
 - **ホスティングはRenderに変更(Decision 068)**: リポジトリ直下の `render.yaml`(Blueprint、Singaporeリージョン・`/healthz`ヘルスチェック・ビルドにバンドル検査組込)。必要な環境変数4つは `apps/web/.env.example`。`next start` 実起動+healthz応答はローカル検証済み。デプロイはRenderダッシュボードでリポジトリ接続→Blueprint適用→環境変数投入
-- **残**: Renderでの初回デプロイ実行(オーナーのアカウント接続待ち)/ ブラウザE2E(購入→割当→レース→Buyback主要フロー)/ Marketplace状態のリアルタイム反映(現状はリロード反映)
+- **デプロイ済み**: https://sevendays-l151.onrender.com (Render Web Service `sevendays`、手動作成のためビルド/起動コマンドは**ダッシュボード側が正**。`npm install -g pnpm@10.18.1 && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@sevendays/web` / `cd apps/web && pnpm exec next start`。Auto-Deploy=mainへのpush。独自ドメイン未設定)
+- **残**: Supabase AuthのSite URLにRenderドメイン追加/サインアップ実機確認→admin_role_grants付与/ブラウザE2E/Marketplaceリアルタイム反映
 
 ### Phase 14: 総仕上げ
 - services/*(Cloud Runワーカー)の薄いHTTPラッパー化+Pub/Sub+Scheduler(20:00 MYT=12:00 UTC)+監視11種アラート
