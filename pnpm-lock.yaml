@@ -176,7 +176,16 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.3.6
         version: 0.3.16
+      '@sevendays/shared':
+        specifier: workspace:*
+        version: link:../shared
+      pg:
+        specifier: ^8.14.0
+        version: 8.22.0
     devDependencies:
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.20.0
       eslint:
         specifier: ^9.28.0
         version: 9.39.4
@@ -332,6 +341,221 @@ importers:
       vitest:
         specifier: ^3.2.0
         version: 3.2.6(@types/node@26.1.0)
+
+  services/assignment-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+
+  services/batch-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+
+  services/burn-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+
+  services/buyback-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+
+  services/chain-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/blockchain':
+        specifier: workspace:*
+        version: link:../../packages/blockchain
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@sevendays/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+
+  services/liquidity-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+
+  services/mlm-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+
+  services/notification-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+
+  services/race-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+
+  services/recovery-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+
+  services/stress-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
 
 packages:
 
@@ -2350,10 +2574,11 @@ snapshots:
   '@types/node@26.1.0':
     dependencies:
       undici-types: 8.3.0
+    optional: true
 
   '@types/pg@8.20.0':
     dependencies:
-      '@types/node': 26.1.0
+      '@types/node': 22.20.0
       pg-protocol: 1.15.0
       pg-types: 2.2.0
 
@@ -3127,7 +3352,8 @@ snapshots:
 
   undici-types@6.21.0: {}
 
-  undici-types@8.3.0: {}
+  undici-types@8.3.0:
+    optional: true
 
   uri-js@4.4.1:
     dependencies:

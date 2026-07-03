@@ -10,6 +10,7 @@ import {
   saveStressResults,
 } from '@sevendays/settlement-engine';
 import { computeEconomyMetrics, runAllStressScenarios } from '@sevendays/economy-engine';
+import { batchDateFor } from '@sevendays/shared';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry } from '../router.js';
 
@@ -24,15 +25,24 @@ const dateInput = z.object({
   batch_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'batch_date must be YYYY-MM-DD'),
 });
 
+// Cloud Scheduler cannot compute dates: omitted batch_date means "today in
+// MYT" (Decision 047 — the batch day is the MYT calendar day).
+const schedulableDateInput = z.object({
+  batch_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'batch_date must be YYYY-MM-DD')
+    .optional(),
+});
+
 export function registerInternalEndpoints(registry: ApiRegistry): void {
   registry.register({
     method: 'POST',
     path: '/internal/batch/start',
     auth: 'internal',
-    input: dateInput,
+    input: schedulableDateInput,
     handler: async (ctx, input) => {
       const result = await runBatch(ctx.client, {
-        batchDate: input.batch_date,
+        batchDate: input.batch_date ?? batchDateFor(new Date()),
         handlers: buildProductionHandlers(),
       });
       return result;
@@ -108,9 +118,9 @@ export function registerInternalEndpoints(registry: ApiRegistry): void {
     method: 'POST',
     path: '/internal/recovery/check-timeouts',
     auth: 'internal',
-    input: dateInput,
+    input: schedulableDateInput,
     handler: async (ctx, input) => {
-      const timedOut = await checkRecoveryTimeouts(ctx.client, input.batch_date);
+      const timedOut = await checkRecoveryTimeouts(ctx.client, input.batch_date ?? batchDateFor(new Date()));
       return { timed_out: timedOut };
     },
   });

@@ -1,0 +1,10 @@
+.git
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+.env*
+*.log
+*supabase情報*.txt
+apps/web/.next

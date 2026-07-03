@@ -1,0 +1,21 @@
+{
+  "name": "@sevendays/assignment-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@sevendays/api-contracts": "workspace:*",
+    "@sevendays/database": "workspace:*"
+  },
+  "devDependencies": {
+    "eslint": "^9.28.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.33.0"
+  }
+}
