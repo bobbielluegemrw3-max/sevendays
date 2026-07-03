@@ -39,6 +39,7 @@ All public APIs are versioned:
 - GET `/api/v1/buybacks`
 - GET `/api/v1/buybacks/{id}`
 - GET `/api/v1/notifications`
+- POST `/api/v1/horses/{id}/training` (Decision 066)
 
 `POST /purchase` requires Marketplace OPEN, sufficient USER_AVAILABLE balance, and Idempotency-Key. It creates immediate fund locking.
 
@@ -46,20 +47,32 @@ All public APIs are versioned:
 
 `POST /wallet/deposit` creates or returns deposit instructions for USDT. Deposit credit occurs only after blockchain watcher confirmation and Ledger transaction.
 
-`POST /wallet/withdraw` requires Idempotency-Key, minimum withdrawal of 10 USDT, sufficient USER_AVAILABLE balance, and Ledger fund lock before blockchain broadcast.
+`POST /wallet/withdraw` requires Idempotency-Key, minimum withdrawal of 10 USDT (at most 6 decimal places, Decision 064), sufficient USER_AVAILABLE balance, and Ledger fund lock before blockchain broadcast.
+
+`POST /horses/{id}/training` (Decision 066) selects the daily training (SPEED_TRAINING / POWER_TRAINING / RECOVERY_TRAINING). One training per horse per effective_race_date; owner only; rejected with MARKETPLACE_LOCKED after Batch Lock (the day's intake closes); while open it applies to the next race to run. Errors: HORSE_NOT_FOUND, NOT_HORSE_OWNER, TRAINING_ALREADY_EXISTS, RACE_SNAPSHOT_ALREADY_CREATED, INVALID_TRAINING_TYPE, MARKETPLACE_LOCKED.
 
 ## Admin APIs
 
 - GET `/api/v1/admin/dashboard`
 - GET `/api/v1/admin/batches`
 - POST `/api/v1/admin/batches/{id}/retry`
+- GET `/api/v1/admin/recovery` (Decision 067)
+- GET `/api/v1/admin/recovery/{id}` (Decision 067)
 - POST `/api/v1/admin/recovery/{id}/approve`
+- POST `/api/v1/admin/recovery/{id}/execute` (Decision 067)
+- GET `/api/v1/admin/withdrawals` (Decision 060)
+- POST `/api/v1/admin/withdrawals/{id}/approve` (Decision 060)
+- POST `/api/v1/admin/withdrawals/{id}/reject` (Decision 060)
 - GET `/api/v1/admin/audit`
 - GET `/api/v1/admin/liquidity/reports`
 - GET `/api/v1/admin/stress-tests`
 - GET `/api/v1/admin/policies`
 
-Admin recovery and retry require role validation and audit. Dual approval is required for recovery.
+Admin recovery and retry require role validation and audit. Dual approval is required for recovery and for releasing large withdrawals (Decision 060: one FINANCE_ADMIN + one SUPER_ADMIN, two distinct persons).
+
+## Notifications v1.0 (Decision 065)
+
+In-App only. Types: DEPOSIT_CONFIRMED, ASSIGNMENT_COMPLETED, TRAINING_COMPLETED, RACE_RESULT_READY, HORSE_BURNED, REVENGE_BUFF_GENERATED, BUYBACK_PAYMENT_PAID, BUYBACK_COMPLETED, MEMORIAL_NFT_MINTED, WITHDRAWAL_COMPLETED, WITHDRAWAL_FAILED, MARKETPLACE_LOCKED, MARKETPLACE_REOPENED. Fixed Japanese templates live in the Decision Log / packages/domain.
 
 ## Internal APIs
 

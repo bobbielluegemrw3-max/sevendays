@@ -23,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link href="/admin">ダッシュボード</Link>
         <Link href="/admin/batches">バッチ</Link>
         <Link href="/admin/withdrawals">出金レビュー</Link>
+        <Link href="/admin/recovery">リカバリ</Link>
         <Link href="/admin/audit">監査ログ</Link>
       </nav>
       {children}

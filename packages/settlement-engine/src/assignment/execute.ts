@@ -1,6 +1,6 @@
-import { Money, generateSecureSeedHex, sha256Hex, sha256Parts } from '@sevendays/shared';
+import { Money, generateSecureSeedHex, insertNotification, sha256Hex, sha256Parts } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import { DAY0_MINT_PRICE } from '@sevendays/domain';
+import { DAY0_MINT_PRICE, renderNotification } from '@sevendays/domain';
 import {
   assignmentSettlement,
   day0MintSettlement,
@@ -193,6 +193,24 @@ async function completeSettlement(
      where user_id = $1 and status = 'ACTIVE'`,
     [buyerUserId, assignment.horse_id],
   );
+
+  // In-App notification (Decision 065) — BEFORE the final marker so a crash
+  // re-runs this idempotently (dedupe key) while the session is still open.
+  const horse = await client.query<{ name: string; current_day: number }>(
+    `select name, current_day from horses where id = $1`,
+    [assignment.horse_id],
+  );
+  const rendered = renderNotification('ASSIGNMENT_COMPLETED', {
+    horse_name: horse.rows[0]?.name ?? '',
+    current_day: horse.rows[0]?.current_day ?? 0,
+    price: price.toFixed8(),
+  });
+  await insertNotification(client, {
+    userId: buyerUserId,
+    type: 'ASSIGNMENT_COMPLETED',
+    dedupeKey: `notif:ASSIGNMENT_COMPLETED:${sessionId}`,
+    payload: { ...rendered, horse_id: assignment.horse_id, price: price.toFixed8() },
+  });
 
   // 5. Final marker.
   await client.query(

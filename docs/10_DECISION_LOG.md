@@ -138,6 +138,19 @@ Implementation note: Bloodline maps to the name generator's bloodline component 
 
 064. Withdrawal amount decimals are restricted to 6 decimal places at the API (POST /wallet/withdraw). Rationale: Polygon USDT has 6 on-chain decimals; accepting 8 creates unrepresentable amounts. The broadcaster keeps its refund-on-unrepresentable guard as defense in depth.
 
+## Decision 065 (2026-07-03, Owner)
+
+065. Notification specification v1.0 (resolves E17). Channel: In-App notifications ONLY (Email / Push / Telegram / LINE are future scope). Thirteen notification types are adopted: DEPOSIT_CONFIRMED, ASSIGNMENT_COMPLETED, TRAINING_COMPLETED, RACE_RESULT_READY, HORSE_BURNED, REVENGE_BUFF_GENERATED, BUYBACK_PAYMENT_PAID, BUYBACK_COMPLETED, MEMORIAL_NFT_MINTED, WITHDRAWAL_COMPLETED, WITHDRAWAL_FAILED, MARKETPLACE_LOCKED, MARKETPLACE_REOPENED. The Japanese title/body templates fixed by the owner are recorded verbatim in packages/domain (NOTIFICATION_TEMPLATES_V1) with {placeholder} interpolation.
+Implementation note: notifications are emitted at each event site with a deterministic dedupe_key (unique index) so batch retries and crash re-runs can never duplicate a notification. MARKETPLACE_LOCKED / MARKETPLACE_REOPENED are single broadcast rows (user_id null, readable by all authenticated users) rather than per-user fan-out.
+
+## Decision 066 (2026-07-03, Owner)
+
+066. Training API added to 07_API.md: POST /api/v1/horses/{id}/training with body { training_type: SPEED_TRAINING | POWER_TRAINING | RECOVERY_TRAINING }. Rules: one training per horse per effective_race_date (DB-enforced); only the horse's owner may train; training never permanently modifies ability. Timing (v1.0, owner): while the marketplace is LOCKED (Batch Lock onward) the day's intake is CLOSED — the request is rejected with MARKETPLACE_LOCKED to avoid confusion. While OPEN, the training applies to the next race to run: today's race if today's batch has not completed yet, otherwise tomorrow's. Errors: HORSE_NOT_FOUND, NOT_HORSE_OWNER, TRAINING_ALREADY_EXISTS, RACE_SNAPSHOT_ALREADY_CREATED, INVALID_TRAINING_TYPE, MARKETPLACE_LOCKED.
+
+## Decision 067 (2026-07-03, Owner)
+
+067. Admin Recovery API surface added to 07_API.md: GET /api/v1/admin/recovery (list), GET /api/v1/admin/recovery/{id} (detail including recovery_logs), POST /api/v1/admin/recovery/{id}/approve (existing), POST /api/v1/admin/recovery/{id}/execute. Auth: Admin JWT + role (FINANCE_ADMIN / SUPER_ADMIN). Rules unchanged from the constitution: dual approval by two distinct admins; recovery can never mutate posted ledger entries, rerun a race with changed inputs, or replace a seed/snapshot; every action writes recovery_logs. Errors: RECOVERY_NOT_FOUND, RECOVERY_ALREADY_APPROVED, RECOVERY_REQUIRES_DUAL_APPROVAL, INVALID_RECOVERY_STATE, FORBIDDEN.
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:

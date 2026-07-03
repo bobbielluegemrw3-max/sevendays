@@ -1,4 +1,5 @@
-import { Money, type SqlClient } from '@sevendays/shared';
+import { Money, insertNotification, type SqlClient } from '@sevendays/shared';
+import { renderNotification } from '@sevendays/domain';
 import { depositConfirmation } from '@sevendays/ledger';
 import type { ChainClient, TokenTransfer } from './types.js';
 import type { ChainConfig } from './config.js';
@@ -188,6 +189,18 @@ async function creditConfirmedDeposits(
       idempotencyKey: `deposit:${config.chainId}:${row.tx_hash}`,
       referenceType: 'blockchain_deposit',
       referenceId: row.id,
+    });
+    // Notify BEFORE the CREDITED marker (Decision 065): a crash re-runs
+    // this row and both the ledger and the notification replay idempotently.
+    await insertNotification(client, {
+      userId: row.user_id,
+      type: 'DEPOSIT_CONFIRMED',
+      dedupeKey: `notif:DEPOSIT_CONFIRMED:${config.chainId}:${row.tx_hash}`,
+      payload: {
+        ...renderNotification('DEPOSIT_CONFIRMED', { amount: row.amount }),
+        amount: row.amount,
+        tx_hash: row.tx_hash,
+      },
     });
     await client.query(
       `update blockchain_deposits

@@ -1,5 +1,6 @@
+import { insertNotification } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import type { MarketplaceState } from '@sevendays/domain';
+import { renderNotification, type MarketplaceState } from '@sevendays/domain';
 
 /**
  * Marketplace state control (05_SETTLEMENT_ENGINE.md):
@@ -27,6 +28,13 @@ export async function lockMarketplace(client: SqlClient, batchRunId: string): Pr
     `update batch_runs set marketplace_locked_at = now() where id = $1 and marketplace_locked_at is null`,
     [batchRunId],
   );
+  // Broadcast notification (Decision 065): one row for everyone.
+  await insertNotification(client, {
+    userId: null,
+    type: 'MARKETPLACE_LOCKED',
+    dedupeKey: `notif:MARKETPLACE_LOCKED:${batchRunId}`,
+    payload: { ...renderNotification('MARKETPLACE_LOCKED'), batch_run_id: batchRunId },
+  });
 }
 
 export async function reopenMarketplace(client: SqlClient, batchRunId: string): Promise<void> {
@@ -36,4 +44,10 @@ export async function reopenMarketplace(client: SqlClient, batchRunId: string): 
      where id = true and (locked_by_batch_run_id = $1 or locked_by_batch_run_id is null)`,
     [batchRunId],
   );
+  await insertNotification(client, {
+    userId: null,
+    type: 'MARKETPLACE_REOPENED',
+    dedupeKey: `notif:MARKETPLACE_REOPENED:${batchRunId}`,
+    payload: { ...renderNotification('MARKETPLACE_REOPENED'), batch_run_id: batchRunId },
+  });
 }

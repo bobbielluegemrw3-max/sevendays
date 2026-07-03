@@ -1,10 +1,16 @@
 import { z } from 'zod';
-import { Money } from '@sevendays/shared';
-import { MIN_WITHDRAWAL_AMOUNT, DEFAULT_CHAIN } from '@sevendays/domain';
+import { Money, batchDateFor, addDays, insertNotification } from '@sevendays/shared';
+import {
+  MIN_WITHDRAWAL_AMOUNT,
+  DEFAULT_CHAIN,
+  TRAINING_TYPES,
+  renderNotification,
+} from '@sevendays/domain';
 import { ensureUserAccounts, getBalance, withdrawalFundLock } from '@sevendays/ledger';
 import {
   cancelPurchaseSession,
   createPurchaseSession,
+  getMarketplaceState,
   verifyReplayInputs,
 } from '@sevendays/settlement-engine';
 import { ApiError } from '../errors.js';
@@ -151,6 +157,86 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       );
       if (!rows.rows[0]) throw new ApiError('NOT_FOUND', 'Horse not found');
       return rows.rows[0];
+    },
+  });
+
+  // Daily training selection (Decision 066). One per horse per
+  // effective_race_date (DB unique); the day's intake closes at Batch Lock.
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/horses/:id/training',
+    auth: 'user',
+    input: z.object({ training_type: z.string() }),
+    handler: async (ctx, input) => {
+      if (!(TRAINING_TYPES as readonly string[]).includes(input.training_type)) {
+        throw new ApiError(
+          'INVALID_TRAINING_TYPE',
+          `training_type must be one of: ${TRAINING_TYPES.join(', ')}`,
+        );
+      }
+      const horse = await ctx.client.query<{ owner_user_id: string; name: string }>(
+        `select owner_user_id, name from horses where id = $1`,
+        [ctx.params.id],
+      );
+      if (!horse.rows[0]) throw new ApiError('HORSE_NOT_FOUND', 'Horse not found');
+      if (horse.rows[0].owner_user_id !== ctx.userId) {
+        throw new ApiError('NOT_HORSE_OWNER', 'Only the owner can train this horse');
+      }
+
+      if ((await getMarketplaceState(ctx.client)) !== 'OPEN') {
+        throw new ApiError('MARKETPLACE_LOCKED', "Training intake is closed during Daily Settlement");
+      }
+
+      // While OPEN the training targets the next race to run: today's race
+      // unless today's batch already completed (post-race evening).
+      const today = batchDateFor(new Date());
+      const completedToday = await ctx.client.query(
+        `select 1 from batch_runs where batch_date = $1 and status = 'COMPLETED'`,
+        [today],
+      );
+      const effectiveRaceDate = completedToday.rows[0] ? addDays(today, 1) : today;
+
+      const snapshot = await ctx.client.query(
+        `select 1
+         from race_participant_snapshots s
+         join races r on r.id = s.race_id
+         join batch_runs b on b.id = r.batch_run_id
+         where s.horse_id = $1 and b.batch_date = $2`,
+        [ctx.params.id, effectiveRaceDate],
+      );
+      if (snapshot.rows[0]) {
+        throw new ApiError('RACE_SNAPSHOT_ALREADY_CREATED', 'The race snapshot is already frozen');
+      }
+
+      try {
+        await ctx.client.query(
+          `insert into training_sessions (horse_id, user_id, training_type, training_date, effective_race_date)
+           values ($1, $2, $3::training_type, $4, $5)`,
+          [ctx.params.id, ctx.userId, input.training_type, today, effectiveRaceDate],
+        );
+      } catch (error) {
+        if (/uq_training_horse_race_date|duplicate key/i.test((error as Error).message)) {
+          throw new ApiError('TRAINING_ALREADY_EXISTS', 'This horse already trained for that race');
+        }
+        throw error;
+      }
+
+      const rendered = renderNotification('TRAINING_COMPLETED', {
+        horse_name: horse.rows[0].name,
+        training_type: input.training_type,
+      });
+      await insertNotification(ctx.client, {
+        userId: ctx.userId,
+        type: 'TRAINING_COMPLETED',
+        dedupeKey: `notif:TRAINING_COMPLETED:${ctx.params.id}:${effectiveRaceDate}`,
+        payload: { ...rendered, horse_id: ctx.params.id, training_type: input.training_type },
+      });
+
+      return {
+        horse_id: ctx.params.id,
+        training_type: input.training_type,
+        effective_race_date: effectiveRaceDate,
+      };
     },
   });
 
@@ -348,7 +434,9 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     handler: async (ctx) => {
       const rows = await ctx.client.query(
         `select id, notification_type, payload_json, read_at::text as read_at, created_at::text as created_at
-         from notifications where user_id = $1 order by created_at desc limit 50`,
+         from notifications
+         where user_id = $1 or user_id is null -- broadcasts (Decision 065)
+         order by created_at desc limit 50`,
         [ctx.userId],
       );
       return { notifications: rows.rows };

@@ -4,6 +4,7 @@ import { createTestDb } from '@sevendays/database';
 import { Money } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
 import { depositConfirmation } from '@sevendays/ledger';
+import { requestRecovery } from '@sevendays/settlement-engine';
 import {
   buildApiRegistry,
   generateOpenApi,
@@ -374,5 +375,169 @@ describe('large-withdrawal admin review (Decisions 060, 064)', () => {
     const wallet = await call('GET', '/api/v1/wallet', asUser(user));
     // 5000 - 1500 (still locked, released for broadcast) + 1200 refunded
     expect((wallet.body as { available: string }).available).toBe('3500.00000000');
+  });
+});
+
+describe('training (Decision 066)', () => {
+  async function newHorseFor(owner: string): Promise<string> {
+    const r = await client.query<{ id: string }>(
+      `insert into horses (owner_user_id, current_day, name, horse_type, rarity, dna_hash, dna_modifier,
+                           horse_generation_version, mint_seed_hash, ability_json)
+       values ($1, 2, $2, 'SPRINTER', 'COMMON', $3, 0.50, 'horse_generation_v1.0', $4, $5)
+       returning id`,
+      [
+        owner,
+        `Training Target ${randomUUID().slice(0, 12)}`,
+        randomUUID().replaceAll('-', ''),
+        randomUUID().replaceAll('-', ''),
+        JSON.stringify({ speed: 75, power: 75, stamina: 75, recovery: 75, luck: 75 }),
+      ],
+    );
+    return r.rows[0]!.id;
+  }
+
+  it('one training per race date, owner-only, closed while locked, notifies', async () => {
+    const owner = await newUser();
+    const stranger = await newUser();
+    const horseId = await newHorseFor(owner);
+
+    const invalid = await call('POST', `/api/v1/horses/${horseId}/training`, asUser(owner), {
+      body: { training_type: 'SWIMMING' },
+    });
+    expect(invalid.status).toBe(400);
+    expect((invalid.body as { error: { code: string } }).error.code).toBe('INVALID_TRAINING_TYPE');
+
+    const notOwner = await call('POST', `/api/v1/horses/${horseId}/training`, asUser(stranger), {
+      body: { training_type: 'SPEED_TRAINING' },
+    });
+    expect(notOwner.status).toBe(403);
+    expect((notOwner.body as { error: { code: string } }).error.code).toBe('NOT_HORSE_OWNER');
+
+    const missing = await call('POST', `/api/v1/horses/${randomUUID()}/training`, asUser(owner), {
+      body: { training_type: 'SPEED_TRAINING' },
+    });
+    expect(missing.status).toBe(404);
+
+    const ok = await call('POST', `/api/v1/horses/${horseId}/training`, asUser(owner), {
+      body: { training_type: 'SPEED_TRAINING' },
+    });
+    expect(ok.status).toBe(200);
+    const okBody = ok.body as { training_type: string; effective_race_date: string };
+    expect(okBody.training_type).toBe('SPEED_TRAINING');
+    expect(okBody.effective_race_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    // In-App notification emitted (Decision 065).
+    const notifications = await call('GET', '/api/v1/notifications', asUser(owner));
+    const list = (notifications.body as { notifications: { notification_type: string }[] }).notifications;
+    expect(list.some((n) => n.notification_type === 'TRAINING_COMPLETED')).toBe(true);
+
+    // Second training for the same effective race date is rejected.
+    const duplicate = await call('POST', `/api/v1/horses/${horseId}/training`, asUser(owner), {
+      body: { training_type: 'POWER_TRAINING' },
+    });
+    expect(duplicate.status).toBe(409);
+    expect((duplicate.body as { error: { code: string } }).error.code).toBe('TRAINING_ALREADY_EXISTS');
+
+    // Batch Lock closes the intake (v1.0 rule).
+    await client.query(`update marketplace_status set state = 'MARKET_LOCKED' where id = true`);
+    try {
+      const horse2 = await newHorseFor(owner);
+      const locked = await call('POST', `/api/v1/horses/${horse2}/training`, asUser(owner), {
+        body: { training_type: 'RECOVERY_TRAINING' },
+      });
+      expect(locked.status).toBe(409);
+      expect((locked.body as { error: { code: string } }).error.code).toBe('MARKETPLACE_LOCKED');
+    } finally {
+      await client.query(`update marketplace_status set state = 'OPEN' where id = true`);
+    }
+  });
+});
+
+describe('admin recovery surface (Decision 067)', () => {
+  function asAdmin(userId: string, roles: string[]): AuthContext {
+    return { kind: 'admin', userId, roles };
+  }
+
+  async function newAdmin(role: 'FINANCE_ADMIN' | 'SUPER_ADMIN'): Promise<string> {
+    const id = await newUser();
+    await client.query(`insert into admin_role_grants (user_id, role) values ($1, $2)`, [id, role]);
+    return id;
+  }
+
+  it('lists and details recoveries; guards dual approval and execution state', async () => {
+    const financeAdmin = await newAdmin('FINANCE_ADMIN');
+    const superAdmin = await newAdmin('SUPER_ADMIN');
+    const thirdAdmin = await newAdmin('SUPER_ADMIN');
+
+    const batch = await client.query<{ id: string }>(
+      `insert into batch_runs (batch_date, batch_algorithm_version, status, failed_at)
+       values ('2032-01-01', 'batch_v1.0', 'FAILED', now()) returning id`,
+    );
+    const recoveryId = await requestRecovery(client, {
+      batchRunId: batch.rows[0]!.id,
+      reason: 'api surface test',
+      requestedBy: financeAdmin,
+    });
+
+    const list = await call('GET', '/api/v1/admin/recovery', asAdmin(financeAdmin, ['FINANCE_ADMIN']));
+    expect(list.status).toBe(200);
+    const rows = (list.body as { recoveries: { id: string; approval_status: string }[] }).recoveries;
+    expect(rows.some((r) => r.id === recoveryId)).toBe(true);
+
+    const detail = await call(
+      'GET',
+      `/api/v1/admin/recovery/${recoveryId}`,
+      asAdmin(financeAdmin, ['FINANCE_ADMIN']),
+    );
+    expect(detail.status).toBe(200);
+    const detailBody = detail.body as { approval_status: string; logs: { action: string }[] };
+    expect(detailBody.approval_status).toBe('PENDING');
+    expect(detailBody.logs.some((l) => l.action === 'REQUESTED')).toBe(true);
+
+    // Execute before dual approval is refused.
+    const early = await call(
+      'POST',
+      `/api/v1/admin/recovery/${recoveryId}/execute`,
+      asAdmin(superAdmin, ['SUPER_ADMIN']),
+      { idempotencyKey: randomUUID() },
+    );
+    expect(early.status).toBe(403);
+    expect((early.body as { error: { code: string } }).error.code).toBe('RECOVERY_REQUIRES_DUAL_APPROVAL');
+
+    const first = await call(
+      'POST',
+      `/api/v1/admin/recovery/${recoveryId}/approve`,
+      asAdmin(financeAdmin, ['FINANCE_ADMIN']),
+      { idempotencyKey: randomUUID() },
+    );
+    expect(first.status).toBe(200);
+    expect((first.body as { approval_status: string }).approval_status).toBe('PENDING');
+
+    const second = await call(
+      'POST',
+      `/api/v1/admin/recovery/${recoveryId}/approve`,
+      asAdmin(superAdmin, ['SUPER_ADMIN']),
+      { idempotencyKey: randomUUID() },
+    );
+    expect(second.status).toBe(200);
+    expect((second.body as { approval_status: string }).approval_status).toBe('APPROVED');
+
+    // A third approval after APPROVED is refused (Decision 067 error code).
+    const third = await call(
+      'POST',
+      `/api/v1/admin/recovery/${recoveryId}/approve`,
+      asAdmin(thirdAdmin, ['SUPER_ADMIN']),
+      { idempotencyKey: randomUUID() },
+    );
+    expect(third.status).toBe(409);
+    expect((third.body as { error: { code: string } }).error.code).toBe('RECOVERY_ALREADY_APPROVED');
+
+    const missing = await call(
+      'POST',
+      `/api/v1/admin/recovery/${randomUUID()}/approve`,
+      asAdmin(financeAdmin, ['FINANCE_ADMIN']),
+      { idempotencyKey: randomUUID() },
+    );
+    expect(missing.status).toBe(404);
   });
 });

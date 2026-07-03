@@ -1,6 +1,6 @@
-import { sha256Parts } from '@sevendays/shared';
+import { insertNotification, sha256Parts } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import type { EconomyStatus } from '@sevendays/domain';
+import { renderNotification, type EconomyStatus } from '@sevendays/domain';
 import {
   burnTargetCount,
   rankParticipants,
@@ -163,6 +163,42 @@ export async function finalizeAndBurn(
       });
       if (!payment.alreadyPosted) mlmPaymentsMade += 1;
     }
+  }
+
+  // In-App notifications (Decision 065): results per participant, burn +
+  // buff per burned owner. Deterministic dedupe keys — retries converge.
+  const names = await client.query<{ id: string; name: string }>(
+    `select id, name from horses where id = any($1)`,
+    [ranking.map((r) => r.horseUuid)],
+  );
+  const nameById = new Map(names.rows.map((r) => [r.id, r.name]));
+  for (const r of ranking) {
+    const rendered = renderNotification('RACE_RESULT_READY', {
+      horse_name: nameById.get(r.horseUuid) ?? '',
+    });
+    await insertNotification(client, {
+      userId: ownerByHorse.get(r.horseUuid)!,
+      type: 'RACE_RESULT_READY',
+      dedupeKey: `notif:RACE_RESULT_READY:${input.raceId}:${r.horseUuid}`,
+      payload: { ...rendered, race_id: input.raceId, horse_id: r.horseUuid },
+    });
+  }
+  for (const horseId of burnTargets) {
+    const ownerId = ownerByHorse.get(horseId)!;
+    const burned = renderNotification('HORSE_BURNED', { horse_name: nameById.get(horseId) ?? '' });
+    await insertNotification(client, {
+      userId: ownerId,
+      type: 'HORSE_BURNED',
+      dedupeKey: `notif:HORSE_BURNED:${input.raceId}:${horseId}`,
+      payload: { ...burned, horse_id: horseId },
+    });
+    const buff = renderNotification('REVENGE_BUFF_GENERATED');
+    await insertNotification(client, {
+      userId: ownerId,
+      type: 'REVENGE_BUFF_GENERATED',
+      dedupeKey: `notif:REVENGE_BUFF_GENERATED:${uuidFromParts(input.raceId, horseId, 'burn_event')}`,
+      payload: { ...buff },
+    });
   }
 
   await client.query(

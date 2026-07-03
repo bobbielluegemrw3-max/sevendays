@@ -24,7 +24,7 @@ export async function withSqlClient<T>(fn: (client: SqlClient) => Promise<T>): P
   try {
     const client: SqlClient = {
       async query<R>(sql: string, params?: unknown[]): Promise<QueryResult<R>> {
-        const result = await connection.query(sql, params as unknown[] | undefined);
+        const result = await connection.query(sql, params);
         return { rows: result.rows as R[], affectedRows: result.rowCount ?? 0 };
       },
     };

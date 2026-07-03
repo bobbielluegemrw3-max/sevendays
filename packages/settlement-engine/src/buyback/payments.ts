@@ -1,5 +1,6 @@
-import { Money } from '@sevendays/shared';
+import { Money, insertNotification } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
+import { renderNotification } from '@sevendays/domain';
 import { buybackPayment } from '@sevendays/ledger';
 
 /**
@@ -43,6 +44,15 @@ export async function processDueBuybackPayments(
       referenceType: 'buyback_schedule_payment',
       referenceId: payment.id,
     });
+    // Notify BEFORE the PAID marker: a crash re-selects the row and the
+    // dedupe key absorbs the replay (Decision 065).
+    const rendered = renderNotification('BUYBACK_PAYMENT_PAID', { amount: payment.amount });
+    await insertNotification(client, {
+      userId: payment.user_id,
+      type: 'BUYBACK_PAYMENT_PAID',
+      dedupeKey: `notif:BUYBACK_PAYMENT_PAID:${payment.buyback_schedule_id}:${payment.payment_number}`,
+      payload: { ...rendered, buyback_schedule_id: payment.buyback_schedule_id, payment_number: payment.payment_number },
+    });
     await client.query(
       `update buyback_schedule_payments
        set status = 'PAID', ledger_transaction_id = $2, paid_at = now()
@@ -52,7 +62,23 @@ export async function processDueBuybackPayments(
     if (!posted.alreadyPosted) paymentsMade += 1;
   }
 
-  // Complete schedules whose 7 payments are all PAID.
+  // Complete schedules whose 7 payments are all PAID — notify first so a
+  // crash between notify and update converges on the next run.
+  const toComplete = await client.query<{ id: string; user_id: string }>(
+    `select s.id, s.user_id from buyback_schedules s
+     where s.status <> 'COMPLETED'
+       and (select count(*) from buyback_schedule_payments p
+            where p.buyback_schedule_id = s.id and p.status = 'PAID') = 7`,
+  );
+  for (const schedule of toComplete.rows) {
+    const rendered = renderNotification('BUYBACK_COMPLETED');
+    await insertNotification(client, {
+      userId: schedule.user_id,
+      type: 'BUYBACK_COMPLETED',
+      dedupeKey: `notif:BUYBACK_COMPLETED:${schedule.id}`,
+      payload: { ...rendered, buyback_schedule_id: schedule.id },
+    });
+  }
   const completed = await client.query(
     `update buyback_schedules s
      set status = 'COMPLETED', completed_at = now()

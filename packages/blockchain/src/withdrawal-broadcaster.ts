@@ -1,5 +1,5 @@
-import { Money, type SqlClient } from '@sevendays/shared';
-import { WITHDRAWAL_ADMIN_REVIEW_THRESHOLD, type AdminRole } from '@sevendays/domain';
+import { Money, insertNotification, type SqlClient } from '@sevendays/shared';
+import { WITHDRAWAL_ADMIN_REVIEW_THRESHOLD, renderNotification, type AdminRole } from '@sevendays/domain';
 import { withdrawalRejectionRefund } from '@sevendays/ledger';
 import { isAddress } from 'viem';
 import type { ChainClient, WithdrawalSigner } from './types.js';
@@ -68,6 +68,7 @@ interface WithdrawalRow {
   user_id: string;
   to_address: string;
   requested_amount: string;
+  net_amount: string;
   tx_hash: string | null;
   raw_tx: string | null;
 }
@@ -111,6 +112,13 @@ async function refundAndClose(
     idempotencyKey: `wdrefund:${row.id}`,
     referenceType: 'blockchain_withdrawal',
     referenceId: row.id,
+  });
+  // Notify before the status marker (Decision 065): replays dedupe away.
+  await insertNotification(client, {
+    userId: row.user_id,
+    type: 'WITHDRAWAL_FAILED',
+    dedupeKey: `notif:WITHDRAWAL_FAILED:${row.id}`,
+    payload: { ...renderNotification('WITHDRAWAL_FAILED'), withdrawal_id: row.id, reason: action },
   });
   await client.query(`update blockchain_withdrawals set status = $2 where id = $1`, [row.id, status]);
   await audit(client, actor, action, row.id);
@@ -209,7 +217,7 @@ export async function rejectWithdrawal(
   args: { withdrawalId: string; adminUserId: string },
 ): Promise<void> {
   const rows = await client.query<WithdrawalRow>(
-    `select id, user_id, to_address, requested_amount::text as requested_amount, tx_hash, raw_tx
+    `select id, user_id, to_address, requested_amount::text as requested_amount, net_amount::text as net_amount, tx_hash, raw_tx
      from blockchain_withdrawals where id = $1 and status = 'ADMIN_REVIEW'`,
     [args.withdrawalId],
   );
@@ -297,7 +305,7 @@ async function broadcastLockedWithdrawals(
   // row inserted by the API between routing and this select would
   // otherwise bypass the Decision 060 review entirely.
   const batch = await client.query<WithdrawalRow>(
-    `select id, user_id, to_address, requested_amount::text as requested_amount, tx_hash, raw_tx
+    `select id, user_id, to_address, requested_amount::text as requested_amount, net_amount::text as net_amount, tx_hash, raw_tx
      from blockchain_withdrawals
      where chain_id = $1 and status = 'LOCKED'
        and ($2::numeric is null or requested_amount < $2::numeric or review_approved_at is not null)
@@ -393,7 +401,7 @@ async function confirmBroadcastWithdrawals(
 ): Promise<void> {
   const confirmations = BigInt(policy.confirmationBlocks ?? config.confirmationBlocks);
   const pending = await client.query<WithdrawalRow>(
-    `select id, user_id, to_address, requested_amount::text as requested_amount, tx_hash, raw_tx
+    `select id, user_id, to_address, requested_amount::text as requested_amount, net_amount::text as net_amount, tx_hash, raw_tx
      from blockchain_withdrawals
      where chain_id = $1 and status = 'BROADCAST'
      order by broadcast_at, id`,
@@ -423,6 +431,16 @@ async function confirmBroadcastWithdrawals(
     if (latest - status.blockNumber + 1n < confirmations) continue;
 
     if (status.kind === 'SUCCESS') {
+      await insertNotification(client, {
+        userId: row.user_id,
+        type: 'WITHDRAWAL_COMPLETED',
+        dedupeKey: `notif:WITHDRAWAL_COMPLETED:${row.id}`,
+        payload: {
+          ...renderNotification('WITHDRAWAL_COMPLETED', { amount: row.net_amount }),
+          withdrawal_id: row.id,
+          tx_hash: row.tx_hash,
+        },
+      });
       await client.query(
         `update blockchain_withdrawals set status = 'CONFIRMED', confirmed_at = now() where id = $1`,
         [row.id],

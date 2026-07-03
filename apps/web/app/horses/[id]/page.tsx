@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { serverApi } from '@/lib/server-api';
+import { TrainingForm } from '@/components/TrainingForm';
 
 interface HorseDetail {
   id: string;
@@ -40,6 +41,15 @@ export default async function HorseDetailPage({ params }: { params: Promise<{ id
           </div>
         ))}
       </div>
+
+      {horse.status === 'ACTIVE' ? (
+        <>
+          <h2>トレーニング</h2>
+          <div className="panel">
+            <TrainingForm horseId={horse.id} />
+          </div>
+        </>
+      ) : null}
 
       <h2>ステータス</h2>
       <div className="panel">

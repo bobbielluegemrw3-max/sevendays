@@ -5,7 +5,12 @@ import {
 } from '@sevendays/economy-engine';
 import { ADMIN_ROLES } from '@sevendays/domain';
 import { approveWithdrawal, rejectWithdrawal } from '@sevendays/blockchain';
-import { approveRecovery, runBatch, buildProductionHandlers } from '@sevendays/settlement-engine';
+import {
+  approveRecovery,
+  executeRecovery,
+  runBatch,
+  buildProductionHandlers,
+} from '@sevendays/settlement-engine';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry, HandlerContext } from '../router.js';
 
@@ -92,6 +97,54 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
     },
   });
 
+  // Recovery surface (Decision 067): list / detail / approve / execute.
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/admin/recovery',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const rows = await ctx.client.query(
+        `select r.id, r.batch_run_id, b.batch_date::text as batch_date,
+                b.status::text as batch_status, r.recovery_reason,
+                r.approval_status::text as approval_status,
+                r.approved_by_1, r.approved_by_2,
+                r.created_at::text as created_at, r.completed_at::text as completed_at
+         from recovery_snapshots r
+         join batch_runs b on b.id = r.batch_run_id
+         order by r.created_at desc limit 50`,
+      );
+      return { recoveries: rows.rows };
+    },
+  });
+
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/admin/recovery/:id',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const rows = await ctx.client.query(
+        `select r.id, r.batch_run_id, b.batch_date::text as batch_date,
+                b.status::text as batch_status, r.recovery_reason,
+                r.approval_status::text as approval_status,
+                r.approved_by_1, r.approved_by_2, r.before_snapshot_hash, r.after_snapshot_hash,
+                r.created_at::text as created_at, r.completed_at::text as completed_at
+         from recovery_snapshots r
+         join batch_runs b on b.id = r.batch_run_id
+         where r.id = $1`,
+        [ctx.params.id],
+      );
+      if (!rows.rows[0]) throw new ApiError('RECOVERY_NOT_FOUND', 'Recovery not found');
+      const logs = await ctx.client.query(
+        `select actor_user_id, action, step_key, reason, result, created_at::text as created_at
+         from recovery_logs where recovery_snapshot_id = $1 order by created_at`,
+        [ctx.params.id],
+      );
+      return { ...rows.rows[0], logs: logs.rows };
+    },
+  });
+
   registry.register({
     method: 'POST',
     path: '/api/v1/admin/recovery/:id/approve',
@@ -99,12 +152,52 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
     idempotencyKeyRequired: true,
     handler: async (ctx) => {
       requireAdminRole(ctx);
+      const current = await ctx.client.query<{ approval_status: string }>(
+        `select approval_status::text as approval_status from recovery_snapshots where id = $1`,
+        [ctx.params.id],
+      );
+      if (!current.rows[0]) throw new ApiError('RECOVERY_NOT_FOUND', 'Recovery not found');
+      if (current.rows[0].approval_status === 'APPROVED') {
+        throw new ApiError('RECOVERY_ALREADY_APPROVED', 'Recovery is already fully approved');
+      }
       const result = await approveRecovery(ctx.client, {
         recoveryId: ctx.params.id!,
         approverUserId: ctx.userId,
       });
       await audit(ctx, 'ADMIN_RECOVERY_APPROVE', 'recovery_snapshot', ctx.params.id!);
       return { approval_status: result.approvalStatus };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/recovery/:id/execute',
+    auth: 'admin',
+    idempotencyKeyRequired: true,
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const current = await ctx.client.query<{ approval_status: string; completed_at: string | null }>(
+        `select approval_status::text as approval_status, completed_at::text as completed_at
+         from recovery_snapshots where id = $1`,
+        [ctx.params.id],
+      );
+      if (!current.rows[0]) throw new ApiError('RECOVERY_NOT_FOUND', 'Recovery not found');
+      if (current.rows[0].completed_at !== null) {
+        throw new ApiError('INVALID_RECOVERY_STATE', 'Recovery already completed');
+      }
+      if (current.rows[0].approval_status !== 'APPROVED') {
+        throw new ApiError(
+          'RECOVERY_REQUIRES_DUAL_APPROVAL',
+          'Recovery must be approved by two distinct admins before execution',
+        );
+      }
+      await audit(ctx, 'ADMIN_RECOVERY_EXECUTE', 'recovery_snapshot', ctx.params.id!);
+      const result = await executeRecovery(ctx.client, {
+        recoveryId: ctx.params.id!,
+        executedBy: ctx.userId,
+        handlers: buildProductionHandlers(),
+      });
+      return { batch_run_id: result.batchRunId, status: result.status };
     },
   });
 

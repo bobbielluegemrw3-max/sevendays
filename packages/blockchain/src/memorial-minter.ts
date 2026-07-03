@@ -1,4 +1,5 @@
-import type { SqlClient } from '@sevendays/shared';
+import { insertNotification, type SqlClient } from '@sevendays/shared';
+import { renderNotification } from '@sevendays/domain';
 import type { ChainConfig } from './config.js';
 
 /**
@@ -56,8 +57,12 @@ export async function processMemorialMints(
   config: ChainConfig,
   options: { custodyAddress: string; maxPerRun?: number },
 ): Promise<MemorialMintRunResult> {
-  const pending = await client.query<{ id: string; metadata_json: Record<string, unknown> }>(
-    `select id, metadata_json from memorial_nfts
+  const pending = await client.query<{
+    id: string;
+    user_id: string;
+    metadata_json: Record<string, unknown>;
+  }>(
+    `select id, user_id, metadata_json from memorial_nfts
      where mint_tx_hash is null
      order by created_at, id
      limit $1`,
@@ -72,6 +77,18 @@ export async function processMemorialMints(
       to: options.custodyAddress,
       tokenId,
       metadata: row.metadata_json,
+    });
+    // Notify before the mint record (Decision 065); replays dedupe away.
+    const horseName = typeof row.metadata_json.horse_name === 'string' ? row.metadata_json.horse_name : '';
+    await insertNotification(client, {
+      userId: row.user_id,
+      type: 'MEMORIAL_NFT_MINTED',
+      dedupeKey: `notif:MEMORIAL_NFT_MINTED:${row.id}`,
+      payload: {
+        ...renderNotification('MEMORIAL_NFT_MINTED', { horse_name: horseName }),
+        memorial_id: row.id,
+        token_id: tokenId,
+      },
     });
     await client.query(
       `update memorial_nfts
