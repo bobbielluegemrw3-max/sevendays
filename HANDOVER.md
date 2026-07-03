@@ -14,7 +14,7 @@ M1 基盤        ✅ Phase 0-3   (モノレポ/DB/Ledger/ポリシー)
 M2 コアエンジン ✅ Phase 4-7   (バッチ骨格/レース/Burn/Buyback)
 M3 経済循環    ✅ Phase 8-10  (購入・割当/経済エンジン/リカバリ)
 M4 プロダクト   ✅ Phase 11-13(API/入出金Amoy実機検証済み/フロント=sevendaysderby.com稼働)
-M5 リリース判定 🔶 Phase 14a-c ✅(全Gates通過・**経済v1.1で再検証済み**)→ 残りはRenderワーカー作成のみ(Decision 070)
+M5 リリース判定 ✅ **全システム本番稼働**(2026-07-04): Web=sevendaysderby.com / Worker=sevendays-worker(Render pserv・スケジューラー稼働確認済み・初回バッチ2026-07-04 20:00 MYT)。全Gates通過・経済v1.1。残=チェーン系env投入(入出金本稼働)とローンチ前チェックリスト
 ```
 
 - **バックエンドのドメイン層は完成**。37ステップの日次精算バッチが本番ハンドラで完走し(`production-day.test.ts`)、**ローンチ初日(馬0頭)シナリオも検証済み**。
