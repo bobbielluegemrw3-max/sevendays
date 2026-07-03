@@ -1,6 +1,6 @@
 # Seven Days Derby — セッション引継ぎ書
 
-> 最終更新: 2026-07-03 / 最終コミット: `d7580bd` / テスト: **260件 全PASS**(+実Postgres opt-in 1件)
+> 最終更新: 2026-07-03 / 最終コミット: `89dc025` / テスト: **265件 全PASS**(+実Postgres opt-in 1件)
 > 新しいセッションはまずこのファイルと `IMPLEMENTATION_PLAN.md` を読むこと。
 > **仕様の正は `docs/`(v1.0仕様書パッケージ)+ `docs/10_DECISION_LOG.md`(Decision 001〜059)。ビジネスルールの発明は禁止。**
 
@@ -13,7 +13,7 @@ M1 基盤        ✅ Phase 0-3   (モノレポ/DB/Ledger/ポリシー)
 M2 コアエンジン ✅ Phase 4-7   (バッチ骨格/レース/Burn/Buyback)
 M3 経済循環    ✅ Phase 8-10  (購入・割当/経済エンジン/リカバリ)
 M4 プロダクト   🔶 Phase 11 ✅ / Phase 12 コア✅(チェーン実機検証残)/ Phase 13 初版✅(E2E・E17残)
-M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Completion Gates)
+M5 リリース判定 🔶 Phase 14a/b ✅(ワーカー11本+インフラ定義)→ 14c(G10シミュレーション/Gates検証)・GCP実デプロイが残
 ```
 
 - **バックエンドのドメイン層は完成**。37ステップの日次精算バッチが本番ハンドラで完走し(`production-day.test.ts`)、**ローンチ初日(馬0頭)シナリオも検証済み**。
@@ -83,9 +83,10 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 - **本番動作確認済み**(2026-07-03): サインアップ→ログイン→ダッシュボード表示まで実機確認。**トークンはES256署名(Supabase新JWT Signing Keys)**のためJWKS検証を実装済み(HS256レガシーもフォールバック対応。`6ebbab9`)。オーナーアカウント(bobbielluegemrw3@gmail.com / e54dd629-…)にFINANCE_ADMIN+SUPER_ADMIN付与済み
 - **残**: 2人目の管理者アカウント(二重承認は別人2名がDB強制のため1人では完結不可)/ブラウザE2E/Marketplaceリアルタイム反映
 
-### Phase 14: 総仕上げ
-- services/*(Cloud Runワーカー)の薄いHTTPラッパー化+Pub/Sub+Scheduler(20:00 MYT=12:00 UTC)+監視11種アラート
-- 10万ユーザーシミュレーション(Completion Gate G10)
+### Phase 14: 総仕上げ — 14a/b完了(`89dc025`)
+- **実装済み**: `createWorkerServer`(内部トークン+ワーカー別allowlist+internal認証dispatch、HTTP実テスト)/仕様10ワーカー+`chain-worker`(watcher/broadcaster/mintジョブ)/単一Dockerfile(`SERVICE`切替)/`infra/cloudrun`(deploy.sh・scheduler.sh 5ジョブ・README)/`infra/pubsub`(再実行+DLQ)/`infra/monitoring`(11アラート+F-U滞留アラート)。`batch/start`と`check-timeouts`はbatch_date省略可(=MYT今日)
+- **残(14c)**: 10万ユーザーシミュレーション(Completion Gate G10)+G1-G10チェックリスト実行
+- **残(実デプロイ)**: オーナーのGCPプロジェクト作成→`infra/cloudrun/README.md`の手順(Secret 6本、SA 2本、スクリプト4本)。QuickNodeキーが揃えばchain-workerも同時に本稼働
 - **積み残しの技術負債(診断で記録済み)**: ①カバレッジ計測導入 ②スナップショット/割当ループのN+1集合SQL化(10万頭で顕在化) ③admin retryの非同期化 ④CIグリーンの確認(**ユーザーにActionsタブ確認を4回依頼済み・未回答**)
 - ローンチ前: Supabaseキーローテーション(チャット経由でファイル共有したため)・チェーン最終確認(Polygon or BSC)・E18 KYC要否
 
@@ -114,7 +115,7 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 - 遅延制約トリガーのエラーは**COMMIT時**に発火 — `manageTransaction: false`で外部管理する場合は呼び出し側でエラーマップが必要(実例: `sessions.ts`)
 - 禁止APIチェッカーはリテラルgrep — テストで禁止パスを使う場合は動的組み立て(`['','api',...].join('/')`)
 
-## 8. テスト全景(260件全PASS+opt-in 1件。数字は `turbo run test --force` の実測)
+## 8. テスト全景(265件全PASS+opt-in 1件。数字は `turbo run test --force` の実測)
 
 | スイート | 件数 | 内容 |
 |---|---|---|
@@ -125,6 +126,6 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 | race-engine | 33 | 生成/スコア/ランキング/リプレイ/Burn/バフ(統計検証込み) |
 | economy-engine | 22 | ポリシー/メトリクス/Status遷移ウォーク/出品/ストレス |
 | settlement-engine | 35 | バッチ/Burn e2e/Buyback e2e/割当e2e(クラッシュ再開込み)/リカバリ/**フルデイ/ローンチ初日** |
-| api-contracts | 10 | 認証境界/冪等強制/API経由フロー/禁止APIゲート/2名承認・6桁制限/**トレーニング/リカバリAPI** |
+| api-contracts | 14 | 認証境界/冪等強制/API経由フロー/禁止APIゲート/2名承認・6桁制限/トレーニング/リカバリAPI/**ワーカーHTTPサーバー** |
 | blockchain | 44 | HD導出(BIP-44ベクタ)/金額変換+実費手数料/Watcher(冪等・クラッシュ窓・**0値/リオルグ/REVERT**)/Broadcaster(永続化先行送信・リオルグ・2名承認・**自己修復・二重払いガード**)/NFTミント(決定論tokenId・クラッシュ再開)/署名/鍵非露出 |
-| web | 7 | JWT検証/初回プロビジョニング(**email衝突耐性**)/ロール解決/出金フロー(ブリッジ経由)/admin境界/internal到達不能 |
+| web | 8 | JWT検証/初回プロビジョニング(**email衝突耐性**)/ロール解決/出金フロー(ブリッジ経由)/admin境界/internal到達不能 |
