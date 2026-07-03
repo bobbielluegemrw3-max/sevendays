@@ -1,0 +1,35 @@
+{
+  "name": "@sevendays/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build && node scripts/check-client-bundle.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint app components lib test scripts"
+  },
+  "dependencies": {
+    "@sevendays/api-contracts": "workspace:*",
+    "@sevendays/domain": "workspace:*",
+    "@sevendays/shared": "workspace:*",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.49.0",
+    "jose": "^6.0.10",
+    "next": "^16.0.0",
+    "pg": "^8.14.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@sevendays/database": "workspace:*",
+    "@sevendays/ledger": "workspace:*",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "eslint": "^9.28.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.33.0",
+    "vitest": "^3.2.0"
+  }
+}
