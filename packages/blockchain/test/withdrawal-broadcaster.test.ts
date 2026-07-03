@@ -9,6 +9,7 @@ import {
   getPlatformAccountId,
   reconcile,
   withdrawalFundLock,
+  withdrawalRejectionRefund,
 } from '@sevendays/ledger';
 import {
   POLYGON_POS_USDT,
@@ -272,15 +273,16 @@ describe('withdrawal broadcaster', () => {
     expect(first.released).toBe(false);
     expect((await withdrawalRow(approvedId)).status).toBe('ADMIN_REVIEW');
 
-    // The same admin cannot approve twice, and cannot approve with a role
-    // they do not hold (DB-enforced).
-    await expect(
-      approveWithdrawal(client, {
-        withdrawalId: approvedId,
-        adminUserId: financeAdmin,
-        adminRole: 'FINANCE_ADMIN',
-      }),
-    ).rejects.toThrow(/duplicate key/);
+    // The same admin approving again is an idempotent replay — it never
+    // counts twice (DB-enforced) and never releases alone.
+    const replay = await approveWithdrawal(client, {
+      withdrawalId: approvedId,
+      adminUserId: financeAdmin,
+      adminRole: 'FINANCE_ADMIN',
+    });
+    expect(replay.released).toBe(false);
+    expect(replay.approvedRoles).toEqual(['FINANCE_ADMIN']);
+    // Approving with a role the admin does not hold is refused by the DB.
     await expect(
       approveWithdrawal(client, {
         withdrawalId: approvedId,
@@ -319,6 +321,88 @@ describe('withdrawal broadcaster', () => {
     expect(actions).toContain('WITHDRAWAL_REVIEW_APPROVED:SUPER_ADMIN');
     expect(actions).toContain('WITHDRAWAL_REVIEW_RELEASED');
     expect(actions).toContain('WITHDRAWAL_REVIEW_REJECTED');
+  });
+
+  it('applies the Decision 060 default threshold when the policy omits it', async () => {
+    const config = testConfig('TEST_WD_DEFAULT_THRESHOLD');
+    const chain = new FakeChain();
+    const signer = new FakeSigner();
+    const user = await newFundedUser('2000');
+    const id = await requestWithdrawal(config, user, '1500');
+
+    // No adminReviewThreshold key at all -> 1,000 USDT default applies.
+    const run = await processWithdrawals(client, chain, signer, config, {
+      nativeUsdtRate: Money.of('1000'),
+    });
+    expect(run.routedToReview).toBe(1);
+    expect((await withdrawalRow(id)).status).toBe('ADMIN_REVIEW');
+    expect(chain.sent).toEqual([]);
+  });
+
+  it('self-heals a dual-approved row stranded by a crash before release', async () => {
+    const config = testConfig('TEST_WD_STUCK');
+    const chain = new FakeChain();
+    const signer = new FakeSigner();
+    const reviewPolicy = policy({ adminReviewThreshold: Money.of('1000') });
+    const financeAdmin = await newAdmin('FINANCE_ADMIN');
+    const superAdmin = await newAdmin('SUPER_ADMIN');
+    const user = await newFundedUser('2000');
+    const id = await requestWithdrawal(config, user, '1500');
+
+    await processWithdrawals(client, chain, signer, config, reviewPolicy);
+    expect((await withdrawalRow(id)).status).toBe('ADMIN_REVIEW');
+
+    // Simulate the crash window: both approvals recorded, release lost.
+    await client.query(
+      `insert into withdrawal_review_approvals (withdrawal_id, admin_user_id, admin_role)
+       values ($1, $2, 'FINANCE_ADMIN'), ($1, $3, 'SUPER_ADMIN')`,
+      [id, financeAdmin, superAdmin],
+    );
+
+    const heal = await processWithdrawals(client, chain, signer, config, reviewPolicy);
+    expect(heal.releasedFromReview).toBe(1);
+    expect(heal.broadcast).toBe(1); // released rows broadcast in the same run
+    expect((await withdrawalRow(id)).status).toBe('BROADCAST');
+  });
+
+  it('a refund from a crashed rejection wins over approvals (no double payout)', async () => {
+    const config = testConfig('TEST_WD_REFUND_RACE');
+    const chain = new FakeChain();
+    const signer = new FakeSigner();
+    const reviewPolicy = policy({ adminReviewThreshold: Money.of('1000') });
+    const financeAdmin = await newAdmin('FINANCE_ADMIN');
+    const superAdmin = await newAdmin('SUPER_ADMIN');
+    const user = await newFundedUser('2000');
+    const id = await requestWithdrawal(config, user, '1500');
+
+    await processWithdrawals(client, chain, signer, config, reviewPolicy);
+    expect((await withdrawalRow(id)).status).toBe('ADMIN_REVIEW');
+
+    // Simulate rejectWithdrawal crashing between the refund and the status
+    // update: the refund is posted but the row is still ADMIN_REVIEW.
+    await withdrawalRejectionRefund(client, {
+      userId: user,
+      amount: Money.of('1500'),
+      idempotencyKey: `wdrefund:${id}`,
+      referenceType: 'blockchain_withdrawal',
+      referenceId: id,
+    });
+    expect(await availableBalance(user)).toBe('2000.00000000');
+
+    // Dual approval afterwards must NOT release the (already refunded) row.
+    await approveWithdrawal(client, { withdrawalId: id, adminUserId: financeAdmin, adminRole: 'FINANCE_ADMIN' });
+    const second = await approveWithdrawal(client, {
+      withdrawalId: id,
+      adminUserId: superAdmin,
+      adminRole: 'SUPER_ADMIN',
+    });
+    expect(second.released).toBe(false);
+    expect((await withdrawalRow(id)).status).toBe('REJECTED');
+
+    const run = await processWithdrawals(client, chain, signer, config, reviewPolicy);
+    expect(run.broadcast).toBe(0);
+    expect(chain.sent).toEqual([]);
+    expect(await availableBalance(user)).toBe('2000.00000000'); // refunded exactly once, never paid out
   });
 
   it('DB refuses BROADCAST rows without a persisted transaction identity', async () => {

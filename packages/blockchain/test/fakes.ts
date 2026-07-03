@@ -26,7 +26,12 @@ export class FakeChain implements ChainClient {
   }
 
   async getTransactionStatus(txHash: string): Promise<TransactionStatus> {
-    return this.statuses.get(txHash) ?? { kind: 'NOT_FOUND' };
+    const explicit = this.statuses.get(txHash);
+    if (explicit) return explicit;
+    // Chain-faithful default: a transaction whose Transfer event is visible
+    // has a SUCCESS receipt in that block; anything else is unknown.
+    const transfer = this.transfers.find((t) => t.txHash === txHash);
+    return transfer ? { kind: 'SUCCESS', blockNumber: transfer.blockNumber } : { kind: 'NOT_FOUND' };
   }
 
   async getPendingNonce(): Promise<bigint> {

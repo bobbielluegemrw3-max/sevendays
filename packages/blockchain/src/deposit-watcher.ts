@@ -32,10 +32,18 @@ export interface DepositScanResult {
   detected: number;
   alreadyKnown: number;
   skippedUnknownAddress: number;
+  /** Zero-value transfers (anyone can emit these; they must never enter the
+   *  pipeline — the DB rightly forbids amount = 0). */
+  skippedZeroValue: number;
   /** Extra matching transfers inside a tx_hash that already produced a deposit
    *  (spec: duplicate tx_hash is rejected). Surfaced for ops follow-up. */
   skippedSameTxExtra: number;
   credited: number;
+  /** Detected deposits whose transaction vanished from the canonical chain
+   *  (reorg) — confirmation counting restarted. */
+  reorgedOut: number;
+  /** Detected deposits whose transaction REVERTED on chain — rejected. */
+  rejectedOnChain: number;
 }
 
 async function readCursor(client: SqlClient, chainId: string): Promise<bigint | null> {
@@ -67,6 +75,13 @@ async function detectTransfers(
   );
   const seenTxInBatch = new Set<string>();
   for (const transfer of ordered) {
+    // Zero-value transfers are valid ERC-20 events anyone can emit at any
+    // address; inserting one would violate the amount > 0 check and wedge
+    // the scan on this range forever. Skip them outright.
+    if (transfer.valueUnits <= 0n) {
+      result.skippedZeroValue += 1;
+      continue;
+    }
     const userId = ownerByAddress.get(transfer.to.toLowerCase());
     if (!userId) {
       result.skippedUnknownAddress += 1;
@@ -99,13 +114,21 @@ async function detectTransfers(
   }
 }
 
+function clampedCount(depth: bigint): number {
+  if (depth < 0n) return 0;
+  if (depth > 2147483647n) return 2147483647;
+  return Number(depth);
+}
+
 async function creditConfirmedDeposits(
   client: SqlClient,
+  chain: ChainClient,
   config: ChainConfig,
   latestBlock: bigint,
   result: DepositScanResult,
 ): Promise<void> {
-  // Refresh confirmation counts for everything still in flight.
+  // Refresh confirmation counts from the stored block — a cheap pre-filter
+  // for the receipt verification below (and live progress for the UI).
   await client.query(
     `update blockchain_deposits
      set confirmation_count = greatest(0, least(2147483647, $2::bigint - block_number + 1))::int
@@ -113,8 +136,8 @@ async function creditConfirmedDeposits(
     [config.chainId, latestBlock.toString()],
   );
 
-  // Credit everything at/over the confirmation threshold. Rows left in
-  // CONFIRMED by an earlier crash are picked up again here.
+  // Candidates at/over the threshold by stored data. Rows left in CONFIRMED
+  // by an earlier crash are picked up again here.
   const due = await client.query<{ id: string; user_id: string; tx_hash: string; amount: string }>(
     `select id, user_id, tx_hash, amount::text as amount
      from blockchain_deposits
@@ -124,6 +147,38 @@ async function creditConfirmedDeposits(
   );
 
   for (const row of due.rows) {
+    // NEVER credit from stored data alone: re-verify the transaction is
+    // still canonical and measure depth from the CURRENT receipt. The
+    // stored block_number is stale the moment a reorg moves (or drops)
+    // the transaction — and 128 confirmations exist precisely for that.
+    const onchain = await chain.getTransactionStatus(row.tx_hash);
+
+    if (onchain.kind === 'NOT_FOUND' || onchain.kind === 'PENDING') {
+      // Reorged out (or awaiting re-inclusion): restart confirmation
+      // counting; a later SUCCESS resyncs block_number below.
+      await client.query(`update blockchain_deposits set confirmation_count = 0 where id = $1`, [row.id]);
+      result.reorgedOut += 1;
+      continue;
+    }
+
+    const depth = latestBlock - onchain.blockNumber + 1n;
+    // Resync the on-chain position (the receipt is the truth).
+    await client.query(
+      `update blockchain_deposits set block_number = $2, confirmation_count = $3 where id = $1`,
+      [row.id, onchain.blockNumber.toString(), clampedCount(depth)],
+    );
+    if (depth < BigInt(config.confirmationBlocks)) continue; // not final yet
+
+    if (onchain.kind === 'REVERTED') {
+      await client.query(
+        `update blockchain_deposits set status = 'REJECTED'
+         where id = $1 and status in ('DETECTED', 'CONFIRMED')`,
+        [row.id],
+      );
+      result.rejectedOnChain += 1;
+      continue;
+    }
+
     await client.query(`update blockchain_deposits set status = 'CONFIRMED' where id = $1 and status = 'DETECTED'`, [
       row.id,
     ]);
@@ -157,8 +212,11 @@ export async function runDepositScan(
     detected: 0,
     alreadyKnown: 0,
     skippedUnknownAddress: 0,
+    skippedZeroValue: 0,
     skippedSameTxExtra: 0,
     credited: 0,
+    reorgedOut: 0,
+    rejectedOnChain: 0,
   };
   const maxBlocks = BigInt(options.maxBlocksPerScan ?? 2000);
   const latest = await chain.getLatestBlockNumber();
@@ -191,6 +249,6 @@ export async function runDepositScan(
     result.scannedTo = to;
   }
 
-  await creditConfirmedDeposits(client, config, latest, result);
+  await creditConfirmedDeposits(client, chain, config, latest, result);
   return result;
 }

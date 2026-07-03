@@ -212,6 +212,89 @@ describe('deposit watcher', () => {
     expect(result.skippedSameTxExtra).toBe(1);
   });
 
+  it('skips zero-value transfers without wedging the scan (griefing guard)', async () => {
+    const config = testConfig('TEST_ZERO');
+    const chain = new FakeChain();
+    const user = await newUser();
+    const { address } = await ensureDepositAddress(client, config, xpub, user);
+
+    // Anyone can emit transfer(to, 0) at any address — it must be ignored,
+    // and real deposits in the same range must still land.
+    chain.transfers.push(
+      transferTo(address, { block: 10n, units: 0n }),
+      transferTo(address, { block: 11n, units: 42_000_000n }),
+    );
+    chain.latestBlock = 300n;
+
+    const result = await runDepositScan(client, chain, config, { startBlock: 1n });
+    expect(result.skippedZeroValue).toBe(1);
+    expect(result.detected).toBe(1);
+    expect(result.credited).toBe(1);
+    expect(result.scannedTo).toBe(300n); // cursor advanced — no wedge
+    expect(await availableBalance(user)).toBe('42.00000000');
+  });
+
+  it('never credits a deposit whose transaction was reorged out; re-credits after re-inclusion', async () => {
+    const config = testConfig('TEST_REORG');
+    const chain = new FakeChain();
+    const user = await newUser();
+    const { address } = await ensureDepositAddress(client, config, xpub, user);
+
+    const txHash = `0x${'1f'.repeat(32)}`;
+    const original = transferTo(address, { block: 900n, units: 70_000_000n, txHash });
+    chain.transfers.push(original);
+    chain.latestBlock = 1000n;
+    await runDepositScan(client, chain, config, { startBlock: 900n }); // detected, 101 confs
+
+    // Reorg drops the transaction. Stored data alone says 128 confs — the
+    // receipt check must refuse to credit and restart counting.
+    chain.transfers.length = 0;
+    chain.latestBlock = 1027n;
+    const afterReorg = await runDepositScan(client, chain, config);
+    expect(afterReorg.reorgedOut).toBe(1);
+    expect(afterReorg.credited).toBe(0);
+    expect(Money.of(await availableBalance(user)).isZero()).toBe(true);
+
+    // The transaction is re-mined much later; credit only at TRUE depth.
+    chain.transfers.push({ ...original, blockNumber: 1040n });
+    chain.latestBlock = 1100n; // depth from 1040 = 61 < 128
+    const notYet = await runDepositScan(client, chain, config);
+    expect(notYet.credited).toBe(0);
+    const resynced = await client.query<{ block_number: string }>(
+      `select block_number::text as block_number from blockchain_deposits
+       where chain_id = $1 and tx_hash = $2`,
+      [config.chainId, txHash],
+    );
+    expect(resynced.rows[0]!.block_number).toBe('1040');
+
+    chain.latestBlock = 1167n; // depth 128
+    const finalRun = await runDepositScan(client, chain, config);
+    expect(finalRun.credited).toBe(1);
+    expect(await availableBalance(user)).toBe('70.00000000');
+  });
+
+  it('rejects a deposit whose transaction REVERTED on chain', async () => {
+    const config = testConfig('TEST_REVERTED');
+    const chain = new FakeChain();
+    const user = await newUser();
+    const { address } = await ensureDepositAddress(client, config, xpub, user);
+
+    const txHash = `0x${'2e'.repeat(32)}`;
+    chain.transfers.push(transferTo(address, { block: 50n, units: 10_000_000n, txHash }));
+    chain.statuses.set(txHash, { kind: 'REVERTED', blockNumber: 50n });
+    chain.latestBlock = 400n;
+
+    const result = await runDepositScan(client, chain, config, { startBlock: 1n });
+    expect(result.rejectedOnChain).toBe(1);
+    expect(result.credited).toBe(0);
+    expect(Money.of(await availableBalance(user)).isZero()).toBe(true);
+    const row = await client.query<{ status: string }>(
+      `select status::text as status from blockchain_deposits where chain_id = $1 and tx_hash = $2`,
+      [config.chainId, txHash],
+    );
+    expect(row.rows[0]!.status).toBe('REJECTED');
+  });
+
   it('preserves unit-level precision (1 unit = 0.000001 USDT)', async () => {
     const config = testConfig('TEST_DUST');
     const chain = new FakeChain();

@@ -190,6 +190,8 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
         throw new ApiError('FORBIDDEN', `Approver does not hold role ${input.role}`);
       }
       try {
+        // Duplicate approvals replay idempotently inside approveWithdrawal;
+        // release still requires two DISTINCT admins (DB-enforced).
         const result = await approveWithdrawal(ctx.client, {
           withdrawalId: ctx.params.id!,
           adminUserId: ctx.userId,
@@ -198,9 +200,6 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
         return { approved_roles: result.approvedRoles, released: result.released };
       } catch (error) {
         const message = (error as Error).message;
-        if (/duplicate key/i.test(message)) {
-          throw new ApiError('DUAL_APPROVAL_REQUIRED', 'This admin or role has already approved; a second DISTINCT admin must approve');
-        }
         if (/not in ADMIN_REVIEW/.test(message)) throw new ApiError('NOT_FOUND', message);
         throw error;
       }

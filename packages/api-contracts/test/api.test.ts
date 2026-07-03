@@ -330,15 +330,16 @@ describe('large-withdrawal admin review (Decisions 060, 064)', () => {
     expect(first.status).toBe(200);
     expect((first.body as { released: boolean }).released).toBe(false);
 
-    // The same admin cannot count twice.
+    // The same admin re-approving replays idempotently — never counts twice.
     const duplicate = await call(
       'POST',
       `/api/v1/admin/withdrawals/${wid}/approve`,
       asAdmin(financeAdmin, ['FINANCE_ADMIN']),
       { body: { role: 'FINANCE_ADMIN' }, idempotencyKey: randomUUID() },
     );
-    expect(duplicate.status).toBe(403);
-    expect((duplicate.body as { error: { code: string } }).error.code).toBe('DUAL_APPROVAL_REQUIRED');
+    expect(duplicate.status).toBe(200);
+    expect((duplicate.body as { released: boolean }).released).toBe(false);
+    expect((duplicate.body as { approved_roles: string[] }).approved_roles).toEqual(['FINANCE_ADMIN']);
 
     // The second DISTINCT admin with the second role releases the row.
     const release = await call(

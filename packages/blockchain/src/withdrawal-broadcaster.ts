@@ -1,5 +1,5 @@
 import { Money, type SqlClient } from '@sevendays/shared';
-import type { AdminRole } from '@sevendays/domain';
+import { WITHDRAWAL_ADMIN_REVIEW_THRESHOLD, type AdminRole } from '@sevendays/domain';
 import { withdrawalRejectionRefund } from '@sevendays/ledger';
 import { isAddress } from 'viem';
 import type { ChainClient, WithdrawalSigner } from './types.js';
@@ -37,8 +37,13 @@ export interface WithdrawalPolicy {
    * token (ops-configured); fee is computed per run from live gas prices.
    */
   nativeUsdtRate: Money;
-  /** Decision 060: route requests >= this to ADMIN_REVIEW; null disables routing. */
-  adminReviewThreshold: Money | null;
+  /**
+   * Decision 060: route requests >= this to ADMIN_REVIEW.
+   * OMITTED (undefined) -> the domain default (1,000 USDT) applies, so a
+   * misconfigured worker cannot silently disable the review. Explicit
+   * null disables routing (tests / owner override only).
+   */
+  adminReviewThreshold?: Money | null;
   /** Confirmations before a broadcast counts as final (default: deposit's 128). */
   confirmationBlocks?: number;
   /** Broadcast batch size per run. */
@@ -48,6 +53,8 @@ export interface WithdrawalPolicy {
 export interface WithdrawalRunResult {
   lockAcquired: boolean;
   routedToReview: number;
+  /** Fully-approved ADMIN_REVIEW rows released here after an approval-side crash. */
+  releasedFromReview: number;
   rejected: number;
   broadcast: number;
   sendErrors: number;
@@ -82,6 +89,15 @@ async function audit(
  * Refund the full locked amount and move the row to `status`. Idempotent:
  * the refund replays by key, the status update converges.
  */
+/** True if the rejection/failure refund for this withdrawal was already posted. */
+async function refundExists(client: SqlClient, withdrawalId: string): Promise<boolean> {
+  const r = await client.query<{ id: string }>(
+    `select id from ledger_transactions where idempotency_key = $1`,
+    [`wdrefund:${withdrawalId}`],
+  );
+  return r.rows.length > 0;
+}
+
 async function refundAndClose(
   client: SqlClient,
   row: Pick<WithdrawalRow, 'id' | 'user_id' | 'requested_amount'>,
@@ -112,40 +128,79 @@ export async function approveWithdrawal(
   client: SqlClient,
   args: { withdrawalId: string; adminUserId: string; adminRole: AdminRole },
 ): Promise<{ approvedRoles: AdminRole[]; released: boolean }> {
-  const row = await client.query<{ id: string }>(
-    `select id from blockchain_withdrawals where id = $1 and status = 'ADMIN_REVIEW'`,
+  const row = await client.query<{ status: string; review_approved_at: string | null }>(
+    `select status::text as status, review_approved_at::text as review_approved_at
+     from blockchain_withdrawals where id = $1`,
     [args.withdrawalId],
   );
   if (!row.rows[0]) throw new Error(`Withdrawal ${args.withdrawalId} is not in ADMIN_REVIEW`);
+  if (row.rows[0].status !== 'ADMIN_REVIEW') {
+    // Replay of an approval that already released: report the final state.
+    if (row.rows[0].review_approved_at) {
+      const done = await client.query<{ admin_role: AdminRole }>(
+        `select admin_role::text as admin_role from withdrawal_review_approvals where withdrawal_id = $1`,
+        [args.withdrawalId],
+      );
+      return { approvedRoles: done.rows.map((r) => r.admin_role), released: true };
+    }
+    throw new Error(`Withdrawal ${args.withdrawalId} is not in ADMIN_REVIEW`);
+  }
 
-  await client.query(
-    `insert into withdrawal_review_approvals (withdrawal_id, admin_user_id, admin_role)
-     values ($1, $2, $3)`,
-    [args.withdrawalId, args.adminUserId, args.adminRole],
-  );
-  await audit(
-    client,
-    { type: 'ADMIN', id: args.adminUserId },
-    `WITHDRAWAL_REVIEW_APPROVED:${args.adminRole}`,
-    args.withdrawalId,
-  );
+  // A duplicate approval (same admin or same role) is an idempotent replay,
+  // NOT an error: the release evaluation below must still run so a crash
+  // between insert and release always self-heals on the next call.
+  let inserted = true;
+  try {
+    await client.query(
+      `insert into withdrawal_review_approvals (withdrawal_id, admin_user_id, admin_role)
+       values ($1, $2, $3)`,
+      [args.withdrawalId, args.adminUserId, args.adminRole],
+    );
+  } catch (error) {
+    if (!/duplicate key/i.test((error as Error).message)) throw error;
+    inserted = false;
+  }
+  if (inserted) {
+    await audit(
+      client,
+      { type: 'ADMIN', id: args.adminUserId },
+      `WITHDRAWAL_REVIEW_APPROVED:${args.adminRole}`,
+      args.withdrawalId,
+    );
+  }
 
   const approvals = await client.query<{ admin_role: AdminRole }>(
     `select admin_role::text as admin_role from withdrawal_review_approvals where withdrawal_id = $1`,
     [args.withdrawalId],
   );
   const approvedRoles = approvals.rows.map((r) => r.admin_role);
-  const released = approvedRoles.includes('FINANCE_ADMIN') && approvedRoles.includes('SUPER_ADMIN');
-  if (released) {
+  const bothRoles = approvedRoles.includes('FINANCE_ADMIN') && approvedRoles.includes('SUPER_ADMIN');
+  if (!bothRoles) return { approvedRoles, released: false };
+
+  // A refund posted by a crashed rejection wins: releasing now would pay
+  // the user TWICE (refund + broadcast). Converge to REJECTED instead.
+  if (await refundExists(client, args.withdrawalId)) {
     await client.query(
-      `update blockchain_withdrawals
-       set status = 'LOCKED', review_approved_at = now()
-       where id = $1 and status = 'ADMIN_REVIEW'`,
+      `update blockchain_withdrawals set status = 'REJECTED' where id = $1 and status = 'ADMIN_REVIEW'`,
       [args.withdrawalId],
     );
-    await audit(client, { type: 'ADMIN', id: args.adminUserId }, 'WITHDRAWAL_REVIEW_RELEASED', args.withdrawalId);
+    await audit(
+      client,
+      { type: 'ADMIN', id: args.adminUserId },
+      'WITHDRAWAL_REVIEW_CONVERGED_TO_REJECTED',
+      args.withdrawalId,
+    );
+    return { approvedRoles, released: false };
   }
-  return { approvedRoles, released };
+
+  await client.query(
+    `update blockchain_withdrawals
+     set status = 'LOCKED', review_approved_at = now()
+     where id = $1 and status = 'ADMIN_REVIEW'`,
+    [args.withdrawalId],
+  );
+  await audit(client, { type: 'ADMIN', id: args.adminUserId }, 'WITHDRAWAL_REVIEW_RELEASED', args.withdrawalId);
+  return { approvedRoles, released: true };
 }
 
 /** Admin rejection: ADMIN_REVIEW -> REJECTED with full refund. */
@@ -185,22 +240,70 @@ async function routeLargeWithdrawalsToReview(
   }
 }
 
+/**
+ * Self-heal for the approval crash window: an ADMIN_REVIEW row whose dual
+ * approval completed but whose release update was lost is released here —
+ * unless a refund was already posted (crashed rejection), in which case it
+ * converges to REJECTED (paying out on top of a refund would be a double
+ * payment).
+ */
+async function releaseFullyApprovedReviews(
+  client: SqlClient,
+  config: ChainConfig,
+  result: WithdrawalRunResult,
+): Promise<void> {
+  const stuck = await client.query<{ id: string; refunded: boolean }>(
+    `select w.id,
+            exists (select 1 from ledger_transactions t
+                    where t.idempotency_key = 'wdrefund:' || w.id) as refunded
+     from blockchain_withdrawals w
+     where w.chain_id = $1 and w.status = 'ADMIN_REVIEW'
+       and (select count(distinct a.admin_role)
+            from withdrawal_review_approvals a where a.withdrawal_id = w.id) = 2`,
+    [config.chainId],
+  );
+  for (const row of stuck.rows) {
+    if (row.refunded) {
+      await client.query(
+        `update blockchain_withdrawals set status = 'REJECTED' where id = $1 and status = 'ADMIN_REVIEW'`,
+        [row.id],
+      );
+      await audit(client, { type: 'SYSTEM' }, 'WITHDRAWAL_REVIEW_CONVERGED_TO_REJECTED', row.id);
+      result.rejected += 1;
+    } else {
+      await client.query(
+        `update blockchain_withdrawals
+         set status = 'LOCKED', review_approved_at = now()
+         where id = $1 and status = 'ADMIN_REVIEW'`,
+        [row.id],
+      );
+      await audit(client, { type: 'SYSTEM' }, 'WITHDRAWAL_REVIEW_RELEASED', row.id);
+      result.releasedFromReview += 1;
+    }
+  }
+}
+
 async function broadcastLockedWithdrawals(
   client: SqlClient,
   chain: ChainClient,
   signer: WithdrawalSigner,
   config: ChainConfig,
   policy: WithdrawalPolicy,
+  reviewThreshold: Money | null,
   result: WithdrawalRunResult,
   broadcastThisRun: Set<string>,
 ): Promise<void> {
+  // The threshold filter here is NOT redundant with the routing phase: a
+  // row inserted by the API between routing and this select would
+  // otherwise bypass the Decision 060 review entirely.
   const batch = await client.query<WithdrawalRow>(
     `select id, user_id, to_address, requested_amount::text as requested_amount, tx_hash, raw_tx
      from blockchain_withdrawals
      where chain_id = $1 and status = 'LOCKED'
+       and ($2::numeric is null or requested_amount < $2::numeric or review_approved_at is not null)
      order by requested_at, id
-     limit $2`,
-    [config.chainId, policy.maxBroadcastsPerRun ?? 20],
+     limit $3`,
+    [config.chainId, reviewThreshold ? reviewThreshold.toFixed8() : null, policy.maxBroadcastsPerRun ?? 20],
   );
   if (batch.rows.length === 0) return;
 
@@ -346,6 +449,7 @@ export async function processWithdrawals(
   const result: WithdrawalRunResult = {
     lockAcquired: false,
     routedToReview: 0,
+    releasedFromReview: 0,
     rejected: 0,
     broadcast: 0,
     sendErrors: 0,
@@ -362,11 +466,17 @@ export async function processWithdrawals(
   result.lockAcquired = true;
 
   try {
-    if (policy.adminReviewThreshold) {
-      await routeLargeWithdrawalsToReview(client, config, policy.adminReviewThreshold, result);
+    // undefined -> domain default; only an EXPLICIT null disables routing.
+    const reviewThreshold =
+      policy.adminReviewThreshold === undefined
+        ? Money.of(WITHDRAWAL_ADMIN_REVIEW_THRESHOLD)
+        : policy.adminReviewThreshold;
+    if (reviewThreshold) {
+      await routeLargeWithdrawalsToReview(client, config, reviewThreshold, result);
     }
+    await releaseFullyApprovedReviews(client, config, result);
     const broadcastThisRun = new Set<string>();
-    await broadcastLockedWithdrawals(client, chain, signer, config, policy, result, broadcastThisRun);
+    await broadcastLockedWithdrawals(client, chain, signer, config, policy, reviewThreshold, result, broadcastThisRun);
     await confirmBroadcastWithdrawals(client, chain, config, policy, result, broadcastThisRun);
   } finally {
     await client.query(`select pg_advisory_unlock(hashtext('withdrawal_broadcaster:' || $1))`, [config.chainId]);
