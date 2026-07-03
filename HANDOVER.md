@@ -12,8 +12,8 @@
 M1 基盤        ✅ Phase 0-3   (モノレポ/DB/Ledger/ポリシー)
 M2 コアエンジン ✅ Phase 4-7   (バッチ骨格/レース/Burn/Buyback)
 M3 経済循環    ✅ Phase 8-10  (購入・割当/経済エンジン/リカバリ)
-M4 プロダクト   🔶 Phase 11 ✅ / Phase 12 コア✅(チェーン実機検証残)/ Phase 13 初版✅(E2E・E17残)
-M5 リリース判定 🔶 Phase 14a/b ✅(ワーカー11本+インフラ定義)→ 14c(G10シミュレーション/Gates検証)・GCP実デプロイが残
+M4 プロダクト   ✅ Phase 11-13(API/入出金Amoy実機検証済み/フロント=sevendaysderby.com稼働)
+M5 リリース判定 🔶 Phase 14a-c ✅(ワーカー・インフラ定義・**G10 PASS=全Gates通過**)→ 残りはGCP実デプロイのみ
 ```
 
 - **バックエンドのドメイン層は完成**。37ステップの日次精算バッチが本番ハンドラで完走し(`production-day.test.ts`)、**ローンチ初日(馬0頭)シナリオも検証済み**。
@@ -67,10 +67,14 @@ M5 リリース判定 🔶 Phase 14a/b ✅(ワーカー11本+インフラ定義)
 
 ## 5. 残作業(Phase 12〜14)
 
-### Phase 12: 入出金チェーン統合 — ドメイン層完了(`ef3ed2e`)、残り:
-- **QuickNodeアカウント/APIキー取得(オーナー)→ Amoy実機検証**: `createViemChainClient` / `createViemWithdrawalSigner` は署名・エンコードのユニットテストのみ。実RPC経路は未検証
-- **Memorial ERC-721コントラクト**: `mint(to, tokenId)`が既存tokenIdをrevertする仕様で実装・Amoyデプロイ→`NftMinter`のviem実装(パイプライン・決定論的tokenIdは実装済み)
-- 運用設定値: `WithdrawalPolicy.nativeUsdtRate`(POL/USDTレート)と custody address の管理方法をPhase 14で確定
+### Phase 12: 入出金チェーン統合 — **Amoy実機検証まで完了**(2026-07-03)
+- **実機検証PASS**(`packages/blockchain/scripts/amoy-verify.mjs`、QuickNode Amoy経由):
+  - 入金: HDアドレスへ実USDT送金→Watcher検知→**128確認実測**→Ledgerクレジット250 USDT
+  - 出金: ロック→署名→実ブロードキャスト→128確認→**着金39.99939900 USDT実残高照合**(手数料=実ガス×レートのパススルー動作確認)
+  - NFT: 実ミント→冪等再実行→**クラッシュ窓リプレイ**(チェーン上ミント済み・DB未記録から元txで自己修復)
+- コントラクト(`infra/contracts/`、solcコンパイル。Amoyデプロイ済み): TestUSDT=`0x4ceed09bd569f7b358d1d7cc20282b3a0d30f231` / SevenDaysMemorial=`0x899f6af064e449642917e24b1e307589380fa77a`。Amoy用シークレットは`.env.local`のAMOY_*
+- **実運用の学び**: QuickNode無料プランは`eth_getLogs`が5ブロック上限→ChainClient/NftMinterをレンジ分割対応(`CHAIN_GETLOGS_RANGE`環境変数)。**本番プランでは要設定**
+- **メインネット移行時**: 本番マスターシード/ホットウォレット新規生成(Secret Manager直入れ)・SevenDaysMemorialのPolygon PoSデプロイ(監査版/OZ移行検討)・USDT本物アドレスは`POLYGON_POS_USDT`定数に定義済み・`NATIVE_USDT_RATE`運用値
 - 設計メモ: 出金確定時のLedger移動は無し(FUND_LOCKで`PLATFORM_WITHDRAWAL_CLEARING`に入った資金がそのまま外界境界として残る=入金クリアリングと対称、Decision 061でガス代もRevenue計上しない)。`WITHDRAWAL_BROADCAST`/`WITHDRAWAL_CONFIRMATION`のenum値は現状未使用
 
 ### Phase 13: フロントエンド — 初版完了(`ecff8e8`)、残り:

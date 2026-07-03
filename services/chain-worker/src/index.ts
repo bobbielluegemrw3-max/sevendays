@@ -5,8 +5,10 @@ import {
   POLYGON_POS_USDT,
   amoyTestConfig,
   createViemChainClient,
+  createViemNftMinter,
   createViemWithdrawalSigner,
   provisionMissingDepositAddresses,
+  processMemorialMints,
   processWithdrawals,
   runDepositScan,
   type ChainConfig,
@@ -47,6 +49,13 @@ function requireEnv(name: string): string {
   return value;
 }
 
+/** eth_getLogs range cap differs per RPC plan (QuickNode free: 5). */
+function chainClientOptions(): { getLogsRangeLimit?: bigint } {
+  return process.env.CHAIN_GETLOGS_RANGE
+    ? { getLogsRangeLimit: BigInt(process.env.CHAIN_GETLOGS_RANGE) }
+    : {};
+}
+
 const pool = createPool(databaseUrl);
 const server = createWorkerServer({
   workerName: 'chain-worker',
@@ -57,7 +66,7 @@ const server = createWorkerServer({
   jobs: {
     '/jobs/deposit-scan': async (client) => {
       const config = chainConfig();
-      const chain = createViemChainClient(requireEnv('CHAIN_RPC_URL'));
+      const chain = createViemChainClient(requireEnv('CHAIN_RPC_URL'), chainClientOptions());
       const xpub = requireEnv('DEPOSIT_ACCOUNT_XPUB');
       const provisioned = await provisionMissingDepositAddresses(client, config, xpub);
       const scan = await runDepositScan(client, chain, config);
@@ -71,7 +80,7 @@ const server = createWorkerServer({
 
     '/jobs/process-withdrawals': async (client) => {
       const config = chainConfig();
-      const chain = createViemChainClient(requireEnv('CHAIN_RPC_URL'));
+      const chain = createViemChainClient(requireEnv('CHAIN_RPC_URL'), chainClientOptions());
       const signer = createViemWithdrawalSigner(requireEnv('HOT_WALLET_PRIVATE_KEY'), config);
       // Decision 060 threshold defaults inside the policy when omitted;
       // Decision 061 rate is the ops-configured POL/USDT pass-through rate.
@@ -80,13 +89,25 @@ const server = createWorkerServer({
       });
     },
 
-    '/jobs/memorial-mints': () => {
-      // Decision 063 pipeline is implemented (processMemorialMints), but the
-      // ERC-721 contract is not deployed yet — wire the viem NftMinter here
-      // after the Amoy verification (HANDOVER Phase 12 残).
-      return Promise.resolve({
-        skipped: 'memorial minter awaits ERC-721 contract deployment (Amoy verification)',
+    '/jobs/memorial-mints': async (client) => {
+      // Decision 063: mint after all seven buyback payments. Until ops set
+      // the contract/custody env (per environment), the job reports itself
+      // as skipped instead of failing the schedule.
+      const contractAddress = process.env.MEMORIAL_CONTRACT_ADDRESS;
+      const custodyAddress = process.env.MEMORIAL_CUSTODY_ADDRESS;
+      if (!contractAddress || !custodyAddress) {
+        return { skipped: 'MEMORIAL_CONTRACT_ADDRESS / MEMORIAL_CUSTODY_ADDRESS not configured' };
+      }
+      const config = chainConfig();
+      const minter = createViemNftMinter({
+        rpcUrl: requireEnv('CHAIN_RPC_URL'),
+        privateKeyHex: requireEnv('HOT_WALLET_PRIVATE_KEY'),
+        contractAddress,
+        ...(process.env.MEMORIAL_DEPLOY_BLOCK
+          ? { deployedAtBlock: BigInt(process.env.MEMORIAL_DEPLOY_BLOCK) }
+          : {}),
       });
+      return processMemorialMints(client, minter, config, { custodyAddress });
     },
   },
 });
