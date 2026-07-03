@@ -1,4 +1,10 @@
-import { jwtVerify } from 'jose';
+import {
+  createRemoteJWKSet,
+  decodeProtectedHeader,
+  jwtVerify,
+  type JWTPayload,
+  type JWTVerifyGetKey,
+} from 'jose';
 import {
   buildApiRegistry,
   type ApiResponse,
@@ -31,21 +37,63 @@ export interface BridgeRequest {
   accessToken?: string | null;
 }
 
+// Supabase projects on the new "JWT Signing Keys" system sign access tokens
+// asymmetrically (ES256/RS256, verified via the project's public JWKS); the
+// legacy HS256 shared secret only covers older projects/tokens. Support
+// both: pick the path from the token's alg header.
+let remoteJwks: JWTVerifyGetKey | null = null;
+function supabaseRemoteJwks(): JWTVerifyGetKey | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return null;
+  if (!remoteJwks) {
+    // jose caches the fetched keys in memory and refreshes on unknown kid.
+    remoteJwks = createRemoteJWKSet(new URL(`${url}/auth/v1/.well-known/jwks.json`));
+  }
+  return remoteJwks;
+}
+
+export interface AuthVerifyOptions {
+  /** JWKS override for asymmetric tokens (tests use a local key set). */
+  jwks?: JWTVerifyGetKey;
+}
+
+async function verifyAccessToken(
+  accessToken: string,
+  jwtSecret: string,
+  options?: AuthVerifyOptions,
+): Promise<JWTPayload | null> {
+  let alg: string | undefined;
+  try {
+    alg = decodeProtectedHeader(accessToken).alg;
+  } catch {
+    return null;
+  }
+  try {
+    if (alg === 'HS256') {
+      const { payload } = await jwtVerify(accessToken, new TextEncoder().encode(jwtSecret), {
+        algorithms: ['HS256'],
+      });
+      return payload;
+    }
+    const jwks = options?.jwks ?? supabaseRemoteJwks();
+    if (!jwks) return null;
+    const { payload } = await jwtVerify(accessToken, jwks, { algorithms: ['ES256', 'RS256'] });
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 export async function buildAuthContext(
   client: SqlClient,
   accessToken: string | null | undefined,
   jwtSecret: string,
+  options?: AuthVerifyOptions,
 ): Promise<AuthContext> {
   if (!accessToken) return { kind: 'anonymous' };
 
-  let payload: Record<string, unknown>;
-  try {
-    ({ payload } = await jwtVerify(accessToken, new TextEncoder().encode(jwtSecret), {
-      algorithms: ['HS256'],
-    }));
-  } catch {
-    return { kind: 'anonymous' };
-  }
+  const payload = await verifyAccessToken(accessToken, jwtSecret, options);
+  if (!payload) return { kind: 'anonymous' };
   const userId = typeof payload.sub === 'string' ? payload.sub : null;
   if (!userId) return { kind: 'anonymous' };
 

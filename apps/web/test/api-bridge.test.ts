@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { SignJWT } from 'jose';
+import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair } from 'jose';
 import { createTestDb } from '@sevendays/database';
 import { Money, type SqlClient } from '@sevendays/shared';
 import { depositConfirmation } from '@sevendays/ledger';
@@ -49,6 +49,36 @@ describe('buildAuthContext', () => {
     // Second login: idempotent, still a plain user.
     const again = await buildAuthContext(client, token, JWT_SECRET);
     expect(again.kind).toBe('user');
+  });
+
+  it('verifies ES256 tokens via JWKS (new Supabase signing keys)', async () => {
+    const { publicKey, privateKey } = await generateKeyPair('ES256');
+    const jwk = await exportJWK(publicKey);
+    jwk.kid = 'test-key';
+    jwk.alg = 'ES256';
+    jwk.use = 'sig';
+    const jwks = createLocalJWKSet({ keys: [jwk] });
+
+    const uid = randomUUID();
+    const token = await new SignJWT({ email: 'es256@test.dev' })
+      .setProtectedHeader({ alg: 'ES256', kid: 'test-key' })
+      .setSubject(uid)
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(privateKey);
+
+    const auth = await buildAuthContext(client, token, JWT_SECRET, { jwks });
+    expect(auth).toEqual({ kind: 'user', userId: uid });
+
+    // A token signed by a DIFFERENT key is rejected.
+    const { privateKey: wrongKey } = await generateKeyPair('ES256');
+    const forged = await new SignJWT({ email: 'forged@test.dev' })
+      .setProtectedHeader({ alg: 'ES256', kid: 'test-key' })
+      .setSubject(randomUUID())
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(wrongKey);
+    expect((await buildAuthContext(client, forged, JWT_SECRET, { jwks })).kind).toBe('anonymous');
   });
 
   it('survives a stale email collision instead of locking the new user out', async () => {
