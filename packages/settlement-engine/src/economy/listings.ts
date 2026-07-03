@@ -1,0 +1,43 @@
+import type { SqlClient } from '@sevendays/shared';
+import type { EligibleHorse, PriceTablePolicy } from '@sevendays/economy-engine';
+import { getPrice } from '@sevendays/economy-engine';
+import { marketTiebreakScore } from '../assignment/tiebreak.js';
+
+/**
+ * Batch Step 22 — Create Market Listings from the deterministic Profit
+ * Taking selection. Listing only: ownership stays with the seller until
+ * Assignment Settlement completes (Decision 015).
+ */
+export async function createMarketListings(
+  client: SqlClient,
+  input: {
+    batchRunId: string;
+    selection: readonly EligibleHorse[];
+    priceTable: PriceTablePolicy;
+    assignmentAlgorithmVersion: string;
+  },
+): Promise<number> {
+  let created = 0;
+  for (const horse of input.selection) {
+    const price = getPrice(input.priceTable, horse.currentDay);
+    const inserted = await client.query<{ id: string }>(
+      `insert into market_listings
+         (horse_id, seller_user_id, listing_price, current_day, batch_run_id, deterministic_market_tiebreak_score)
+       values ($1, $2, $3, $4, $5, $6)
+       on conflict (horse_id) where status = 'LISTED' do nothing
+       returning id`,
+      [
+        horse.horseId,
+        horse.ownerUserId,
+        price.toFixed8(),
+        horse.currentDay,
+        input.batchRunId,
+        marketTiebreakScore(input.batchRunId, horse.horseId, input.assignmentAlgorithmVersion),
+      ],
+    );
+    if (inserted.rows.length === 0) continue;
+    created += 1;
+    await client.query(`update horses set last_listed_at = now() where id = $1`, [horse.horseId]);
+  }
+  return created;
+}

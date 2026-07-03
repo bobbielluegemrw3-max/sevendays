@@ -96,6 +96,25 @@
 057. Revenge Buff applies to exactly ONE race (resolves P9, option a). The buff auto-applies to the horse received in the user's next successful Assignment, is saved into that horse's next Race Participant Snapshot as the buff snapshot, adds +4/+7/+10 to that race's final_score, and becomes CONSUMED after that race regardless of Survive or Burn. Failed/refunded assignments do not consume it. Lifecycle: ACTIVE -> APPLIED (on assignment) -> snapshotted for the next race -> CONSUMED. Rationale: matches the Expected Buff Modifier +6.7 design; multi-race protection would inflate Day7 arrival rate and Buyback liability; keeps replay/audit simple.
 Implementation note: CONSUMED is executed at snapshot inclusion (not after race completion). Snapshot inclusion is the irreversible commitment point — the immutable snapshot guarantees the buff affects exactly that one race whatever the outcome, so the two timings are financially and game-mechanically equivalent, and snapshot-time consumption is atomic with the snapshot itself.
 
+## Decisions 058-059 (2026-07-03, Owner)
+
+058. Economy metrics v1.0 (resolves P4). All metrics are calculated deterministically from ledger, buyback, marketplace, and batch records. LLM-based forecasting SHALL NOT be used in v1.0.
+- Platform Liquid Reserves = PLATFORM_BUYBACK_RESERVE + PLATFORM_MLM_RESERVE + PLATFORM_EMERGENCY_RESERVE.
+- cash_coverage_ratio = Platform Liquid Reserves / Next 30 Days Scheduled Buyback Payments (30-day window).
+- buyback_cash_coverage_ratio = PLATFORM_BUYBACK_RESERVE / Next 30 Days Scheduled Buyback Payments (tracked separately for normal operations).
+- buyback_liability_ratio = Total Unpaid Buyback Liability (all buyback_schedule_payments with status != PAID) / Platform Total Reserves (all four reserves). Lower is safer; >= 1.0 requires attention.
+- forecasted_cash_coverage = Projected Liquid Reserves After 30 Days / Projected 30 Days Buyback Payments, where projected mint inflow uses avg_day0_mint_count_last_7d x 30 x reserve allocation amounts (deterministic projection input), minus projected MLM and operating usage; projected payments = scheduled next 30d + projected new buyback liability payments.
+
+059. Stress test scenarios v1.0 (resolves P5). Daily runs, 30-day simulation horizon. Common pass conditions: cash_coverage_ratio >= 1.00 every day, buyback_cash_coverage_ratio >= 1.00 every day, no negative reserve balance, all due buyback payments payable.
+- Base: current trend continues (7d averages for mints/match/rebuy, 30d averages for day7 arrival and burn). Pass: cash_coverage_ratio >= 1.20 for 30 days.
+- High Survival: Day7 Arrival Rate +10 percentage points. Pass: buyback_cash_coverage_ratio >= 1.00 for 30 days.
+- Low Burn: burn count -30% (arrival rises accordingly). Pass: cash_coverage_ratio >= 1.00.
+- P2P Freeze: P2P demand = 0 for 7 days (match rate 0, only Day0 fallback if allowed, listings unassigned). Pass: all unassigned sessions refundable, no negative locked balance, buybacks payable, cash_coverage_ratio >= 1.00.
+- Buff Overpower: buff holders' effective survival impact +15 percentage points on projected arrivals (input: buff consumption avg last 7d). Pass: buyback_cash_coverage_ratio >= 1.00 for 30 days.
+- Mass Withdrawal: 20% of all wallet balances withdrawn (Decision 045).
+- Winter 30 / Winter 90: mint demand -30% / -90% (Decision 045).
+Economy Status linkage on failure: Base fail -> at least WATCH; High Survival fail -> at least WINTER; P2P Freeze fail -> at least WATCH; Buff Overpower fail -> at least WINTER; any scenario with a buyback payment shortfall -> EMERGENCY. Stress results influence Tomorrow Economy Status per economy_policy_version.
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:
