@@ -28,12 +28,12 @@ beforeAll(async () => {
     const buyer = await newUser();
     await depositConfirmation(client, {
       userId: buyer,
-      amount: Money.of('100'),
+      amount: Money.of('102'), // Decision 069: mint charge = 100 + 2 fee
       idempotencyKey: randomUUID(),
     });
     await purchaseFundLock(client, {
       userId: buyer,
-      amount: Money.of('100'),
+      amount: Money.of('102'),
       idempotencyKey: randomUUID(),
     });
     await day0MintSettlement(client, { buyerUserId: buyer, idempotencyKey: randomUUID() });
@@ -249,7 +249,8 @@ describe('Buyback payments and Memorial NFT (Steps 20, 30)', () => {
   it('payments never print money: reserve balance decreases by exactly 200', async () => {
     const reserve = await getPlatformAccountId(client, 'PLATFORM_BUYBACK_RESERVE');
     const before = await getBalance(client, reserve);
-    // 3 mints funded 280.80; one full buyback consumed 200 -> 80.80 remains
-    expect(Money.of(before).eq('80.80')).toBe(true);
+    // 3 mints funded 280.80 allocation + 3.00 mint-fee halves (Decision 069);
+    // one full buyback consumed 200 -> 83.80 remains
+    expect(Money.of(before).eq('83.80')).toBe(true);
   });
 });

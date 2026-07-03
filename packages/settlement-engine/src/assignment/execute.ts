@@ -1,6 +1,6 @@
 import { Money, generateSecureSeedHex, insertNotification, sha256Hex, sha256Parts } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import { DAY0_MINT_PRICE, renderNotification } from '@sevendays/domain';
+import { DAY0_MINT_PRICE, DAY0_MINT_TOTAL_CHARGE, renderNotification } from '@sevendays/domain';
 import {
   assignmentSettlement,
   day0MintSettlement,
@@ -155,12 +155,15 @@ async function completeSettlement(
           referenceId: assignment.id,
         });
 
-  // 2. Refund the lock difference (idempotent by key).
+  // 2. Refund the lock difference (idempotent by key). Day0 mints charge
+  //    price + fee = 102 (Decision 069); P2P charges the listed price (the
+  //    seller-side fee never touches the buyer's lock).
   const session = await client.query<{ locked_amount: string }>(
     `select locked_amount::text as locked_amount from purchase_sessions where id = $1`,
     [sessionId],
   );
-  const refund = Money.of(session.rows[0]!.locked_amount).sub(price);
+  const charge = assignment.seller_user_id === null ? Money.of(DAY0_MINT_TOTAL_CHARGE) : price;
+  const refund = Money.of(session.rows[0]!.locked_amount).sub(charge);
   if (!refund.isZero()) {
     await purchaseRefund(client, {
       userId: buyerUserId,

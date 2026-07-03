@@ -171,8 +171,13 @@ describe('purchase flow (05_SETTLEMENT_ENGINE.md)', () => {
     // buyer: 200 - 177.16 + 67.16 = 90; locked: 0
     expect(await getBalance(client, buyerAccounts.available)).toBe('90.00000000');
     expect(await getBalance(client, buyerAccounts.locked)).toBe('0.00000000');
-    // seller receives exactly the price — platform fee 0
-    expect(await getBalance(client, sellerAccounts.available)).toBe('110.00000000');
+    // Decision 069: seller receives price minus the 2% fee (110 -> 107.80);
+    // the fee is split 1.10 / 1.10 to operating and buyback.
+    expect(await getBalance(client, sellerAccounts.available)).toBe('107.80000000');
+    const operating = await getPlatformAccountId(client, 'PLATFORM_OPERATING_RESERVE');
+    const buyback = await getPlatformAccountId(client, 'PLATFORM_BUYBACK_RESERVE');
+    expect(Money.of(await getBalance(client, operating)).gte(Money.of('1.10'))).toBe(true);
+    expect(Money.of(await getBalance(client, buyback)).gte(Money.of('1.10'))).toBe(true);
     // settlement clearing nets to zero
     const clearing = await getPlatformAccountId(client, 'PLATFORM_SETTLEMENT_CLEARING');
     expect(await getBalance(client, clearing)).toBe('0.00000000');
@@ -180,10 +185,11 @@ describe('purchase flow (05_SETTLEMENT_ENGINE.md)', () => {
 
   it('Day0 Mint settlement + Reserve Allocation splits 100 into 93.60/5.40/0.70/0.30', async () => {
     const buyer = await newUser();
-    await fundUser(buyer, '100');
+    // Decision 069: mint charge = 100 price + 2 fee.
+    await fundUser(buyer, '102');
     await purchaseFundLock(client, {
       userId: buyer,
-      amount: Money.of('100'),
+      amount: Money.of('102'),
       idempotencyKey: randomUUID(),
     });
 
@@ -219,10 +225,10 @@ describe('purchase flow (05_SETTLEMENT_ENGINE.md)', () => {
 
 describe('buyback / MLM payments', () => {
   it('pays buyback from PLATFORM_BUYBACK_RESERVE and MLM from PLATFORM_MLM_RESERVE', async () => {
-    // fund reserves via a mint + allocation
+    // fund reserves via a mint + allocation (Decision 069: charge is 102)
     const buyer = await newUser();
-    await fundUser(buyer, '100');
-    await purchaseFundLock(client, { userId: buyer, amount: Money.of('100'), idempotencyKey: randomUUID() });
+    await fundUser(buyer, '102');
+    await purchaseFundLock(client, { userId: buyer, amount: Money.of('102'), idempotencyKey: randomUUID() });
     await day0MintSettlement(client, { buyerUserId: buyer, idempotencyKey: randomUUID() });
     await reserveAllocation(client, { idempotencyKey: randomUUID() });
 

@@ -30,6 +30,7 @@ import { createMemorialNfts } from '../buyback/memorial.js';
 import { lockSessionsIntoBatch, refundUnassignedSessions } from '../assignment/sessions.js';
 import { executeAssignment, executeReserveAllocations } from '../assignment/execute.js';
 import { createMarketListings } from '../economy/listings.js';
+import { evaluateMintCoverageGate } from '../economy/coverage-gate.js';
 import { buildStressBaseInputs, createLiquidityReport, saveStressResults } from '../economy/report.js';
 import type { StepContext, StepHandlers } from './types.js';
 
@@ -327,11 +328,14 @@ export function buildProductionHandlers(): StepHandlers {
     BUILD_BUYER_QUEUE: async () => {},
     EXECUTE_ASSIGNMENT: async (ctx) => {
       const { priceTable, liquidity } = await pricedPolicies(ctx);
+      // Decision 069: the coverage gate can zero the day's mint budget —
+      // the buyback promise is never allowed to outgrow the reserve.
+      const gate = await evaluateMintCoverageGate(ctx.client);
       await executeAssignment(ctx.client, {
         batchRunId: ctx.batchRunId,
         assignmentAlgorithmVersion: lockedVersion(ctx, 'assignment_algorithm_versions'),
         priceTable,
-        allowDay0Mint: liquidity.allow_day0_mint ?? false,
+        allowDay0Mint: (liquidity.allow_day0_mint ?? false) && gate.covered,
         dailyDay0MintLimit: liquidity.daily_day0_mint_limit ?? 0,
         horseGenerationVersion: lockedVersion(ctx, 'horse_generation_versions'),
       });

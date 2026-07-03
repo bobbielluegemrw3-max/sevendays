@@ -29,12 +29,12 @@ beforeAll(async () => {
     const buyer = await newUser();
     await depositConfirmation(client, {
       userId: buyer,
-      amount: Money.of('100'),
+      amount: Money.of('102'), // Decision 069: mint charge = 100 + 2 fee
       idempotencyKey: randomUUID(),
     });
     await purchaseFundLock(client, {
       userId: buyer,
-      amount: Money.of('100'),
+      amount: Money.of('102'),
       idempotencyKey: randomUUID(),
     });
     await day0MintSettlement(client, { buyerUserId: buyer, idempotencyKey: randomUUID() });

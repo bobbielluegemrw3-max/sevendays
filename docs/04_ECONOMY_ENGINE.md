@@ -68,12 +68,14 @@ AI SHALL NOT bypass, reset, or override the Stability Rule.
 
 Burn Target is fixed by Liquidity Policy Version:
 
-| Economy Status | Burn Target |
+| Economy Status | Burn Target (v1.1, Decision 069) |
 |---|---:|
-| NORMAL | 10.0% |
-| WATCH | 10.4% |
-| WINTER | 10.8% |
-| EMERGENCY | 11.2% |
+| NORMAL | 10.7% |
+| WATCH | 11.1% |
+| WINTER | 11.5% |
+| EMERGENCY | 11.9% |
+
+(Original v1.0 values were 10.0/10.4/10.8/11.2; revised +0.7pt by Decision 069 after the measured Day7 arrival rate made the buyback pool under-reserved.)
 
 Future deterministic ranges may be introduced only through a new Liquidity Policy Version.
 

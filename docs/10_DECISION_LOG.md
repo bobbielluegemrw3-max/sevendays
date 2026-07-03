@@ -155,6 +155,16 @@ Implementation note: notifications are emitted at each event site with a determi
 
 068. Frontend hosting changed from Vercel to Render (render.com). The execution boundary is otherwise UNCHANGED: Render serves the user/admin UI and the lightweight API mount (the same @sevendays/api-contracts registry); all financial/batch/settlement/recovery logic remains exclusively on Google Cloud Run; the Service Role Key and wallet keys never reach the client bundle (the existing build-time bundle inspection still enforces this). Render runs the app as a persistent Node server (suits the Postgres session-pooled connections better than serverless). Deployment is Blueprint-based (render.yaml, Singapore region — closest to Supabase ap-south-1).
 
+## Decision 069 (2026-07-04, Developer under owner mandate — economy revision v1.1)
+
+069. Economy revision v1.1. Context: the 100,000-user simulation and a demand-stop drill measured the actual Day7 arrival rate at ~49.4% (floor rounding + revenge buffs push it above the 47.8% geometric model), which made the buyback pool structurally under-reserved by ~5.3 USDT per mint — the aggregate RTP was ~100.6%, payable only while mint volume kept growing. In the drill, a cold demand stop defaulted the buyback pool 9 days later with 279 missed payments. The player-facing promise (buyback 200 over 7 payments, price curve, purchase lock 177.16) is UNCHANGED. Full data: ECONOMY_REVISION.md.
+Changes:
+- Burn Target ladder +0.7pt: NORMAL 0.107 / WATCH 0.111 / WINTER 0.115 / EMERGENCY 0.119 (daily survival 90% -> 89.3%).
+- Day0 mint fee 2 USDT (total charge 102): 1 to PLATFORM_OPERATING_RESERVE, 1 to the buyback buffer. Fits inside the existing 177.16 lock.
+- P2P fee 2% SELLER-side (buyer pays the listed price): 1% operating, 1% buyback buffer. This amends the constitution line "P2P platform trading fee is always 0"; the fee is a fixed policy value — the forbidden "P2P fee setting API" remains forbidden.
+- Mint coverage gate: Day0 minting is allowed only while the buyback reserve covers the stop-scenario liability (deterministic factor table, 3.5% safety margin over the geometric model, matching the measured arrival excess). Engine-enforced at Step 25/26.
+Authorization note: approved by the developer under the owner's standing mandate to correct any >100% RTP condition; prepared for formal owner ratification with ECONOMY_REVISION.md.
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:

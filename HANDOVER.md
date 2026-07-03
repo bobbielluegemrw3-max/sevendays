@@ -1,6 +1,7 @@
 # Seven Days Derby — セッション引継ぎ書
 
-> 最終更新: 2026-07-03 / 最終コミット: `89dc025` / テスト: **265件 全PASS**(+実Postgres opt-in 1件)
+> 最終更新: 2026-07-04 / テスト: **265件 全PASS**(+実Postgres opt-in 1件)
+> **経済改定v1.1適用済み(Decision 069)**: Burn10.7%系・ミント手数料2(課金102)・P2P手数料2%売り手・ミント担保ゲート。理由と実証は `ECONOMY_REVISION.md`(オーナー追認用)。旧経済は需要急停止で未払い279件/新経済は未払い0件+運営利益2%を実証
 > 新しいセッションはまずこのファイルと `IMPLEMENTATION_PLAN.md` を読むこと。
 > **仕様の正は `docs/`(v1.0仕様書パッケージ)+ `docs/10_DECISION_LOG.md`(Decision 001〜059)。ビジネスルールの発明は禁止。**
 
@@ -103,8 +104,8 @@ M5 リリース判定 🔶 Phase 14a-c ✅(ワーカー・インフラ定義・*
 ## 6. 作業の進め方(確立済みの運用)
 
 1. **フェーズ着手前**: 未確定事項があれば「GPTに聞く質問文」形式でユーザーに提示(過去形式は会話ログ/Decision Log参照)
-2. **オーナー決定** → `docs/10_DECISION_LOG.md` に決定番号(次は**069**)で英語追記 + `IMPLEMENTATION_PLAN.md` 付録Eを更新
-3. スキーマ変更 = 新規マイグレーション(次は **20260702200132**)→ PGliteテスト → `db push` で本番反映
+2. **オーナー決定** → `docs/10_DECISION_LOG.md` に決定番号(次は**070**)で英語追記 + `IMPLEMENTATION_PLAN.md` 付録Eを更新
+3. スキーマ変更 = 新規マイグレーション(次は **20260702200133**)→ PGliteテスト → `db push` で本番反映
 4. フェーズ完了ごと: 全チェック(`pnpm build/test/lint/typecheck` + `check:forbidden-apis`)→ コミット(末尾に `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`)→ push
 5. フェーズごとに「100点診断」を求められる文化。**クラッシュ窓・冪等性・並行性・初日/空データのエッジ**を重点監査すると過去の指摘パターンと一致する
 

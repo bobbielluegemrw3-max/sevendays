@@ -71,12 +71,12 @@ describe('Reserve Allocation v1.0', () => {
   });
 });
 
-describe('Burn Target v1.0', () => {
-  it('matches Decision 002 values', () => {
-    expect(BURN_TARGET_RATE_V1.NORMAL).toBe('0.100');
-    expect(BURN_TARGET_RATE_V1.WATCH).toBe('0.104');
-    expect(BURN_TARGET_RATE_V1.WINTER).toBe('0.108');
-    expect(BURN_TARGET_RATE_V1.EMERGENCY).toBe('0.112');
+describe('Burn Target v1.1 (Decision 069)', () => {
+  it('matches the revised ladder (+0.7pt over Decision 002)', () => {
+    expect(BURN_TARGET_RATE_V1.NORMAL).toBe('0.107');
+    expect(BURN_TARGET_RATE_V1.WATCH).toBe('0.111');
+    expect(BURN_TARGET_RATE_V1.WINTER).toBe('0.115');
+    expect(BURN_TARGET_RATE_V1.EMERGENCY).toBe('0.119');
   });
 });
 

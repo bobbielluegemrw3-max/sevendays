@@ -7,13 +7,14 @@ const VERSION = 'race_engine_v1.0';
 
 describe('burn target count (immutable floor rule)', () => {
   it('floor(eligible * rate) per economy status', () => {
-    expect(burnTargetCount(1000, 'NORMAL')).toBe(100); // 10.0%
-    expect(burnTargetCount(1000, 'WATCH')).toBe(104); // 10.4%
-    expect(burnTargetCount(1000, 'WINTER')).toBe(108); // 10.8%
-    expect(burnTargetCount(1000, 'EMERGENCY')).toBe(112); // 11.2%
-    expect(burnTargetCount(999, 'WATCH')).toBe(103); // 103.896 -> floor
-    expect(burnTargetCount(25, 'WATCH')).toBe(2); // 2.6 -> 2
-    expect(burnTargetCount(7, 'NORMAL')).toBe(0); // 0.7 -> 0
+    // Burn ladder v1.1 (Decision 069: +0.7pt over the original values)
+    expect(burnTargetCount(1000, 'NORMAL')).toBe(107); // 10.7%
+    expect(burnTargetCount(1000, 'WATCH')).toBe(111); // 11.1%
+    expect(burnTargetCount(1000, 'WINTER')).toBe(115); // 11.5%
+    expect(burnTargetCount(1000, 'EMERGENCY')).toBe(119); // 11.9%
+    expect(burnTargetCount(999, 'WATCH')).toBe(110); // 110.889 -> floor
+    expect(burnTargetCount(25, 'WATCH')).toBe(2); // 2.775 -> 2
+    expect(burnTargetCount(7, 'NORMAL')).toBe(0); // 0.749 -> 0
   });
 });
 

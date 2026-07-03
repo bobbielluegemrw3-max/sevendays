@@ -248,9 +248,10 @@ describe('assignment execution', () => {
     expect(result.p2pAssignments).toBe(1);
     expect(result.day0Mints).toBe(0); // P2P has priority
 
-    // seller receives exactly the price (platform fee = 0)
+    // Decision 069: seller receives the price minus the 2% fee
+    // (133.10 x 0.98 = 130.438).
     const sellerAccounts = await ensureUserAccounts(client, seller);
-    expect(await getBalance(client, sellerAccounts.available)).toBe('133.10000000');
+    expect(await getBalance(client, sellerAccounts.available)).toBe('130.43800000');
     // buyer: 200 - 177.16 lock + (177.16 - 133.10) refund = 66.90; locked 0
     const buyerAccounts = await ensureUserAccounts(client, buyer);
     expect(await getBalance(client, buyerAccounts.available)).toBe('66.90000000');
@@ -301,7 +302,7 @@ describe('assignment execution', () => {
     expect(await getBalance(client, buyerAccounts.available)).toBe('66.90000000');
   });
 
-  it('Day0 Mint fallback: verifiable commit-reveal mint, reserve allocation, refund 77.16', async () => {
+  it('Day0 Mint fallback: verifiable commit-reveal mint, reserve allocation, refund 75.16', async () => {
     const batch = await newBatch();
     const buyer = await newUser();
     await fund(buyer, '200');
@@ -321,9 +322,10 @@ describe('assignment execution', () => {
     });
     expect(result.day0Mints).toBe(1);
 
-    // buyer: 22.84 + 77.16 refund = 100.00
+    // Decision 069: mint charge 102 (100 + 2 fee) -> refund 75.16;
+    // buyer: 22.84 + 75.16 refund = 98.00
     const buyerAccounts = await ensureUserAccounts(client, buyer);
-    expect(await getBalance(client, buyerAccounts.available)).toBe('100.00000000');
+    expect(await getBalance(client, buyerAccounts.available)).toBe('98.00000000');
 
     // minted horse: owned by buyer, Day0, generation verifiable via commit-reveal
     const assignment = await client.query<{ horse_id: string }>(
@@ -408,7 +410,7 @@ describe('assignment execution', () => {
       }),
     );
     expect(balances).toContain('200.00000000'); // expired buyer fully refunded
-    expect(balances).toContain('100.00000000'); // minted buyer paid exactly 100
+    expect(balances).toContain('98.00000000'); // minted buyer paid 102 (Decision 069)
 
     // ledger stays perfectly balanced through the whole suite
     await executeReserveAllocations(client, batch);
@@ -470,7 +472,7 @@ describe('assignment execution', () => {
     expect(await getBalance(client, buyerAccounts.locked)).toBe('0.00000000');
     expect(await getBalance(client, buyerAccounts.available)).toBe('66.90000000'); // 22.84 + 44.06
     const sellerAccounts = await ensureUserAccounts(client, seller);
-    expect(await getBalance(client, sellerAccounts.available)).toBe('133.10000000'); // exactly once
+    expect(await getBalance(client, sellerAccounts.available)).toBe('130.43800000'); // exactly once (133.10 - 2% fee)
     const horse = await client.query<{ owner_user_id: string }>(
       `select owner_user_id from horses where id = $1`,
       [listing.horseId],

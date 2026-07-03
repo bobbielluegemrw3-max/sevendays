@@ -13,6 +13,7 @@ export * from './assignment/sessions.js';
 export * from './assignment/queues.js';
 export * from './assignment/execute.js';
 export * from './economy/listings.js';
+export * from './economy/coverage-gate.js';
 export * from './economy/report.js';
 export * from './recovery/recovery.js';
 export * from './batch/production.js';

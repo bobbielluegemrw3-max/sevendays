@@ -9,9 +9,9 @@ Seven Days Derby is a Web3 horse racing and high-liquidity P2P asset game. It is
 1. Player First.
 2. Community First.
 3. Liquidity before short-term platform profit.
-4. Platform revenue comes only from Day0 Mint.
-5. Day0 Mint price is 100 USDT.
-6. P2P platform fee is always 0.
+4. Platform revenue comes from the Day0 Mint fee and the P2P fee (Decision 069; originally Day0 Mint only).
+5. Day0 Mint price is 100 USDT plus a 2 USDT mint fee (total charge 102, Decision 069).
+6. P2P platform fee is 2%, seller-side, fixed by policy version (Decision 069; originally 0). No API may change it.
 7. Day7 Buyback total is fixed at 200 USDT in v1.0.
 8. Race Engine is deterministic, versioned, replayable, auditable, and immutable.
 9. AI never changes race outcomes, race scores, rankings, seeds, burn targets, ledger balances, buyback amount, or P2P fee.

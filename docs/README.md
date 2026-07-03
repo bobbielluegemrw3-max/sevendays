@@ -22,7 +22,7 @@ Claude Code must implement from these documents and must not invent business rul
 
 - Platform revenue is Day0 Mint only.
 - Day0 Mint price is 100 USDT.
-- P2P platform trading fee is always 0.
+- P2P platform trading fee is 2% seller-side, fixed by policy version (Decision 069; originally 0).
 - Day7 Buyback is 200 USDT paid over 7 payments.
 - Payment 1 begins on the day after Day7 Clear.
 - Burn generates Revenge Buff and may generate MLM Reward.

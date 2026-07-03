@@ -1,7 +1,9 @@
 import { Money, sumMoney } from '@sevendays/shared';
 import {
   DAY0_MINT_PRICE,
+  DAY0_MINT_TOTAL_CHARGE,
   MLM_REWARD_AMOUNT,
+  P2P_FEE_SPLIT_RATE,
   RESERVE_ALLOCATION_V1,
 } from '@sevendays/domain';
 import { ensureUserAccounts, getPlatformAccountId, getUserAccountId } from './accounts.js';
@@ -84,8 +86,10 @@ export async function purchaseRefund(
 }
 
 /**
- * P2P assignment settlement. Buyer payment == seller proceeds — platform
- * fee is ALWAYS 0 (01_CONSTITUTION.md). Routed through settlement clearing.
+ * P2P assignment settlement (Decision 069): the buyer pays the listed
+ * price; the seller receives price minus the 2% platform fee, which is
+ * split half to operating and half to the buyback reserve buffer. Routed
+ * through settlement clearing (still nets to zero per transaction).
  */
 export async function assignmentSettlement(
   client: SqlClient,
@@ -94,6 +98,11 @@ export async function assignmentSettlement(
   const buyerLocked = await getUserAccountId(client, args.buyerUserId, 'USER_LOCKED');
   const seller = await ensureUserAccounts(client, args.sellerUserId);
   const clearing = await getPlatformAccountId(client, 'PLATFORM_SETTLEMENT_CLEARING');
+  const operating = await getPlatformAccountId(client, 'PLATFORM_OPERATING_RESERVE');
+  const buyback = await getPlatformAccountId(client, 'PLATFORM_BUYBACK_RESERVE');
+  // Price-table prices have 2dp, so the 1% halves are exact (no rounding).
+  const feeHalf = args.price.mulFloor(P2P_FEE_SPLIT_RATE);
+  const proceeds = args.price.sub(feeHalf).sub(feeHalf);
   return postTransaction(client, {
     type: 'ASSIGNMENT_SETTLEMENT',
     idempotencyKey: args.idempotencyKey,
@@ -102,29 +111,41 @@ export async function assignmentSettlement(
       { accountId: buyerLocked, direction: 'DEBIT', amount: args.price },
       { accountId: clearing, direction: 'CREDIT', amount: args.price },
       { accountId: clearing, direction: 'DEBIT', amount: args.price },
-      { accountId: seller.available, direction: 'CREDIT', amount: args.price },
+      { accountId: seller.available, direction: 'CREDIT', amount: proceeds },
+      { accountId: operating, direction: 'CREDIT', amount: feeHalf },
+      { accountId: buyback, direction: 'CREDIT', amount: feeHalf },
     ],
   });
 }
 
-/** Day0 Mint fallback settlement: buyer USER_LOCKED -> PLATFORM_MINT_REVENUE (100 USDT). */
+/**
+ * Day0 Mint settlement (Decision 069): the buyer is charged 102 —
+ * 100 mint price to PLATFORM_MINT_REVENUE (allocated by the reserve step)
+ * plus the 2 mint fee split half operating / half buyback buffer.
+ */
 export async function day0MintSettlement(
   client: SqlClient,
   args: Ref & { buyerUserId: string },
 ): Promise<PostedTransaction> {
   const price = Money.of(DAY0_MINT_PRICE);
+  const charge = Money.of(DAY0_MINT_TOTAL_CHARGE);
+  const feeHalf = charge.sub(price).mulFloor('0.5');
   const buyerLocked = await getUserAccountId(client, args.buyerUserId, 'USER_LOCKED');
   const clearing = await getPlatformAccountId(client, 'PLATFORM_SETTLEMENT_CLEARING');
   const mintRevenue = await getPlatformAccountId(client, 'PLATFORM_MINT_REVENUE');
+  const operating = await getPlatformAccountId(client, 'PLATFORM_OPERATING_RESERVE');
+  const buyback = await getPlatformAccountId(client, 'PLATFORM_BUYBACK_RESERVE');
   return postTransaction(client, {
     type: 'DAY0_MINT_SETTLEMENT',
     idempotencyKey: args.idempotencyKey,
     ...refFields(args),
     entries: [
-      { accountId: buyerLocked, direction: 'DEBIT', amount: price },
-      { accountId: clearing, direction: 'CREDIT', amount: price },
-      { accountId: clearing, direction: 'DEBIT', amount: price },
+      { accountId: buyerLocked, direction: 'DEBIT', amount: charge },
+      { accountId: clearing, direction: 'CREDIT', amount: charge },
+      { accountId: clearing, direction: 'DEBIT', amount: charge },
       { accountId: mintRevenue, direction: 'CREDIT', amount: price },
+      { accountId: operating, direction: 'CREDIT', amount: feeHalf },
+      { accountId: buyback, direction: 'CREDIT', amount: feeHalf },
     ],
   });
 }

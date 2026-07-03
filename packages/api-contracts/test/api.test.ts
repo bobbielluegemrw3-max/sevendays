@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { createTestDb } from '@sevendays/database';
 import { Money } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import { depositConfirmation } from '@sevendays/ledger';
+import { depositConfirmation, getPlatformAccountId, postTransaction } from '@sevendays/ledger';
 import { requestRecovery } from '@sevendays/settlement-engine';
 import {
   buildApiRegistry,
@@ -210,6 +210,27 @@ describe('race transparency and admin surface after a real production day', () =
         ],
       );
     }
+    // Capitalize the buyback reserve for the three synthetic horses: in
+    // production every horse enters via a mint that funds its own coverage;
+    // horses inserted out of thin air would otherwise trip the Decision 069
+    // mint coverage gate (which is exactly its job).
+    await postTransaction(client, {
+      type: 'ADMIN_ADJUSTMENT',
+      idempotencyKey: `test:capitalize:${randomUUID()}`,
+      entries: [
+        {
+          accountId: await getPlatformAccountId(client, 'PLATFORM_DEPOSIT_CLEARING'),
+          direction: 'DEBIT',
+          amount: Money.of('1000'),
+        },
+        {
+          accountId: await getPlatformAccountId(client, 'PLATFORM_BUYBACK_RESERVE'),
+          direction: 'CREDIT',
+          amount: Money.of('1000'),
+        },
+      ],
+    });
+
     const buyer = await newUser();
     await depositConfirmation(client, {
       userId: buyer,

@@ -54,16 +54,57 @@ export const RESERVE_ALLOCATION_V1 = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Burn Target v1.0 (04_ECONOMY_ENGINE.md) — rate by Economy Status.
-// Burn Target Count = floor(eligible * rate). floor() is immutable.
+// Burn Target v1.1 (04_ECONOMY_ENGINE.md, Decision 069) — rate by Economy
+// Status. Burn Target Count = floor(eligible * rate). floor() is immutable.
+//
+// Decision 069 raised the ladder +0.7pt: the measured Day7 arrival rate
+// (~49.4%, floor-rounding + revenge-buff effects) made the buyback pool
+// structurally under-reserved (~-5.3 USDT/mint, aggregate RTP ~100.6%).
+// At 10.7% the pool is balanced; see ECONOMY_REVISION.md.
 // ---------------------------------------------------------------------------
 
 export const BURN_TARGET_RATE_V1: Readonly<Record<EconomyStatus, string>> = {
-  NORMAL: '0.100',
-  WATCH: '0.104',
-  WINTER: '0.108',
-  EMERGENCY: '0.112',
+  NORMAL: '0.107',
+  WATCH: '0.111',
+  WINTER: '0.115',
+  EMERGENCY: '0.119',
 };
+
+// ---------------------------------------------------------------------------
+// Fees v1.1 (Decision 069). Player-facing buyback terms are UNCHANGED.
+// ---------------------------------------------------------------------------
+
+/** Day0 Mint fee on top of the 100 USDT mint price (total charge 102). */
+export const DAY0_MINT_FEE = '2.00';
+/** Total charged to the buyer for a Day0 Mint (price + fee). */
+export const DAY0_MINT_TOTAL_CHARGE = '102.00';
+/** P2P fee, seller-side, deducted from proceeds (2%). */
+export const P2P_FEE_RATE = '0.02';
+/** Half of every fee goes to the buyback reserve buffer, half to operating. */
+export const P2P_FEE_SPLIT_RATE = '0.01';
+
+// ---------------------------------------------------------------------------
+// Mint coverage gate v1.1 (Decision 069): Day0 minting is allowed only
+// while the buyback reserve covers the stop-scenario liability — every
+// in-flight horse's expected arrival value at the NORMAL burn rate with a
+// 3.5% safety margin (the measured arrival excess over the geometric model
+// from floor rounding + revenge buffs was ~3.3%). Factors =
+// 1.035 * (1 - 0.107)^r for r races remaining, ROUND_UP at 8dp.
+// The margin keeps a fresh mint self-covering (marginal liability
+// 200 x 0.46870606 = 93.74 < 94.60 inflow), so the gate binds only when
+// the pool is genuinely behind, never during healthy growth.
+// ---------------------------------------------------------------------------
+
+export const MINT_COVERAGE_FACTOR_V1: readonly string[] = [
+  '1.03500000', // 0 races left (about to clear)
+  '0.92425500',
+  '0.82535972',
+  '0.73704623',
+  '0.65818228',
+  '0.58775678',
+  '0.52486681',
+  '0.46870606', // freshly minted (7 races left)
+];
 
 // ---------------------------------------------------------------------------
 // AI Profit Taking v1.0 (04_ECONOMY_ENGINE.md)
