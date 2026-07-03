@@ -232,6 +232,52 @@ describe('full production day (all 37 steps, real handlers)', () => {
     }
   }, 120_000);
 
+  it('LAUNCH DAY (F-L): zero horses + first buyers — the batch completes and mints', async () => {
+    // fresh database: no horses exist anywhere yet
+    const launchDb = await createTestDb();
+    const buyer = await (async () => {
+      const r = await launchDb.query<{ id: string }>(
+        `insert into users (email) values ($1) returning id`,
+        [`${randomUUID()}@launch.test`],
+      );
+      return r.rows[0]!.id;
+    })();
+    await depositConfirmation(launchDb, {
+      userId: buyer,
+      amount: Money.of('200'),
+      idempotencyKey: randomUUID(),
+    });
+    await createPurchaseSession(launchDb, { userId: buyer, idempotencyKey: randomUUID() });
+
+    const result = await runBatch(launchDb, {
+      batchDate: '2038-06-01',
+      handlers: buildProductionHandlers(),
+    });
+    expect(result.errorMessage, result.failedStepKey).toBeUndefined();
+    expect(result.status).toBe('COMPLETED');
+    expect(await getMarketplaceState(launchDb)).toBe('OPEN');
+
+    // the empty race is legal and finalized with zero participants
+    const race = await launchDb.query<{ participant_count: number; status: string }>(
+      `select participant_count, status::text as status from races
+       where batch_run_id = $1`,
+      [result.batchRunId],
+    );
+    expect(race.rows[0]!.participant_count).toBe(0);
+    expect(race.rows[0]!.status).toBe('FINALIZED');
+
+    // the first horse of the game was minted for the first buyer
+    const horse = await launchDb.query<{ owner_user_id: string; current_day: number }>(
+      `select owner_user_id, current_day from horses`,
+    );
+    expect(horse.rows).toHaveLength(1);
+    expect(horse.rows[0]!.owner_user_id).toBe(buyer);
+    expect(horse.rows[0]!.current_day).toBe(0);
+
+    const reconciliation = await reconcile(launchDb);
+    expect(reconciliation.issues).toEqual([]);
+  }, 120_000);
+
   it('re-running the completed day is a perfect no-op', async () => {
     const before = await client.query<{ tx: string; horses_burned: string }>(
       `select (select count(*) from ledger_transactions)::text as tx,

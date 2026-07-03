@@ -448,7 +448,17 @@ async function verifyBurnOutcome(
   );
   const total = Number(results.rows[0]!.total);
   const burned = Number(results.rows[0]!.burned);
-  if (total === 0) throw new Error(`INVALID_BATCH_STATE: race ${raceId} has no results`);
+  if (total === 0) {
+    // An EMPTY race is legal (launch day: zero ACTIVE horses exist before
+    // the first Day0 mints happen later in this very batch — audit fix F-L).
+    // It is only an error if participants exist without results.
+    const participants = await ctx.client.query<{ participant_count: number }>(
+      `select participant_count from races where id = $1`,
+      [raceId],
+    );
+    if ((participants.rows[0]?.participant_count ?? 0) === 0) return;
+    throw new Error(`INVALID_BATCH_STATE: race ${raceId} has participants but no results`);
+  }
 
   if (aspect === 'count' || aspect === 'selection') {
     // burned flags must exactly cover the bottom ranks
