@@ -1,6 +1,6 @@
 # Seven Days Derby — セッション引継ぎ書
 
-> 最終更新: 2026-07-03 / 最終コミット: `1ebcb6e` / テスト: **247件 全PASS**(+実Postgres opt-in 1件)
+> 最終更新: 2026-07-03 / 最終コミット: `ecff8e8` / テスト: **253件 全PASS**(+実Postgres opt-in 1件)
 > 新しいセッションはまずこのファイルと `IMPLEMENTATION_PLAN.md` を読むこと。
 > **仕様の正は `docs/`(v1.0仕様書パッケージ)+ `docs/10_DECISION_LOG.md`(Decision 001〜059)。ビジネスルールの発明は禁止。**
 
@@ -12,7 +12,7 @@
 M1 基盤        ✅ Phase 0-3   (モノレポ/DB/Ledger/ポリシー)
 M2 コアエンジン ✅ Phase 4-7   (バッチ骨格/レース/Burn/Buyback)
 M3 経済循環    ✅ Phase 8-10  (購入・割当/経済エンジン/リカバリ)
-M4 プロダクト   🔶 Phase 11 ✅ / Phase 12 コア✅(チェーン実機検証・NFTミント残)→ 13(フロントエンド)未着手
+M4 プロダクト   🔶 Phase 11 ✅ / Phase 12 コア✅(チェーン実機検証残)/ Phase 13 初版✅(E2E・E17残)
 M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Completion Gates)
 ```
 
@@ -73,11 +73,10 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 - 運用設定値: `WithdrawalPolicy.nativeUsdtRate`(POL/USDTレート)と custody address の管理方法をPhase 14で確定
 - 設計メモ: 出金確定時のLedger移動は無し(FUND_LOCKで`PLATFORM_WITHDRAWAL_CLEARING`に入った資金がそのまま外界境界として残る=入金クリアリングと対称、Decision 061でガス代もRevenue計上しない)。`WITHDRAWAL_BROADCAST`/`WITHDRAWAL_CONFIRMATION`のenum値は現状未使用
 
-### Phase 13: フロントエンド
-- `apps/web`(Next.js)+ Admin UI。APIは `api-contracts` の registry を Next route handler / Cloud Run HTTPサーバーにマウントするだけ(`registry.dispatch(client, request)`)
-- 認証: Supabase Auth JWT → AuthContext組立(admin rolesは`admin_role_grants`)
-- CIにバンドル検査(Service Role Key/金融ロジック不在)を追加
-- E17(通知種類)未確定 → オーナーに質問
+### Phase 13: フロントエンド — 初版完了(`ecff8e8`)、残り:
+- **実装済み**: `apps/web`(Next.js 16 / App Router)。`app/api/[...path]/route.ts` が registry をマウント、サーバーコンポーネントは同じ`dispatchBridge`をHTTPなしで使用。認証=Supabase JWTをjoseでローカル検証→初回ログインで`users`行プロビジョニング(id=auth.uid)→`admin_role_grants`でロール解決。ユーザーUI 10画面+Admin UI 4画面。バンドル検査は`next build`に組込(`scripts/check-client-bundle.mjs`)
+- **環境変数**(`apps/web/.env.example`): NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_JWT_SECRET / DATABASE_URL(セッションプーラー)
+- **残**: ブラウザE2E(購入→割当→レース→Buyback主要フロー。Playwright+実行環境が必要)/ Marketplace状態のリアルタイム反映(現状はリロード反映)/ E17確定後の通知文言 / トレーニングUI(**APIが07_APIに存在しない — オーナー確認事項**)/ リカバリ画面(一覧APIが07_APIに無い、approveのみ存在)/ Vercelデプロイ
 
 ### Phase 14: 総仕上げ
 - services/*(Cloud Runワーカー)の薄いHTTPラッパー化+Pub/Sub+Scheduler(20:00 MYT=12:00 UTC)+監視11種アラート
@@ -110,7 +109,7 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 - 遅延制約トリガーのエラーは**COMMIT時**に発火 — `manageTransaction: false`で外部管理する場合は呼び出し側でエラーマップが必要(実例: `sessions.ts`)
 - 禁止APIチェッカーはリテラルgrep — テストで禁止パスを使う場合は動的組み立て(`['','api',...].join('/')`)
 
-## 8. テスト全景(247件全PASS+opt-in 1件。数字は `turbo run test --force` の実測)
+## 8. テスト全景(253件全PASS+opt-in 1件。数字は `turbo run test --force` の実測)
 
 | スイート | 件数 | 内容 |
 |---|---|---|
@@ -123,3 +122,4 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 | settlement-engine | 35 | バッチ/Burn e2e/Buyback e2e/割当e2e(クラッシュ再開込み)/リカバリ/**フルデイ/ローンチ初日** |
 | api-contracts | 8 | 認証境界/冪等強制/API経由フロー/禁止APIゲート/**2名承認・6桁制限** |
 | blockchain | 44 | HD導出(BIP-44ベクタ)/金額変換+実費手数料/Watcher(冪等・クラッシュ窓・**0値/リオルグ/REVERT**)/Broadcaster(永続化先行送信・リオルグ・2名承認・**自己修復・二重払いガード**)/NFTミント(決定論tokenId・クラッシュ再開)/署名/鍵非露出 |
+| web | 6 | JWT検証/初回プロビジョニング/ロール解決/出金フロー(ブリッジ経由)/admin境界/internal到達不能 |
