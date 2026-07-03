@@ -1,0 +1,36 @@
+{
+  "name": "@sevendays/api-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint src test"
+  },
+  "dependencies": {
+    "@sevendays/domain": "workspace:*",
+    "@sevendays/economy-engine": "workspace:*",
+    "@sevendays/ledger": "workspace:*",
+    "@sevendays/settlement-engine": "workspace:*",
+    "@sevendays/shared": "workspace:*",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@sevendays/database": "workspace:*",
+    "@sevendays/race-engine": "workspace:*",
+    "eslint": "^9.28.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.33.0",
+    "vitest": "^3.2.0"
+  }
+}

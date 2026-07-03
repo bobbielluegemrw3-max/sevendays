@@ -10,6 +10,7 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
+    "check:forbidden-apis": "node scripts/check-forbidden-apis.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,json,md,yaml,yml}\""
   },
   "devDependencies": {

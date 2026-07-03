@@ -1,0 +1,269 @@
+import { beforeAll, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { createTestDb } from '@sevendays/database';
+import { Money } from '@sevendays/shared';
+import type { SqlClient } from '@sevendays/shared';
+import { depositConfirmation } from '@sevendays/ledger';
+import {
+  buildApiRegistry,
+  generateOpenApi,
+  FORBIDDEN_API_PATHS,
+  ApiRegistry,
+  type AuthContext,
+} from '../src/index.js';
+
+let client: SqlClient;
+const registry = buildApiRegistry();
+
+beforeAll(async () => {
+  client = await createTestDb();
+});
+
+async function newUser(): Promise<string> {
+  const r = await client.query<{ id: string }>(
+    `insert into users (email) values ($1) returning id`,
+    [`${randomUUID()}@test.dev`],
+  );
+  return r.rows[0]!.id;
+}
+
+function asUser(userId: string): AuthContext {
+  return { kind: 'user', userId };
+}
+
+async function call(
+  method: 'GET' | 'POST',
+  path: string,
+  auth: AuthContext,
+  options: { body?: unknown; idempotencyKey?: string } = {},
+) {
+  return registry.dispatch(client, {
+    method,
+    path,
+    auth,
+    body: options.body,
+    idempotencyKey: options.idempotencyKey ?? null,
+  });
+}
+
+describe('forbidden APIs (Completion Gate G8)', () => {
+  it('none of the forbidden endpoints exist in the registry', () => {
+    const paths = registry.list().map((e) => e.path);
+    for (const forbidden of FORBIDDEN_API_PATHS) {
+      expect(paths.some((p) => p.includes(forbidden)), forbidden).toBe(false);
+    }
+  });
+
+  it('registering a forbidden endpoint throws at construction time', () => {
+    const r = new ApiRegistry();
+    // path built dynamically so the repo-wide literal scan stays clean
+    const forbiddenPath = ['', 'api', 'v1', 'burn', 'cancel'].join('/');
+    expect(() =>
+      r.register({
+        method: 'POST',
+        path: forbiddenPath,
+        auth: 'admin',
+        handler: async () => ({}),
+      }),
+    ).toThrow('FORBIDDEN_API');
+  });
+
+  it('OpenAPI document covers the whole surface', () => {
+    const doc = generateOpenApi(registry) as { paths: Record<string, unknown> };
+    expect(Object.keys(doc.paths).length).toBeGreaterThanOrEqual(25);
+  });
+});
+
+describe('auth boundaries (Completion Gate G7 direction)', () => {
+  it('user endpoints reject anonymous; admin endpoints reject users; internal rejects everyone external', async () => {
+    const user = await newUser();
+
+    const anonymous = await call('GET', '/api/v1/wallet', { kind: 'anonymous' });
+    expect(anonymous.status).toBe(401);
+
+    const userOnAdmin = await call('GET', '/api/v1/admin/dashboard', asUser(user));
+    expect(userOnAdmin.status).toBe(403);
+
+    const adminNoRoles = await call('GET', '/api/v1/admin/dashboard', {
+      kind: 'admin',
+      userId: user,
+      roles: [],
+    });
+    expect(adminNoRoles.status).toBe(403);
+
+    const userOnInternal = await call('POST', '/internal/batch/start', asUser(user), {
+      body: { batch_date: '2039-01-01' },
+    });
+    expect(userOnInternal.status).toBe(403);
+
+    const unknown = await call('GET', '/api/v1/nonexistent', asUser(user));
+    expect(unknown.status).toBe(404);
+  });
+});
+
+describe('user flow through the API', () => {
+  it('wallet -> purchase (idempotency enforced) -> session -> cancel', async () => {
+    const user = await newUser();
+    await depositConfirmation(client, {
+      userId: user,
+      amount: Money.of('200'),
+      idempotencyKey: randomUUID(),
+    });
+
+    const wallet = await call('GET', '/api/v1/wallet', asUser(user));
+    expect(wallet.status).toBe(200);
+    expect((wallet.body as { available: string }).available).toBe('200.00000000');
+
+    // POST /purchase without Idempotency-Key -> 400 (07_API.md)
+    const missingKey = await call('POST', '/api/v1/purchase', asUser(user));
+    expect(missingKey.status).toBe(400);
+    expect((missingKey.body as { error: { code: string } }).error.code).toBe('IDEMPOTENCY_KEY_REQUIRED');
+
+    const key = randomUUID();
+    const created = await call('POST', '/api/v1/purchase', asUser(user), { idempotencyKey: key });
+    expect(created.status).toBe(200);
+    const sessionId = (created.body as { purchase_session_id: string }).purchase_session_id;
+
+    // replay returns the same session
+    const replay = await call('POST', '/api/v1/purchase', asUser(user), { idempotencyKey: key });
+    expect((replay.body as { purchase_session_id: string }).purchase_session_id).toBe(sessionId);
+    expect((replay.body as { already_exists: boolean }).already_exists).toBe(true);
+
+    const lockedWallet = await call('GET', '/api/v1/wallet', asUser(user));
+    expect((lockedWallet.body as { locked: string }).locked).toBe('177.16000000');
+
+    const session = await call('GET', `/api/v1/purchase/${sessionId}`, asUser(user));
+    expect(session.status).toBe(200);
+
+    // another user cannot see it
+    const stranger = await newUser();
+    const strangerView = await call('GET', `/api/v1/purchase/${sessionId}`, asUser(stranger));
+    expect(strangerView.status).toBe(404);
+
+    const cancel = await call('POST', `/api/v1/purchase/${sessionId}/cancel`, asUser(user));
+    expect(cancel.status).toBe(200);
+    const refunded = await call('GET', '/api/v1/wallet', asUser(user));
+    expect((refunded.body as { available: string }).available).toBe('200.00000000');
+
+    const history = await call('GET', '/api/v1/wallet/history', asUser(user));
+    expect((history.body as { entries: unknown[] }).entries.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('withdrawal: minimum enforced, funds locked before broadcast, idempotent', async () => {
+    const user = await newUser();
+    await depositConfirmation(client, {
+      userId: user,
+      amount: Money.of('50'),
+      idempotencyKey: randomUUID(),
+    });
+
+    const tooSmall = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '5', to_address: '0xabc123' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(tooSmall.status).toBe(400);
+
+    const key = randomUUID();
+    const ok = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '30', to_address: '0xabc123' },
+      idempotencyKey: key,
+    });
+    expect(ok.status).toBe(200);
+    expect((ok.body as { status: string }).status).toBe('LOCKED');
+
+    const replay = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '30', to_address: '0xabc123' },
+      idempotencyKey: key,
+    });
+    expect((replay.body as { id: string }).id).toBe((ok.body as { id: string }).id);
+
+    const wallet = await call('GET', '/api/v1/wallet', asUser(user));
+    expect((wallet.body as { available: string }).available).toBe('20.00000000');
+
+    // insufficient balance surfaces the spec error code
+    const broke = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '100', to_address: '0xabc123' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(broke.status).toBe(402);
+    expect((broke.body as { error: { code: string } }).error.code).toBe('INSUFFICIENT_BALANCE');
+  });
+});
+
+describe('race transparency and admin surface after a real production day', () => {
+  it('runs a mini production day, then reads it through the API', async () => {
+    // three horses + one funded buyer
+    for (let i = 0; i < 3; i += 1) {
+      const owner = await newUser();
+      await client.query(
+        `insert into horses (owner_user_id, current_day, name, horse_type, rarity, dna_hash, dna_modifier,
+                             horse_generation_version, mint_seed_hash, ability_json)
+         values ($1, $2, $3, 'BALANCED', 'COMMON', $4, 0.5, 'horse_generation_v1.0', $5, $6)`,
+        [
+          owner,
+          i + 1,
+          `Api Day ${randomUUID().slice(0, 15)}`,
+          randomUUID().replaceAll('-', ''),
+          randomUUID().replaceAll('-', ''),
+          JSON.stringify({ speed: 75, power: 74, stamina: 73, recovery: 72, luck: 71 }),
+        ],
+      );
+    }
+    const buyer = await newUser();
+    await depositConfirmation(client, {
+      userId: buyer,
+      amount: Money.of('200'),
+      idempotencyKey: randomUUID(),
+    });
+    await call('POST', '/api/v1/purchase', asUser(buyer), { idempotencyKey: randomUUID() });
+
+    // the internal entry point runs the whole day
+    const internal = await call('POST', '/internal/batch/start', { kind: 'internal' }, {
+      body: { batch_date: '2039-02-01' },
+    });
+    expect(internal.status).toBe(200);
+    expect((internal.body as { status: string }).status).toBe('COMPLETED');
+
+    // races are transparently readable, and replay verification passes
+    const races = await call('GET', '/api/v1/races', asUser(buyer));
+    const raceList = (races.body as { races: { id: string }[] }).races;
+    expect(raceList.length).toBeGreaterThanOrEqual(1);
+    const raceId = raceList[0]!.id;
+
+    const results = await call('GET', `/api/v1/races/${raceId}/results`, asUser(buyer));
+    expect((results.body as { results: unknown[] }).results.length).toBe(3);
+
+    const replay = await call('GET', `/api/v1/races/${raceId}/replay`, asUser(buyer));
+    expect(replay.status).toBe(200);
+    expect((replay.body as { verified: boolean }).verified).toBe(true);
+
+    // buyer received a horse through the batch (P2P inventory was empty -> mint)
+    const horses = await call('GET', '/api/v1/horses', asUser(buyer));
+    expect((horses.body as { horses: unknown[] }).horses.length).toBeGreaterThanOrEqual(1);
+
+    // admin surface
+    const admin = await newUser();
+    await client.query(
+      `insert into admin_role_grants (user_id, role) values ($1, 'SUPER_ADMIN')`,
+      [admin],
+    );
+    const adminAuth: AuthContext = { kind: 'admin', userId: admin, roles: ['SUPER_ADMIN'] };
+    const dashboard = await call('GET', '/api/v1/admin/dashboard', adminAuth);
+    expect(dashboard.status).toBe(200);
+    expect((dashboard.body as { latest_batch: { status: string } }).latest_batch.status).toBe('COMPLETED');
+    const batches = await call('GET', '/api/v1/admin/batches', adminAuth);
+    expect((batches.body as { batches: unknown[] }).batches.length).toBeGreaterThanOrEqual(1);
+    const stress = await call('GET', '/api/v1/admin/stress-tests', adminAuth);
+    expect((stress.body as { stress_tests: unknown[] }).stress_tests.length).toBe(8);
+    const policies = await call('GET', '/api/v1/admin/policies', adminAuth);
+    expect(Object.keys((policies.body as { policies: object }).policies)).toHaveLength(8);
+
+    // retry on a COMPLETED batch is rejected with the spec error code
+    const batchId = (batches.body as { batches: { id: string }[] }).batches[0]!.id;
+    const retry = await call('POST', `/api/v1/admin/batches/${batchId}/retry`, adminAuth, {
+      idempotencyKey: randomUUID(),
+    });
+    expect(retry.status).toBe(409);
+    expect((retry.body as { error: { code: string } }).error.code).toBe('INVALID_BATCH_STATE');
+  });
+});

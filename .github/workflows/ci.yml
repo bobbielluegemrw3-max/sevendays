@@ -33,6 +33,8 @@ jobs:
       - name: Test
         run: pnpm test
 
-      # Placeholder gates — extended in later phases:
-      # - Forbidden API check (Phase 11)
+      - name: Forbidden API check (Completion Gate G8)
+        run: pnpm check:forbidden-apis
+
+      # Remaining gates — extended in later phases:
       # - Client-side financial logic / Service Role Key bundle check (Phase 13)

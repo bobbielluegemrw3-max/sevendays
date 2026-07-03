@@ -1,0 +1,51 @@
+/**
+ * API error envelope (07_API.md common error codes + contract-level codes).
+ */
+
+export const API_ERROR_STATUS: Record<string, number> = {
+  MARKETPLACE_LOCKED: 409,
+  INSUFFICIENT_BALANCE: 402,
+  PURCHASE_EXPIRED: 410,
+  ASSIGNMENT_NOT_FOUND: 404,
+  BUYBACK_NOT_FOUND: 404,
+  REVENGE_BUFF_NOT_FOUND: 404,
+  LEDGER_UNBALANCED: 500,
+  INVALID_BATCH_STATE: 409,
+  RACE_SEED_VERIFICATION_FAILED: 500,
+  RACE_SNAPSHOT_VERIFICATION_FAILED: 500,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  // contract-level codes
+  NOT_FOUND: 404,
+  VALIDATION_FAILED: 400,
+  IDEMPOTENCY_KEY_REQUIRED: 400,
+  PURCHASE_SESSION_LIMIT: 409,
+  PURCHASE_NOT_CANCELLABLE: 409,
+  WITHDRAWAL_BELOW_MINIMUM: 400,
+  DEPOSIT_ADDRESS_UNAVAILABLE: 503,
+  DUAL_APPROVAL_REQUIRED: 403,
+  RECOVERY_NOT_FOUND: 404,
+  RECOVERY_ALREADY_OPEN: 409,
+};
+
+export class ApiError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+
+  get status(): number {
+    return API_ERROR_STATUS[this.code] ?? 500;
+  }
+}
+
+export interface ErrorBody {
+  error: { code: string; message: string };
+}
+
+export function toErrorBody(code: string, message: string): ErrorBody {
+  return { error: { code, message } };
+}
