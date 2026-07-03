@@ -1,6 +1,6 @@
 # Seven Days Derby — セッション引継ぎ書
 
-> 最終更新: 2026-07-03 / 最終コミット: `fd5ac27` / テスト: **218件 全PASS**
+> 最終更新: 2026-07-03 / 最終コミット: `2eb83e8` / テスト: **250件 全PASS**
 > 新しいセッションはまずこのファイルと `IMPLEMENTATION_PLAN.md` を読むこと。
 > **仕様の正は `docs/`(v1.0仕様書パッケージ)+ `docs/10_DECISION_LOG.md`(Decision 001〜059)。ビジネスルールの発明は禁止。**
 
@@ -12,13 +12,14 @@
 M1 基盤        ✅ Phase 0-3   (モノレポ/DB/Ledger/ポリシー)
 M2 コアエンジン ✅ Phase 4-7   (バッチ骨格/レース/Burn/Buyback)
 M3 経済循環    ✅ Phase 8-10  (購入・割当/経済エンジン/リカバリ)
-M4 プロダクト   🔶 Phase 11 ✅ → Phase 12(入出金)・13(フロントエンド)が未着手
+M4 プロダクト   🔶 Phase 11 ✅ / Phase 12 コア✅(チェーン実機検証・NFTミント残)→ 13(フロントエンド)未着手
 M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Completion Gates)
 ```
 
 - **バックエンドのドメイン層は完成**。37ステップの日次精算バッチが本番ハンドラで完走し(`production-day.test.ts`)、**ローンチ初日(馬0頭)シナリオも検証済み**。
 - APIレイヤ(`packages/api-contracts`)完成: User 17 / Admin 8 / Internal 8 エンドポイント、認証境界・冪等強制・禁止APIゲート(CI組込)。
-- 本番Supabase(project ref `bdljkptqmnewkjoqzviy`, region ap-south-1)に**マイグレーション28本適用済み・同期済み**。
+- Phase 12コア完成(`packages/blockchain`): HD入金アドレス導出(xpubのみでプロビジョニング)・Deposit Watcher(カーソルスキャン→128確認→Ledger経由クレジット)・Withdrawal Broadcaster(**署名→永続化→送信**順序で二重送金を構造排除、E14閾値ルーティング+approve/reject実装済み)。フェイクチェーンで全クラッシュ窓をテスト済み。**残**: RPCプロバイダ選定→Amoy実機検証、Memorial NFTミント(P6待ち)、E14閾値のAdmin APIエンドポイント結線。
+- 本番Supabase(project ref `bdljkptqmnewkjoqzviy`, region ap-south-1)に**マイグレーション29本適用済み・同期済み**。
 
 ## 2. 環境セットアップ(新セッションで最初にやること)
 
@@ -48,6 +49,7 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 | `economy-engine` | ポリシーローダー・メトリクス・Status判定+Stability Rule・出品選定・ストレス8種 | `evaluateEconomyStatus`, `selectProfitTakingListings` |
 | `settlement-engine` | バッチorchestrator・**production.ts(37ステップ結線)**・スナップショット・Burn実行・Buyback・割当・リカバリ | `runBatch`, `buildProductionHandlers`, `executeRecovery` |
 | `api-contracts` | ルーター(認証/zod/冪等/エラーマップ)+全エンドポイント実装+OpenAPI | `buildApiRegistry()`, `registry.dispatch()` |
+| `blockchain` | HD導出・入金Watcher・出金Broadcaster・bigint↔Money変換・viem実装(ChainClient/Signer抽象でフェイク可能) | `runDepositScan`, `processWithdrawals`, `ensureDepositAddress`, `approveWithdrawal` |
 
 **DBが憲法を強制**: posted Ledger不変・貸借一致(遅延トリガー)・負残高禁止・Commit-RevealのSHA検証・スナップショット凍結・Burn馬復帰不可・非リトライ可能ステップ凍結(リカバリフラグ`sevendays.recovery_mode`のみ例外、結果テーブルは常時不変)・二重承認は別人2名。
 
@@ -63,12 +65,12 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 
 ## 5. 残作業(Phase 12〜14)
 
-### Phase 12: 入出金チェーン統合
-- HDウォレット導出(`deposit_addresses`テーブル・スキーマ済み。BIP-32/44、マスターシードはSecret Manager)
-- Deposit Watcher(Polygon PoS USDT・128確認→`depositConfirmation`(実装済みのLedger関数)を呼ぶだけ)
-- Withdrawal Broadcaster(`blockchain_withdrawals` LOCKED行(API実装済み)→署名→BROADCAST→CONFIRMED。手数料控除→`net_amount`更新)
-- Memorial NFTオンチェーンミント(Polygon ERC-721、`memorial_nfts`のchain列は準備済み)
-- **注意**: RPCプロバイダ選定・テストネット(Amoy)検証が必要。E14(大口出金閾値)未確定 → オーナーに質問
+### Phase 12: 入出金チェーン統合 — コア完了(`2eb83e8`)、残り:
+- **RPCプロバイダ選定(オーナー)→ Amoy実機検証**: `createViemChainClient` / `createViemWithdrawalSigner` は署名・エンコードのユニットテストのみ。実RPC経路は未検証
+- **Memorial NFTオンチェーンミント**(Polygon ERC-721、P6最終確認待ち。`memorial_nfts`のchain列は準備済み)
+- **E14確定後**: 閾値を設定に投入+Admin APIエンドポイント(`approveWithdrawal`/`rejectWithdrawal`関数は実装・テスト済み。07_APIのAdmin一覧に無いためエンドポイント追加はオーナー確認後)
+- 手数料は`WithdrawalPolicy.networkFee`(設定値)。金額・決定方法はオーナー未確定
+- 設計メモ: 出金確定時のLedger移動は無し(FUND_LOCKで`PLATFORM_WITHDRAWAL_CLEARING`に入った資金がそのまま外界境界として残る=入金クリアリングと対称)。`WITHDRAWAL_BROADCAST`/`WITHDRAWAL_CONFIRMATION`のenum値は現状未使用
 
 ### Phase 13: フロントエンド
 - `apps/web`(Next.js)+ Admin UI。APIは `api-contracts` の registry を Next route handler / Cloud Run HTTPサーバーにマウントするだけ(`registry.dispatch(client, request)`)
@@ -92,7 +94,7 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 
 1. **フェーズ着手前**: 未確定事項があれば「GPTに聞く質問文」形式でユーザーに提示(過去形式は会話ログ/Decision Log参照)
 2. **オーナー決定** → `docs/10_DECISION_LOG.md` に決定番号(次は**060**)で英語追記 + `IMPLEMENTATION_PLAN.md` 付録Eを更新
-3. スキーマ変更 = 新規マイグレーション(次は **20260702200129**)→ PGliteテスト → `db push` で本番反映
+3. スキーマ変更 = 新規マイグレーション(次は **20260702200130**)→ PGliteテスト → `db push` で本番反映
 4. フェーズ完了ごと: 全チェック(`pnpm build/test/lint/typecheck` + `check:forbidden-apis`)→ コミット(末尾に `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`)→ push
 5. フェーズごとに「100点診断」を求められる文化。**クラッシュ窓・冪等性・並行性・初日/空データのエッジ**を重点監査すると過去の指摘パターンと一致する
 
@@ -107,7 +109,7 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 - 遅延制約トリガーのエラーは**COMMIT時**に発火 — `manageTransaction: false`で外部管理する場合は呼び出し側でエラーマップが必要(実例: `sessions.ts`)
 - 禁止APIチェッカーはリテラルgrep — テストで禁止パスを使う場合は動的組み立て(`['','api',...].join('/')`)
 
-## 8. テスト全景(218件)
+## 8. テスト全景(250件)
 
 | スイート | 件数 | 内容 |
 |---|---|---|
@@ -119,3 +121,4 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 | economy-engine | 33 | ポリシー/メトリクス/Status遷移ウォーク/出品/ストレス |
 | settlement-engine | 38 | バッチ/Burn e2e/Buyback e2e/割当e2e(クラッシュ再開込み)/リカバリ/**フルデイ/ローンチ初日** |
 | api-contracts | 7 | 認証境界/冪等強制/API経由フロー/禁止APIゲート |
+| blockchain | 32 | HD導出(BIP-44ベクタ)/金額変換/Watcher(冪等・クラッシュ窓)/Broadcaster(永続化先行送信・リオルグ・レビュー)/署名/鍵非露出 |
