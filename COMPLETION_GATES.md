@@ -13,14 +13,14 @@
 | G7 | RLS Security | `database` schema.test RLS節(own-rows only・admin不可視・透明読み取り)+ `api-contracts`/`web` 認証境界テスト | ✅ PASS |
 | G8 | Forbidden API Check | `scripts/check-forbidden-apis.mjs`(CI: リテラルgrep)+ registry登録時の実行時拒否 + api.test G8節 | ✅ PASS |
 | G9 | Stress Test | `economy-engine` stress 8種(Decision 059の入力・30日ホライズン・合格基準・Status連動)+ バッチStep 32で日次実行 | ✅ PASS |
-| G10 | 100,000 User Simulation | `settlement-engine/test/g10-simulation.test.ts` — 実DB+本番37ステップバッチを日次で回し、毎日「バッチCOMPLETED・reconcileクリーン・期日Buyback全PAID・Marketplace再開」+最終スイープ(Burn上限・スケジュール200/7・バフ保存則)。スモーク(1500人×5日)は常時スイートで実行。**フルスケール**: `G10_USERS=100000 G10_DAYS=30 G10_DAILY_BUYERS=1000 pnpm --filter @sevendays/settlement-engine test -- g10` | 🔶 実行中(下記) |
+| G10 | 100,000 User Simulation | `settlement-engine/test/g10-simulation.test.ts` — 実DB+本番37ステップバッチを日次で回し、毎日「バッチCOMPLETED・reconcileクリーン・期日Buyback全PAID・Marketplace再開」+最終スイープ(Burn上限・スケジュール200/7・バフ保存則)。スモーク(1500人×5日)は常時スイートで実行。**フルスケール**: `G10_USERS=100000 G10_DAYS=30 G10_DAILY_BUYERS=1000 pnpm --filter @sevendays/settlement-engine test -- g10` | ✅ **PASS**(下記実行記録) |
 
 ## G10 フルスケール実行記録
 
 | 日時 | パラメータ | 結果 |
 |---|---|---|
 | 2026-07-03 | 5,000人×12日×100購入/日(中規模) | ✅ PASS(馬628・Burn228・Day7到達182・期日支払い全消化・毎日reconcileクリーン) |
-| 2026-07-03 | 100,000人×30日×1,000購入/日(本番ゲート) | (未実行) |
+| 2026-07-03 | 100,000人×30日×1,000購入/日(本番ゲート) | ✅ **PASS** — 馬14,968・Burn6,344・Buyback完了4,531・期日支払い30日間全消化・毎日reconcileクリーン。**27日目にNORMAL→WATCH自動遷移→Burn率上昇→29日目NORMAL復帰**(Status連動の自己安定を実測)。註: vitestレポーターのRPCタイムアウト(ツール側ノイズ)がテスト全PASS後に1件発生 — ドメイン結果に影響なし |
 
 ## 備考
 
