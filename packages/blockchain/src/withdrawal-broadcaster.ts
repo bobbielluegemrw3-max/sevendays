@@ -1,0 +1,330 @@
+import { Money, type SqlClient } from '@sevendays/shared';
+import { withdrawalRejectionRefund } from '@sevendays/ledger';
+import { isAddress } from 'viem';
+import type { ChainClient, WithdrawalSigner } from './types.js';
+import type { ChainConfig } from './config.js';
+import { AmountConversionError, moneyToUnits } from './amounts.js';
+
+/**
+ * Withdrawal broadcaster core (07_API.md Withdrawal v1.0,
+ * 01_CONSTITUTION.md): funds are ALREADY locked through Ledger by
+ * POST /wallet/withdraw (rows arrive here as LOCKED); this module deducts
+ * the network fee, signs, broadcasts, and confirms.
+ *
+ * Double-send safety: the signed raw transaction and its hash are persisted
+ * (status BROADCAST) BEFORE the first send. Any crash after that point can
+ * only ever re-send the SAME bytes — same nonce, same hash — which the chain
+ * deduplicates. We never re-sign a row that has raw_tx.
+ *
+ * Ledger notes: WITHDRAWAL_FUND_LOCK moved requested_amount into
+ * PLATFORM_WITHDRAWAL_CLEARING, which (like PLATFORM_DEPOSIT_CLEARING) is
+ * the external-world boundary account. On confirmation the funds simply
+ * remain there as the record of value that left the platform (net paid to
+ * the user, fee consumed by the network), mirroring how deposits leave
+ * PLATFORM_DEPOSIT_CLEARING negative. Failure/rejection refunds via
+ * WITHDRAWAL_REJECTION_REFUND with the deterministic key `wdrefund:{id}`,
+ * so a crash between refund and status update replays harmlessly.
+ *
+ * Admin Review (E14 threshold pending owner decision): when
+ * `adminReviewThreshold` is set, large LOCKED rows are routed to
+ * ADMIN_REVIEW and only proceed via approveWithdrawal / rejectWithdrawal.
+ */
+
+export interface WithdrawalPolicy {
+  /** Network fee deducted from the requested amount (owner-configured). */
+  networkFee: Money;
+  /** E14: route requests >= this to ADMIN_REVIEW; null disables routing. */
+  adminReviewThreshold: Money | null;
+  /** Confirmations before a broadcast counts as final (default: deposit's 128). */
+  confirmationBlocks?: number;
+  /** Broadcast batch size per run. */
+  maxBroadcastsPerRun?: number;
+}
+
+export interface WithdrawalRunResult {
+  lockAcquired: boolean;
+  routedToReview: number;
+  rejected: number;
+  broadcast: number;
+  sendErrors: number;
+  rebroadcast: number;
+  confirmed: number;
+  failed: number;
+}
+
+interface WithdrawalRow {
+  id: string;
+  user_id: string;
+  to_address: string;
+  requested_amount: string;
+  tx_hash: string | null;
+  raw_tx: string | null;
+}
+
+async function audit(
+  client: SqlClient,
+  actor: { type: 'SYSTEM' | 'ADMIN'; id?: string },
+  action: string,
+  withdrawalId: string,
+): Promise<void> {
+  await client.query(
+    `insert into audit_logs (actor_type, actor_id, action, reference_type, reference_id)
+     values ($1, $2, $3, 'blockchain_withdrawal', $4)`,
+    [actor.type, actor.id ?? null, action, withdrawalId],
+  );
+}
+
+/**
+ * Refund the full locked amount and move the row to `status`. Idempotent:
+ * the refund replays by key, the status update converges.
+ */
+async function refundAndClose(
+  client: SqlClient,
+  row: Pick<WithdrawalRow, 'id' | 'user_id' | 'requested_amount'>,
+  status: 'REJECTED' | 'FAILED',
+  action: string,
+  actor: { type: 'SYSTEM' | 'ADMIN'; id?: string },
+): Promise<void> {
+  await withdrawalRejectionRefund(client, {
+    userId: row.user_id,
+    amount: Money.of(row.requested_amount),
+    idempotencyKey: `wdrefund:${row.id}`,
+    referenceType: 'blockchain_withdrawal',
+    referenceId: row.id,
+  });
+  await client.query(`update blockchain_withdrawals set status = $2 where id = $1`, [row.id, status]);
+  await audit(client, actor, action, row.id);
+}
+
+/** Admin approval: ADMIN_REVIEW -> LOCKED (eligible for the next broadcast run). */
+export async function approveWithdrawal(
+  client: SqlClient,
+  args: { withdrawalId: string; adminUserId: string },
+): Promise<void> {
+  const updated = await client.query(
+    `update blockchain_withdrawals
+     set status = 'LOCKED', review_approved_at = now()
+     where id = $1 and status = 'ADMIN_REVIEW'`,
+    [args.withdrawalId],
+  );
+  if ((updated.affectedRows ?? 0) === 0) {
+    throw new Error(`Withdrawal ${args.withdrawalId} is not in ADMIN_REVIEW`);
+  }
+  await audit(client, { type: 'ADMIN', id: args.adminUserId }, 'WITHDRAWAL_REVIEW_APPROVED', args.withdrawalId);
+}
+
+/** Admin rejection: ADMIN_REVIEW -> REJECTED with full refund. */
+export async function rejectWithdrawal(
+  client: SqlClient,
+  args: { withdrawalId: string; adminUserId: string },
+): Promise<void> {
+  const rows = await client.query<WithdrawalRow>(
+    `select id, user_id, to_address, requested_amount::text as requested_amount, tx_hash, raw_tx
+     from blockchain_withdrawals where id = $1 and status = 'ADMIN_REVIEW'`,
+    [args.withdrawalId],
+  );
+  const row = rows.rows[0];
+  if (!row) throw new Error(`Withdrawal ${args.withdrawalId} is not in ADMIN_REVIEW`);
+  await refundAndClose(client, row, 'REJECTED', 'WITHDRAWAL_REVIEW_REJECTED', {
+    type: 'ADMIN',
+    id: args.adminUserId,
+  });
+}
+
+async function routeLargeWithdrawalsToReview(
+  client: SqlClient,
+  config: ChainConfig,
+  threshold: Money,
+  result: WithdrawalRunResult,
+): Promise<void> {
+  const routed = await client.query<{ id: string }>(
+    `update blockchain_withdrawals set status = 'ADMIN_REVIEW'
+     where chain_id = $1 and status = 'LOCKED' and requested_amount >= $2
+       and review_approved_at is null
+     returning id`,
+    [config.chainId, threshold.toFixed8()],
+  );
+  for (const row of routed.rows) {
+    await audit(client, { type: 'SYSTEM' }, 'WITHDRAWAL_ROUTED_TO_ADMIN_REVIEW', row.id);
+    result.routedToReview += 1;
+  }
+}
+
+async function broadcastLockedWithdrawals(
+  client: SqlClient,
+  chain: ChainClient,
+  signer: WithdrawalSigner,
+  config: ChainConfig,
+  policy: WithdrawalPolicy,
+  result: WithdrawalRunResult,
+  broadcastThisRun: Set<string>,
+): Promise<void> {
+  const batch = await client.query<WithdrawalRow>(
+    `select id, user_id, to_address, requested_amount::text as requested_amount, tx_hash, raw_tx
+     from blockchain_withdrawals
+     where chain_id = $1 and status = 'LOCKED'
+     order by requested_at, id
+     limit $2`,
+    [config.chainId, policy.maxBroadcastsPerRun ?? 20],
+  );
+  if (batch.rows.length === 0) return;
+
+  let nonce: bigint | null = null;
+  for (const row of batch.rows) {
+    const requested = Money.of(row.requested_amount);
+    const net = requested.sub(policy.networkFee);
+
+    if (!isAddress(row.to_address)) {
+      await refundAndClose(client, row, 'REJECTED', 'WITHDRAWAL_REJECTED:INVALID_ADDRESS', { type: 'SYSTEM' });
+      result.rejected += 1;
+      continue;
+    }
+    if (net.lte(Money.zero())) {
+      await refundAndClose(client, row, 'REJECTED', 'WITHDRAWAL_REJECTED:NET_AMOUNT_NOT_POSITIVE', {
+        type: 'SYSTEM',
+      });
+      result.rejected += 1;
+      continue;
+    }
+    let valueUnits: bigint;
+    try {
+      valueUnits = moneyToUnits(net, config.tokenDecimals);
+    } catch (error) {
+      if (!(error instanceof AmountConversionError)) throw error;
+      await refundAndClose(client, row, 'REJECTED', 'WITHDRAWAL_REJECTED:AMOUNT_NOT_REPRESENTABLE', {
+        type: 'SYSTEM',
+      });
+      result.rejected += 1;
+      continue;
+    }
+
+    // net_amount check constraint (net = requested - fee) keeps this honest.
+    await client.query(
+      `update blockchain_withdrawals set network_fee_amount = $2, net_amount = $3 where id = $1`,
+      [row.id, policy.networkFee.toFixed8(), net.toFixed8()],
+    );
+
+    nonce = nonce ?? (await chain.getPendingNonce(signer.address));
+    const gas = await chain.getGasFees();
+    const signed = await signer.signTokenTransfer({
+      tokenContract: config.tokenContract,
+      to: row.to_address,
+      valueUnits,
+      nonce,
+      gas,
+    });
+    nonce += 1n;
+
+    // Persist the transaction identity BEFORE the first send (see header).
+    await client.query(
+      `update blockchain_withdrawals
+       set tx_hash = $2, raw_tx = $3, status = 'BROADCAST', broadcast_at = now()
+       where id = $1 and status = 'LOCKED'`,
+      [row.id, signed.txHash, signed.rawTx],
+    );
+    result.broadcast += 1;
+    broadcastThisRun.add(row.id);
+
+    try {
+      await chain.sendRawTransaction(signed.rawTx);
+    } catch {
+      // The row stays BROADCAST with its raw_tx; the confirm pass below (or
+      // the next run) re-sends the same bytes. Never re-sign here.
+      result.sendErrors += 1;
+    }
+  }
+}
+
+async function confirmBroadcastWithdrawals(
+  client: SqlClient,
+  chain: ChainClient,
+  config: ChainConfig,
+  policy: WithdrawalPolicy,
+  result: WithdrawalRunResult,
+  broadcastThisRun: Set<string>,
+): Promise<void> {
+  const confirmations = BigInt(policy.confirmationBlocks ?? config.confirmationBlocks);
+  const pending = await client.query<WithdrawalRow>(
+    `select id, user_id, to_address, requested_amount::text as requested_amount, tx_hash, raw_tx
+     from blockchain_withdrawals
+     where chain_id = $1 and status = 'BROADCAST'
+     order by broadcast_at, id`,
+    [config.chainId],
+  );
+  if (pending.rows.length === 0) return;
+
+  const latest = await chain.getLatestBlockNumber();
+  for (const row of pending.rows) {
+    const status = await chain.getTransactionStatus(row.tx_hash!);
+    if (status.kind === 'NOT_FOUND') {
+      // Sent moments ago in this very run — give the mempool a pass before
+      // re-sending the same bytes on the NEXT run.
+      if (broadcastThisRun.has(row.id)) continue;
+      try {
+        await chain.sendRawTransaction(row.raw_tx!);
+        result.rebroadcast += 1;
+      } catch {
+        result.sendErrors += 1;
+      }
+      continue;
+    }
+    if (status.kind === 'PENDING') continue;
+
+    // Both SUCCESS and REVERTED are only final past the confirmation depth
+    // (reorg protection — refunding a reverted tx too early risks paying twice).
+    if (latest - status.blockNumber + 1n < confirmations) continue;
+
+    if (status.kind === 'SUCCESS') {
+      await client.query(
+        `update blockchain_withdrawals set status = 'CONFIRMED', confirmed_at = now() where id = $1`,
+        [row.id],
+      );
+      result.confirmed += 1;
+    } else {
+      await refundAndClose(client, row, 'FAILED', 'WITHDRAWAL_FAILED:ON_CHAIN_REVERT', { type: 'SYSTEM' });
+      result.failed += 1;
+    }
+  }
+}
+
+/**
+ * One broadcaster pass. A session advisory lock guarantees a single runner
+ * per chain (nonce continuity); a held lock returns immediately.
+ */
+export async function processWithdrawals(
+  client: SqlClient,
+  chain: ChainClient,
+  signer: WithdrawalSigner,
+  config: ChainConfig,
+  policy: WithdrawalPolicy,
+): Promise<WithdrawalRunResult> {
+  const result: WithdrawalRunResult = {
+    lockAcquired: false,
+    routedToReview: 0,
+    rejected: 0,
+    broadcast: 0,
+    sendErrors: 0,
+    rebroadcast: 0,
+    confirmed: 0,
+    failed: 0,
+  };
+
+  const lock = await client.query<{ acquired: boolean }>(
+    `select pg_try_advisory_lock(hashtext('withdrawal_broadcaster:' || $1)) as acquired`,
+    [config.chainId],
+  );
+  if (!lock.rows[0]?.acquired) return result;
+  result.lockAcquired = true;
+
+  try {
+    if (policy.adminReviewThreshold) {
+      await routeLargeWithdrawalsToReview(client, config, policy.adminReviewThreshold, result);
+    }
+    const broadcastThisRun = new Set<string>();
+    await broadcastLockedWithdrawals(client, chain, signer, config, policy, result, broadcastThisRun);
+    await confirmBroadcastWithdrawals(client, chain, config, policy, result, broadcastThisRun);
+  } finally {
+    await client.query(`select pg_advisory_unlock(hashtext('withdrawal_broadcaster:' || $1))`, [config.chainId]);
+  }
+  return result;
+}

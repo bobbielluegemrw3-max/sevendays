@@ -1,0 +1,288 @@
+import { beforeAll, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { createTestDb } from '@sevendays/database';
+import { Money, type SqlClient } from '@sevendays/shared';
+import {
+  depositConfirmation,
+  ensureUserAccounts,
+  getBalance,
+  getPlatformAccountId,
+  reconcile,
+  withdrawalFundLock,
+} from '@sevendays/ledger';
+import {
+  POLYGON_POS_USDT,
+  approveWithdrawal,
+  processWithdrawals,
+  rejectWithdrawal,
+  type ChainConfig,
+  type WithdrawalPolicy,
+} from '../src/index.js';
+import { FakeChain, FakeSigner } from './fakes.js';
+
+let client: SqlClient;
+
+const VALID_TO = '0x4444444444444444444444444444444444444444';
+
+function testConfig(chainId: string): ChainConfig {
+  return { ...POLYGON_POS_USDT, chainId };
+}
+
+function policy(overrides: Partial<WithdrawalPolicy> = {}): WithdrawalPolicy {
+  return { networkFee: Money.of('1'), adminReviewThreshold: null, ...overrides };
+}
+
+beforeAll(async () => {
+  client = await createTestDb();
+});
+
+async function newFundedUser(funding: string): Promise<string> {
+  const r = await client.query<{ id: string }>(`insert into users (email) values ($1) returning id`, [
+    `${randomUUID()}@test.dev`,
+  ]);
+  const userId = r.rows[0]!.id;
+  await depositConfirmation(client, {
+    userId,
+    amount: Money.of(funding),
+    idempotencyKey: randomUUID(),
+  });
+  return userId;
+}
+
+/** Mirrors what POST /wallet/withdraw does: ledger lock + LOCKED row. */
+async function requestWithdrawal(
+  config: ChainConfig,
+  userId: string,
+  amount: string,
+  toAddress = VALID_TO,
+): Promise<string> {
+  const lock = await withdrawalFundLock(client, {
+    userId,
+    amount: Money.of(amount),
+    idempotencyKey: `wdlock:${randomUUID()}`,
+  });
+  const row = await client.query<{ id: string }>(
+    `insert into blockchain_withdrawals
+       (user_id, chain_id, token_contract, to_address, requested_amount, network_fee_amount, net_amount,
+        status, ledger_transaction_id)
+     values ($1, $2, 'USDT', $3, $4, 0, $4, 'LOCKED', $5)
+     returning id`,
+    [userId, config.chainId, toAddress, Money.of(amount).toFixed8(), lock.transactionId],
+  );
+  return row.rows[0]!.id;
+}
+
+async function availableBalance(userId: string): Promise<string> {
+  const accounts = await ensureUserAccounts(client, userId);
+  return getBalance(client, accounts.available);
+}
+
+async function withdrawalRow(id: string) {
+  const r = await client.query<{
+    status: string;
+    tx_hash: string | null;
+    raw_tx: string | null;
+    network_fee_amount: string;
+    net_amount: string;
+  }>(
+    `select status::text as status, tx_hash, raw_tx,
+            network_fee_amount::text as network_fee_amount, net_amount::text as net_amount
+     from blockchain_withdrawals where id = $1`,
+    [id],
+  );
+  return r.rows[0]!;
+}
+
+describe('withdrawal broadcaster', () => {
+  it('deducts the fee, persists the signed tx before sending, then confirms', async () => {
+    const config = testConfig('TEST_WD_FLOW');
+    const chain = new FakeChain();
+    const signer = new FakeSigner();
+    const user = await newFundedUser('200');
+    const id = await requestWithdrawal(config, user, '100');
+
+    const run = await processWithdrawals(client, chain, signer, config, policy());
+    expect(run.lockAcquired).toBe(true);
+    expect(run.broadcast).toBe(1);
+
+    const row = await withdrawalRow(id);
+    expect(row.status).toBe('BROADCAST');
+    expect(row.network_fee_amount).toBe('1.00000000');
+    expect(row.net_amount).toBe('99.00000000');
+    expect(row.tx_hash).not.toBeNull();
+    expect(row.raw_tx).not.toBeNull();
+    expect(chain.sent).toEqual([row.raw_tx]);
+    expect(await availableBalance(user)).toBe('100.00000000');
+
+    // Mined but not deep enough: stays BROADCAST.
+    chain.statuses.set(row.tx_hash!, { kind: 'SUCCESS', blockNumber: 1000n });
+    chain.latestBlock = 1100n;
+    const early = await processWithdrawals(client, chain, signer, config, policy());
+    expect(early.confirmed).toBe(0);
+    expect((await withdrawalRow(id)).status).toBe('BROADCAST');
+
+    // 128 confirmations: final.
+    chain.latestBlock = 1127n;
+    const final = await processWithdrawals(client, chain, signer, config, policy());
+    expect(final.confirmed).toBe(1);
+    expect((await withdrawalRow(id)).status).toBe('CONFIRMED');
+
+    // The locked funds stay in the withdrawal clearing boundary account.
+    const clearing = await getPlatformAccountId(client, 'PLATFORM_WITHDRAWAL_CLEARING');
+    expect(Money.of(await getBalance(client, clearing)).gte(Money.of('100'))).toBe(true);
+
+    const audit = await reconcile(client);
+    expect(audit.issues).toEqual([]);
+  });
+
+  it('crash between persist and send: re-sends the SAME tx, never re-signs', async () => {
+    const config = testConfig('TEST_WD_CRASH');
+    const chain = new FakeChain();
+    const signer = new FakeSigner();
+    const user = await newFundedUser('50');
+    const id = await requestWithdrawal(config, user, '20');
+
+    chain.nextSendError = new Error('connection reset');
+    const run = await processWithdrawals(client, chain, signer, config, policy());
+    expect(run.broadcast).toBe(1);
+    expect(run.sendErrors).toBe(1);
+    expect(chain.sent).toEqual([]); // send failed…
+
+    const persisted = await withdrawalRow(id);
+    expect(persisted.status).toBe('BROADCAST'); // …but identity is on disk
+    const signsSoFar = signer.signCount;
+
+    const retry = await processWithdrawals(client, chain, signer, config, policy());
+    expect(retry.rebroadcast).toBe(1);
+    expect(signer.signCount).toBe(signsSoFar); // no second signature
+    expect(chain.sent).toEqual([persisted.raw_tx]); // identical bytes
+
+    const after = await withdrawalRow(id);
+    expect(after.tx_hash).toBe(persisted.tx_hash);
+  });
+
+  it('refunds exactly once when the transfer reverts on chain (past reorg depth)', async () => {
+    const config = testConfig('TEST_WD_REVERT');
+    const chain = new FakeChain();
+    const signer = new FakeSigner();
+    const user = await newFundedUser('80');
+    const id = await requestWithdrawal(config, user, '30');
+
+    await processWithdrawals(client, chain, signer, config, policy());
+    const row = await withdrawalRow(id);
+    expect(await availableBalance(user)).toBe('50.00000000');
+
+    // Reverted but shallow: reorg protection keeps it BROADCAST.
+    chain.statuses.set(row.tx_hash!, { kind: 'REVERTED', blockNumber: 2000n });
+    chain.latestBlock = 2010n;
+    await processWithdrawals(client, chain, signer, config, policy());
+    expect((await withdrawalRow(id)).status).toBe('BROADCAST');
+    expect(await availableBalance(user)).toBe('50.00000000');
+
+    // Deep enough: refund and close.
+    chain.latestBlock = 2127n;
+    const run = await processWithdrawals(client, chain, signer, config, policy());
+    expect(run.failed).toBe(1);
+    expect((await withdrawalRow(id)).status).toBe('FAILED');
+    expect(await availableBalance(user)).toBe('80.00000000');
+
+    // Idempotent on re-run.
+    const again = await processWithdrawals(client, chain, signer, config, policy());
+    expect(again.failed).toBe(0);
+    expect(await availableBalance(user)).toBe('80.00000000');
+  });
+
+  it('rejects and refunds when the fee eats the whole amount', async () => {
+    const config = testConfig('TEST_WD_FEE');
+    const chain = new FakeChain();
+    const signer = new FakeSigner();
+    const user = await newFundedUser('15');
+    const id = await requestWithdrawal(config, user, '10');
+
+    const run = await processWithdrawals(client, chain, signer, config, policy({ networkFee: Money.of('12') }));
+    expect(run.rejected).toBe(1);
+    expect((await withdrawalRow(id)).status).toBe('REJECTED');
+    expect(await availableBalance(user)).toBe('15.00000000');
+    expect(chain.sent).toEqual([]);
+  });
+
+  it('rejects amounts not representable in token units (7+ decimals on USDT)', async () => {
+    const config = testConfig('TEST_WD_DUST');
+    const chain = new FakeChain();
+    const signer = new FakeSigner();
+    const user = await newFundedUser('20');
+    const id = await requestWithdrawal(config, user, '10.1234567');
+
+    const run = await processWithdrawals(client, chain, signer, config, policy({ networkFee: Money.of('0') }));
+    expect(run.rejected).toBe(1);
+    expect((await withdrawalRow(id)).status).toBe('REJECTED');
+    expect(await availableBalance(user)).toBe('20.00000000');
+  });
+
+  it('rejects invalid destination addresses with a full refund', async () => {
+    const config = testConfig('TEST_WD_ADDR');
+    const chain = new FakeChain();
+    const signer = new FakeSigner();
+    const user = await newFundedUser('30');
+    const id = await requestWithdrawal(config, user, '12', 'not-an-address');
+
+    const run = await processWithdrawals(client, chain, signer, config, policy());
+    expect(run.rejected).toBe(1);
+    expect((await withdrawalRow(id)).status).toBe('REJECTED');
+    expect(await availableBalance(user)).toBe('30.00000000');
+  });
+
+  it('routes large withdrawals to ADMIN_REVIEW; approval is terminal, rejection refunds', async () => {
+    const config = testConfig('TEST_WD_REVIEW');
+    const chain = new FakeChain();
+    const signer = new FakeSigner();
+    const reviewPolicy = policy({ adminReviewThreshold: Money.of('1000') });
+    const admin = await newFundedUser('0.00000001');
+
+    const bigUser = await newFundedUser('3000');
+    const approvedId = await requestWithdrawal(config, bigUser, '1500');
+    const rejectedId = await requestWithdrawal(config, bigUser, '1200');
+    const smallUser = await newFundedUser('100');
+    const smallId = await requestWithdrawal(config, smallUser, '50');
+
+    const run = await processWithdrawals(client, chain, signer, config, reviewPolicy);
+    expect(run.routedToReview).toBe(2);
+    expect(run.broadcast).toBe(1); // the small one goes straight through
+    expect((await withdrawalRow(approvedId)).status).toBe('ADMIN_REVIEW');
+    expect((await withdrawalRow(rejectedId)).status).toBe('ADMIN_REVIEW');
+    expect((await withdrawalRow(smallId)).status).toBe('BROADCAST');
+
+    // Approve one: it broadcasts on the next run and is NOT re-routed.
+    await approveWithdrawal(client, { withdrawalId: approvedId, adminUserId: admin });
+    // Reject the other: refunded in full.
+    await rejectWithdrawal(client, { withdrawalId: rejectedId, adminUserId: admin });
+    expect(await availableBalance(bigUser)).toBe('1500.00000000'); // 3000 - 1500 lock (1200 refunded)
+
+    const second = await processWithdrawals(client, chain, signer, config, reviewPolicy);
+    expect(second.routedToReview).toBe(0);
+    expect(second.broadcast).toBe(1);
+    expect((await withdrawalRow(approvedId)).status).toBe('BROADCAST');
+    expect((await withdrawalRow(rejectedId)).status).toBe('REJECTED');
+
+    // Audit trail exists for routing + both decisions.
+    const audit = await client.query<{ action: string }>(
+      `select action from audit_logs where reference_type = 'blockchain_withdrawal'
+       and reference_id in ($1, $2) order by created_at`,
+      [approvedId, rejectedId],
+    );
+    const actions = audit.rows.map((r) => r.action);
+    expect(actions).toContain('WITHDRAWAL_ROUTED_TO_ADMIN_REVIEW');
+    expect(actions).toContain('WITHDRAWAL_REVIEW_APPROVED');
+    expect(actions).toContain('WITHDRAWAL_REVIEW_REJECTED');
+  });
+
+  it('DB refuses BROADCAST rows without a persisted transaction identity', async () => {
+    const config = testConfig('TEST_WD_GUARD');
+    const user = await newFundedUser('40');
+    const id = await requestWithdrawal(config, user, '11');
+
+    await expect(
+      client.query(`update blockchain_withdrawals set status = 'BROADCAST' where id = $1`, [id]),
+    ).rejects.toThrow(/withdrawals_broadcast_requires_tx/);
+  });
+});

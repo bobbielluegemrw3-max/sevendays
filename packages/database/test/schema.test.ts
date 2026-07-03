@@ -109,6 +109,13 @@ function sha256(s: string): string {
   return createHash('sha256').update(s, 'utf8').digest('hex');
 }
 
+// Random dates collided across tests (unique batch_date); allocate sequentially.
+let batchDateCounter = 0;
+function nextUniqueBatchDate(): string {
+  batchDateCounter += 1;
+  return new Date(Date.UTC(2030, 0, batchDateCounter)).toISOString().slice(0, 10);
+}
+
 async function insertBatchRun(date: string): Promise<string> {
   const r = await db.query<{ id: string }>(
     `insert into batch_runs (batch_date, batch_algorithm_version)
@@ -429,7 +436,7 @@ describe('race participant snapshots', () => {
   async function setupRace(): Promise<{ raceId: string; horseId: string; ownerId: string }> {
     const owner = await insertUser();
     const horse = await insertHorse(owner);
-    const batch = await insertBatchRun(`2030-01-${String(Math.floor(Math.random() * 27) + 1).padStart(2, '0')}`);
+    const batch = await insertBatchRun(nextUniqueBatchDate());
     const commit = await db.query<{ id: string }>(
       `insert into randomness_commits (reference_type, reference_id, commit_hash)
        values ('RACE', $1, $2) returning id`,

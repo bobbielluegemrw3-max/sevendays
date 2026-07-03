@@ -1,0 +1,35 @@
+{
+  "name": "@sevendays/blockchain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "eslint src test"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.9.0",
+    "@scure/bip32": "^1.7.0",
+    "@sevendays/domain": "workspace:*",
+    "@sevendays/ledger": "workspace:*",
+    "@sevendays/shared": "workspace:*",
+    "viem": "^2.30.0"
+  },
+  "devDependencies": {
+    "@sevendays/database": "workspace:*",
+    "eslint": "^9.28.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.33.0",
+    "vitest": "^3.2.0"
+  }
+}
