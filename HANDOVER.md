@@ -14,7 +14,7 @@ M1 基盤        ✅ Phase 0-3   (モノレポ/DB/Ledger/ポリシー)
 M2 コアエンジン ✅ Phase 4-7   (バッチ骨格/レース/Burn/Buyback)
 M3 経済循環    ✅ Phase 8-10  (購入・割当/経済エンジン/リカバリ)
 M4 プロダクト   ✅ Phase 11-13(API/入出金Amoy実機検証済み/フロント=sevendaysderby.com稼働)
-M5 リリース判定 🔶 Phase 14a-c ✅(ワーカー・インフラ定義・**G10 PASS=全Gates通過**)→ 残りはGCP実デプロイのみ
+M5 リリース判定 🔶 Phase 14a-c ✅(全Gates通過・**経済v1.1で再検証済み**)→ 残りはRenderワーカー作成のみ(Decision 070)
 ```
 
 - **バックエンドのドメイン層は完成**。37ステップの日次精算バッチが本番ハンドラで完走し(`production-day.test.ts`)、**ローンチ初日(馬0頭)シナリオも検証済み**。
@@ -89,6 +89,7 @@ M5 リリース判定 🔶 Phase 14a-c ✅(ワーカー・インフラ定義・*
 - **残**: 2人目の管理者アカウント(二重承認は別人2名がDB強制のため1人では完結不可)/ブラウザE2E/Marketplaceリアルタイム反映
 
 ### Phase 14: 総仕上げ — 14a/b完了(`89dc025`)
+- **Decision 070(2026-07-04)**: ワーカーはGCPではなく**Render Private Service**に配備。`services/render-worker`=11ロール統合+**内蔵スケジューラー**(30秒tick・日次バッチは「20:00 MYT以降+当日行なし」で自己修復発火・FAILEDは自動再試行しない・チェーンループはCHAIN_RPC_URL設定時のみ)。`render.yaml`にpserv定義済み。GCP一式(infra/cloudrun等)はスケールアウト用に残置
 - **実装済み**: `createWorkerServer`(内部トークン+ワーカー別allowlist+internal認証dispatch、HTTP実テスト)/仕様10ワーカー+`chain-worker`(watcher/broadcaster/mintジョブ)/単一Dockerfile(`SERVICE`切替)/`infra/cloudrun`(deploy.sh・scheduler.sh 5ジョブ・README)/`infra/pubsub`(再実行+DLQ)/`infra/monitoring`(11アラート+F-U滞留アラート)。`batch/start`と`check-timeouts`はbatch_date省略可(=MYT今日)
 - **残(14c)**: 10万ユーザーシミュレーション(Completion Gate G10)+G1-G10チェックリスト実行
 - **残(実デプロイ)**: オーナーのGCPプロジェクト作成→`infra/cloudrun/README.md`の手順(Secret 6本、SA 2本、スクリプト4本)。QuickNodeキーが揃えばchain-workerも同時に本稼働
@@ -104,7 +105,7 @@ M5 リリース判定 🔶 Phase 14a-c ✅(ワーカー・インフラ定義・*
 ## 6. 作業の進め方(確立済みの運用)
 
 1. **フェーズ着手前**: 未確定事項があれば「GPTに聞く質問文」形式でユーザーに提示(過去形式は会話ログ/Decision Log参照)
-2. **オーナー決定** → `docs/10_DECISION_LOG.md` に決定番号(次は**070**)で英語追記 + `IMPLEMENTATION_PLAN.md` 付録Eを更新
+2. **オーナー決定** → `docs/10_DECISION_LOG.md` に決定番号(次は**071**)で英語追記 + `IMPLEMENTATION_PLAN.md` 付録Eを更新
 3. スキーマ変更 = 新規マイグレーション(次は **20260702200133**)→ PGliteテスト → `db push` で本番反映
 4. フェーズ完了ごと: 全チェック(`pnpm build/test/lint/typecheck` + `check:forbidden-apis`)→ コミット(末尾に `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`)→ push
 5. フェーズごとに「100点診断」を求められる文化。**クラッシュ窓・冪等性・並行性・初日/空データのエッジ**を重点監査すると過去の指摘パターンと一致する

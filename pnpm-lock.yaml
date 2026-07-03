@@ -541,6 +541,31 @@ importers:
         specifier: ^8.33.0
         version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
 
+  services/render-worker:
+    dependencies:
+      '@sevendays/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sevendays/blockchain':
+        specifier: workspace:*
+        version: link:../../packages/blockchain
+      '@sevendays/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@sevendays/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+    devDependencies:
+      eslint:
+        specifier: ^9.28.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.33.0
+        version: 8.62.1(eslint@9.39.4)(typescript@5.9.3)
+
   services/stress-worker:
     dependencies:
       '@sevendays/api-contracts':

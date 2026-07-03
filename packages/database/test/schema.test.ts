@@ -151,17 +151,23 @@ describe('migrations and seed data', () => {
     expect(r.rows[0]!.state).toBe('OPEN');
   });
 
-  it('v1.0 policies are seeded and activated', async () => {
+  it('exactly one ACTIVE policy version per table (v1.1 supersedes v1.0)', async () => {
     for (const table of [
       'price_tables', 'reserve_policies', 'liquidity_policies', 'buff_policies',
       'economy_policies', 'assignment_algorithm_versions', 'race_engine_versions',
       'horse_generation_versions',
     ]) {
       const r = await db.query<{ count: string }>(
-        `select count(*)::text as count from ${table} where activated_at is not null`,
+        `select count(*)::text as count from ${table}
+         where activated_at is not null and deactivated_at is null`,
       );
       expect(r.rows[0]!.count, table).toBe('1');
     }
+    // Decision 069: the liquidity policy history keeps the superseded v1.0.
+    const history = await db.query<{ version: string }>(
+      `select version from liquidity_policies where deactivated_at is not null`,
+    );
+    expect(history.rows.map((r) => r.version)).toEqual(['liquidity_policy_v1.0']);
   });
 
   it('activated policies are immutable', async () => {

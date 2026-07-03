@@ -23,10 +23,12 @@ beforeAll(async () => {
 });
 
 describe('policy loader', () => {
-  it('loads the seeded v1.0 active policy of every table', async () => {
+  it('loads the seeded active policy of every table', async () => {
     for (const table of POLICY_TABLES) {
       const record = await loadActivePolicy(client, table);
-      expect(record.version, table).toMatch(/v1\.0$/);
+      // liquidity policy was superseded by v1.1 (Decision 069).
+      const expected = table === 'liquidity_policies' ? /v1\.1$/ : /v1\.0$/;
+      expect(record.version, table).toMatch(expected);
       expect(record.activatedAt).not.toBeNull();
     }
   });
@@ -52,8 +54,8 @@ describe('policy loader', () => {
       note: 'test version',
     });
     // not active yet
-    const stillV10 = await loadActivePolicy(client, 'liquidity_policies');
-    expect(stillV10.version).toBe('liquidity_policy_v1.0');
+    const stillV11 = await loadActivePolicy(client, 'liquidity_policies');
+    expect(stillV11.version).toBe('liquidity_policy_v1.1');
 
     await activatePolicy(client, 'liquidity_policies', 'liquidity_policy_v1.1-test');
     const nowV11 = await loadActivePolicy(client, 'liquidity_policies');

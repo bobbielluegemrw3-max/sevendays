@@ -4,6 +4,34 @@
 # Run. The build runs the client-bundle inspection (Service Role Key /
 # settlement logic must never reach the browser).
 services:
+  # Consolidated worker (Decision 070): daily batch + chain loops with the
+  # scheduler in-process. Private service — no public URL.
+  - type: pserv
+    name: sevendays-worker
+    runtime: node
+    region: singapore
+    plan: starter
+    buildCommand: npm install -g pnpm@10.18.1 && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@sevendays/render-worker
+    startCommand: cd services/render-worker && node dist/index.js
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: DATABASE_URL
+        sync: false
+      - key: INTERNAL_TOKEN
+        generateValue: true
+      # Chain loops activate when these are present:
+      - key: CHAIN_RPC_URL
+        sync: false
+      - key: DEPOSIT_ACCOUNT_XPUB
+        sync: false
+      - key: HOT_WALLET_PRIVATE_KEY
+        sync: false
+      - key: NATIVE_USDT_RATE
+        sync: false
+      - key: CHAIN_GETLOGS_RANGE
+        sync: false
+
   - type: web
     name: sevendays-web
     runtime: node

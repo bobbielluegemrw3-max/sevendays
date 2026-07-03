@@ -165,6 +165,10 @@ Changes:
 - Mint coverage gate: Day0 minting is allowed only while the buyback reserve covers the stop-scenario liability (deterministic factor table, 3.5% safety margin over the geometric model, matching the measured arrival excess). Engine-enforced at Step 25/26.
 Authorization note: approved by the developer under the owner's standing mandate to correct any >100% RTP condition; prepared for formal owner ratification with ECONOMY_REVISION.md.
 
+## Decision 070 (2026-07-04, Owner)
+
+070. Worker hosting moved from Google Cloud Run to Render (following Decision 068 for the frontend). All eleven worker roles consolidate into ONE always-on Render PRIVATE service (services/render-worker) with the scheduler IN-PROCESS: the daily batch trigger is self-healing ("today's batch due + no batch_runs row" evaluated every 30s tick; a FAILED batch is never auto-retried — Admin Recovery only), chain loops run on intervals, and every job is idempotent so restarts/double-fires are harmless. Cloud Scheduler and Pub/Sub are not used in v1.0. The execution boundary is unchanged in substance: financial/batch logic runs ONLY in this private worker (no public URL); the web service serves UI + the lightweight API mount. The Cloud Run deployment path (infra/cloudrun, the ten per-role services, Dockerfile) remains in the repository as the documented scale-out option. Rationale: single-platform operations (Render + Supabase), and the GCP billing path was blocked for the owner; capacity analysis showed the daily-batch workload fits a single worker well beyond the near-term user scale, with the true scale limits (DB, set-based SQL debt) unaffected by this choice.
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:

@@ -13,30 +13,35 @@ Database/Auth/Storage:
 
 Workers:
 
-- Google Cloud Run
+- Render private service (Decision 070; consolidated worker with an
+  in-process scheduler). Google Cloud Run remains the documented
+  scale-out option (infra/cloudrun).
 
 Queue:
 
-- Google Pub/Sub
+- None in v1.0 (Decision 070: idempotent jobs + in-process scheduler).
+  Google Pub/Sub applies to the Cloud Run scale-out option.
 
 Secrets:
 
-- Google Secret Manager
+- Render environment variables (Decision 070); Google Secret Manager in
+  the Cloud Run scale-out option
 
 Monitoring:
 
-- Google Cloud Logging
-- Google Cloud Monitoring
+- Render logs + health checks (Decision 070); Google Cloud
+  Logging/Monitoring with the 11 alert policies (infra/monitoring) in the
+  Cloud Run scale-out option
 
 ## Execution Boundary
 
-Cloud Run SHALL execute all financial, batch, settlement, and recovery logic.
+The private worker service SHALL execute all financial, batch, settlement, and recovery logic (Render pserv per Decision 070; Cloud Run in the scale-out option).
 
 Render SHALL serve frontend and lightweight server-side APIs only (Decision 068).
 
 Supabase PostgreSQL SHALL be the only writable database.
 
-Google Pub/Sub SHALL be the queue and worker communication mechanism.
+Worker communication is in-process in v1.0 (Decision 070); Google Pub/Sub applies to the Cloud Run scale-out option.
 
 Service Role Key SHALL never be exposed to browser, frontend, client bundle, client-side runtime, or public logs.
 
