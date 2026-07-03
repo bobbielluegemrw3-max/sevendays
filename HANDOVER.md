@@ -1,6 +1,6 @@
 # Seven Days Derby — セッション引継ぎ書
 
-> 最終更新: 2026-07-03 / 最終コミット: `ef3ed2e` / テスト: **241件 全PASS**(+実Postgres opt-in 1件)
+> 最終更新: 2026-07-03 / 最終コミット: `1ebcb6e` / テスト: **247件 全PASS**(+実Postgres opt-in 1件)
 > 新しいセッションはまずこのファイルと `IMPLEMENTATION_PLAN.md` を読むこと。
 > **仕様の正は `docs/`(v1.0仕様書パッケージ)+ `docs/10_DECISION_LOG.md`(Decision 001〜059)。ビジネスルールの発明は禁止。**
 
@@ -20,6 +20,7 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 - APIレイヤ(`packages/api-contracts`)完成: User 17 / Admin 8 / Internal 8 エンドポイント、認証境界・冪等強制・禁止APIゲート(CI組込)。
 - Phase 12コア完成(`packages/blockchain`): HD入金アドレス導出(xpubのみでプロビジョニング)・Deposit Watcher(カーソルスキャン→128確認→Ledger経由クレジット)・Withdrawal Broadcaster(**署名→永続化→送信**順序で二重送金を構造排除)。フェイクチェーンで全クラッシュ窓をテスト済み。
 - **Decision 060-064適用済み**(オーナー回答 2026-07-03): 大口出金1,000 USDT以上は**FINANCE_ADMIN+SUPER_ADMINの2名承認**(`withdrawal_review_approvals`+Admin API 3本)/手数料=**実費ガス精算**(`gasCostToUsdtFee`、Revenue計上なし)/Polygon PoS・128確認で確定(RPCはQuickNode推奨)/Memorial NFTメタデータ11項目+**決定論的tokenId(UUID→uint256)のミントパイプライン**/出金APIは小数6桁制限。**残**: QuickNodeキー取得→Amoy実機検証(RPCクライアント・署名・ERC-721コントラクトのデプロイとViem Minter実装)。
+- **Phase 12監査(85点)→ F-M〜F-R修正済み**(`1ebcb6e`): 0値Transferグリーフィング/クレジット前のレシート再検証(リオルグ)/レビュー迂回レース/承認クラッシュ自己修復/返金vs承認の二重払いガード/閾値デフォルト結線。**未対応の既知残債**: F-S(xpubフィンガープリント照合なし)・F-T(Watcher/MinterにAdvisoryロックなし=冗長実行でエラーノイズ)・F-U(スタックtx/nonce衝突の運用経路なし→Phase 14で「BROADCAST滞留」アラート必須)・同一tx複数入金の永続記録なし・token_contract表現不一致('USDT'リテラル vs アドレス)。
 - 本番Supabase(project ref `bdljkptqmnewkjoqzviy`, region ap-south-1)に**マイグレーション30本適用済み・同期済み**。
 
 ## 2. 環境セットアップ(新セッションで最初にやること)
@@ -109,7 +110,7 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 - 遅延制約トリガーのエラーは**COMMIT時**に発火 — `manageTransaction: false`で外部管理する場合は呼び出し側でエラーマップが必要(実例: `sessions.ts`)
 - 禁止APIチェッカーはリテラルgrep — テストで禁止パスを使う場合は動的組み立て(`['','api',...].join('/')`)
 
-## 8. テスト全景(241件全PASS+opt-in 1件。数字は `turbo run test --force` の実測)
+## 8. テスト全景(247件全PASS+opt-in 1件。数字は `turbo run test --force` の実測)
 
 | スイート | 件数 | 内容 |
 |---|---|---|
@@ -121,4 +122,4 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 | economy-engine | 22 | ポリシー/メトリクス/Status遷移ウォーク/出品/ストレス |
 | settlement-engine | 35 | バッチ/Burn e2e/Buyback e2e/割当e2e(クラッシュ再開込み)/リカバリ/**フルデイ/ローンチ初日** |
 | api-contracts | 8 | 認証境界/冪等強制/API経由フロー/禁止APIゲート/**2名承認・6桁制限** |
-| blockchain | 38 | HD導出(BIP-44ベクタ)/金額変換+実費手数料/Watcher(冪等・クラッシュ窓)/Broadcaster(永続化先行送信・リオルグ・**2名承認**)/**NFTミント(決定論tokenId・クラッシュ再開)**/署名/鍵非露出 |
+| blockchain | 44 | HD導出(BIP-44ベクタ)/金額変換+実費手数料/Watcher(冪等・クラッシュ窓・**0値/リオルグ/REVERT**)/Broadcaster(永続化先行送信・リオルグ・2名承認・**自己修復・二重払いガード**)/NFTミント(決定論tokenId・クラッシュ再開)/署名/鍵非露出 |
