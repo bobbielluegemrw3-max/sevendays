@@ -9,7 +9,10 @@ services:
     runtime: node
     region: singapore # closest to Supabase ap-south-1
     plan: starter
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@sevendays/web
+    # pnpm via npm (NOT corepack): corepack's bundled registry signing keys
+    # go stale and break the pnpm fetch ("Cannot find matching keyid").
+    # Version matches the root package.json packageManager pin.
+    buildCommand: npm install -g pnpm@10.18.1 && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@sevendays/web
     startCommand: cd apps/web && pnpm exec next start
     healthCheckPath: /healthz
     envVars:
