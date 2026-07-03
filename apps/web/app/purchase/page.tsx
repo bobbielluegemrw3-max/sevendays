@@ -1,5 +1,14 @@
-import { serverApiOrLogin } from '@/lib/server-api';
-import { PurchasePanel } from '@/components/PurchasePanel';
+import { serverApi, serverApiOrLogin } from '@/lib/server-api';
+import { CreateSessionButton, CancelSessionButton } from '@/components/PurchasePanel';
+
+interface Session {
+  id: string;
+  status: string;
+  locked_amount: string;
+  assigned_price: string | null;
+  refund_amount: string | null;
+  created_at: string;
+}
 
 interface Assignment {
   id: string;
@@ -11,22 +20,60 @@ interface Assignment {
 }
 
 export default async function PurchasePage() {
-  const { assignments } = await serverApiOrLogin<{ assignments: Assignment[] }>('/api/v1/assignments');
+  const { sessions } = await serverApiOrLogin<{ sessions: Session[] }>('/api/v1/purchase');
+  const assignments = await serverApi<{ assignments: Assignment[] }>('/api/v1/assignments');
 
   return (
     <>
       <h1>購入</h1>
       <div className="panel">
         <p>
-          購入セッションを作成すると価格テーブル上限額がロックされ、当日バッチの割当で馬が決まります。
-          割当価格との差額とロック超過分は自動で返金されます。バッチのロック前ならキャンセルできます。
+          購入セッションを作成すると価格テーブル上限額(177.16 USDT)がロックされ、当日バッチの割当で馬が決まります。
+          Day0ミントの場合の請求は102 USDT(価格100+手数料2)で、割当価格との差額とロック超過分は自動で返金されます。
+          バッチのロック前ならキャンセルできます(同時に最大10件)。
         </p>
-        <PurchasePanel />
+        <CreateSessionButton />
+      </div>
+
+      <h2>あなたのセッション</h2>
+      <div className="panel">
+        {sessions.length > 0 ? (
+          <table>
+            <thead>
+              <tr>
+                <th>作成日時</th>
+                <th>状態</th>
+                <th>ロック額</th>
+                <th>割当価格</th>
+                <th>返金</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {sessions.map((s) => (
+                <tr key={s.id}>
+                  <td className="muted">{s.created_at.slice(0, 19)}</td>
+                  <td>
+                    <span className="badge">{s.status}</span>
+                  </td>
+                  <td>{s.locked_amount} USDT</td>
+                  <td>{s.assigned_price ?? '—'}</td>
+                  <td>{s.refund_amount ?? '—'}</td>
+                  <td>
+                    {s.status === 'PENDING_ASSIGNMENT' ? <CancelSessionButton sessionId={s.id} /> : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="muted">セッションはまだありません。</p>
+        )}
       </div>
 
       <h2>割当履歴</h2>
       <div className="panel">
-        {assignments.length > 0 ? (
+        {assignments.status === 200 && assignments.body.assignments.length > 0 ? (
           <table>
             <thead>
               <tr>
@@ -38,7 +85,7 @@ export default async function PurchasePage() {
               </tr>
             </thead>
             <tbody>
-              {assignments.map((a) => (
+              {assignments.body.assignments.map((a) => (
                 <tr key={a.id}>
                   <td className="muted">{a.created_at.slice(0, 19)}</td>
                   <td>

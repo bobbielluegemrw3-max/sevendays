@@ -249,6 +249,25 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     },
   });
 
+  // Own-session list (the UI showed only the latest session, hiding the
+  // rest — production finding, 2026-07-04). Same visibility rules as
+  // GET /purchase/{id}.
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/purchase',
+    auth: 'user',
+    handler: async (ctx) => {
+      const rows = await ctx.client.query(
+        `select id, status::text as status, locked_amount::text as locked_amount,
+                assigned_price::text as assigned_price, refund_amount::text as refund_amount,
+                created_at::text as created_at
+         from purchase_sessions where user_id = $1 order by created_at desc limit 20`,
+        [ctx.userId],
+      );
+      return { sessions: rows.rows };
+    },
+  });
+
   registry.register({
     method: 'POST',
     path: '/api/v1/purchase',

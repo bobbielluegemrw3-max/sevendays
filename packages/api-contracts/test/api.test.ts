@@ -136,6 +136,12 @@ describe('user flow through the API', () => {
     const session = await call('GET', `/api/v1/purchase/${sessionId}`, asUser(user));
     expect(session.status).toBe(200);
 
+    // The session list shows the user's OWN sessions (UI fix, 2026-07-04).
+    const list = await call('GET', '/api/v1/purchase', asUser(user));
+    expect(list.status).toBe(200);
+    const sessions = (list.body as { sessions: { id: string }[] }).sessions;
+    expect(sessions.some((s) => s.id === sessionId)).toBe(true);
+
     // another user cannot see it
     const stranger = await newUser();
     const strangerView = await call('GET', `/api/v1/purchase/${sessionId}`, asUser(stranger));
