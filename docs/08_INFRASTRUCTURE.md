@@ -4,7 +4,7 @@
 
 Frontend:
 
-- Vercel
+- Render (Decision 068; originally Vercel)
 - Next.js
 
 Database/Auth/Storage:
@@ -32,7 +32,7 @@ Monitoring:
 
 Cloud Run SHALL execute all financial, batch, settlement, and recovery logic.
 
-Vercel SHALL serve frontend and lightweight server-side APIs only.
+Render SHALL serve frontend and lightweight server-side APIs only (Decision 068).
 
 Supabase PostgreSQL SHALL be the only writable database.
 
@@ -42,7 +42,7 @@ Service Role Key SHALL never be exposed to browser, frontend, client bundle, cli
 
 Wallet private keys SHALL be stored only in Google Secret Manager or secure signer infrastructure. They must never be exposed to browser, frontend, logs, or public runtime.
 
-## Vercel Responsibilities
+## Render Responsibilities (Decision 068)
 
 - User UI
 - Admin UI
@@ -50,7 +50,7 @@ Wallet private keys SHALL be stored only in Google Secret Manager or secure sign
 - Server-side auth checks
 - Read-oriented APIs
 
-Vercel must not run financial batch logic.
+Render must not run financial batch logic.
 
 ## Cloud Run Responsibilities
 

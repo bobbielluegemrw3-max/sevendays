@@ -151,6 +151,10 @@ Implementation note: notifications are emitted at each event site with a determi
 
 067. Admin Recovery API surface added to 07_API.md: GET /api/v1/admin/recovery (list), GET /api/v1/admin/recovery/{id} (detail including recovery_logs), POST /api/v1/admin/recovery/{id}/approve (existing), POST /api/v1/admin/recovery/{id}/execute. Auth: Admin JWT + role (FINANCE_ADMIN / SUPER_ADMIN). Rules unchanged from the constitution: dual approval by two distinct admins; recovery can never mutate posted ledger entries, rerun a race with changed inputs, or replace a seed/snapshot; every action writes recovery_logs. Errors: RECOVERY_NOT_FOUND, RECOVERY_ALREADY_APPROVED, RECOVERY_REQUIRES_DUAL_APPROVAL, INVALID_RECOVERY_STATE, FORBIDDEN.
 
+## Decision 068 (2026-07-03, Owner)
+
+068. Frontend hosting changed from Vercel to Render (render.com). The execution boundary is otherwise UNCHANGED: Render serves the user/admin UI and the lightweight API mount (the same @sevendays/api-contracts registry); all financial/batch/settlement/recovery logic remains exclusively on Google Cloud Run; the Service Role Key and wallet keys never reach the client bundle (the existing build-time bundle inspection still enforces this). Render runs the app as a persistent Node server (suits the Postgres session-pooled connections better than serverless). Deployment is Blueprint-based (render.yaml, Singapore region — closest to Supabase ap-south-1).
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:

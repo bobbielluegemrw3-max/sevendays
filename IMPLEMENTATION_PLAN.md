@@ -28,7 +28,7 @@ Web3競馬 × 高流動性P2Pアセットゲーム「Seven Days Derby」v1.0 を
 
 | レイヤ | 技術 |
 |---|---|
-| フロントエンド | Vercel + Next.js |
+| フロントエンド | **Render + Next.js**(Decision 068。当初Vercel) |
 | DB / Auth / Storage | Supabase (PostgreSQL) |
 | 金融・バッチ実行 | Google Cloud Run(全ワーカー) |
 | キュー | Google Pub/Sub |
@@ -39,7 +39,7 @@ Web3競馬 × 高流動性P2Pアセットゲーム「Seven Days Derby」v1.0 を
 ### 0.3 実行境界(絶対規則)
 
 - **Cloud Run**: 全ての金融・バッチ・精算・リカバリロジックを実行する唯一の場所
-- **Vercel**: UI と軽量な読み取り系API・認証チェックのみ。金融バッチロジック禁止
+- **Render**(Decision 068): UI と軽量な読み取り系API・認証チェックのみ。金融バッチロジック禁止
 - **Ledger**: 唯一の真実。残高直接更新は全面禁止(複式簿記のみ)
 - **AI**: レース結果・ランキング・Burn対象・シード・Ledgerを一切決定しない(推奨のみ)
 - Service Role Key / ウォレット秘密鍵はブラウザ・フロント・ログ・公開ランタイムに露出禁止

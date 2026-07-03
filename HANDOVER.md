@@ -78,7 +78,8 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 - **環境変数**(`apps/web/.env.example`): NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_JWT_SECRET / DATABASE_URL(セッションプーラー)
 - **Decision 065-067適用済み**(オーナー回答 2026-07-03): 通知13種+日本語テンプレート(`NOTIFICATION_TEMPLATES_V1`)を全イベントサイトで発火(決定論的`dedupe_key`で冪等・最終マーカー前に通知でクラッシュ自己修復・MARKETPLACE系は`user_id null`のブロードキャスト行)/ `POST /horses/{id}/training`(1日1回・ロック中は締切・当日バッチ完了後は翌日向け)+馬詳細のトレーニングUI / Admin Recovery一覧・詳細・approve・executeエンドポイント+リカバリUI。07_API.mdもオーナー指示で更新済み
 - **Phase 13監査(90点)→ F-V〜F-Z修正済み**(`d7580bd`): プール接続のロールバック保護/stale email衝突のプロビジョニング詰み/リカバリ承認スロットの同時実行ガード/非ACTIVE馬のトレーニング拒否(`HORSE_NOT_ACTIVE` 409を追加)/RSC認証のReact cache化+pool 10。**未対応LOW**: トレーニングのOPEN確認→insert間のTOCTOU微小窓/サインアップのメール確認UX/`read_at`更新APIなし(07_API未定義)/admin layoutの二重プローブ/recovery execute・batch retryのVercel同期実行(タイムアウトリスク→Phase 14でCloud Run側へ、既存負債③と同族)
-- **残**: ブラウザE2E(購入→割当→レース→Buyback主要フロー。Playwright+実行環境が必要)/ Marketplace状態のリアルタイム反映(現状はリロード反映)/ Vercelデプロイ
+- **ホスティングはRenderに変更(Decision 068)**: リポジトリ直下の `render.yaml`(Blueprint、Singaporeリージョン・`/healthz`ヘルスチェック・ビルドにバンドル検査組込)。必要な環境変数4つは `apps/web/.env.example`。`next start` 実起動+healthz応答はローカル検証済み。デプロイはRenderダッシュボードでリポジトリ接続→Blueprint適用→環境変数投入
+- **残**: Renderでの初回デプロイ実行(オーナーのアカウント接続待ち)/ ブラウザE2E(購入→割当→レース→Buyback主要フロー)/ Marketplace状態のリアルタイム反映(現状はリロード反映)
 
 ### Phase 14: 総仕上げ
 - services/*(Cloud Runワーカー)の薄いHTTPラッパー化+Pub/Sub+Scheduler(20:00 MYT=12:00 UTC)+監視11種アラート
@@ -95,7 +96,7 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 ## 6. 作業の進め方(確立済みの運用)
 
 1. **フェーズ着手前**: 未確定事項があれば「GPTに聞く質問文」形式でユーザーに提示(過去形式は会話ログ/Decision Log参照)
-2. **オーナー決定** → `docs/10_DECISION_LOG.md` に決定番号(次は**068**)で英語追記 + `IMPLEMENTATION_PLAN.md` 付録Eを更新
+2. **オーナー決定** → `docs/10_DECISION_LOG.md` に決定番号(次は**069**)で英語追記 + `IMPLEMENTATION_PLAN.md` 付録Eを更新
 3. スキーマ変更 = 新規マイグレーション(次は **20260702200132**)→ PGliteテスト → `db push` で本番反映
 4. フェーズ完了ごと: 全チェック(`pnpm build/test/lint/typecheck` + `check:forbidden-apis`)→ コミット(末尾に `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`)→ push
 5. フェーズごとに「100点診断」を求められる文化。**クラッシュ窓・冪等性・並行性・初日/空データのエッジ**を重点監査すると過去の指摘パターンと一致する

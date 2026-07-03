@@ -1,0 +1,27 @@
+# Render Blueprint (Decision 068): frontend hosting.
+# Execution boundary (08_INFRASTRUCTURE.md): this service serves the UI and
+# the lightweight API mount ONLY — all financial/batch logic runs on Cloud
+# Run. The build runs the client-bundle inspection (Service Role Key /
+# settlement logic must never reach the browser).
+services:
+  - type: web
+    name: sevendays-web
+    runtime: node
+    region: singapore # closest to Supabase ap-south-1
+    plan: starter
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@sevendays/web
+    startCommand: cd apps/web && pnpm exec next start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      # Browser (inlined into the client bundle at build time)
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      # Server only — never NEXT_PUBLIC_
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
