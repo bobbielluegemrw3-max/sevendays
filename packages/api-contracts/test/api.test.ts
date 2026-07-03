@@ -438,6 +438,15 @@ describe('training (Decision 066)', () => {
     expect(duplicate.status).toBe(409);
     expect((duplicate.body as { error: { code: string } }).error.code).toBe('TRAINING_ALREADY_EXISTS');
 
+    // Non-ACTIVE horses never race again — training is refused.
+    const burnedHorse = await newHorseFor(owner);
+    await client.query(`update horses set status = 'BURNED' where id = $1`, [burnedHorse]);
+    const burnedTraining = await call('POST', `/api/v1/horses/${burnedHorse}/training`, asUser(owner), {
+      body: { training_type: 'SPEED_TRAINING' },
+    });
+    expect(burnedTraining.status).toBe(409);
+    expect((burnedTraining.body as { error: { code: string } }).error.code).toBe('HORSE_NOT_ACTIVE');
+
     // Batch Lock closes the intake (v1.0 rule).
     await client.query(`update marketplace_status set state = 'MARKET_LOCKED' where id = true`);
     try {

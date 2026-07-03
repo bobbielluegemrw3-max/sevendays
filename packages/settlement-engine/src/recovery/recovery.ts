@@ -144,7 +144,7 @@ export async function approveRecovery(
      from recovery_snapshots where id = $1`,
     [input.recoveryId],
   );
-  const row = recovery.rows[0];
+  let row = recovery.rows[0];
   if (!row) throw new RecoveryError('RECOVERY_NOT_FOUND', `Recovery ${input.recoveryId} not found`);
   if (row.completed_at !== null) {
     throw new RecoveryError('INVALID_BATCH_STATE', 'Recovery already completed');
@@ -162,16 +162,37 @@ export async function approveRecovery(
   }
 
   if (row.approved_by_1 === null) {
-    await client.query(
-      `update recovery_snapshots set approved_by_1 = $2 where id = $1`,
+    // Guarded claim: two concurrent first approvals must not overwrite each
+    // other (last-write-wins would silently DROP an approval).
+    const claimed = await client.query(
+      `update recovery_snapshots set approved_by_1 = $2
+       where id = $1 and approved_by_1 is null`,
       [input.recoveryId, input.approverUserId],
     );
-    await log(client, input.recoveryId, row.batch_run_id, input.approverUserId, 'APPROVED_1');
-    return { approvalStatus: 'PENDING' };
+    if ((claimed.affectedRows ?? 0) > 0) {
+      await log(client, input.recoveryId, row.batch_run_id, input.approverUserId, 'APPROVED_1');
+      return { approvalStatus: 'PENDING' };
+    }
+    // Lost the first-slot race: re-read and continue as second approver.
+    const fresh = await client.query<typeof row>(
+      `select batch_run_id, approval_status::text as approval_status,
+              approved_by_1, approved_by_2, completed_at::text as completed_at
+       from recovery_snapshots where id = $1`,
+      [input.recoveryId],
+    );
+    row = fresh.rows[0]!;
+    if (row.approved_by_1 === input.approverUserId || row.approved_by_2 === input.approverUserId) {
+      return { approvalStatus: row.approval_status };
+    }
+  }
+
+  const firstApprover = row.approved_by_1;
+  if (firstApprover === null) {
+    throw new RecoveryError('DUAL_APPROVAL_REQUIRED', 'First approval slot unexpectedly empty');
   }
 
   // Second approval: distinct user (DB check) + combined role coverage.
-  const roles1 = await activeAdminRoles(client, row.approved_by_1);
+  const roles1 = await activeAdminRoles(client, firstApprover);
   const combined = new Set<AdminRole>([...roles1, ...roles]);
   if (!combined.has('FINANCE_ADMIN') || !combined.has('SUPER_ADMIN')) {
     throw new RecoveryError(
@@ -179,12 +200,20 @@ export async function approveRecovery(
       'Approvers must jointly hold FINANCE_ADMIN and SUPER_ADMIN',
     );
   }
-  await client.query(
+  const completed = await client.query(
     `update recovery_snapshots
      set approved_by_2 = $2, approval_status = 'APPROVED'
-     where id = $1`,
+     where id = $1 and approved_by_2 is null`,
     [input.recoveryId, input.approverUserId],
   );
+  if ((completed.affectedRows ?? 0) === 0) {
+    // A concurrent second approval finished first — report the final state.
+    const final = await client.query<{ approval_status: string }>(
+      `select approval_status::text as approval_status from recovery_snapshots where id = $1`,
+      [input.recoveryId],
+    );
+    return { approvalStatus: final.rows[0]?.approval_status ?? 'APPROVED' };
+  }
   await log(client, input.recoveryId, row.batch_run_id, input.approverUserId, 'APPROVED_2');
   return { approvalStatus: 'APPROVED' };
 }

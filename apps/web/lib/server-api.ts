@@ -1,13 +1,17 @@
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
+import type { AuthContext } from '@sevendays/api-contracts';
 import { withSqlClient } from './db';
-import { dispatchBridge } from './api-bridge';
+import { buildAuthContext, dispatchWithAuth } from './api-bridge';
 
 /**
  * Server-component data access: same contract as the HTTP API, without the
  * HTTP hop. The Supabase session cookie provides the access token; the
- * bridge verifies it cryptographically before any dispatch.
+ * bridge verifies it cryptographically. Auth resolution (JWT verify +
+ * user provisioning + role lookup) runs ONCE per render via React cache —
+ * pages calling serverApi several times share the result.
  */
 
 function jwtSecret(): string {
@@ -16,7 +20,7 @@ function jwtSecret(): string {
   return secret;
 }
 
-export async function getAccessToken(): Promise<string | null> {
+export const getAccessToken = cache(async (): Promise<string | null> => {
   // Read cookies FIRST so every caller is dynamically rendered — even when
   // the Supabase env is absent (build machines must never prerender pages
   // into the database).
@@ -34,7 +38,13 @@ export async function getAccessToken(): Promise<string | null> {
   });
   const { data } = await supabase.auth.getSession();
   return data.session?.access_token ?? null;
-}
+});
+
+const getAuthContext = cache(async (): Promise<AuthContext> => {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { kind: 'anonymous' };
+  return withSqlClient((client) => buildAuthContext(client, accessToken, jwtSecret()));
+});
 
 export interface ServerApiResult<T> {
   status: number;
@@ -45,17 +55,16 @@ export async function serverApi<T>(
   path: string,
   init: { method?: 'GET' | 'POST'; body?: unknown } = {},
 ): Promise<ServerApiResult<T>> {
-  const accessToken = await getAccessToken();
+  const auth = await getAuthContext();
   const response = await withSqlClient((client) =>
-    dispatchBridge(
+    dispatchWithAuth(
       client,
       {
         method: init.method ?? 'GET',
         path,
         body: init.body,
-        accessToken,
       },
-      jwtSecret(),
+      auth,
     ),
   );
   return { status: response.status, body: response.body as T };

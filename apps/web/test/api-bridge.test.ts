@@ -51,6 +51,29 @@ describe('buildAuthContext', () => {
     expect(again.kind).toBe('user');
   });
 
+  it('survives a stale email collision instead of locking the new user out', async () => {
+    const email = `${randomUUID()}@collision.dev`;
+    // A previous owner of this email address still holds it in users
+    // (they changed address in Supabase; the email was re-registered).
+    const stale = await client.query<{ id: string }>(
+      `insert into users (email) values ($1) returning id`,
+      [email],
+    );
+
+    const uid = randomUUID();
+    const token = await signToken(uid, email);
+    const auth = await buildAuthContext(client, token, JWT_SECRET);
+    expect(auth).toEqual({ kind: 'user', userId: uid });
+
+    const mine = await client.query<{ email: string }>(`select email from users where id = $1`, [uid]);
+    expect(mine.rows[0]!.email).toBe(email); // verified owner gets the email
+
+    const tombstoned = await client.query<{ email: string }>(`select email from users where id = $1`, [
+      stale.rows[0]!.id,
+    ]);
+    expect(tombstoned.rows[0]!.email.startsWith('moved+')).toBe(true);
+  });
+
   it('resolves active admin grants into an admin context', async () => {
     const uid = randomUUID();
     const token = await signToken(uid, 'admin@test.dev');

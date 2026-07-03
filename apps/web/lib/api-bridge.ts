@@ -40,7 +40,9 @@ export async function buildAuthContext(
 
   let payload: Record<string, unknown>;
   try {
-    ({ payload } = await jwtVerify(accessToken, new TextEncoder().encode(jwtSecret)));
+    ({ payload } = await jwtVerify(accessToken, new TextEncoder().encode(jwtSecret), {
+      algorithms: ['HS256'],
+    }));
   } catch {
     return { kind: 'anonymous' };
   }
@@ -50,10 +52,26 @@ export async function buildAuthContext(
   // First-login provisioning: everything downstream (RLS, ledger accounts,
   // deposit addresses) keys on users.id = auth.uid().
   const email = typeof payload.email === 'string' && payload.email !== '' ? payload.email : `${userId}@user.sevendays`;
-  await client.query(
-    `insert into users (id, email) values ($1, $2) on conflict do nothing`,
-    [userId, email],
-  );
+  try {
+    await client.query(
+      `insert into users (id, email) values ($1, $2) on conflict (id) do nothing`,
+      [userId, email],
+    );
+  } catch (error) {
+    if (!/duplicate key/i.test((error as Error).message)) throw error;
+    // Another users row still holds this email (its owner changed address
+    // in Supabase and the email was re-registered). The verified token
+    // proves THIS auth uid owns the email now — tombstone the stale record
+    // so the new user is never locked out of provisioning.
+    await client.query(
+      `update users set email = 'moved+' || id || '+' || email where email = $2 and id <> $1`,
+      [userId, email],
+    );
+    await client.query(
+      `insert into users (id, email) values ($1, $2) on conflict (id) do nothing`,
+      [userId, email],
+    );
+  }
 
   const grants = await client.query<{ role: string }>(
     `select role::text as role from admin_role_grants where user_id = $1 and revoked_at is null`,
@@ -71,6 +89,16 @@ export async function dispatchBridge(
   jwtSecret: string,
 ): Promise<ApiResponse> {
   const auth = await buildAuthContext(client, request.accessToken, jwtSecret);
+  return dispatchWithAuth(client, request, auth);
+}
+
+/** Dispatch with a pre-resolved AuthContext (server components resolve auth
+ *  ONCE per render via React cache instead of per data call). */
+export async function dispatchWithAuth(
+  client: SqlClient,
+  request: Omit<BridgeRequest, 'accessToken'>,
+  auth: AuthContext,
+): Promise<ApiResponse> {
   return registry.dispatch(client, {
     method: request.method,
     path: request.path,

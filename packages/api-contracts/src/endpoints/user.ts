@@ -174,13 +174,18 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
           `training_type must be one of: ${TRAINING_TYPES.join(', ')}`,
         );
       }
-      const horse = await ctx.client.query<{ owner_user_id: string; name: string }>(
-        `select owner_user_id, name from horses where id = $1`,
+      const horse = await ctx.client.query<{ owner_user_id: string; name: string; status: string }>(
+        `select owner_user_id, name, status::text as status from horses where id = $1`,
         [ctx.params.id],
       );
       if (!horse.rows[0]) throw new ApiError('HORSE_NOT_FOUND', 'Horse not found');
       if (horse.rows[0].owner_user_id !== ctx.userId) {
         throw new ApiError('NOT_HORSE_OWNER', 'Only the owner can train this horse');
+      }
+      // Burned/memorialized/Day7 horses never race again — accepting their
+      // training (and notifying "applied") would be a lie.
+      if (horse.rows[0].status !== 'ACTIVE') {
+        throw new ApiError('HORSE_NOT_ACTIVE', `Horse is ${horse.rows[0].status}; only ACTIVE horses can train`);
       }
 
       if ((await getMarketplaceState(ctx.client)) !== 'OPEN') {
@@ -208,29 +213,33 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         throw new ApiError('RACE_SNAPSHOT_ALREADY_CREATED', 'The race snapshot is already frozen');
       }
 
+      // Training row + notification are one atomic unit — a crash can never
+      // record the training while dropping its notification (or vice versa).
       try {
+        await ctx.client.query('begin');
         await ctx.client.query(
           `insert into training_sessions (horse_id, user_id, training_type, training_date, effective_race_date)
            values ($1, $2, $3::training_type, $4, $5)`,
           [ctx.params.id, ctx.userId, input.training_type, today, effectiveRaceDate],
         );
+        const rendered = renderNotification('TRAINING_COMPLETED', {
+          horse_name: horse.rows[0].name,
+          training_type: input.training_type,
+        });
+        await insertNotification(ctx.client, {
+          userId: ctx.userId,
+          type: 'TRAINING_COMPLETED',
+          dedupeKey: `notif:TRAINING_COMPLETED:${ctx.params.id}:${effectiveRaceDate}`,
+          payload: { ...rendered, horse_id: ctx.params.id, training_type: input.training_type },
+        });
+        await ctx.client.query('commit');
       } catch (error) {
+        await ctx.client.query('rollback').catch(() => undefined);
         if (/uq_training_horse_race_date|duplicate key/i.test((error as Error).message)) {
           throw new ApiError('TRAINING_ALREADY_EXISTS', 'This horse already trained for that race');
         }
         throw error;
       }
-
-      const rendered = renderNotification('TRAINING_COMPLETED', {
-        horse_name: horse.rows[0].name,
-        training_type: input.training_type,
-      });
-      await insertNotification(ctx.client, {
-        userId: ctx.userId,
-        type: 'TRAINING_COMPLETED',
-        dedupeKey: `notif:TRAINING_COMPLETED:${ctx.params.id}:${effectiveRaceDate}`,
-        payload: { ...rendered, horse_id: ctx.params.id, training_type: input.training_type },
-      });
 
       return {
         horse_id: ctx.params.id,
