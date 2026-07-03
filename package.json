@@ -14,6 +14,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,json,md,yaml,yml}\""
   },
   "devDependencies": {
+    "@types/node": "^22.20.0",
     "eslint": "^9.39.4",
     "prettier": "^3.5.3",
     "supabase": "^2.109.0",
