@@ -13,18 +13,71 @@ import type { EconomyMetrics } from './metrics.js';
  * No LLM anywhere in this path (Decision 046).
  */
 
+/**
+ * Threshold values come from the ACTIVE economy_policy_version (F-J).
+ * The defaults mirror economy_policy_v1.0; a future policy version can
+ * change them without touching code.
+ */
+export interface EconomyThresholds {
+  emergencyCashBelow: number;
+  emergencyForecastBelow: number;
+  winterCashBelow: number;
+  winterForecastBelow: number;
+  watchCashBelow: number;
+  watchP2pMatchBelow: number;
+  watchRebuyBelow: number;
+}
+
+export const ECONOMY_THRESHOLDS_DEFAULT_V1: EconomyThresholds = {
+  emergencyCashBelow: 1.2,
+  emergencyForecastBelow: 1.2,
+  winterCashBelow: 1.5,
+  winterForecastBelow: 1.5,
+  watchCashBelow: 2.0,
+  watchP2pMatchBelow: 0.8,
+  watchRebuyBelow: 0.3,
+};
+
+/** Parse thresholds out of economy_policies.policy_json (v1.0 shape). */
+export function thresholdsFromPolicy(policyJson: unknown): EconomyThresholds {
+  const t = (policyJson as { thresholds?: Record<string, Record<string, string>> }).thresholds;
+  if (!t) return ECONOMY_THRESHOLDS_DEFAULT_V1;
+  const num = (v: string | undefined, fallback: number): number =>
+    v === undefined ? fallback : Number(v);
+  return {
+    emergencyCashBelow: num(t.EMERGENCY?.cash_coverage_below, 1.2),
+    emergencyForecastBelow: num(t.EMERGENCY?.forecasted_cash_coverage_below, 1.2),
+    winterCashBelow: num(t.WATCH?.cash_coverage_min, 1.5),
+    winterForecastBelow: num(t.WINTER?.forecasted_cash_coverage_below, 1.5),
+    watchCashBelow: num(t.NORMAL?.cash_coverage_min, 2.0),
+    watchP2pMatchBelow: num(t.NORMAL?.p2p_match_rate_min, 0.8),
+    watchRebuyBelow: num(t.NORMAL?.rebuy_rate_min, 0.3),
+  };
+}
+
 /** Threshold candidate from metrics — most severe match wins. */
-export function thresholdStatus(metrics: EconomyMetrics): EconomyStatus {
+export function thresholdStatus(
+  metrics: EconomyMetrics,
+  thresholds: EconomyThresholds = ECONOMY_THRESHOLDS_DEFAULT_V1,
+): EconomyStatus {
   const cash = metrics.cashCoverageRatio;
   const forecast = metrics.forecastedCashCoverage;
 
-  if (cash < 1.2 || forecast < 1.2 || metrics.buybackCashCoverageRatio < 1.0) {
+  if (
+    cash < thresholds.emergencyCashBelow ||
+    forecast < thresholds.emergencyForecastBelow ||
+    metrics.buybackCashCoverageRatio < 1.0
+  ) {
     return 'EMERGENCY';
   }
-  if (cash < 1.5 || forecast < 1.5) {
+  if (cash < thresholds.winterCashBelow || forecast < thresholds.winterForecastBelow) {
     return 'WINTER';
   }
-  if (cash < 2.0 || metrics.p2pMatchRate < 0.8 || metrics.rebuyRate < 0.3) {
+  if (
+    cash < thresholds.watchCashBelow ||
+    metrics.p2pMatchRate < thresholds.watchP2pMatchBelow ||
+    metrics.rebuyRate < thresholds.watchRebuyBelow
+  ) {
     return 'WATCH';
   }
   return 'NORMAL';
@@ -121,6 +174,7 @@ export async function evaluateEconomyStatus(
     economyPolicyVersion: string;
     metrics: EconomyMetrics;
     stressFailures: readonly { scenario: StressScenario; buybackShortfall: boolean }[];
+    thresholds?: EconomyThresholds;
   },
 ): Promise<EvaluationResult> {
   const idempotent = await client.query<{ recommended_status: EconomyStatus; final_status: EconomyStatus }>(
@@ -133,7 +187,7 @@ export async function evaluateEconomyStatus(
   }
 
   const recommended = mostSevere(
-    thresholdStatus(input.metrics),
+    thresholdStatus(input.metrics, input.thresholds),
     stressEscalationFloor(input.stressFailures),
   );
 
