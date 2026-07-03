@@ -34,7 +34,9 @@ export class FakeChain implements ChainClient {
   }
 
   async getGasFees(): Promise<GasFees> {
-    return { maxFeePerGas: 30_000_000_000n, maxPriorityFeePerGas: 1_000_000_000n };
+    // 10 gwei x transferGasLimit 100k = 0.001 native token per transfer,
+    // so a nativeUsdtRate of 1000 makes the pass-through fee exactly 1 USDT.
+    return { maxFeePerGas: 10_000_000_000n, maxPriorityFeePerGas: 1_000_000_000n };
   }
 
   async sendRawTransaction(rawTx: string): Promise<void> {

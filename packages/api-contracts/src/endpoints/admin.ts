@@ -1,7 +1,10 @@
+import { z } from 'zod';
 import {
   computeEconomyMetrics,
   currentEconomyStatus,
 } from '@sevendays/economy-engine';
+import { ADMIN_ROLES } from '@sevendays/domain';
+import { approveWithdrawal, rejectWithdrawal } from '@sevendays/blockchain';
 import { approveRecovery, runBatch, buildProductionHandlers } from '@sevendays/settlement-engine';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry, HandlerContext } from '../router.js';
@@ -146,6 +149,79 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
          order by b.batch_date desc, r.scenario limit 200`,
       );
       return { stress_tests: rows.rows };
+    },
+  });
+
+  // Large-withdrawal Admin Review (Decision 060): dual approval by one
+  // FINANCE_ADMIN + one SUPER_ADMIN, two distinct persons. Package
+  // functions write the approvals/audit; DB constraints enforce the rules.
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/admin/withdrawals',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const rows = await ctx.client.query(
+        `select w.id, w.user_id, w.chain_id, w.to_address,
+                w.requested_amount::text as requested_amount,
+                w.status::text as status, w.requested_at::text as requested_at,
+                coalesce(json_agg(json_build_object('admin_user_id', a.admin_user_id, 'role', a.admin_role))
+                         filter (where a.id is not null), '[]') as approvals
+         from blockchain_withdrawals w
+         left join withdrawal_review_approvals a on a.withdrawal_id = w.id
+         where w.status = 'ADMIN_REVIEW'
+         group by w.id
+         order by w.requested_at
+         limit 100`,
+      );
+      return { withdrawals: rows.rows };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/withdrawals/:id/approve',
+    auth: 'admin',
+    idempotencyKeyRequired: true,
+    input: z.object({ role: z.enum(ADMIN_ROLES) }),
+    handler: async (ctx, input) => {
+      requireAdminRole(ctx);
+      if (ctx.auth.kind !== 'admin' || !ctx.auth.roles.includes(input.role)) {
+        throw new ApiError('FORBIDDEN', `Approver does not hold role ${input.role}`);
+      }
+      try {
+        const result = await approveWithdrawal(ctx.client, {
+          withdrawalId: ctx.params.id!,
+          adminUserId: ctx.userId,
+          adminRole: input.role,
+        });
+        return { approved_roles: result.approvedRoles, released: result.released };
+      } catch (error) {
+        const message = (error as Error).message;
+        if (/duplicate key/i.test(message)) {
+          throw new ApiError('DUAL_APPROVAL_REQUIRED', 'This admin or role has already approved; a second DISTINCT admin must approve');
+        }
+        if (/not in ADMIN_REVIEW/.test(message)) throw new ApiError('NOT_FOUND', message);
+        throw error;
+      }
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/withdrawals/:id/reject',
+    auth: 'admin',
+    idempotencyKeyRequired: true,
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      try {
+        await rejectWithdrawal(ctx.client, { withdrawalId: ctx.params.id!, adminUserId: ctx.userId });
+      } catch (error) {
+        const message = (error as Error).message;
+        if (/not in ADMIN_REVIEW/.test(message)) throw new ApiError('NOT_FOUND', message);
+        throw error;
+      }
+      return { status: 'REJECTED' };
     },
   });
 

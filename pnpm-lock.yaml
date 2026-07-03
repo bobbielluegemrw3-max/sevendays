@@ -29,6 +29,9 @@ importers:
 
   packages/api-contracts:
     dependencies:
+      '@sevendays/blockchain':
+        specifier: workspace:*
+        version: link:../blockchain
       '@sevendays/domain':
         specifier: workspace:*
         version: link:../domain

@@ -83,7 +83,10 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     auth: 'user',
     idempotencyKeyRequired: true,
     input: z.object({
-      amount: z.string().regex(/^\d+(\.\d+)?$/, 'amount must be a decimal string'),
+      // Decision 064: at most 6 decimals (Polygon USDT on-chain scale).
+      amount: z
+        .string()
+        .regex(/^\d+(\.\d{1,6})?$/, 'amount must be a decimal string with at most 6 decimal places'),
       to_address: z.string().min(4),
     }),
     handler: async (ctx, input) => {

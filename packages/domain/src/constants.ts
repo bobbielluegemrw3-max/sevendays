@@ -294,13 +294,17 @@ export const STABILITY_RULE_V1 = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Deposit / Withdrawal v1.0 (07_API.md, Decisions 048)
+// Deposit / Withdrawal v1.0 (07_API.md, Decisions 048, 060, 062, 064)
 // ---------------------------------------------------------------------------
 
 export const SUPPORTED_ASSET = 'USDT';
 export const DEFAULT_CHAIN = 'POLYGON_POS';
 export const DEPOSIT_CONFIRMATION_BLOCKS = 128;
 export const MIN_WITHDRAWAL_AMOUNT = '10.00';
+/** Decision 060: withdrawals at/over this require dual-admin review. */
+export const WITHDRAWAL_ADMIN_REVIEW_THRESHOLD = '1000';
+/** Decision 064: withdrawal API accepts at most 6 decimal places (USDT on-chain scale). */
+export const WITHDRAWAL_MAX_DECIMALS = 6;
 
 // ---------------------------------------------------------------------------
 // Purchase sessions (Decisions 043, 051)

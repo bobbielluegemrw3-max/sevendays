@@ -32,6 +32,32 @@ export function unitsToMoney(units: bigint, decimals: number): Money {
   return Money.of(`${whole.toString()}.${fracStr.slice(0, 8)}`);
 }
 
+/**
+ * Decision 061: withdrawal network fee = actual gas cost pass-through.
+ * Converts a native-token gas cost (wei) to a USDT fee via the
+ * ops-configured native/USDT rate, rounded UP at `tokenDecimals` so the
+ * platform never subsidizes gas. Never booked as revenue.
+ */
+export function gasCostToUsdtFee(args: {
+  gasLimit: bigint;
+  maxFeePerGas: bigint;
+  /** USDT per 1 native token (e.g. POL), as Money. */
+  nativeUsdtRate: Money;
+  tokenDecimals: number;
+}): Money {
+  const { gasLimit, maxFeePerGas, nativeUsdtRate, tokenDecimals } = args;
+  if (gasLimit <= 0n || maxFeePerGas < 0n) {
+    throw new AmountConversionError(`Invalid gas parameters: limit=${gasLimit}, maxFeePerGas=${maxFeePerGas}`);
+  }
+  const costWei = gasLimit * maxFeePerGas;
+  const rateUnits = moneyToUnits(nativeUsdtRate, 8);
+  // fee(token units) = ceil(costWei * rate / 10^(18 native decimals + 8 rate scale - tokenDecimals))
+  const denominator = 10n ** BigInt(18 + 8 - tokenDecimals);
+  const numerator = costWei * rateUnits;
+  const feeUnits = (numerator + denominator - 1n) / denominator;
+  return unitsToMoney(feeUnits, tokenDecimals);
+}
+
 /** Money -> on-chain units. Throws if the amount is not representable. */
 export function moneyToUnits(amount: Money, decimals: number): bigint {
   if (amount.isNegative()) throw new AmountConversionError(`Negative money amount: ${amount.toString()}`);

@@ -115,6 +115,29 @@ Implementation note: CONSUMED is executed at snapshot inclusion (not after race 
 - Winter 30 / Winter 90: mint demand -30% / -90% (Decision 045).
 Economy Status linkage on failure: Base fail -> at least WATCH; High Survival fail -> at least WINTER; P2P Freeze fail -> at least WATCH; Buff Overpower fail -> at least WINTER; any scenario with a buyback payment shortfall -> EMERGENCY. Stress results influence Tomorrow Economy Status per economy_policy_version.
 
+## Decision 060 (2026-07-03, Owner)
+
+060. Large withdrawal Admin Review (resolves E14). Withdrawals of 1,000 USDT or more require Admin Review before broadcast. Approval requires TWO distinct admins — one FINANCE_ADMIN and one SUPER_ADMIN — the same dual-approval standard as the Recovery Procedure, because this is a financial system.
+Implementation note: approvals are recorded append-only in withdrawal_review_approvals (unique per admin and per role for each withdrawal); the row re-enters the broadcast queue only after both roles have approved, and an approved withdrawal is never re-routed to review. A single admin may reject; rejection refunds the full locked amount (the conservative action).
+
+## Decision 061 (2026-07-03, Owner)
+
+061. Withdrawal network fee = actual gas cost pass-through. No fixed fee is adopted (Polygon, BSC, and future chains all differ). The user bears the actual network cost; the platform takes NO profit from it and the fee SHALL NOT be booked as Ledger revenue — this is gas settlement, not income.
+Implementation note: net_amount must be fixed before signing, so the charged fee is the pre-broadcast estimate transfer_gas_limit x maxFeePerGas converted to USDT via an ops-configured native/USDT rate, rounded UP at the token's 6 decimals (the platform never subsidizes gas). Deducted from requested_amount into net_amount; the locked funds remain in PLATFORM_WITHDRAWAL_CLEARING as the external-world boundary (no revenue entry).
+
+## Decision 062 (2026-07-03, Owner)
+
+062. Launch chain confirmed: Polygon PoS USDT with confirmation_count = 128 blocks (the whole v1.0 design is Polygon-based). RPC provider selection is an implementation/ops matter, not a spec item; the owner recommends QuickNode (commercial-grade). The BSC-switchable config structure remains as required by 07_API.md.
+
+## Decision 063 (2026-07-03, Owner)
+
+063. Memorial NFT final specification (resolves P6). Chain/standard: Polygon PoS, ERC-721. Mint timing: only after ALL seven buyback payments have completed. Metadata minimum fields: Horse Name, Horse UUID, Bloodline, Horse Type, Rarity, Generation, Day7 Date, Buyback Completion Date, Race Count, Owner, Version. Transfer: YES — freely transferable, but a transferred NFT never returns to the game; it is a pure commemorative asset with no in-game effect.
+Implementation note: Bloodline maps to the name generator's bloodline component (the horse name prefix, per Decision 055); Generation = horse_generation_version; Owner = owner user UUID at memorialization; Version = memorial metadata schema version (memorial_v1.0); Race Count = the horse's race_participant_snapshots count; Buyback Completion Date = paid_at of payment 7. Token id is derived deterministically from the memorial UUID so re-minting after a crash is structurally impossible (the contract rejects an existing token id).
+
+## Decision 064 (2026-07-03, Owner)
+
+064. Withdrawal amount decimals are restricted to 6 decimal places at the API (POST /wallet/withdraw). Rationale: Polygon USDT has 6 on-chain decimals; accepting 8 creates unrepresentable amounts. The broadcaster keeps its refund-on-unrepresentable guard as defense in depth.
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:

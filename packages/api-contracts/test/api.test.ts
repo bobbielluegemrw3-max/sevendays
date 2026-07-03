@@ -267,3 +267,111 @@ describe('race transparency and admin surface after a real production day', () =
     expect((retry.body as { error: { code: string } }).error.code).toBe('INVALID_BATCH_STATE');
   });
 });
+
+describe('large-withdrawal admin review (Decisions 060, 064)', () => {
+  function asAdmin(userId: string, roles: string[]): AuthContext {
+    return { kind: 'admin', userId, roles };
+  }
+
+  async function newAdmin(role: 'FINANCE_ADMIN' | 'SUPER_ADMIN'): Promise<string> {
+    const id = await newUser();
+    await client.query(`insert into admin_role_grants (user_id, role) values ($1, $2)`, [id, role]);
+    return id;
+  }
+
+  it('enforces the 6-decimal limit, dual-approval release, and rejection refund', async () => {
+    const user = await newUser();
+    await depositConfirmation(client, {
+      userId: user,
+      amount: Money.of('5000'),
+      idempotencyKey: randomUUID(),
+    });
+
+    // Decision 064: more than 6 decimal places fails validation.
+    const dust = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '10.1234567', to_address: '0xabc123' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(dust.status).toBe(400);
+    expect((dust.body as { error: { code: string } }).error.code).toBe('VALIDATION_FAILED');
+
+    // A large request locks normally; the broadcaster routes it to review
+    // (simulated here — routing itself is covered in @sevendays/blockchain).
+    const big = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '1500', to_address: '0xabc123' },
+      idempotencyKey: randomUUID(),
+    });
+    const wid = (big.body as { id: string }).id;
+    await client.query(`update blockchain_withdrawals set status = 'ADMIN_REVIEW' where id = $1`, [wid]);
+
+    const financeAdmin = await newAdmin('FINANCE_ADMIN');
+    const superAdmin = await newAdmin('SUPER_ADMIN');
+
+    const listed = await call('GET', '/api/v1/admin/withdrawals', asAdmin(financeAdmin, ['FINANCE_ADMIN']));
+    const listBody = listed.body as { withdrawals: { id: string }[] };
+    expect(listBody.withdrawals.some((w) => w.id === wid)).toBe(true);
+
+    // Cannot approve with a role the JWT does not carry.
+    const wrongRole = await call(
+      'POST',
+      `/api/v1/admin/withdrawals/${wid}/approve`,
+      asAdmin(financeAdmin, ['FINANCE_ADMIN']),
+      { body: { role: 'SUPER_ADMIN' }, idempotencyKey: randomUUID() },
+    );
+    expect(wrongRole.status).toBe(403);
+
+    // First approval records but does not release.
+    const first = await call(
+      'POST',
+      `/api/v1/admin/withdrawals/${wid}/approve`,
+      asAdmin(financeAdmin, ['FINANCE_ADMIN']),
+      { body: { role: 'FINANCE_ADMIN' }, idempotencyKey: randomUUID() },
+    );
+    expect(first.status).toBe(200);
+    expect((first.body as { released: boolean }).released).toBe(false);
+
+    // The same admin cannot count twice.
+    const duplicate = await call(
+      'POST',
+      `/api/v1/admin/withdrawals/${wid}/approve`,
+      asAdmin(financeAdmin, ['FINANCE_ADMIN']),
+      { body: { role: 'FINANCE_ADMIN' }, idempotencyKey: randomUUID() },
+    );
+    expect(duplicate.status).toBe(403);
+    expect((duplicate.body as { error: { code: string } }).error.code).toBe('DUAL_APPROVAL_REQUIRED');
+
+    // The second DISTINCT admin with the second role releases the row.
+    const release = await call(
+      'POST',
+      `/api/v1/admin/withdrawals/${wid}/approve`,
+      asAdmin(superAdmin, ['SUPER_ADMIN']),
+      { body: { role: 'SUPER_ADMIN' }, idempotencyKey: randomUUID() },
+    );
+    expect(release.status).toBe(200);
+    expect((release.body as { released: boolean }).released).toBe(true);
+    const row = await client.query<{ status: string }>(
+      `select status::text as status from blockchain_withdrawals where id = $1`,
+      [wid],
+    );
+    expect(row.rows[0]!.status).toBe('LOCKED');
+
+    // Rejection refunds the full locked amount.
+    const second = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '1200', to_address: '0xabc123' },
+      idempotencyKey: randomUUID(),
+    });
+    const wid2 = (second.body as { id: string }).id;
+    await client.query(`update blockchain_withdrawals set status = 'ADMIN_REVIEW' where id = $1`, [wid2]);
+    const rejected = await call(
+      'POST',
+      `/api/v1/admin/withdrawals/${wid2}/reject`,
+      asAdmin(superAdmin, ['SUPER_ADMIN']),
+      { idempotencyKey: randomUUID() },
+    );
+    expect(rejected.status).toBe(200);
+
+    const wallet = await call('GET', '/api/v1/wallet', asUser(user));
+    // 5000 - 1500 (still locked, released for broadcast) + 1200 refunded
+    expect((wallet.body as { available: string }).available).toBe('3500.00000000');
+  });
+});

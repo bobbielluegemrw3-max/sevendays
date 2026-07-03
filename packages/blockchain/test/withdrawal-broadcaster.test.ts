@@ -29,7 +29,8 @@ function testConfig(chainId: string): ChainConfig {
 }
 
 function policy(overrides: Partial<WithdrawalPolicy> = {}): WithdrawalPolicy {
-  return { networkFee: Money.of('1'), adminReviewThreshold: null, ...overrides };
+  // FakeChain quotes 10 gwei; 100k gas -> 0.001 native; rate 1000 -> fee 1 USDT.
+  return { nativeUsdtRate: Money.of('1000'), adminReviewThreshold: null, ...overrides };
 }
 
 beforeAll(async () => {
@@ -70,6 +71,15 @@ async function requestWithdrawal(
     [userId, config.chainId, toAddress, Money.of(amount).toFixed8(), lock.transactionId],
   );
   return row.rows[0]!.id;
+}
+
+async function newAdmin(role: 'FINANCE_ADMIN' | 'SUPER_ADMIN'): Promise<string> {
+  const r = await client.query<{ id: string }>(`insert into users (email) values ($1) returning id`, [
+    `${randomUUID()}@admin.dev`,
+  ]);
+  const adminId = r.rows[0]!.id;
+  await client.query(`insert into admin_role_grants (user_id, role) values ($1, $2)`, [adminId, role]);
+  return adminId;
 }
 
 async function availableBalance(userId: string): Promise<string> {
@@ -199,7 +209,7 @@ describe('withdrawal broadcaster', () => {
     const user = await newFundedUser('15');
     const id = await requestWithdrawal(config, user, '10');
 
-    const run = await processWithdrawals(client, chain, signer, config, policy({ networkFee: Money.of('12') }));
+    const run = await processWithdrawals(client, chain, signer, config, policy({ nativeUsdtRate: Money.of('12000') }));
     expect(run.rejected).toBe(1);
     expect((await withdrawalRow(id)).status).toBe('REJECTED');
     expect(await availableBalance(user)).toBe('15.00000000');
@@ -213,7 +223,7 @@ describe('withdrawal broadcaster', () => {
     const user = await newFundedUser('20');
     const id = await requestWithdrawal(config, user, '10.1234567');
 
-    const run = await processWithdrawals(client, chain, signer, config, policy({ networkFee: Money.of('0') }));
+    const run = await processWithdrawals(client, chain, signer, config, policy({ nativeUsdtRate: Money.of('0') }));
     expect(run.rejected).toBe(1);
     expect((await withdrawalRow(id)).status).toBe('REJECTED');
     expect(await availableBalance(user)).toBe('20.00000000');
@@ -232,12 +242,13 @@ describe('withdrawal broadcaster', () => {
     expect(await availableBalance(user)).toBe('30.00000000');
   });
 
-  it('routes large withdrawals to ADMIN_REVIEW; approval is terminal, rejection refunds', async () => {
+  it('routes large withdrawals to ADMIN_REVIEW; release needs FINANCE+SUPER dual approval (Decision 060)', async () => {
     const config = testConfig('TEST_WD_REVIEW');
     const chain = new FakeChain();
     const signer = new FakeSigner();
     const reviewPolicy = policy({ adminReviewThreshold: Money.of('1000') });
-    const admin = await newFundedUser('0.00000001');
+    const financeAdmin = await newAdmin('FINANCE_ADMIN');
+    const superAdmin = await newAdmin('SUPER_ADMIN');
 
     const bigUser = await newFundedUser('3000');
     const approvedId = await requestWithdrawal(config, bigUser, '1500');
@@ -252,15 +263,47 @@ describe('withdrawal broadcaster', () => {
     expect((await withdrawalRow(rejectedId)).status).toBe('ADMIN_REVIEW');
     expect((await withdrawalRow(smallId)).status).toBe('BROADCAST');
 
-    // Approve one: it broadcasts on the next run and is NOT re-routed.
-    await approveWithdrawal(client, { withdrawalId: approvedId, adminUserId: admin });
+    // One approval alone does NOT release.
+    const first = await approveWithdrawal(client, {
+      withdrawalId: approvedId,
+      adminUserId: financeAdmin,
+      adminRole: 'FINANCE_ADMIN',
+    });
+    expect(first.released).toBe(false);
+    expect((await withdrawalRow(approvedId)).status).toBe('ADMIN_REVIEW');
+
+    // The same admin cannot approve twice, and cannot approve with a role
+    // they do not hold (DB-enforced).
+    await expect(
+      approveWithdrawal(client, {
+        withdrawalId: approvedId,
+        adminUserId: financeAdmin,
+        adminRole: 'FINANCE_ADMIN',
+      }),
+    ).rejects.toThrow(/duplicate key/);
+    await expect(
+      approveWithdrawal(client, {
+        withdrawalId: approvedId,
+        adminUserId: financeAdmin,
+        adminRole: 'SUPER_ADMIN',
+      }),
+    ).rejects.toThrow(/WITHDRAWAL_APPROVER_ROLE_MISSING/);
+
+    // The second, DISTINCT admin with the second role releases it.
+    const second = await approveWithdrawal(client, {
+      withdrawalId: approvedId,
+      adminUserId: superAdmin,
+      adminRole: 'SUPER_ADMIN',
+    });
+    expect(second.released).toBe(true);
+
     // Reject the other: refunded in full.
-    await rejectWithdrawal(client, { withdrawalId: rejectedId, adminUserId: admin });
+    await rejectWithdrawal(client, { withdrawalId: rejectedId, adminUserId: superAdmin });
     expect(await availableBalance(bigUser)).toBe('1500.00000000'); // 3000 - 1500 lock (1200 refunded)
 
-    const second = await processWithdrawals(client, chain, signer, config, reviewPolicy);
-    expect(second.routedToReview).toBe(0);
-    expect(second.broadcast).toBe(1);
+    const secondRun = await processWithdrawals(client, chain, signer, config, reviewPolicy);
+    expect(secondRun.routedToReview).toBe(0); // approved row is never re-routed
+    expect(secondRun.broadcast).toBe(1);
     expect((await withdrawalRow(approvedId)).status).toBe('BROADCAST');
     expect((await withdrawalRow(rejectedId)).status).toBe('REJECTED');
 
@@ -272,7 +315,9 @@ describe('withdrawal broadcaster', () => {
     );
     const actions = audit.rows.map((r) => r.action);
     expect(actions).toContain('WITHDRAWAL_ROUTED_TO_ADMIN_REVIEW');
-    expect(actions).toContain('WITHDRAWAL_REVIEW_APPROVED');
+    expect(actions).toContain('WITHDRAWAL_REVIEW_APPROVED:FINANCE_ADMIN');
+    expect(actions).toContain('WITHDRAWAL_REVIEW_APPROVED:SUPER_ADMIN');
+    expect(actions).toContain('WITHDRAWAL_REVIEW_RELEASED');
     expect(actions).toContain('WITHDRAWAL_REVIEW_REJECTED');
   });
 

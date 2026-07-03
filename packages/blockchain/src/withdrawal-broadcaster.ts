@@ -1,9 +1,10 @@
 import { Money, type SqlClient } from '@sevendays/shared';
+import type { AdminRole } from '@sevendays/domain';
 import { withdrawalRejectionRefund } from '@sevendays/ledger';
 import { isAddress } from 'viem';
 import type { ChainClient, WithdrawalSigner } from './types.js';
 import type { ChainConfig } from './config.js';
-import { AmountConversionError, moneyToUnits } from './amounts.js';
+import { AmountConversionError, gasCostToUsdtFee, moneyToUnits } from './amounts.js';
 
 /**
  * Withdrawal broadcaster core (07_API.md Withdrawal v1.0,
@@ -31,9 +32,12 @@ import { AmountConversionError, moneyToUnits } from './amounts.js';
  */
 
 export interface WithdrawalPolicy {
-  /** Network fee deducted from the requested amount (owner-configured). */
-  networkFee: Money;
-  /** E14: route requests >= this to ADMIN_REVIEW; null disables routing. */
+  /**
+   * Decision 061: fee = actual gas cost pass-through. USDT per 1 native
+   * token (ops-configured); fee is computed per run from live gas prices.
+   */
+  nativeUsdtRate: Money;
+  /** Decision 060: route requests >= this to ADMIN_REVIEW; null disables routing. */
   adminReviewThreshold: Money | null;
   /** Confirmations before a broadcast counts as final (default: deposit's 128). */
   confirmationBlocks?: number;
@@ -96,21 +100,52 @@ async function refundAndClose(
   await audit(client, actor, action, row.id);
 }
 
-/** Admin approval: ADMIN_REVIEW -> LOCKED (eligible for the next broadcast run). */
+/**
+ * Admin approval (Decision 060): dual approval by two DISTINCT admins —
+ * one FINANCE_ADMIN and one SUPER_ADMIN, like the Recovery Procedure. The
+ * row returns to the broadcast queue (LOCKED) only once both roles have
+ * approved; review_approved_at then makes approval terminal (never
+ * re-routed). DB constraints enforce distinct persons, one approval per
+ * role, and that the approver actually holds the role.
+ */
 export async function approveWithdrawal(
   client: SqlClient,
-  args: { withdrawalId: string; adminUserId: string },
-): Promise<void> {
-  const updated = await client.query(
-    `update blockchain_withdrawals
-     set status = 'LOCKED', review_approved_at = now()
-     where id = $1 and status = 'ADMIN_REVIEW'`,
+  args: { withdrawalId: string; adminUserId: string; adminRole: AdminRole },
+): Promise<{ approvedRoles: AdminRole[]; released: boolean }> {
+  const row = await client.query<{ id: string }>(
+    `select id from blockchain_withdrawals where id = $1 and status = 'ADMIN_REVIEW'`,
     [args.withdrawalId],
   );
-  if ((updated.affectedRows ?? 0) === 0) {
-    throw new Error(`Withdrawal ${args.withdrawalId} is not in ADMIN_REVIEW`);
+  if (!row.rows[0]) throw new Error(`Withdrawal ${args.withdrawalId} is not in ADMIN_REVIEW`);
+
+  await client.query(
+    `insert into withdrawal_review_approvals (withdrawal_id, admin_user_id, admin_role)
+     values ($1, $2, $3)`,
+    [args.withdrawalId, args.adminUserId, args.adminRole],
+  );
+  await audit(
+    client,
+    { type: 'ADMIN', id: args.adminUserId },
+    `WITHDRAWAL_REVIEW_APPROVED:${args.adminRole}`,
+    args.withdrawalId,
+  );
+
+  const approvals = await client.query<{ admin_role: AdminRole }>(
+    `select admin_role::text as admin_role from withdrawal_review_approvals where withdrawal_id = $1`,
+    [args.withdrawalId],
+  );
+  const approvedRoles = approvals.rows.map((r) => r.admin_role);
+  const released = approvedRoles.includes('FINANCE_ADMIN') && approvedRoles.includes('SUPER_ADMIN');
+  if (released) {
+    await client.query(
+      `update blockchain_withdrawals
+       set status = 'LOCKED', review_approved_at = now()
+       where id = $1 and status = 'ADMIN_REVIEW'`,
+      [args.withdrawalId],
+    );
+    await audit(client, { type: 'ADMIN', id: args.adminUserId }, 'WITHDRAWAL_REVIEW_RELEASED', args.withdrawalId);
   }
-  await audit(client, { type: 'ADMIN', id: args.adminUserId }, 'WITHDRAWAL_REVIEW_APPROVED', args.withdrawalId);
+  return { approvedRoles, released };
 }
 
 /** Admin rejection: ADMIN_REVIEW -> REJECTED with full refund. */
@@ -169,10 +204,21 @@ async function broadcastLockedWithdrawals(
   );
   if (batch.rows.length === 0) return;
 
+  // One gas quote per run: the fee is the pre-broadcast actual-cost
+  // estimate (Decision 061) and every signature in this run uses the same
+  // gas parameters.
+  const gas = await chain.getGasFees();
+  const networkFee = gasCostToUsdtFee({
+    gasLimit: config.transferGasLimit,
+    maxFeePerGas: gas.maxFeePerGas,
+    nativeUsdtRate: policy.nativeUsdtRate,
+    tokenDecimals: config.tokenDecimals,
+  });
+
   let nonce: bigint | null = null;
   for (const row of batch.rows) {
     const requested = Money.of(row.requested_amount);
-    const net = requested.sub(policy.networkFee);
+    const net = requested.sub(networkFee);
 
     if (!isAddress(row.to_address)) {
       await refundAndClose(client, row, 'REJECTED', 'WITHDRAWAL_REJECTED:INVALID_ADDRESS', { type: 'SYSTEM' });
@@ -201,11 +247,10 @@ async function broadcastLockedWithdrawals(
     // net_amount check constraint (net = requested - fee) keeps this honest.
     await client.query(
       `update blockchain_withdrawals set network_fee_amount = $2, net_amount = $3 where id = $1`,
-      [row.id, policy.networkFee.toFixed8(), net.toFixed8()],
+      [row.id, networkFee.toFixed8(), net.toFixed8()],
     );
 
     nonce = nonce ?? (await chain.getPendingNonce(signer.address));
-    const gas = await chain.getGasFees();
     const signed = await signer.signTokenTransfer({
       tokenContract: config.tokenContract,
       to: row.to_address,
