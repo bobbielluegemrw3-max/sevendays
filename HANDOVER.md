@@ -1,6 +1,6 @@
 # Seven Days Derby — セッション引継ぎ書
 
-> 最終更新: 2026-07-03 / 最終コミット: `ecff8e8` / テスト: **253件 全PASS**(+実Postgres opt-in 1件)
+> 最終更新: 2026-07-03 / 最終コミット: `b8fe6ba` / テスト: **259件 全PASS**(+実Postgres opt-in 1件)
 > 新しいセッションはまずこのファイルと `IMPLEMENTATION_PLAN.md` を読むこと。
 > **仕様の正は `docs/`(v1.0仕様書パッケージ)+ `docs/10_DECISION_LOG.md`(Decision 001〜059)。ビジネスルールの発明は禁止。**
 
@@ -76,7 +76,8 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 ### Phase 13: フロントエンド — 初版完了(`ecff8e8`)、残り:
 - **実装済み**: `apps/web`(Next.js 16 / App Router)。`app/api/[...path]/route.ts` が registry をマウント、サーバーコンポーネントは同じ`dispatchBridge`をHTTPなしで使用。認証=Supabase JWTをjoseでローカル検証→初回ログインで`users`行プロビジョニング(id=auth.uid)→`admin_role_grants`でロール解決。ユーザーUI 10画面+Admin UI 4画面。バンドル検査は`next build`に組込(`scripts/check-client-bundle.mjs`)
 - **環境変数**(`apps/web/.env.example`): NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_JWT_SECRET / DATABASE_URL(セッションプーラー)
-- **残**: ブラウザE2E(購入→割当→レース→Buyback主要フロー。Playwright+実行環境が必要)/ Marketplace状態のリアルタイム反映(現状はリロード反映)/ E17確定後の通知文言 / トレーニングUI(**APIが07_APIに存在しない — オーナー確認事項**)/ リカバリ画面(一覧APIが07_APIに無い、approveのみ存在)/ Vercelデプロイ
+- **Decision 065-067適用済み**(オーナー回答 2026-07-03): 通知13種+日本語テンプレート(`NOTIFICATION_TEMPLATES_V1`)を全イベントサイトで発火(決定論的`dedupe_key`で冪等・最終マーカー前に通知でクラッシュ自己修復・MARKETPLACE系は`user_id null`のブロードキャスト行)/ `POST /horses/{id}/training`(1日1回・ロック中は締切・当日バッチ完了後は翌日向け)+馬詳細のトレーニングUI / Admin Recovery一覧・詳細・approve・executeエンドポイント+リカバリUI。07_API.mdもオーナー指示で更新済み
+- **残**: ブラウザE2E(購入→割当→レース→Buyback主要フロー。Playwright+実行環境が必要)/ Marketplace状態のリアルタイム反映(現状はリロード反映)/ Vercelデプロイ
 
 ### Phase 14: 総仕上げ
 - services/*(Cloud Runワーカー)の薄いHTTPラッパー化+Pub/Sub+Scheduler(20:00 MYT=12:00 UTC)+監視11種アラート
@@ -109,17 +110,17 @@ M5 リリース判定 ⬜ Phase 14   (シミュレーション/デプロイ/Comp
 - 遅延制約トリガーのエラーは**COMMIT時**に発火 — `manageTransaction: false`で外部管理する場合は呼び出し側でエラーマップが必要(実例: `sessions.ts`)
 - 禁止APIチェッカーはリテラルgrep — テストで禁止パスを使う場合は動的組み立て(`['','api',...].join('/')`)
 
-## 8. テスト全景(253件全PASS+opt-in 1件。数字は `turbo run test --force` の実測)
+## 8. テスト全景(259件全PASS+opt-in 1件。数字は `turbo run test --force` の実測)
 
 | スイート | 件数 | 内容 |
 |---|---|---|
 | shared | 26 | Money/hash/時刻 |
-| domain | 22 | v1.0定数の仕様突合 |
+| domain | 26 | v1.0定数の仕様突合+**通知テンプレート(Decision 065)** |
 | database | 43 | スキーマ/トリガー/RLS(実DB) |
 | ledger | 14+1 | 複式簿記+実Postgres並行二重支払い(opt-in skip) |
 | race-engine | 33 | 生成/スコア/ランキング/リプレイ/Burn/バフ(統計検証込み) |
 | economy-engine | 22 | ポリシー/メトリクス/Status遷移ウォーク/出品/ストレス |
 | settlement-engine | 35 | バッチ/Burn e2e/Buyback e2e/割当e2e(クラッシュ再開込み)/リカバリ/**フルデイ/ローンチ初日** |
-| api-contracts | 8 | 認証境界/冪等強制/API経由フロー/禁止APIゲート/**2名承認・6桁制限** |
+| api-contracts | 10 | 認証境界/冪等強制/API経由フロー/禁止APIゲート/2名承認・6桁制限/**トレーニング/リカバリAPI** |
 | blockchain | 44 | HD導出(BIP-44ベクタ)/金額変換+実費手数料/Watcher(冪等・クラッシュ窓・**0値/リオルグ/REVERT**)/Broadcaster(永続化先行送信・リオルグ・2名承認・**自己修復・二重払いガード**)/NFTミント(決定論tokenId・クラッシュ再開)/署名/鍵非露出 |
 | web | 6 | JWT検証/初回プロビジョニング/ロール解決/出金フロー(ブリッジ経由)/admin境界/internal到達不能 |
