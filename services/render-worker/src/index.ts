@@ -135,6 +135,13 @@ async function tick(): Promise<void> {
   if (ticking) return;
   ticking = true;
   try {
+    // Heartbeat: the worker is quiet by design (jobs log only when they do
+    // work), so prove liveness every 30 minutes.
+    if (every('heartbeat', 1_800_000)) {
+      const today = batchDateFor(new Date());
+      const nextBatch = batchStartUtc(today).getTime() <= Date.now() ? 'due/ran today' : batchStartUtc(today).toISOString();
+      console.log(`[heartbeat] alive; chain=${chainEnabled ? 'on' : 'off'}; daily batch (${today}): ${nextBatch}`);
+    }
     // Daily Settlement Batch: due at 20:00 MYT (Decision 047) for the MYT
     // calendar day; the batch_runs existence check makes this self-healing
     // (a FAILED batch is NOT retried here — that is Admin Recovery's job).
