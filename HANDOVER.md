@@ -1,6 +1,7 @@
 # Seven Days Derby — セッション引継ぎ書
 
-> 最終更新: 2026-07-04 / テスト: **265件 全PASS**(+実Postgres opt-in 1件)
+> 最終更新: 2026-07-05 / テスト: **265件 全PASS**(+実Postgres opt-in 1件)
+> **🎨 UIリデザイン進行中 → 詳細と教訓は必ず `UI_HANDOVER.md` を読むこと**(オーナーは「デザインはハンドオフ忠実・変えるのはテキストだけ」を強く要求。勝手にデザインを変えない。Claudeデザインの差分レビュー回答待ち)
 > **ログイン=Google/MetaMask/メール+相互連携(Decision 071/072・記録は`AUTH_SETUP.md`)** / **インフラ=Render集約(Decision 068/070)**: 記録は `INFRA_REVISION.md` / **経済改定v1.1適用済み(Decision 069)**: Burn10.7%系・ミント手数料2(課金102)・P2P手数料2%売り手・ミント担保ゲート。理由と実証は `ECONOMY_REVISION.md`(オーナー追認用)。旧経済は需要急停止で未払い279件/新経済は未払い0件+運営利益2%を実証
 > 新しいセッションはまずこのファイルと `IMPLEMENTATION_PLAN.md` を読むこと。
 > **仕様の正は `docs/`(v1.0仕様書パッケージ)+ `docs/10_DECISION_LOG.md`(Decision 001〜059)。ビジネスルールの発明は禁止。**
