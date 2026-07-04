@@ -105,7 +105,7 @@ M5 リリース判定 ✅ **全システム本番稼働**(2026-07-04): Web=seven
 ## 6. 作業の進め方(確立済みの運用)
 
 1. **フェーズ着手前**: 未確定事項があれば「GPTに聞く質問文」形式でユーザーに提示(過去形式は会話ログ/Decision Log参照)
-2. **オーナー決定** → `docs/10_DECISION_LOG.md` に決定番号(次は**071**)で英語追記 + `IMPLEMENTATION_PLAN.md` 付録Eを更新
+2. **オーナー決定** → `docs/10_DECISION_LOG.md` に決定番号(次は**072**)で英語追記 + `IMPLEMENTATION_PLAN.md` 付録Eを更新
 3. スキーマ変更 = 新規マイグレーション(次は **20260702200133**)→ PGliteテスト → `db push` で本番反映
 4. フェーズ完了ごと: 全チェック(`pnpm build/test/lint/typecheck` + `check:forbidden-apis`)→ コミット(末尾に `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`)→ push
 5. フェーズごとに「100点診断」を求められる文化。**クラッシュ窓・冪等性・並行性・初日/空データのエッジ**を重点監査すると過去の指摘パターンと一致する

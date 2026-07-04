@@ -1,8 +1,11 @@
 'use client';
 
 import { createBrowserClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-type BrowserSupabaseClient = ReturnType<typeof createBrowserClient>;
+// The generic createBrowserClient return type collapses to `any` under the
+// current lib versions; pin the concrete client type explicitly.
+type BrowserSupabaseClient = SupabaseClient;
 
 /**
  * Browser-side helpers: Supabase auth session + authenticated fetch to

@@ -169,6 +169,10 @@ Authorization note: approved by the developer under the owner's standing mandate
 
 070. Worker hosting moved from Google Cloud Run to Render (following Decision 068 for the frontend). All eleven worker roles consolidate into ONE always-on Render PRIVATE service (services/render-worker) with the scheduler IN-PROCESS: the daily batch trigger is self-healing ("today's batch due + no batch_runs row" evaluated every 30s tick; a FAILED batch is never auto-retried — Admin Recovery only), chain loops run on intervals, and every job is idempotent so restarts/double-fires are harmless. Cloud Scheduler and Pub/Sub are not used in v1.0. The execution boundary is unchanged in substance: financial/batch logic runs ONLY in this private worker (no public URL); the web service serves UI + the lightweight API mount. The Cloud Run deployment path (infra/cloudrun, the ten per-role services, Dockerfile) remains in the repository as the documented scale-out option. Rationale: single-platform operations (Render + Supabase), and the GCP billing path was blocked for the owner; capacity analysis showed the daily-batch workload fits a single worker well beyond the near-term user scale, with the true scale limits (DB, set-based SQL debt) unaffected by this choice.
 
+## Decision 071 (2026-07-04, Owner)
+
+071. Login methods: MetaMask (Sign-In with Ethereum via the Supabase "Web3 Wallet" provider) and Google OAuth become the primary sign-in options. Email+password remains available as a secondary fallback (the owner's admin account is email-based; full removal can follow after identity migration). No backend changes were required: all providers issue standard Supabase JWTs, and the API bridge already verifies ES256 via JWKS and provisions users without an email claim.
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:
