@@ -63,8 +63,8 @@
 .ab .track > span.cyan { background: linear-gradient(90deg, var(--cyan-deep), var(--cyan)); }
 .dayRail { display: flex; gap: 4px; margin-top: 13px; }
 .dayRail span { flex: 1; height: 6px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); }
-.dayRail span.done { background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
-.dayRail span.today { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+.dayRail span:global(.done) { background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
+.dayRail span:global(.today) { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
 
 /* teaser (no horse yet) */
 .teaser { padding: 16px; text-align: center; }

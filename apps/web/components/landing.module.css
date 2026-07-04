@@ -2,8 +2,13 @@
    Responsive: wide two-column on desktop, stacked on mobile. */
 
 .page {
-  margin: -1.5rem auto -5rem; /* break out of <main> padding */
-  width: 100%; position: relative;
+  /* full-bleed out of the centered <main> (max-width 1040) */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  margin-top: -1.5rem; /* cancel <main> top padding */
+  margin-bottom: -5rem; /* cancel <main> bottom padding */
+  position: relative;
   background: #070511;
   overflow: hidden;
 }
@@ -136,6 +141,26 @@
 .typeGrid .c .td { font-size: 10px; color: var(--muted); margin-top: 3px; }
 .rarityLadder { display: flex; gap: 5px; margin-top: 12px; }
 .rarityLadder span { flex: 1; text-align: center; font-family: var(--font-display); font-size: 8px; padding: 6px 0; border-radius: 5px; }
+
+/* gallery (marketplace-style, honest — no fake floor/volume) */
+.galGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
+@media (min-width: 720px) { .galGrid { grid-template-columns: repeat(4, 1fr); } }
+.galCard { border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: linear-gradient(180deg, #141020, #0a0813);
+  transition: border-color 0.15s ease, transform 0.15s ease; }
+.galCard:hover { border-color: var(--border-strong); transform: translateY(-3px); }
+.galCard .gtop { height: 3px; }
+.galCard .gart { position: relative; height: 150px; background: radial-gradient(closest-side at 50% 55%, rgba(0, 234, 255, 0.14), transparent 72%); }
+.galCard .gart img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.5)); }
+.galCard .gart .rar { position: absolute; top: 10px; left: 10px; }
+.galCard .gbody { padding: 10px 12px 13px; }
+.galCard .gname { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--text); }
+.galCard .gmeta { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+.galCard .gtype { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.galCard .gday { font-family: var(--font-mono); font-size: 10px; color: var(--cyan); }
+.galCard .grail { display: flex; gap: 3px; margin-top: 9px; }
+.galCard .grail span { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); }
+.galCard .grail span:global(.done) { background: var(--cyan); }
+.galCard .grail span:global(.today) { background: var(--magenta); box-shadow: 0 0 6px var(--magenta); }
 
 /* transparency */
 .trans { max-width: 1200px; margin: clamp(34px, 5vw, 64px) auto 0; box-sizing: border-box; width: calc(100% - clamp(40px, 10vw, 128px));

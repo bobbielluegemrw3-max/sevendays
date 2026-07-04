@@ -19,32 +19,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ja" className={`${orbitron.variable} ${grotesk.variable} ${plexMono.variable}`}>
       <body>
-        <nav className="topnav">
-          <Link href="/" className="brand">
-            <span className="brand-bars" aria-hidden="true">
-              <span></span>
-              <span></span>
-            </span>
-            SEVEN&nbsp;DERBY
-          </Link>
-          {authed ? (
-            <>
-              <Link href="/">HOME</Link>
-              <Link href="/horses">STABLE</Link>
-              <Link href="/races">RACE</Link>
-              <Link href="/wallet">WALLET</Link>
-              <Link href="/notifications">通知</Link>
-              <span className="spacer" />
-              <Link href="/account">アカウント</Link>
-              <LogoutButton />
-            </>
-          ) : (
-            <>
-              <span className="spacer" />
-              <Link href="/login">ログイン</Link>
-            </>
-          )}
-        </nav>
+        {/* Anonymous pages (landing / login) carry their own header. */}
+        {authed ? (
+          <nav className="topnav">
+            <Link href="/" className="brand">
+              <span className="brand-bars" aria-hidden="true">
+                <span></span>
+                <span></span>
+              </span>
+              SEVEN&nbsp;DERBY
+            </Link>
+            <Link href="/">HOME</Link>
+            <Link href="/horses">STABLE</Link>
+            <Link href="/races">RACE</Link>
+            <Link href="/wallet">WALLET</Link>
+            <Link href="/notifications">通知</Link>
+            <span className="spacer" />
+            <Link href="/account">アカウント</Link>
+            <LogoutButton />
+          </nav>
+        ) : null}
         <main>{children}</main>
       </body>
     </html>

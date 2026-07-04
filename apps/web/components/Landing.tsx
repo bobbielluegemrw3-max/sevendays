@@ -44,9 +44,9 @@ export function Landing() {
               <span className={s.l2}>DERBY</span>
             </h1>
             <p className={s.hLead}>
-              7日間を走り抜け。毎晩20時、全馬が一斉に発走し、下位はBurn。生き残った馬だけがDay7の栄光と買い戻しに辿り着く。すべてはオンチェーンで、改ざん不能。
+              毎晩20時、その日のすべての馬が1つのレースを走ります。下位はBurn、勝ち残った馬はDay7で200 USDTの買い戻しへ。結果はすべてオンチェーンに記録され、誰でも検証できます。
             </p>
-            <div className={s.hSub}>Survive the week. Every horse is a deterministic, replayable NFT.</div>
+            <div className={s.hSub}>Every horse is an on-chain NFT. Every race is verifiable.</div>
             <div className={s.hCta}>
               <Link href="/login" className="grow">
                 <button style={{ width: '100%' }}>馬を迎える ▶</button>
@@ -127,9 +127,9 @@ export function Landing() {
           <div>
             <div className={s.eyebrow}>HOW IT WORKS</div>
             <h2>
-              7日間の<span className={s.cy}>生存レース</span>
+              7日間の<span className={s.cy}>サバイバルレース</span>
             </h2>
-            <p className={s.p}>Mint から Memorial まで。すべての工程はシード確定・リプレイ可能。</p>
+            <p className={s.p}>馬を迎えてから記念NFTになるまで。すべての結果はシードで確定し、あとから誰でも再現・検証できます。</p>
             <div className={s.pipRail}>
               <span className={s.d}>D1</span>
               <span className={s.fill} />
@@ -141,28 +141,28 @@ export function Landing() {
             <span className={`${s.no} ${s.c1}`}>01</span>
             <div>
               <div className={s.t}>馬を迎える(Day0 Mint)</div>
-              <div className={s.d}>102 USDT(価格100 + 手数料2)で新しい馬を発行。タイプ・レア度・DNAはシードから決定論的に生成。</div>
+              <div className={s.d}>102 USDT(価格100+手数料2)で馬を1頭発行します。タイプ・レア度・能力はシードから自動で決まります。</div>
             </div>
           </div>
           <div className={s.step}>
             <span className={`${s.no} ${s.c2}`}>02</span>
             <div>
               <div className={s.t}>調教して出走</div>
-              <div className={s.d}>発走前に1回だけ調教で味付け。20:00に全馬が一斉に走る。</div>
+              <div className={s.d}>レース前に1日1回だけ調教できます。毎晩20時、すべての馬が一斉に走ります。</div>
             </div>
           </div>
           <div className={s.step}>
             <span className={`${s.no} ${s.c3}`}>03</span>
             <div>
               <div className={s.t}>生存 or Burn</div>
-              <div className={s.d}>下位一定数はBurn。負けても Revenge Buff が次の馬に自動で宿る。</div>
+              <div className={s.d}>成績下位の馬はBurnされます。Burnされても、次の馬に引き継がれるRevenge Buffを獲得します。</div>
             </div>
           </div>
           <div className={`${s.step} ${s.gold}`}>
             <span className={`${s.no} ${s.c4}`}>04</span>
             <div>
-              <div className={s.t}>Day7 到達 → 買い戻し → Memorial</div>
-              <div className={s.d}>7日走り切れば 200 USDT を7回で受取。完済で Memorial NFT に昇華。</div>
+              <div className={s.t}>Day7到達 → 買い戻し → 記念NFT</div>
+              <div className={s.d}>7日間を走り切ると200 USDTが7回に分けて支払われ、完了すると記念NFTになります。</div>
             </div>
           </div>
           </div>
@@ -172,7 +172,7 @@ export function Landing() {
       {/* types + rarity */}
       <div className={s.block} id="types">
         <div className={s.eyebrow}>FIVE TYPES · FIVE RARITIES</div>
-        <h2>同じ馬は二頭と存在しない</h2>
+        <h2>1頭ずつ、能力もDNAも異なります</h2>
         <div className={s.typeGrid}>
           <div className={`${s.c} ${s.on}`}>
             <div className={s.tn} style={{ color: 'var(--cyan)' }}>
@@ -222,12 +222,51 @@ export function Landing() {
         </div>
       </div>
 
+      {/* gallery — example horses (marketplace-style, honest) */}
+      <div className={s.block} id="gallery">
+        <div className={s.eyebrow}>COLLECTION</div>
+        <h2>今夜、こうした馬が走ります</h2>
+        <p className={s.p}>タイプ・レア度・能力はすべてシードから決まります。下は生成される馬の一例です。</p>
+        <div className={s.galGrid}>
+          {[
+            { art: '/horses/gold.png', name: 'Royal Thunder', type: 'ENDURANCE', rarity: 'LEGENDARY', day: 5, top: 'linear-gradient(90deg,var(--gold),var(--gold-bright))' },
+            { art: '/horses/chrome.png', name: 'Silver Arrow', type: 'SPRINTER', rarity: 'RARE', day: 3, top: 'linear-gradient(90deg,var(--cyan),#5ff5ff)' },
+            { art: '/horses/gold.png', name: 'Golden Storm', type: 'POWER', rarity: 'EPIC', day: 2, top: 'linear-gradient(90deg,var(--magenta),var(--magenta-soft))' },
+            { art: '/horses/onyx.png', name: 'Black Wind', type: 'BALANCED', rarity: 'COMMON', day: 6, top: 'rgba(255,255,255,.2)' },
+          ].map((h) => (
+            <div key={h.name} className={s.galCard}>
+              <div className={s.gtop} style={{ background: h.top }} />
+              <div className={s.gart}>
+                <span className={s.rar}>
+                  <span className={`badge rarity-${h.rarity}`}>{h.rarity}</span>
+                </span>
+                <img src={h.art} alt={h.name} />
+              </div>
+              <div className={s.gbody}>
+                <div className={s.gname}>{h.name}</div>
+                <div className={s.gmeta}>
+                  <span className={s.gtype}>{h.type}</span>
+                  <span className={s.gday}>DAY {h.day}/7</span>
+                </div>
+                <div className={s.grail}>
+                  {Array.from({ length: 7 }, (_, i) => {
+                    const day = i + 1;
+                    const cls = day < h.day + 1 ? 'done' : day === h.day + 1 ? 'today' : '';
+                    return <span key={day} className={cls} />;
+                  })}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* transparency */}
       <div className={s.trans} id="economy">
         <div className={s.eyebrow}>TRANSPARENT ECONOMY</div>
-        <h2>数字は、すべて台帳に。</h2>
+        <h2>すべての記録が、台帳に残ります</h2>
         <p className={s.p}>
-          レース結果・Burn・残高は複式簿記の台帳が唯一の真実。AIが勝者や順位を決めることは一切なく、レースはシード公開後に誰でも再検証できる。
+          レース結果・Burn・残高は複式簿記の台帳で管理され、それが唯一の記録です。勝者や順位をAIが決めることはありません。レースはシード公開後、誰でも同じ結果を再現・検証できます。
         </p>
         <div className={s.facts}>
           <div className={s.fact}>
@@ -247,13 +286,12 @@ export function Landing() {
 
       {/* final */}
       <div className={s.final}>
-        <h2>
-          レースは、終わらない。
-          <br />
-          今夜、あなたも走る。
-        </h2>
+        <h2>今夜のレースは、20時に発走します。</h2>
+        <p className="muted" style={{ marginBottom: '1.4rem', fontSize: '0.95rem' }}>
+          MetaMask または Google で、いますぐ参加できます。
+        </p>
         <Link href="/login">
-          <button style={{ fontSize: 14, padding: '16px 40px' }}>いま はじめる ▶</button>
+          <button style={{ fontSize: 15, padding: '16px 44px' }}>はじめる ▶</button>
         </Link>
       </div>
 
