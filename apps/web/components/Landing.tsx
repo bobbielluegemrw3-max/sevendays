@@ -19,6 +19,11 @@ export function Landing() {
           <span className={s.bar} />
           <span className={s.nm}>SEVEN&nbsp;DERBY</span>
         </div>
+        <div className={s.menu}>
+          <Link href="#how">遊び方</Link>
+          <Link href="#types">コレクション</Link>
+          <Link href="#economy">エコノミー</Link>
+        </div>
         <Link href="/login" className={s.enter}>
           はじめる
         </Link>
@@ -28,33 +33,50 @@ export function Landing() {
       <div className={s.hero}>
         <div className={s.grid} />
         <div className={s.inner}>
-          <span className={s.badge2}>
-            <span className={s.g} />
-            WEB3 HORSE RACING · ON-CHAIN
-          </span>
-          <h1 className={s.hTitle}>
-            <span className={s.l1}>SEVEN&nbsp;DAYS</span>
-            <span className={s.l2}>DERBY</span>
-          </h1>
-          <p className={s.hLead}>
-            7日間を走り抜け。毎晩20時、全馬が一斉に発走し、下位はBurn。生き残った馬だけがDay7の栄光と買い戻しに辿り着く。すべてはオンチェーンで、改ざん不能。
-          </p>
-          <div className={s.hSub}>Survive the week. Every horse is a deterministic, replayable NFT.</div>
-          <div className={s.hCta}>
-            <Link href="/login" className="grow">
-              <button>馬を迎える ▶</button>
-            </Link>
-            <Link href="#how">
-              <button className="secondary">遊び方</button>
-            </Link>
+          {/* left copy */}
+          <div>
+            <span className={s.badge2}>
+              <span className={s.g} />
+              WEB3 HORSE RACING · ON-CHAIN
+            </span>
+            <h1 className={s.hTitle}>
+              <span className={s.l1}>SEVEN&nbsp;DAYS</span>
+              <span className={s.l2}>DERBY</span>
+            </h1>
+            <p className={s.hLead}>
+              7日間を走り抜け。毎晩20時、全馬が一斉に発走し、下位はBurn。生き残った馬だけがDay7の栄光と買い戻しに辿り着く。すべてはオンチェーンで、改ざん不能。
+            </p>
+            <div className={s.hSub}>Survive the week. Every horse is a deterministic, replayable NFT.</div>
+            <div className={s.hCta}>
+              <Link href="/login" className="grow">
+                <button style={{ width: '100%' }}>馬を迎える ▶</button>
+              </Link>
+              <Link href="#how">
+                <button className="secondary">遊び方を見る</button>
+              </Link>
+            </div>
+            <div className={s.heroStats}>
+              <div>
+                <div className={`${s.n} ${s.go}`}>200 USDT</div>
+                <div className={s.k}>DAY7 BUYBACK</div>
+              </div>
+              <div>
+                <div className={`${s.n} ${s.cy}`}>7 DAYS</div>
+                <div className={s.k}>TO GLORY</div>
+              </div>
+              <div>
+                <div className={`${s.n} ${s.gr}`}>0 AI</div>
+                <div className={s.k}>IN RESULTS</div>
+              </div>
+            </div>
           </div>
 
-          {/* featured horse */}
+          {/* right: featured horse */}
           <div className={s.featCard}>
             <div className={s.goldline} />
             <div className={s.art}>
               <span className={s.idl}>#0001</span>
-              <span className={s.idr}>GENESIS</span>
+              <span className={s.idr}>♡ GENESIS</span>
               <span className={s.aura} />
               <img src="/horses/hero.png" alt="Seven Days Derby cyber horse" />
             </div>
@@ -63,7 +85,7 @@ export function Landing() {
                 <div className={s.gtag}>GENESIS&nbsp;#0001</div>
                 <div className={s.nm}>ROYAL&nbsp;THUNDER</div>
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <span className="badge">ENDURANCE</span>
                 <span className="badge rarity-LEGENDARY">LEGENDARY</span>
               </div>
@@ -99,30 +121,22 @@ export function Landing() {
         <div className={s.s}>毎晩 20:00(日本時間 21:00)· 全馬一斉発走</div>
       </div>
 
-      {/* value stats (true) */}
-      <div className={s.vstats}>
-        <div className={s.vstat}>
-          <div className={`${s.n} ${s.go}`}>200</div>
-          <div className={s.k}>USDT · DAY7 BUYBACK</div>
-        </div>
-        <div className={s.vstat}>
-          <div className={`${s.n} ${s.cy}`}>7</div>
-          <div className={s.k}>DAYS TO GLORY</div>
-        </div>
-        <div className={s.vstat}>
-          <div className={`${s.n} ${s.gr}`}>0</div>
-          <div className={s.k}>AI IN RESULTS</div>
-        </div>
-      </div>
-
       {/* how it works */}
       <div className={s.block} id="how">
-        <div className={s.eyebrow}>HOW IT WORKS</div>
-        <h2>
-          7日間の<span className={s.cy}>生存レース</span>
-        </h2>
-        <p className={s.p}>Mint から Memorial まで。すべての工程はシード確定・リプレイ可能。</p>
-        <div className={s.steps}>
+        <div className={s.howGrid}>
+          <div>
+            <div className={s.eyebrow}>HOW IT WORKS</div>
+            <h2>
+              7日間の<span className={s.cy}>生存レース</span>
+            </h2>
+            <p className={s.p}>Mint から Memorial まで。すべての工程はシード確定・リプレイ可能。</p>
+            <div className={s.pipRail}>
+              <span className={s.d}>D1</span>
+              <span className={s.fill} />
+              <span className={`${s.d} ${s.g}`}>D7 ★</span>
+            </div>
+          </div>
+          <div className={s.steps}>
           <div className={`${s.step} ${s.cyan}`}>
             <span className={`${s.no} ${s.c1}`}>01</span>
             <div>
@@ -151,16 +165,12 @@ export function Landing() {
               <div className={s.d}>7日走り切れば 200 USDT を7回で受取。完済で Memorial NFT に昇華。</div>
             </div>
           </div>
-        </div>
-        <div className={s.pipRail}>
-          <span className={s.d}>D1</span>
-          <span className={s.fill} />
-          <span className={`${s.d} ${s.g}`}>D7 ★</span>
+          </div>
         </div>
       </div>
 
       {/* types + rarity */}
-      <div className={s.block}>
+      <div className={s.block} id="types">
         <div className={s.eyebrow}>FIVE TYPES · FIVE RARITIES</div>
         <h2>同じ馬は二頭と存在しない</h2>
         <div className={s.typeGrid}>
@@ -213,7 +223,7 @@ export function Landing() {
       </div>
 
       {/* transparency */}
-      <div className={s.trans}>
+      <div className={s.trans} id="economy">
         <div className={s.eyebrow}>TRANSPARENT ECONOMY</div>
         <h2>数字は、すべて台帳に。</h2>
         <p className={s.p}>
