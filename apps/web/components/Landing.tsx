@@ -49,18 +49,16 @@ const TYPE_COLOR: Record<string, string> = {
   LUCK: '#c9a86a',
 };
 
-// Real day-based price ladder (PRICE_TABLE_V1). Honest showcase prices.
-const DAY_PRICE = ['100', '110', '121', '133', '146', '161', '177'];
-
+// Gallery data — faithful to the handoff (names, likes, rank, price, last).
 const GALLERY = [
-  { id: '#0001', name: 'Royal Thunder', img: '/horses/hero.png', type: 'ENDURANCE', rarity: 'LEGENDARY', day: 5 },
-  { id: '#0007', name: 'Solaris Flare', img: '/horses/chrome.png', type: 'POWER', rarity: 'EPIC', day: 3 },
-  { id: '#0142', name: 'Glacier Rush', img: '/horses/gold.png', type: 'SPRINTER', rarity: 'RARE', day: 2 },
-  { id: '#0311', name: 'Nocturne Ex', img: '/horses/onyx.png', type: 'BALANCED', rarity: 'RARE', day: 6 },
-  { id: '#1024', name: 'Void Comet', img: '/horses/hero.png', type: 'ENDURANCE', rarity: 'LEGENDARY', day: 4 },
-  { id: '#0781', name: 'Aureus Bolt', img: '/horses/chrome.png', type: 'POWER', rarity: 'EPIC', day: 1 },
-  { id: '#0605', name: 'Plasma Dash', img: '/horses/onyx.png', type: 'LUCK', rarity: 'RARE', day: 3 },
-  { id: '#1330', name: 'Cryo Surge', img: '/horses/gold.png', type: 'SPRINTER', rarity: 'RARE', day: 5 },
+  { id: '#0001', name: 'AURELIAN MIST', img: '/horses/onyx.png', type: 'ENDURANCE', rarity: 'LEGENDARY', price: '520', last: '480', likes: '2.1k', rank: '#2' },
+  { id: '#0007', name: 'SOLARIS FLARE', img: '/horses/chrome.png', type: 'POWER', rarity: 'EPIC', price: '310', last: '288', likes: '940', rank: '#41' },
+  { id: '#0142', name: 'GLACIER RUSH', img: '/horses/gold.png', type: 'SPRINTER', rarity: 'RARE', price: '180', last: '165', likes: '612', rank: '#312' },
+  { id: '#0311', name: 'NOCTURNE EX', img: '/horses/onyx.png', type: 'BALANCED', rarity: 'RARE', price: '145', last: '132', likes: '388', rank: '#488' },
+  { id: '#1024', name: 'VOID COMET', img: '/horses/hero.png', type: 'ENDURANCE', rarity: 'LEGENDARY', price: '540', last: '510', likes: '1.7k', rank: '#4' },
+  { id: '#0781', name: 'AUREUS BOLT', img: '/horses/chrome.png', type: 'POWER', rarity: 'EPIC', price: '298', last: '275', likes: '810', rank: '#55' },
+  { id: '#0605', name: 'PLASMA DASH', img: '/horses/hero.png', type: 'LUCK', rarity: 'RARE', price: '132', last: '120', likes: '274', rank: '#602' },
+  { id: '#1330', name: 'CRYO SURGE', img: '/horses/gold.png', type: 'SPRINTER', rarity: 'RARE', price: '128', last: '119', likes: '210', rank: '#720' },
 ];
 
 export function Landing() {
@@ -237,22 +235,37 @@ export function Landing() {
           </div>
           <div className={s.colStats}>
             <div className={s.st}>
-              <div className={`${s.n} ${s.cy}`}>5</div>
-              <div className={s.k}>TYPES</div>
+              <div className={`${s.n} ${s.cy}`}>◈ 180</div>
+              <div className={s.k}>FLOOR</div>
             </div>
             <div className={s.st}>
-              <div className={`${s.n} ${s.go}`}>5</div>
-              <div className={s.k}>RARITIES</div>
+              <div className={`${s.n} ${s.go}`}>84.2K</div>
+              <div className={s.k}>24H VOL</div>
             </div>
             <div className={s.st}>
-              <div className={`${s.n} ${s.go}`}>200</div>
-              <div className={s.k}>BUYBACK</div>
+              <div className={`${s.n} ${s.go}`}>50K</div>
+              <div className={s.k}>ITEMS</div>
             </div>
             <div className={s.st}>
-              <div className={`${s.n} ${s.cy}`}>0</div>
-              <div className={s.k}>AI</div>
+              <div className={`${s.n} ${s.go}`}>12.1K</div>
+              <div className={s.k}>OWNERS</div>
             </div>
           </div>
+        </div>
+
+        {/* filter bar (faithful to handoff) */}
+        <div className={s.filterBar}>
+          <div className={s.filterL}>
+            <span className={s.buynow}>Buy Now</span>
+            <span className={s.all}>All</span>
+            <span className={s.sep} />
+            <span className={`${s.rc} ${s.leg}`}>LEGENDARY</span>
+            <span className={`${s.rc} ${s.epi}`}>EPIC</span>
+            <span className={`${s.rc} ${s.rar}`}>RARE</span>
+          </div>
+          <span className={s.sortBtn}>
+            価格が安い順 <span className={s.caret}>▾</span>
+          </span>
         </div>
 
         <div className={s.galGrid}>
@@ -265,6 +278,7 @@ export function Landing() {
                   <span className={s.id} style={{ color: st.border }}>
                     {h.id}
                   </span>
+                  <span className={s.lk}>♡ {h.likes}</span>
                   <span className={s.rib} style={{ background: st.ribbon, color: st.ink }}>
                     {h.rarity}
                   </span>
@@ -279,19 +293,19 @@ export function Landing() {
                     <span className={s.type} style={{ color: TYPE_COLOR[h.type], borderColor: TYPE_COLOR[h.type] }}>
                       {h.type}
                     </span>
-                    <span className={s.day}>DAY {h.day}/7</span>
+                    <span className={s.rank}>RANK {h.rank}</span>
                   </div>
                   <div className={s.priceRow}>
                     <div>
                       <div className={s.pl}>PRICE</div>
                       <div className={s.pv}>
-                        <span className={s.d}>◈</span> {DAY_PRICE[h.day - 1]}
+                        <span className={s.d}>◈</span> {h.price}
                       </div>
                     </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#6a6690' }}>P2P</div>
+                    <span className={s.last}>last {h.last}</span>
                   </div>
                   <Link href="/login">
-                    <button>迎える · MINT</button>
+                    <button>購入 · BUY</button>
                   </Link>
                 </div>
               </div>
@@ -300,7 +314,7 @@ export function Landing() {
         </div>
         <div className={s.colMore}>
           <Link href="/login">
-            <button>厩舎に入る →</button>
+            <button>すべての出品を見る · 50,000 items →</button>
           </Link>
         </div>
       </div>
@@ -363,9 +377,11 @@ export function Landing() {
           SEVEN&nbsp;DERBY
         </div>
         <div className={s.links}>
-          <Link href="#how">遊び方</Link>
-          <Link href="#collection">コレクション</Link>
-          <Link href="#economy">エコノミー</Link>
+          <span>Whitepaper</span>
+          <span>Docs</span>
+          <span>Discord</span>
+          <span>X</span>
+          <span>Contract</span>
         </div>
         <div className={s.cpy}>© 2026 Seven Days Derby · Deterministic · Auditable</div>
       </div>
