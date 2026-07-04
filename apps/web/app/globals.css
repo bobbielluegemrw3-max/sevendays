@@ -32,9 +32,10 @@
   --shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.8);
   --maxw: 1040px;
 
-  --font-display: var(--f-display), 'Orbitron', system-ui, sans-serif;
-  --font-sans: var(--f-sans), 'Space Grotesk', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', system-ui, sans-serif;
-  --font-mono: var(--f-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  --font-display: 'Orbitron', system-ui, sans-serif;
+  --font-sans: 'Space Grotesk', 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', system-ui, sans-serif;
+  --font-jp: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 * { box-sizing: border-box; }
