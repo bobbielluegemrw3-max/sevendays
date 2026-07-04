@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { Countdown } from '@/components/Countdown';
 import { LandingAuth } from '@/components/LandingAuth';
@@ -71,16 +72,18 @@ export function Landing() {
       <div className={s.nav}>
         <div className={s.brand}>
           <span className={s.bar} />
-          <span className={s.nm}>SEVEN&nbsp;DERBY</span>
+          <span className={s.lock}>
+            <span className={s.l1}>SEVEN&nbsp;DAYS</span>
+            <span className={s.l2}>DERBY</span>
+          </span>
         </div>
         <div className={s.navMenu}>
           <Link href="#how">遊び方</Link>
           <Link href="#collection">コレクション</Link>
           <Link href="#economy">エコノミー</Link>
-          <span style={{ color: '#5a5580' }}>ホワイトペーパー</span>
         </div>
         <Link href="/login" className={s.navCta}>
-          はじめる
+          ログイン
         </Link>
       </div>
 
@@ -111,12 +114,6 @@ export function Landing() {
                 <button className={s.btnGhost}>遊び方を見る</button>
               </Link>
             </div>
-            <div className={s.authDivider}>
-              <span className={s.ln} />
-              <span className={s.tx}>OR CONTINUE WITH</span>
-              <span className={s.ln} />
-            </div>
-            <LandingAuth variant="row" />
             <div className={s.hstats}>
               <div>
                 <div className={`${s.n} ${s.go}`}>200 USDT</div>
@@ -138,14 +135,14 @@ export function Landing() {
             <div className={s.goldbar} />
             <div className={s.art}>
               <span className={s.idl}>#0001</span>
-              <span className={s.idr}>GENESIS</span>
+              <span className={s.idr}>♡ 2.1k</span>
               <span className={s.aura} />
-              <img src="/horses/hero.png" alt="Royal Thunder — genesis cyber horse" />
+              <img src="/horses/hero.png" alt="Aurelian Mist — genesis cyber horse" />
             </div>
             <div className={s.cap}>
               <div>
                 <div className={s.gtag}>GENESIS&nbsp;#0001</div>
-                <div className={s.nm}>ROYAL&nbsp;THUNDER</div>
+                <div className={s.nm}>AURELIAN&nbsp;MIST</div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <span className={`${s.tag} ${s.cy}`}>ENDURANCE</span>
@@ -280,7 +277,7 @@ export function Landing() {
           {GALLERY.map((h) => {
             const st = RARITY_STYLE[h.rarity]!;
             return (
-              <div key={h.id} className={s.galCard} style={{ borderColor: st.border, boxShadow: `0 0 20px -8px ${st.glow}` }}>
+              <div key={h.id} className={s.galCard} style={{ borderColor: st.border, ['--rar-glow']: st.glow } as CSSProperties}>
                 <div className={s.acc} style={{ background: st.accent }} />
                 <div className={s.art} style={{ background: st.panel }}>
                   <span className={s.id} style={{ color: st.border }}>
@@ -322,7 +319,7 @@ export function Landing() {
         </div>
         <div className={s.colMore}>
           <Link href="/login">
-            <button>すべての出品を見る · 50,000 items →</button>
+            <button>すべての出品を見る →</button>
           </Link>
         </div>
       </div>
@@ -368,9 +365,9 @@ export function Landing() {
       <div className={s.finalWrap}>
         <div className={s.finalBox}>
           <div className={s.finalInner}>
-            <h2>今夜のレースは、20時に発走します。</h2>
-            <p className={s.p}>MetaMask または Google でログインして、最初の馬を迎えよう。</p>
-            <LandingAuth variant="stack" />
+            <h2>今夜、走らせるか？</h2>
+            <p className={s.p}>ウォレット、またはGoogleアカウントで、すぐに始められます。</p>
+            <LandingAuth />
             <div className={s.fine}>USDT · non-custodial · Polygon</div>
           </div>
         </div>
@@ -380,7 +377,10 @@ export function Landing() {
       <div className={s.foot}>
         <div className={s.fb}>
           <span className={s.bar} />
-          SEVEN&nbsp;DERBY
+          <span className={s.lock}>
+            <span className={s.l1}>SEVEN&nbsp;DAYS</span>
+            <span className={s.l2}>DERBY</span>
+          </span>
         </div>
         <div className={s.links}>
           <span>Whitepaper</span>
