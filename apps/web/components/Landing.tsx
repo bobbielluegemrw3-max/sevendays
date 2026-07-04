@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Countdown } from '@/components/Countdown';
+import { LandingAuth } from '@/components/LandingAuth';
 import s from './landing.module.css';
 
 /**
@@ -109,6 +110,12 @@ export function Landing() {
                 <button className={s.btnGhost}>遊び方を見る</button>
               </Link>
             </div>
+            <div className={s.authDivider}>
+              <span className={s.ln} />
+              <span className={s.tx}>OR CONTINUE WITH</span>
+              <span className={s.ln} />
+            </div>
+            <LandingAuth variant="row" />
             <div className={s.hstats}>
               <div>
                 <div className={`${s.n} ${s.go}`}>200 USDT</div>
@@ -362,9 +369,7 @@ export function Landing() {
           <div className={s.finalInner}>
             <h2>今夜のレースは、20時に発走します。</h2>
             <p className={s.p}>MetaMask または Google でログインして、最初の馬を迎えよう。</p>
-            <Link href="/login">
-              <button>はじめる ▶</button>
-            </Link>
+            <LandingAuth variant="stack" />
             <div className={s.fine}>USDT · non-custodial · Polygon</div>
           </div>
         </div>

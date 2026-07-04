@@ -78,6 +78,24 @@
 .btnGhost { border: 1px solid rgba(255, 45, 196, 0.5); background: rgba(255, 45, 196, 0.1); color: #ff8fe4; font-family: var(--font-display); font-size: 15px; letter-spacing: 0.04em;
   padding: 17px 30px; border-radius: 13px; cursor: pointer; }
 .btnGhost:hover { border-color: #ff2dc4; }
+/* login buttons (Google / MetaMask) */
+.authRow { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.authStack { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; align-items: center; }
+.authStack .authBtn { width: 100%; max-width: 300px; justify-content: center; }
+.authBtn {
+  display: inline-flex; align-items: center; gap: 12px; cursor: pointer;
+  font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: 0.01em; color: #edede8;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px;
+  padding: 14px 24px; backdrop-filter: blur(6px); box-shadow: none; transition: border-color 0.2s ease, background 0.2s ease;
+}
+.authBtn:hover { border-color: rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.08); filter: none; }
+.authBtn.authMeta:hover { border-color: rgba(230, 150, 80, 0.55); background: rgba(230, 150, 80, 0.08); }
+.authBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+.authErr { flex-basis: 100%; color: #ff8fe4; font-size: 12px; font-family: var(--font-mono); margin: 4px 0 0; }
+.authDivider { display: flex; align-items: center; gap: 16px; margin: 22px 0 4px; width: min(360px, 100%); }
+.authDivider .ln { flex: 1; height: 1px; background: rgba(255, 255, 255, 0.14); }
+.authDivider .tx { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.3em; color: #6e6e68; }
+
 .hstats { display: flex; gap: clamp(24px, 4vw, 40px); margin-top: 40px; flex-wrap: wrap; }
 .hstats .n { font-family: var(--font-display); font-weight: 800; font-size: clamp(22px, 3vw, 26px); }
 .hstats .n.go { color: #f2ead6; } .hstats .n.cy { color: #00eaff; } .hstats .n.gr { color: #c6ff3a; }
