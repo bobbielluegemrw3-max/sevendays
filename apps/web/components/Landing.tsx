@@ -77,6 +77,7 @@ export function Landing() {
           <Link href="#how">遊び方</Link>
           <Link href="#collection">コレクション</Link>
           <Link href="#economy">エコノミー</Link>
+          <span style={{ color: '#5a5580' }}>ホワイトペーパー</span>
         </div>
         <Link href="/login" className={s.navCta}>
           はじめる
@@ -134,7 +135,7 @@ export function Landing() {
 
           {/* right featured NFT card */}
           <div className={s.featCard}>
-            <div className={s.gold} />
+            <div className={s.goldbar} />
             <div className={s.art}>
               <span className={s.idl}>#0001</span>
               <span className={s.idr}>GENESIS</span>

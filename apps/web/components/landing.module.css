@@ -104,7 +104,7 @@
 /* featured NFT card */
 .featCard { border: 2px solid #d8b25a; border-radius: 24px; background: linear-gradient(180deg, #141020, #0a0813);
   box-shadow: 0 0 40px -10px rgba(201, 168, 106, 0.55), inset 0 0 60px rgba(201, 168, 106, 0.06); overflow: hidden; }
-.featCard .gold { height: 5px; background: linear-gradient(90deg, #c9a86a, #f7eccb, #c9a86a); }
+.featCard .goldbar { height: 5px; background: linear-gradient(90deg, #c9a86a, #f7eccb, #c9a86a); }
 .featCard .art { position: relative; height: clamp(300px, 40vw, 400px); }
 .featCard .art .idl { position: absolute; top: 16px; left: 20px; font-family: var(--font-mono); font-size: 12px; color: #c9a86a; z-index: 3; }
 .featCard .art .idr { position: absolute; top: 16px; right: 20px; font-family: var(--font-mono); font-size: 12px; color: #8f8ac2; z-index: 3; }
