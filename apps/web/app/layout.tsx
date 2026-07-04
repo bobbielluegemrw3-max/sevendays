@@ -6,7 +6,7 @@ import { LogoutButton } from '@/components/LogoutButton';
 
 export const metadata: Metadata = {
   title: 'Seven Days Derby',
-  description: 'Web3 horse racing — seven days to glory',
+  description: '7日間のダービー — 毎晩20:00、全馬が一斉に走る',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -20,14 +20,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </Link>
           {authed ? (
             <>
-              <Link href="/wallet">ウォレット</Link>
-              <Link href="/horses">馬</Link>
+              <Link href="/">ホーム</Link>
+              <Link href="/horses">マイ厩舎</Link>
               <Link href="/races">レース</Link>
-              <Link href="/purchase">購入</Link>
-              <Link href="/buybacks">Buyback</Link>
+              <Link href="/wallet">ウォレット</Link>
               <Link href="/notifications">通知</Link>
-              <Link href="/account">アカウント</Link>
               <span className="spacer" />
+              <Link href="/account">アカウント</Link>
               <LogoutButton />
             </>
           ) : (
