@@ -173,6 +173,10 @@ Authorization note: approved by the developer under the owner's standing mandate
 
 071. Login methods: MetaMask (Sign-In with Ethereum via the Supabase "Web3 Wallet" provider) and Google OAuth become the primary sign-in options. Email+password remains available as a secondary fallback (the owner's admin account is email-based; full removal can follow after identity migration). No backend changes were required: all providers issue standard Supabase JWTs, and the API bridge already verifies ES256 via JWKS and provisions users without an email claim.
 
+## Decision 072 (2026-07-04, Owner)
+
+072. Cross-linking of login methods. A MetaMask-first user can link Google on the account page (native Supabase identity linking — same auth user, requires the dashboard "Manual Linking" toggle); a Google/email-first user can link MetaMask via a personal_sign proof (fresh timestamped message bound to the logged-in user, verified server-side) recorded in user_wallets. A Web3 session whose wallet is linked resolves to the linked game account at the API bridge (aliasing) — no second account is ever created for a linked wallet, and a Web3-first account claims its wallet on first login so it can never be linked elsewhere (one wallet = one account, DB-unique). Endpoints: GET /api/v1/account/wallets, POST /api/v1/account/link-wallet, POST /api/v1/account/unlink-wallet.
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:

@@ -51,6 +51,47 @@ describe('buildAuthContext', () => {
     expect(again.kind).toBe('user');
   });
 
+  it('resolves a Web3 session for a LINKED wallet to the linked game account (Decision 072)', async () => {
+    // Existing game account with a linked wallet.
+    const gameUser = randomUUID();
+    const wallet = '0x1234567890abcdef1234567890abcdef12345678';
+    await client.query(`insert into users (id, email) values ($1, $2)`, [gameUser, `${randomUUID()}@link.dev`]);
+    await client.query(`insert into user_wallets (user_id, wallet_address) values ($1, $2)`, [gameUser, wallet]);
+
+    // A fresh Supabase Web3 auth uid presenting that wallet in its claims.
+    const web3Sub = randomUUID();
+    const token = await new SignJWT({ user_metadata: { custom_claims: { address: wallet } } })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject(web3Sub)
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(new TextEncoder().encode(JWT_SECRET));
+
+    const auth = await buildAuthContext(client, token, JWT_SECRET);
+    expect(auth).toEqual({ kind: 'user', userId: gameUser }); // aliased, no second account
+    const noNewRow = await client.query(`select 1 from users where id = $1`, [web3Sub]);
+    expect(noNewRow.rows).toHaveLength(0);
+  });
+
+  it('a Web3-first login provisions its own account and claims its wallet', async () => {
+    const web3Sub = randomUUID();
+    const wallet = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd';
+    const token = await new SignJWT({ user_metadata: { custom_claims: { address: wallet } } })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject(web3Sub)
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(new TextEncoder().encode(JWT_SECRET));
+
+    const auth = await buildAuthContext(client, token, JWT_SECRET);
+    expect(auth).toEqual({ kind: 'user', userId: web3Sub });
+    const claimed = await client.query<{ user_id: string }>(
+      `select user_id from user_wallets where wallet_address = $1`,
+      [wallet],
+    );
+    expect(claimed.rows[0]!.user_id).toBe(web3Sub); // wallet claimed -> nobody else can link it
+  });
+
   it('verifies ES256 tokens via JWKS (new Supabase signing keys)', async () => {
     const { publicKey, privateKey } = await generateKeyPair('ES256');
     const jwk = await exportJWK(publicKey);

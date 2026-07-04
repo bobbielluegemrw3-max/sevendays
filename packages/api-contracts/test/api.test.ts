@@ -577,3 +577,68 @@ describe('admin recovery surface (Decision 067)', () => {
     expect(missing.status).toBe(404);
   });
 });
+
+describe('wallet linking (Decision 072)', () => {
+  it('links a wallet with a fresh signed proof; rejects reuse, forgery, and stale proofs', async () => {
+    const { privateKeyToAccount } = await import('viem/accounts');
+    const { buildWalletLinkMessage } = await import('@sevendays/blockchain');
+    const wallet = privateKeyToAccount(
+      '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
+    );
+
+    const user = await newUser();
+    const message = buildWalletLinkMessage(user, new Date().toISOString());
+    const signature = await wallet.signMessage({ message });
+
+    const linked = await call('POST', '/api/v1/account/link-wallet', asUser(user), {
+      body: { address: wallet.address, message, signature },
+    });
+    expect(linked.status).toBe(200);
+    expect((linked.body as { linked: string }).linked).toBe(wallet.address.toLowerCase());
+
+    const list = await call('GET', '/api/v1/account/wallets', asUser(user));
+    expect(
+      (list.body as { wallets: { wallet_address: string }[] }).wallets.map((w) => w.wallet_address),
+    ).toEqual([wallet.address.toLowerCase()]);
+
+    // One wallet = one account: a second account cannot claim it.
+    const thief = await newUser();
+    const thiefMessage = buildWalletLinkMessage(thief, new Date().toISOString());
+    const thiefSignature = await wallet.signMessage({ message: thiefMessage });
+    const stolen = await call('POST', '/api/v1/account/link-wallet', asUser(thief), {
+      body: { address: wallet.address, message: thiefMessage, signature: thiefSignature },
+    });
+    expect(stolen.status).toBe(409);
+    expect((stolen.body as { error: { code: string } }).error.code).toBe('WALLET_ALREADY_LINKED');
+
+    // Forged signature (message signed by a different key) is rejected.
+    const otherKey = privateKeyToAccount(
+      '0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba',
+    );
+    const forged = await call('POST', '/api/v1/account/link-wallet', asUser(thief), {
+      body: {
+        address: wallet.address,
+        message: thiefMessage,
+        signature: await otherKey.signMessage({ message: thiefMessage }),
+      },
+    });
+    expect(forged.status).toBe(400);
+
+    // Stale proof (issued 20 minutes ago) is rejected.
+    const stale = buildWalletLinkMessage(user, new Date(Date.now() - 20 * 60_000).toISOString());
+    const staleAttempt = await call('POST', '/api/v1/account/link-wallet', asUser(user), {
+      body: { address: wallet.address, message: stale, signature: await wallet.signMessage({ message: stale }) },
+    });
+    expect(staleAttempt.status).toBe(400);
+
+    // Unlink works and is idempotent-ish (second call 404s).
+    const unlink = await call('POST', '/api/v1/account/unlink-wallet', asUser(user), {
+      body: { address: wallet.address },
+    });
+    expect(unlink.status).toBe(200);
+    const again = await call('POST', '/api/v1/account/unlink-wallet', asUser(user), {
+      body: { address: wallet.address },
+    });
+    expect(again.status).toBe(404);
+  });
+});

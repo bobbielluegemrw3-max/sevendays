@@ -6,4 +6,5 @@ export * from './provisioning.js';
 export * from './deposit-watcher.js';
 export * from './withdrawal-broadcaster.js';
 export * from './memorial-minter.js';
+export * from './wallet-link.js';
 export * from './rpc.js';

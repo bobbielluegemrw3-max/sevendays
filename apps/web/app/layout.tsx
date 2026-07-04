@@ -26,6 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/purchase">購入</Link>
               <Link href="/buybacks">Buyback</Link>
               <Link href="/notifications">通知</Link>
+              <Link href="/account">アカウント</Link>
               <span className="spacer" />
               <LogoutButton />
             </>

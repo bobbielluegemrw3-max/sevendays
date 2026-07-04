@@ -13,6 +13,7 @@ import {
   getMarketplaceState,
   verifyReplayInputs,
 } from '@sevendays/settlement-engine';
+import { verifyWalletLink } from '@sevendays/blockchain';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry } from '../router.js';
 
@@ -157,6 +158,74 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       );
       if (!rows.rows[0]) throw new ApiError('NOT_FOUND', 'Horse not found');
       return rows.rows[0];
+    },
+  });
+
+  // Wallet <-> account linking (Decision 072). Linking requires a fresh
+  // personal_sign proof; a wallet maps to exactly one game account.
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/account/wallets',
+    auth: 'user',
+    handler: async (ctx) => {
+      const rows = await ctx.client.query(
+        `select wallet_address, created_at::text as created_at
+         from user_wallets where user_id = $1 order by created_at`,
+        [ctx.userId],
+      );
+      return { wallets: rows.rows };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/account/link-wallet',
+    auth: 'user',
+    input: z.object({
+      address: z.string().min(4),
+      message: z.string().min(10).max(500),
+      signature: z.string().min(10),
+    }),
+    handler: async (ctx, input) => {
+      const verified = await verifyWalletLink({
+        userId: ctx.userId,
+        address: input.address,
+        message: input.message,
+        signature: input.signature,
+      });
+      if (!verified.ok) {
+        throw new ApiError('WALLET_SIGNATURE_INVALID', `Wallet proof rejected: ${verified.reason}`);
+      }
+      try {
+        await ctx.client.query(
+          `insert into user_wallets (user_id, wallet_address) values ($1, $2)`,
+          [ctx.userId, verified.address],
+        );
+      } catch (error) {
+        if (/uq_user_wallet_address|duplicate key/i.test((error as Error).message)) {
+          throw new ApiError(
+            'WALLET_ALREADY_LINKED',
+            'This wallet is already linked to an account (each wallet can belong to exactly one account)',
+          );
+        }
+        throw error;
+      }
+      return { linked: verified.address };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/account/unlink-wallet',
+    auth: 'user',
+    input: z.object({ address: z.string().min(4) }),
+    handler: async (ctx, input) => {
+      const removed = await ctx.client.query(
+        `delete from user_wallets where user_id = $1 and wallet_address = lower($2)`,
+        [ctx.userId, input.address],
+      );
+      if ((removed.affectedRows ?? 0) === 0) throw new ApiError('NOT_FOUND', 'Wallet not linked');
+      return { unlinked: input.address.toLowerCase() };
     },
   });
 

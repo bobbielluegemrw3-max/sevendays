@@ -84,6 +84,29 @@ async function verifyAccessToken(
   }
 }
 
+/** Wallet address from a Supabase Web3 session's claims (tolerant lookup). */
+function extractWalletAddress(payload: JWTPayload): string | null {
+  const meta = payload.user_metadata as Record<string, unknown> | undefined;
+  const custom = (meta?.custom_claims ?? undefined) as Record<string, unknown> | undefined;
+  for (const candidate of [custom?.address, meta?.address, (payload as Record<string, unknown>).address]) {
+    if (typeof candidate === 'string' && /^0x[0-9a-fA-F]{40}$/.test(candidate)) {
+      return candidate.toLowerCase();
+    }
+  }
+  return null;
+}
+
+async function resolveContextFor(client: SqlClient, userId: string): Promise<AuthContext> {
+  const grants = await client.query<{ role: string }>(
+    `select role::text as role from admin_role_grants where user_id = $1 and revoked_at is null`,
+    [userId],
+  );
+  if (grants.rows.length > 0) {
+    return { kind: 'admin', userId, roles: grants.rows.map((r) => r.role) };
+  }
+  return { kind: 'user', userId };
+}
+
 export async function buildAuthContext(
   client: SqlClient,
   accessToken: string | null | undefined,
@@ -96,6 +119,22 @@ export async function buildAuthContext(
   if (!payload) return { kind: 'anonymous' };
   const userId = typeof payload.sub === 'string' ? payload.sub : null;
   if (!userId) return { kind: 'anonymous' };
+
+  // Existing account: fast path.
+  const existing = await client.query<{ id: string }>(`select id from users where id = $1`, [userId]);
+  if (existing.rows[0]) return resolveContextFor(client, userId);
+
+  // Decision 072 aliasing: a Web3 session whose wallet is linked to an
+  // existing game account resolves to THAT account (no second account is
+  // ever provisioned for a linked wallet).
+  const walletAddress = extractWalletAddress(payload);
+  if (walletAddress) {
+    const linked = await client.query<{ user_id: string }>(
+      `select user_id from user_wallets where wallet_address = $1`,
+      [walletAddress],
+    );
+    if (linked.rows[0]) return resolveContextFor(client, linked.rows[0].user_id);
+  }
 
   // First-login provisioning: everything downstream (RLS, ledger accounts,
   // deposit addresses) keys on users.id = auth.uid().
@@ -121,14 +160,17 @@ export async function buildAuthContext(
     );
   }
 
-  const grants = await client.query<{ role: string }>(
-    `select role::text as role from admin_role_grants where user_id = $1 and revoked_at is null`,
-    [userId],
-  );
-  if (grants.rows.length > 0) {
-    return { kind: 'admin', userId, roles: grants.rows.map((r) => r.role) };
+  // A Web3-first account claims its wallet immediately — this is what makes
+  // a later "link this wallet to another account" attempt fail loudly
+  // instead of silently splitting identities.
+  if (walletAddress) {
+    await client.query(
+      `insert into user_wallets (user_id, wallet_address) values ($1, $2) on conflict do nothing`,
+      [userId, walletAddress],
+    );
   }
-  return { kind: 'user', userId };
+
+  return resolveContextFor(client, userId);
 }
 
 export async function dispatchBridge(
