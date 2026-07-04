@@ -31,3 +31,7 @@ yarn-debug.log*
 yarn-error.log*
 
 *.tsbuildinfo
+
+# design source drops (kept locally, not in repo)
+*.zip
+/素材/
