@@ -56,3 +56,11 @@ export function errorMessage(body: unknown): string | null {
   const maybe = body as ApiErrorBody;
   return maybe && typeof maybe === 'object' && 'error' in maybe ? maybe.error.message : null;
 }
+
+/** Public site origin for OAuth redirects — env override beats the runtime
+ *  origin so a proxied/misdetected origin can never leak (e.g. localhost). */
+export function siteOrigin(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL;
+  if (configured) return configured.replace(/\/$/, '');
+  return window.location.origin;
+}

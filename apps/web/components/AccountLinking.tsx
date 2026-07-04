@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { UserIdentity } from '@supabase/supabase-js';
-import { apiFetch, errorMessage, supabaseBrowser } from '@/lib/client-api';
+import { apiFetch, errorMessage, siteOrigin, supabaseBrowser } from '@/lib/client-api';
 
 interface Eip1193Provider {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;
@@ -44,7 +44,7 @@ export function AccountLinking({ userId, wallets }: { userId: string; wallets: s
     setError(null);
     const { error: linkError } = await supabaseBrowser().auth.linkIdentity({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/account` },
+      options: { redirectTo: `${siteOrigin()}/auth/callback?next=/account` },
     });
     if (linkError) {
       setBusy(false);

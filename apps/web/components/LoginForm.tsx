@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabaseBrowser } from '@/lib/client-api';
+import { siteOrigin, supabaseBrowser } from '@/lib/client-api';
 
 /**
  * Login methods (Decision 071): MetaMask (Sign-In with Ethereum via
@@ -47,7 +47,7 @@ export function LoginForm() {
     setError(null);
     const { error: oauthError } = await supabaseBrowser().auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${siteOrigin()}/auth/callback` },
     });
     // On success the browser redirects to Google; only errors land here.
     if (oauthError) {
