@@ -102,7 +102,7 @@ export function Landing() {
               <span className={s.idl}>#0001</span>
               <span className={s.idr}>♡ 2.1k</span>
               <span className={s.aura} />
-              <HorseArt baseId="base_04" coat={HERO_COAT} mane={HERO_MANE} flip={false} seed={1001} />
+              <HorseArt baseId="base_01" coat={HERO_COAT} mane={HERO_MANE} flip={false} seed={1001} />
             </div>
             <div className={s.cap}>
               <div>
