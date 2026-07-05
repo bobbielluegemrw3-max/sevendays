@@ -183,7 +183,10 @@
 .galCard .rank { font-family: var(--font-mono); font-size: 9px; color: #8f8ac2; }
 .galCard .last { font-family: var(--font-mono); font-size: 9px; color: #6a6690; }
 
-.galGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; margin-top: 22px; }
+/* Explicit columns per Claude Design handoff: phone 2 / tablet 3 / desktop 4 */
+.galGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 22px; }
+@media (min-width: 680px) { .galGrid { grid-template-columns: repeat(3, 1fr); gap: 16px; } }
+@media (min-width: 1040px) { .galGrid { grid-template-columns: repeat(4, 1fr); } }
 .galCard { border-radius: 16px; overflow: hidden; background: #0a0813; border: 2px solid;
   box-shadow: 0 0 20px -8px var(--rar-glow, rgba(0, 234, 255, 0.4)); transition: box-shadow 0.16s ease; }
 .galCard:hover { box-shadow: 0 0 30px -4px var(--rar-glow, rgba(0, 234, 255, 0.4)); }
