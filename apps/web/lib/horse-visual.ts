@@ -94,6 +94,27 @@ export const BASES: BaseDef[] = [
   { id: 'base_11', pose: 'high_trot', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_12', pose: 'power_kickoff', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_13', pose: 'gliding_gallop', gender: 'male', rarityMin: 'COMMON' },
+  // batch02 (standard, COMMON)
+  { id: 'base_14', pose: 'gallop_collected', gender: 'female', rarityMin: 'COMMON' },
+  { id: 'base_15', pose: 'gallop_extended', gender: 'neutral', rarityMin: 'COMMON' },
+  { id: 'base_16', pose: 'power_stride', gender: 'male', rarityMin: 'COMMON' },
+  { id: 'base_17', pose: 'gallop_3q_front', gender: 'female', rarityMin: 'COMMON' },
+  { id: 'base_18', pose: 'gallop_3q_rear', gender: 'neutral', rarityMin: 'COMMON' },
+  { id: 'base_19', pose: 'high_trot', gender: 'male', rarityMin: 'COMMON' },
+  { id: 'base_20', pose: 'leap_stride', gender: 'female', rarityMin: 'COMMON' },
+  { id: 'base_21', pose: 'gliding_gallop', gender: 'neutral', rarityMin: 'COMMON' },
+  { id: 'base_22', pose: 'gallop_extended', gender: 'male', rarityMin: 'COMMON' },
+  { id: 'base_23', pose: 'gallop_collected', gender: 'female', rarityMin: 'COMMON' },
+  { id: 'base_24', pose: 'power_stride', gender: 'neutral', rarityMin: 'COMMON' },
+  { id: 'base_25', pose: 'gallop_3q_front', gender: 'male', rarityMin: 'COMMON' },
+  { id: 'base_26', pose: 'gallop_3q_rear', gender: 'female', rarityMin: 'COMMON' },
+  { id: 'base_27', pose: 'high_trot', gender: 'neutral', rarityMin: 'COMMON' },
+  { id: 'base_28', pose: 'leap_stride', gender: 'male', rarityMin: 'COMMON' },
+  { id: 'base_29', pose: 'gliding_gallop', gender: 'female', rarityMin: 'COMMON' },
+  { id: 'base_30', pose: 'gallop_extended', gender: 'neutral', rarityMin: 'COMMON' },
+  { id: 'base_31', pose: 'gallop_collected', gender: 'male', rarityMin: 'COMMON' },
+  { id: 'base_32', pose: 'power_stride', gender: 'female', rarityMin: 'COMMON' },
+  { id: 'base_33', pose: 'gallop_3q_front', gender: 'neutral', rarityMin: 'COMMON' },
 ];
 const RARITY_RANK: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
 
