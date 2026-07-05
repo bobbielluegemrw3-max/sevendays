@@ -23,7 +23,7 @@ function publicOrigin(request: NextRequest): string {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
-  const next = requestUrl.searchParams.get('next') ?? '/';
+  const next = requestUrl.searchParams.get('next') ?? '/dashboard';
   const origin = publicOrigin(request);
   const response = NextResponse.redirect(new URL(next, origin));
 

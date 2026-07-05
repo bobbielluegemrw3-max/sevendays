@@ -33,7 +33,7 @@ export function LandingAuth() {
       setError(e.message);
       return;
     }
-    router.push('/');
+    router.push('/dashboard');
     router.refresh();
   }
 

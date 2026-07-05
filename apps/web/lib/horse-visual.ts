@@ -151,47 +151,28 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-export interface DerivedHorse {
-  seed: number;
-  id: string; // display id like "#0007"
-  prefix: string;
-  suffix: string;
-  name: string;
-  type: HorseType;
-  rarity: Rarity;
-  rarityLine: string;
-  rarityGlow: string;
-  rarityPanel: string;
-  rarityInk: string;
-  rarityRibbon: string;
+/** The purely visual identity of a horse — everything HorseArt + the card frame need. */
+export interface HorseVisual {
   coat: [Rgb, Rgb];
   coatB: [Rgb, Rgb];
   pattern: CoatPattern;
   mane: [Rgb, Rgb];
-  hue: number; // normalised coat hue 0..360 — used to spread the showcase & colour the frame
-  accentHue: number; // dominant second colour on the card (coatB, or mane when solid)
-  tone: 'dark' | 'pale' | 'vivid'; // perceived family beyond hue — blacks/whites read alike whatever their hue
-  frameLine: string; // card border/id — a vivid tint of the horse's own colour
-  frameGlow: string; // outer glow
-  framePanel: string; // art backdrop wash
-  frameGrad: string; // CTA button fill
+  hue: number;
+  accentHue: number;
+  tone: 'dark' | 'pale' | 'vivid';
+  frameLine: string;
+  frameGlow: string;
+  framePanel: string;
+  frameGrad: string;
   baseId: string;
-  flip: boolean;
-  price: string;
-  last: string;
-  likes: string;
-  rank: string;
 }
 
-/** Deterministically derive a full horse (identity + palette + base) from a seed. */
-export function deriveHorse(seed: number): DerivedHorse {
-  const rng = mulberry32(seed);
-  const rr = rng();
-  const ri = rr < 0.5 ? 0 : rr < 0.75 ? 1 : rr < 0.9 ? 2 : rr < 0.98 ? 3 : 4;
-  const rar = RAR[ri]!;
-  const prefix = PREFIX[Math.floor(rng() * PREFIX.length)]!;
-  const suffix = SUFFIX[Math.floor(rng() * SUFFIX.length)]!;
-  const [ph, ps, phiL] = PREFIX_HUE[prefix] ?? [200, 0.82];
+/**
+ * Shared colour/pattern/base pipeline. `ph/ps/phiL` come from the name prefix
+ * (name↔colour coherence), `ri` is the rarity rank (gates the base-pose pool),
+ * and every other choice is drawn from `rng`.
+ */
+function deriveVisual(rng: () => number, ph: number, ps: number, phiL: number | undefined, ri: number): HorseVisual {
   const coatHue = ph + (rng() * 2 - 1) * 22;
   const coatSat = Math.max(0.05, Math.min(1, ps + (rng() * 2 - 1) * 0.1));
   // Pure single-colour horses (owner request): not every horse carries a two-tone
@@ -256,11 +237,81 @@ export function deriveHorse(seed: number): DerivedHorse {
   const frameGlow = `hsl(${H} 88% 55% / 0.5)`;
   const framePanel = `hsl(${H} 72% 50% / 0.14)`;
   const frameGrad = `linear-gradient(92deg, hsl(${H} 80% 58%), hsl(${H} 85% 74%))`;
-  const type = HORSE_TYPES[Math.floor(rng() * HORSE_TYPES.length)]!;
 
   const eligible = BASES.filter((b) => RARITY_RANK[b.rarityMin] <= ri);
   const pool = eligible.length ? eligible : BASES;
   const baseId = pool[Math.floor(rng() * pool.length)]!.id;
+
+  return {
+    coat, coatB, pattern, mane, hue,
+    accentHue: (((pattern.kind === 'solid' ? maneHue : bHue) % 360) + 360) % 360,
+    tone,
+    frameLine, frameGlow, framePanel, frameGrad, baseId,
+  };
+}
+
+/**
+ * Visual identity for a REAL horse row (dashboard/stable/detail): `dna_hash`
+ * seeds the rng, the horse's real name prefix drives the hue family (so
+ * name↔colour coherence holds on live data too) and its real rarity gates the
+ * base-pose pool. Same horse → same pixels, everywhere, forever.
+ */
+export function deriveHorseArt(dnaHash: string, name: string, rarity: string): HorseVisual {
+  let h = 0x811c9dc5; // FNV-1a over the hash string — dna_hash formats stay opaque
+  for (let i = 0; i < dnaHash.length; i++) {
+    h ^= dnaHash.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  const rng = mulberry32(h >>> 0);
+  const prefix = name.trim().split(/\s+/)[0] ?? '';
+  const [ph, ps, phiL] = PREFIX_HUE[prefix] ?? [200, 0.82];
+  const ri = RARITY_RANK[rarity as Rarity] ?? 0;
+  return deriveVisual(rng, ph, ps, phiL, ri);
+}
+
+export interface DerivedHorse {
+  seed: number;
+  id: string; // display id like "#0007"
+  prefix: string;
+  suffix: string;
+  name: string;
+  type: HorseType;
+  rarity: Rarity;
+  rarityLine: string;
+  rarityGlow: string;
+  rarityPanel: string;
+  rarityInk: string;
+  rarityRibbon: string;
+  coat: [Rgb, Rgb];
+  coatB: [Rgb, Rgb];
+  pattern: CoatPattern;
+  mane: [Rgb, Rgb];
+  hue: number; // normalised coat hue 0..360 — used to spread the showcase & colour the frame
+  accentHue: number; // dominant second colour on the card (coatB, or mane when solid)
+  tone: 'dark' | 'pale' | 'vivid'; // perceived family beyond hue — blacks/whites read alike whatever their hue
+  frameLine: string; // card border/id — a vivid tint of the horse's own colour
+  frameGlow: string; // outer glow
+  framePanel: string; // art backdrop wash
+  frameGrad: string; // CTA button fill
+  baseId: string;
+  flip: boolean;
+  price: string;
+  last: string;
+  likes: string;
+  rank: string;
+}
+
+/** Deterministically derive a full horse (identity + palette + base) from a seed. */
+export function deriveHorse(seed: number): DerivedHorse {
+  const rng = mulberry32(seed);
+  const rr = rng();
+  const ri = rr < 0.5 ? 0 : rr < 0.75 ? 1 : rr < 0.9 ? 2 : rr < 0.98 ? 3 : 4;
+  const rar = RAR[ri]!;
+  const prefix = PREFIX[Math.floor(rng() * PREFIX.length)]!;
+  const suffix = SUFFIX[Math.floor(rng() * SUFFIX.length)]!;
+  const [ph, ps, phiL] = PREFIX_HUE[prefix] ?? [200, 0.82];
+  const visual = deriveVisual(rng, ph, ps, phiL, ri);
+  const type = HORSE_TYPES[Math.floor(rng() * HORSE_TYPES.length)]!;
   const flip = false; // all horses face right for a consistent, curated grid
 
   const priceBase = [110, 150, 190, 300, 500][ri]!;
@@ -275,10 +326,7 @@ export function deriveHorse(seed: number): DerivedHorse {
     prefix, suffix, name: `${prefix} ${suffix}`.toUpperCase(),
     type, rarity: rar.name,
     rarityLine: rar.line, rarityGlow: rar.glow, rarityPanel: rar.panel, rarityInk: rar.ink, rarityRibbon: rar.ribbon,
-    coat, coatB, pattern, mane, hue,
-    accentHue: (((pattern.kind === 'solid' ? maneHue : bHue) % 360) + 360) % 360,
-    tone,
-    frameLine, frameGlow, framePanel, frameGrad, baseId, flip,
+    ...visual, flip,
     price, last, likes, rank,
   };
 }

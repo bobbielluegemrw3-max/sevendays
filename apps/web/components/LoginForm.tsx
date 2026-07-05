@@ -38,7 +38,7 @@ export function LoginForm() {
       setError(web3Error.message);
       return;
     }
-    router.push('/');
+    router.push('/dashboard');
     router.refresh();
   }
 
@@ -70,7 +70,7 @@ export function LoginForm() {
       setError(result.error.message);
       return;
     }
-    router.push('/');
+    router.push('/dashboard');
     router.refresh();
   }
 

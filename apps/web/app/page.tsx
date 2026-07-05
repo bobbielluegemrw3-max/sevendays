@@ -1,14 +1,14 @@
+import { redirect } from 'next/navigation';
 import { getAccessToken } from '@/lib/server-api';
 import { Landing } from '@/components/Landing';
-import Dashboard from '@/components/Dashboard';
 
 /**
- * Root: anonymous visitors get the public landing page; signed-in players
- * get the game dashboard (which re-validates the session and bounces to
- * /login if the token is stale).
+ * Root is always the public landing page. Signed-in players are redirected to
+ * /dashboard so the URL reflects the auth state (bookmarkable, analysable,
+ * and the landing stays an anonymous-only page).
  */
 export default async function Home() {
   const token = await getAccessToken();
-  if (!token) return <Landing />;
-  return <Dashboard />;
+  if (token) redirect('/dashboard');
+  return <Landing />;
 }

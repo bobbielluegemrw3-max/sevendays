@@ -27,14 +27,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Anonymous pages (landing / login) carry their own header. */}
         {authed ? (
           <nav className="topnav">
-            <Link href="/" className="brand">
+            <Link href="/dashboard" className="brand">
               <span className="brand-bars" aria-hidden="true">
                 <span></span>
                 <span></span>
               </span>
               SEVEN&nbsp;DERBY
             </Link>
-            <Link href="/">HOME</Link>
+            <Link href="/dashboard">HOME</Link>
             <Link href="/horses">STABLE</Link>
             <Link href="/races">RACE</Link>
             <Link href="/wallet">WALLET</Link>

@@ -88,6 +88,7 @@ M5 リリース判定 ✅ **全システム本番稼働**(2026-07-04): Web=seven
 - **デプロイ済み**: **https://sevendaysderby.com**(www→ルートに301。Cloudflare DNS、CNAME 2本・DNS onlyモード)。Render Web Service `sevendays`(内部URL sevendays-l151.onrender.com)。手動作成のためビルド/起動コマンドは**ダッシュボード側が正**: `npm install -g pnpm@10.18.1 && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@sevendays/web` / `cd apps/web && pnpm exec next start`。Auto-Deploy=mainへのpush
 - **本番動作確認済み**(2026-07-03): サインアップ→ログイン→ダッシュボード表示まで実機確認。**トークンはES256署名(Supabase新JWT Signing Keys)**のためJWKS検証を実装済み(HS256レガシーもフォールバック対応。`6ebbab9`)。オーナーアカウント(bobbielluegemrw3@gmail.com / e54dd629-…)にFINANCE_ADMIN+SUPER_ADMIN付与済み
 - **残**: 2人目の管理者アカウント(二重承認は別人2名がDB強制のため1人では完結不可)/ブラウザE2E/Marketplaceリアルタイム反映
+- **ダッシュボード改修(2026-07-05)**: ログイン後URLを `/dashboard` に分離(`/`=常にランディング、ログイン済みは307)。Dashboardは取得層+`DashboardView`(表示層)に分離し、`/dev/dashboard-preview`(本番404)でフィクスチャ視覚検証可。昨夜の結果/調教済バッジ(`GET /horses` に `dna_hash`+`trained_for_next_race` 追加、07_API.md追記済)/現在価値(PRICE_TABLE_V1)/タスク帯/通知プレビュー/決定論馬アート(`deriveHorseArt`)。PC=2カラム化。**教訓: CSS Modulesは子孫セレクタ内のリテラルclassもハッシュ化する** — JSXのリテラルclassには `:global()` 必須(初版の多数のスタイル欠落の原因だった)。ヘッドレスChromeは最小幅500pxクランプあり=モバイル検証は必ずCDPエミュレーション
 
 ### Phase 14: 総仕上げ — 14a/b完了(`89dc025`)
 - **Decision 070(2026-07-04)**: ワーカーはGCPではなく**Render Private Service**に配備。`services/render-worker`=11ロール統合+**内蔵スケジューラー**(30秒tick・日次バッチは「20:00 MYT以降+当日行なし」で自己修復発火・FAILEDは自動再試行しない・チェーンループはCHAIN_RPC_URL設定時のみ)。`render.yaml`にpserv定義済み。GCP一式(infra/cloudrun等)はスケールアウト用に残置

@@ -133,11 +133,25 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     path: '/api/v1/horses',
     auth: 'user',
     handler: async (ctx) => {
+      // trained_for_next_race mirrors the POST /training target: today's race
+      // unless today's batch already completed (then tonight's training was
+      // recorded against tomorrow's race).
+      const today = batchDateFor(new Date());
+      const completedToday = await ctx.client.query(
+        `select 1 from batch_runs where batch_date = $1 and status = 'COMPLETED'`,
+        [today],
+      );
+      const effectiveRaceDate = completedToday.rows[0] ? addDays(today, 1) : today;
       const rows = await ctx.client.query(
-        `select id, name, status::text as status, current_day, horse_type::text as horse_type,
-                rarity::text as rarity, condition::text as condition, fatigue::text as fatigue
-         from horses where owner_user_id = $1 order by created_at desc limit 100`,
-        [ctx.userId],
+        `select h.id, h.name, h.status::text as status, h.current_day, h.horse_type::text as horse_type,
+                h.rarity::text as rarity, h.condition::text as condition, h.fatigue::text as fatigue,
+                h.dna_hash,
+                exists(
+                  select 1 from training_sessions t
+                  where t.horse_id = h.id and t.effective_race_date = $2
+                ) as trained_for_next_race
+         from horses h where h.owner_user_id = $1 order by h.created_at desc limit 100`,
+        [ctx.userId, effectiveRaceDate],
       );
       return { horses: rows.rows };
     },
