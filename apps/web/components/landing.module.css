@@ -5,12 +5,9 @@
    ============================================================ */
 
 .page {
-  /* full-bleed out of the centered <main> (max-width 1040) */
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
-  margin-top: -1.5rem;
-  margin-bottom: -5rem;
+  /* full-bleed: <main> drops its own box for this page (globals.css
+     `main:has(> .landing-bleed)`) — the old 100vw/negative-margin hack
+     overflowed by the scrollbar width and caused an 8px horizontal wiggle */
   position: relative;
   color: #eae7ff;
   overflow: hidden;

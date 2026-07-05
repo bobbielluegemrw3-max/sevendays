@@ -1,0 +1,79 @@
+/* ============================================================================
+   Seven Days Derby — /wallet(ウォレット)再設計。
+   ダッシュボード(Option 1c)と同じ部品言語。Next.js App Router · CSS Modules。
+   モバイルファースト、900px、横スクロール禁止。色/フォントは globals.css トークン。
+   注意: リテラル子孫 class は :global() で受ける / display 切替は親付き詳細度。
+   ========================================================================== */
+
+.wrap { display: flex; flex-direction: column; gap: 16px; }
+.h1 { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: 0.02em; color: var(--text); }
+
+/* ---- 残高 ----------------------------------------------------------------- */
+.balances { display: flex; flex-direction: column; gap: 14px; }
+@media (min-width: 700px) { .balances { flex-direction: row; } }
+.balAvail { flex: 1.4; border: 1px solid rgba(201, 168, 106, 0.34); border-radius: 16px; padding: 18px 20px;
+  background: linear-gradient(150deg, rgba(201, 168, 106, 0.12), transparent 70%); }
+.balLocked { flex: 1; border: 1px solid rgba(0, 234, 255, 0.28); border-radius: 16px; padding: 18px 20px;
+  background: linear-gradient(150deg, rgba(0, 234, 255, 0.08), transparent 70%); }
+.balK { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.12em; }
+.balAvail .balK { color: var(--gold); } .balLocked .balK { color: var(--cyan); }
+.balV { font-family: var(--font-display); font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.balAvail .balV { font-size: 38px; color: var(--gold-bright); } .balLocked .balV { font-size: 30px; color: #a9f6ff; }
+.balV small { color: var(--muted); margin-left: 6px; }
+.balAvail .balV small { font-size: 14px; } .balLocked .balV small { font-size: 13px; color: var(--faint); }
+.balNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 4px; }
+
+/* ---- カード共通 ----------------------------------------------------------- */
+.card { border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; background: linear-gradient(180deg, rgba(20, 18, 34, 0), var(--panel)); }
+.cardHead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.cardLabel { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.18em; color: var(--muted); }
+.chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 9px;
+  color: #a9f6ff; border: 1px solid rgba(0, 234, 255, 0.28); background: rgba(0, 234, 255, 0.06); }
+
+/* ---- 入金 ----------------------------------------------------------------- */
+.depLead { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+.addrBox { display: flex; align-items: center; gap: 10px; background: var(--bg); border: 1px solid rgba(0, 234, 255, 0.24); border-radius: 11px; padding: 11px 14px; }
+.addr { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 12.5px; color: var(--text); word-break: break-all; }
+.copy { flex: none; font-family: var(--font-display); font-size: 10px; font-weight: 700; color: #04141a;
+  background: linear-gradient(100deg, var(--cyan), #5ff5ff); padding: 7px 12px; border-radius: 8px; }
+.warn { display: flex; gap: 9px; align-items: flex-start; margin-top: 11px; border: 1px solid rgba(230, 178, 74, 0.3);
+  border-radius: 10px; padding: 10px 12px; background: rgba(230, 178, 74, 0.06); }
+.warnIcon { color: var(--warn); font-size: 13px; flex: none; }
+.warnText { font-family: var(--font-mono); font-size: 9.5px; color: #c9b98a; line-height: 1.6; }
+.warnText b { color: var(--warn); } .warnText .bad { color: var(--magenta-soft); }
+
+/* ---- 出金 ----------------------------------------------------------------- */
+.withdraw { border: 1px solid rgba(255, 45, 196, 0.28); border-radius: 16px; padding: 16px 18px;
+  background: linear-gradient(120deg, rgba(255, 45, 196, 0.06), transparent 72%); }
+.withdrawLabel { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.18em; color: var(--magenta-soft); margin-bottom: 12px; }
+.withdrawForm { max-width: 420px; }
+
+/* ---- 履歴 ----------------------------------------------------------------- */
+.histHead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.histCount { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+.search { flex: 1; min-width: 150px; background: var(--bg); color: var(--text); border: 1px solid var(--border-strong);
+  border-radius: 10px; padding: 9px 12px; font-size: 12px; font-family: inherit; outline: none; }
+.search:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0, 234, 255, 0.15); }
+.select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 12px; font-family: inherit; cursor: pointer; outline: none; }
+.count { font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+
+.histList { display: flex; flex-direction: column; gap: 6px; }
+.hRow { display: flex; align-items: center; gap: 14px; border: 1px solid var(--border); border-radius: 11px; padding: 10px 14px; background: linear-gradient(120deg, rgba(0, 234, 255, 0.03), transparent 65%); }
+.hDot { flex: none; width: 8px; height: 8px; border-radius: 2px; }
+.hDotCredit { background: var(--good); box-shadow: 0 0 7px rgba(53, 208, 127, 0.5); }
+.hDotDebit { background: var(--magenta); box-shadow: 0 0 7px rgba(255, 45, 196, 0.5); }
+.hDotNeutral { background: #3a3658; }
+.hBody { flex: 1; min-width: 0; }
+.hLabel { font-size: 12.5px; color: var(--text); font-weight: 600; }
+.hSub { font-family: var(--font-mono); font-size: 9px; color: var(--faint); }
+.hAmt { font-family: var(--font-display); font-weight: 700; font-size: 14px; white-space: nowrap; }
+.hAmtCredit { color: #9dffc4; } .hAmtDebit { color: var(--magenta-soft); } .hAmtNeutral { color: var(--muted); }
+
+.pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+.pagerBtn { font-family: var(--font-display); font-size: 11px; font-weight: 700; border: 1px solid rgba(0, 234, 255, 0.4); border-radius: 9px; padding: 8px 14px; cursor: pointer; color: var(--cyan); background: rgba(0, 234, 255, 0.08); }
+.pagerBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pageLabel { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.empty { border: 1px dashed var(--border); border-radius: 13px; padding: 24px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.7; }
+
+@media (max-width: 560px) { .search { flex-basis: 100%; } .select { flex: 1; } }

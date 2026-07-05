@@ -1,0 +1,130 @@
+/* ============================================================================
+   Seven Days Derby — /horses/[id](馬詳細・調教)再設計。
+   ダッシュボード/厩舎(Option 1c)と同じ部品言語。Next.js App Router · CSS Modules。
+
+   構成: パンくず + タイトル(名前/レアリティ/タイプ/状態)
+        → ヒーロー(HorseArt 大)+ サイド(COND/FATIGUE/現在価値)
+        → 能力 ABILITY → 今日の調教(ACTIVE のみ)→ 検証情報 PROVENANCE
+   PC(≥900px)は 2カラム(ヒーロー+サイド)、モバイルは1カラム・横スクロール禁止。
+
+   注意: リテラル子孫 class は :global() で受ける。表示切替は詳細度を1段上げる
+   (本ページは切替が少ないが方針は踏襲)。色/フォントは globals.css の :root トークン。
+   ========================================================================== */
+
+.wrap { display: flex; flex-direction: column; gap: 16px; }
+
+/* ---- パンくず + タイトル --------------------------------------------------- */
+.crumb { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.14em; color: var(--muted); text-decoration: none; }
+.crumb:hover { color: var(--cyan); }
+.titleRow { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; margin-top: 8px; }
+.title { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: 0.01em; color: var(--text); }
+
+/* ---- 上段: ヒーロー + サイド ---------------------------------------------- */
+.top { display: flex; flex-direction: column; gap: 14px; }
+@media (min-width: 900px) { .top { flex-direction: row; align-items: stretch; } }
+
+.hero { border-radius: 18px; padding: 1px; box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.7);
+  background: conic-gradient(from 140deg, #3a2f18, var(--gold), #f2e4bf, var(--cyan), var(--magenta), var(--gold), #3a2f18); }
+.heroBurned { background: linear-gradient(180deg, #2a2740, #1a1830); }
+@media (min-width: 900px) { .hero { flex: 1.3; min-width: 0; } }
+.heroInner { border-radius: 17px; background: linear-gradient(180deg, #12101d, #0a0813); overflow: hidden; height: 100%; }
+.heroArtBox { position: relative; background: radial-gradient(90% 80% at 50% 42%, rgba(0, 234, 255, 0.07), transparent 70%); }
+.heroCanvas { display: block; width: 100%; height: 240px; object-fit: contain; padding: 12px 8px 26px; box-sizing: border-box; }
+@media (min-width: 900px) { .heroCanvas { height: 300px; } }
+.heroBurned .heroCanvas { filter: grayscale(1) brightness(0.6); opacity: 0.6; }
+.scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 8, 19, 0) 48%, rgba(10, 8, 19, 0.9) 96%); pointer-events: none; }
+.heroCaption { position: absolute; bottom: 14px; left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+.heroValLabel { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.heroVal { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: var(--gold-bright); }
+.heroValMuted { color: var(--muted); }
+.heroVal small { font-family: var(--font-mono); font-weight: 400; font-size: 11px; color: var(--muted); margin-left: 5px; }
+.heroDay { text-align: right; }
+.heroDay :global(.l) { font-family: var(--font-display); font-size: 9px; color: var(--faint); letter-spacing: 0.14em; }
+.heroDay :global(.v) { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: var(--cyan); }
+.heroDay :global(.v) small { font-size: 13px; color: var(--faint); }
+.heroFoot { padding: 14px 16px 16px; }
+.dayNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 9px; line-height: 1.5; }
+
+.side { display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 900px) { .side { width: 230px; flex: none; } }
+.mini { border-radius: 14px; padding: 13px 15px; }
+.miniCond { border: 1px solid rgba(0, 234, 255, 0.24); background: linear-gradient(180deg, rgba(0, 234, 255, 0.06), transparent); }
+.miniFtg { border: 1px solid rgba(255, 45, 196, 0.28); background: linear-gradient(180deg, rgba(255, 45, 196, 0.07), transparent); }
+.miniVal { border: 1px solid rgba(201, 168, 106, 0.3); background: linear-gradient(180deg, rgba(201, 168, 106, 0.09), transparent); flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.miniK { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; }
+.miniCond .miniK { color: var(--cyan); } .miniFtg .miniK { color: var(--magenta-soft); } .miniVal .miniK { color: var(--gold); }
+.miniRow { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.miniNum { font-family: var(--font-display); font-weight: 700; font-size: 20px; }
+.miniCond .miniNum { color: #a9f6ff; } .miniFtg .miniNum { color: var(--magenta-soft); }
+.miniValNum { font-family: var(--font-display); font-weight: 700; font-size: 22px; color: var(--gold-bright); margin-top: 4px; }
+.miniValNum small { font-size: 11px; color: var(--faint); margin-left: 4px; }
+.miniNote { font-family: var(--font-mono); font-size: 9px; color: var(--faint); margin-top: 4px; line-height: 1.5; }
+
+/* 帯 */
+.track { flex: 1; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.track > span { display: block; height: 100%; }
+.fillCyan { background: linear-gradient(90deg, var(--cyan-deep), var(--cyan)); }
+.fillMag { background: linear-gradient(90deg, #7a1660, var(--magenta)); }
+
+/* 7日レール */
+.rail { display: flex; gap: 4px; }
+.pip { flex: 1; height: 6px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); }
+.pipDone { flex: 1; height: 6px; border-radius: 2px; background: var(--cyan); }
+.pipToday { flex: 1; height: 6px; border-radius: 2px; background: var(--magenta); box-shadow: 0 0 7px var(--magenta); }
+
+/* ---- 能力 ----------------------------------------------------------------- */
+.secLabel { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.2em; color: var(--muted); margin-bottom: 11px; }
+.secLabelDim { color: var(--faint); }
+.abilityBox {
+  display: grid; grid-template-columns: 1fr; gap: 9px 20px;
+  border: 1px solid var(--border); border-radius: 14px; padding: 15px 18px;
+  background: linear-gradient(180deg, rgba(20, 18, 34, 0), var(--panel));
+}
+@media (min-width: 700px) { .abilityBox { grid-template-columns: 1fr 1fr; } }
+.abRow { display: flex; align-items: center; gap: 10px; }
+.abLabel { width: 96px; font-size: 12px; color: #c3ccd8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.abVal { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--text); width: 40px; text-align: right; }
+
+/* ---- 今日の調教 ----------------------------------------------------------- */
+.train { border-radius: 16px; padding: 16px 18px; }
+.trainActive { border: 1px solid rgba(255, 45, 196, 0.4); background: linear-gradient(120deg, rgba(255, 45, 196, 0.09), transparent 72%); }
+.trainHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.trainTitle { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--magenta-soft); }
+.trainDesc { color: var(--muted); font-size: 12.5px; margin-top: 5px; line-height: 1.6; }
+.trainNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
+.trainForm { margin-top: 12px; }
+
+.retired { border-radius: 16px; padding: 15px 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.retiredBurned { border: 1px solid rgba(255, 45, 196, 0.3); background: linear-gradient(120deg, rgba(255, 45, 196, 0.06), transparent 72%); }
+.retiredGold { border: 1px solid rgba(201, 168, 106, 0.3); background: linear-gradient(120deg, rgba(201, 168, 106, 0.08), transparent 72%); }
+.retiredText { font-size: 12.5px; color: #c3ccd8; }
+
+/* ---- 検証情報 ------------------------------------------------------------- */
+.prov {
+  border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(20, 18, 34, 0), #0f0d1a);
+  display: flex; flex-direction: column; gap: 9px;
+}
+.provRow { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
+.provRow + .provRow { border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 9px; }
+.provK { font-family: var(--font-mono); font-size: 10px; color: var(--faint); flex: none; }
+.provV { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); word-break: break-all; text-align: right; }
+.provNote { font-family: var(--font-mono); font-size: 9px; color: #4a4668; margin-top: 2px; line-height: 1.5; }
+
+/* ---- バッジ --------------------------------------------------------------- */
+.badge {
+  display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 6px;
+  font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+  white-space: nowrap; text-transform: uppercase; border: 1px solid transparent;
+}
+.rarCOMMON    { color: #c3ccd8; border-color: #8a92a0; background: rgba(130, 140, 160, 0.14); }
+.rarUNCOMMON  { color: #9dffc4; border-color: var(--good); background: rgba(53, 208, 127, 0.15); }
+.rarRARE      { color: #a9f6ff; border-color: var(--cyan); background: rgba(0, 234, 255, 0.16); }
+.rarEPIC      { color: var(--magenta-soft); border-color: var(--magenta); background: rgba(255, 45, 196, 0.16); }
+.rarLEGENDARY { color: #0a0813; border-color: transparent; background: linear-gradient(92deg, var(--gold), #f7eccb); }
+.typeBadge { color: var(--muted); border-color: rgba(0, 234, 255, 0.28); background: rgba(0, 234, 255, 0.06); }
+
+.stActive   { color: var(--cyan); border-color: rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.08); letter-spacing: 0.06em; }
+.stBurned   { color: var(--magenta-soft); border-color: var(--magenta); background: rgba(255, 45, 196, 0.14); letter-spacing: 0.06em; }
+.stCleared  { color: var(--gold-bright); border-color: var(--gold); background: rgba(201, 168, 106, 0.16); letter-spacing: 0.06em; }
+.stMemorial { color: #0a0813; border-color: transparent; background: linear-gradient(92deg, var(--gold), #f7eccb); letter-spacing: 0.06em; }

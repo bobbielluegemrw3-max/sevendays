@@ -1,0 +1,86 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import s from '../app/purchase.module.css';
+
+/* ============================================================================
+ * AssignmentList — 割当履歴を馬ID検索・種別(Day0/P2P)絞り込み・ページングで表示。
+ * 所有が増えると件数が伸びるためクライアントで完結。
+ * ========================================================================== */
+
+export interface Assignment {
+  id: string; horse_id: string; assigned_price: string; status: string;
+  was_day0_mint: boolean; created_at: string;
+}
+
+const PAGE_SIZE = 12;
+
+function money(v: string): string {
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v;
+}
+
+export function AssignmentList({ assignments }: { assignments: Assignment[] }) {
+  const [q, setQ] = useState('');
+  const [filt, setFilt] = useState('ALL'); // ALL | DAY0 | P2P
+  const [page, setPage] = useState(0);
+
+  const total = assignments.length;
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return assignments.filter((a) => {
+      if (needle && !a.horse_id.toLowerCase().includes(needle)) return false;
+      if (filt === 'DAY0') return a.was_day0_mint;
+      if (filt === 'P2P') return !a.was_day0_mint;
+      return true;
+    });
+  }, [assignments, q, filt]);
+
+  const shown = filtered.length;
+  const pageCount = Math.max(1, Math.ceil(shown / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const slice = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const reset = () => setPage(0);
+
+  if (total === 0) {
+    return <div className={s.empty}>割当はまだありません。今夜のバッチで馬が割り当てられるとここに表示されます。</div>;
+  }
+
+  return (
+    <div>
+      <div className={s.controls}>
+        <input className={s.search} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder="馬IDで検索…" aria-label="馬IDで検索" />
+        <select className={s.select} value={filt} onChange={(e) => { setFilt(e.target.value); reset(); }} aria-label="種別で絞り込み">
+          <option value="ALL">すべて</option>
+          <option value="DAY0">Day0 Mint</option>
+          <option value="P2P">P2P</option>
+        </select>
+        <span className={s.count}>{shown === total ? `全${total}件` : `${total}件中 ${shown}件`}</span>
+      </div>
+
+      {slice.length > 0 ? (
+        <div className={s.aList}>
+          {slice.map((a) => (
+            <Link key={a.id} href={`/horses/${a.horse_id}`} className={s.aRow}>
+              <span className={s.aId}>{a.horse_id}</span>
+              <span className={`${s.badge} ${a.was_day0_mint ? s.kDay0 : s.kP2P}`}>{a.was_day0_mint ? 'Day0 Mint' : 'P2P'}</span>
+              <span className={s.aPrice}>{money(a.assigned_price)}<small>USDT</small></span>
+              <span className={s.aDate}>{a.created_at.slice(0, 10)}</span>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className={s.empty}>条件に一致する割当がありません。</div>
+      )}
+
+      {pageCount > 1 ? (
+        <div className={s.pager}>
+          <button type="button" className={s.pagerBtn} disabled={safePage === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← 前へ</button>
+          <span className={s.pageLabel}>{safePage + 1} / {pageCount}</span>
+          <button type="button" className={s.pagerBtn} disabled={safePage >= pageCount - 1} onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}>次へ →</button>
+        </div>
+      ) : null}
+    </div>
+  );
+}

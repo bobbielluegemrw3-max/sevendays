@@ -58,6 +58,9 @@ a { color: var(--cyan); text-decoration: none; }
 a:hover { color: var(--gold-bright); }
 
 main { max-width: var(--maxw); margin: 0 auto; padding: 1.5rem 1.1rem 5rem; }
+/* the landing page is full-bleed: main drops its centering box for it
+   (replaces the old 100vw hack that overflowed by the scrollbar width) */
+main:has(> .landing-bleed) { max-width: none; padding: 0; }
 
 h1, h2, h3 {
   font-family: var(--font-display);

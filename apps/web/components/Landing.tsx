@@ -34,7 +34,7 @@ export function Landing() {
   // ordered so no two similar colours ever sit next to each other.
   const horses = pickShowcase(8, () => (Math.random() * 0xffffffff) >>> 0);
   return (
-    <div className={s.page}>
+    <div className={`landing-bleed ${s.page}`}>
       <span className={s.hairline} />
 
       {/* ===== NAV ===== */}

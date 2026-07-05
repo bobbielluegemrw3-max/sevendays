@@ -1,0 +1,27 @@
+/* ============================================================================
+   Seven Days Derby — /account(アカウント)再設計。
+   ダッシュボード(Option 1c)と同じ部品言語。Next.js App Router · CSS Modules。
+   色/フォントは globals.css トークン。横スクロール禁止。
+   ========================================================================== */
+
+.wrap { display: flex; flex-direction: column; gap: 16px; }
+.h1 { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--text); }
+
+/* プロフィール */
+.profile { border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px;
+  background: linear-gradient(180deg, rgba(20, 18, 34, 0), var(--panel)); display: flex; flex-direction: column; gap: 11px; }
+.row { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
+.row + .row { border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 11px; }
+.k { font-family: var(--font-mono); font-size: 10px; color: var(--faint); flex: none; }
+.v { font-family: var(--font-mono); font-size: 11px; color: var(--muted); word-break: break-all; text-align: right; }
+.vEmail { font-family: var(--font-sans); font-size: 12.5px; color: var(--text); text-align: right; word-break: break-all; }
+.vUnset { font-family: var(--font-mono); font-size: 11px; color: var(--faint); font-style: italic; text-align: right; }
+
+/* 連携 */
+.linking { border: 1px solid rgba(0, 234, 255, 0.24); border-radius: 16px; padding: 16px 18px;
+  background: linear-gradient(150deg, rgba(0, 234, 255, 0.05), transparent 70%); }
+.linkLabel { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.18em; color: var(--muted); margin-bottom: 8px; }
+.linkLead { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+.linkBody { margin-top: 14px; }
+
+@media (max-width: 560px) { .v, .vEmail, .vUnset { font-size: 10.5px; } }

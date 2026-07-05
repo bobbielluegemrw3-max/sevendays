@@ -1,0 +1,77 @@
+/* ============================================================================
+   Seven Days Derby — /buybacks(買い戻し一覧)と /buybacks/[id](7回スケジュール)。
+   ダッシュボード(Option 1c)と同じ部品言語。Next.js App Router · CSS Modules。
+   モバイルファースト、横スクロール禁止。色/フォントは globals.css トークン。
+   ========================================================================== */
+
+.wrap { display: flex; flex-direction: column; gap: 16px; }
+.h1 { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--text); }
+
+/* 説明 */
+.intro { border: 1px solid rgba(201, 168, 106, 0.28); border-radius: 14px; padding: 14px 16px;
+  background: linear-gradient(120deg, rgba(201, 168, 106, 0.08), transparent 72%); font-size: 12.5px; color: #c9b98a; line-height: 1.6; }
+.intro b { font-family: var(--font-display); color: var(--gold-bright); }
+
+/* ---- 一覧 ----------------------------------------------------------------- */
+.list { display: flex; flex-direction: column; gap: 10px; }
+.card { display: block; text-decoration: none; color: inherit; border: 1px solid rgba(201, 168, 106, 0.24);
+  border-radius: 14px; padding: 14px 16px; background: linear-gradient(120deg, rgba(201, 168, 106, 0.06), transparent 60%); transition: border-color 0.15s ease; }
+.card:hover { border-color: rgba(201, 168, 106, 0.5); }
+.cardTop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cardTitle { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--gold-bright); }
+.cardHid { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.cardProg { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.progLabel { font-family: var(--font-mono); font-size: 11px; color: var(--gold); min-width: 76px; }
+.cardTotal { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--gold-bright); }
+.cardTotal small { font-family: var(--font-mono); font-weight: 400; font-size: 8.5px; color: var(--faint); margin-left: 3px; }
+.cardGo { font-family: var(--font-display); font-size: 11px; color: var(--cyan); }
+
+/* バー */
+.bar { flex: 1; height: 8px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.barBig { height: 9px; }
+.bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); box-shadow: 0 0 10px rgba(242, 228, 191, 0.4); }
+
+.empty { border: 1px dashed var(--border); border-radius: 13px; padding: 30px 20px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.7; }
+
+/* ---- 詳細ヘッダ ------------------------------------------------------------ */
+.crumb { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.14em; color: var(--muted); text-decoration: none; }
+.crumb:hover { color: var(--cyan); }
+.titleRow { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; margin-top: 8px; }
+.title { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: var(--text); }
+.hidLink { font-family: var(--font-mono); font-size: 11px; color: var(--cyan); text-decoration: none; }
+
+/* 進捗ヒーロー */
+.hero { border: 1px solid rgba(201, 168, 106, 0.3); border-radius: 16px; padding: 18px 20px;
+  background: linear-gradient(150deg, rgba(201, 168, 106, 0.1), transparent 70%); }
+.heroTop { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.heroK { font-family: var(--font-mono); font-size: 9.5px; color: var(--gold); letter-spacing: 0.1em; }
+.heroNum { font-family: var(--font-display); font-weight: 800; font-size: 32px; color: var(--gold-bright); margin-top: 4px; }
+.heroNum small { font-size: 16px; color: var(--muted); }
+.heroRight { text-align: right; }
+.heroRightK { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); }
+.heroAmt { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--text); margin-top: 4px; }
+.heroAmt span { color: var(--faint); font-size: 13px; }
+
+/* ---- 支払いスケジュール --------------------------------------------------- */
+.secLabel { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.18em; color: var(--muted); margin-bottom: 12px; }
+.pays { display: flex; flex-direction: column; gap: 6px; }
+.pRow { display: flex; align-items: center; gap: 13px; border: 1px solid var(--border); border-radius: 12px; padding: 11px 14px; background: linear-gradient(120deg, rgba(201, 168, 106, 0.03), transparent 65%); }
+.pPaid { border-color: rgba(53, 208, 127, 0.24); background: linear-gradient(120deg, rgba(53, 208, 127, 0.05), transparent 65%); }
+.pNum { flex: none; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--muted); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+.pNumPaid { color: #0a0813; background: linear-gradient(92deg, var(--gold), #f2e4bf); border-color: transparent; }
+.pBody { flex: 1; min-width: 0; }
+.pAmt { font-size: 12.5px; color: var(--text); }
+.pAmt small { font-family: var(--font-mono); font-size: 9px; color: var(--faint); }
+.pDue { font-family: var(--font-mono); font-size: 9px; color: var(--faint); }
+.pStatus { font-family: var(--font-mono); font-size: 9px; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.pStatusPaid { color: var(--good); border: 1px solid rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.08); }
+.pStatusNext { color: var(--cyan); border: 1px solid rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.08); }
+.pStatusPending { color: var(--muted); border: 1px solid var(--border); background: rgba(255, 255, 255, 0.03); }
+.note { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 12px; line-height: 1.6; }
+
+/* バッジ */
+.badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 6px; font-family: var(--font-display);
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.06em; white-space: nowrap; border: 1px solid transparent; }
+.stProgress { color: var(--gold-bright); border-color: rgba(201, 168, 106, 0.4); background: rgba(201, 168, 106, 0.12); }
+.stDone { color: #9dffc4; border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.1); }

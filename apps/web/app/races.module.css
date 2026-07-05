@@ -1,0 +1,125 @@
+/* ============================================================================
+   Seven Days Derby — /races(レース一覧)と /races/[id](レース詳細・結果・検証)。
+   ダッシュボード(Option 1c)と同じ部品言語。Next.js App Router · CSS Modules。
+   モバイルファースト、ブレークポイント 900px、横スクロール禁止。
+   注意: リテラル子孫 class は :global() で受ける / 表示切替は詳細度を1段上げる。
+   ========================================================================== */
+
+.wrap { display: flex; flex-direction: column; gap: 16px; }
+.h1 { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: 0.02em; color: var(--text); }
+
+/* ---- 今夜のレース(upcoming) ---------------------------------------------- */
+.tonight {
+  border: 1px solid rgba(0, 234, 255, 0.34); border-radius: 16px; padding: 18px 20px;
+  background: linear-gradient(180deg, rgba(0, 234, 255, 0.1), rgba(255, 45, 196, 0.05));
+}
+.tonightTop { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.tonightLabel { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.22em; color: var(--cyan); }
+.tonightLive { font-family: var(--font-mono); font-size: 10.5px; color: var(--cyan); }
+.tonightLive .dot { animation: sdd-pulse 1.6s infinite; }
+@keyframes sdd-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.tonightBody { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+.timer {
+  font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 7vw, 40px); line-height: 1;
+  color: var(--cyan); font-variant-numeric: tabular-nums; text-shadow: 0 0 22px rgba(0, 234, 255, 0.5);
+}
+.tonightSub { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.tonightNote { text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--faint); line-height: 1.7; }
+.tonightNote b { color: var(--magenta-soft); }
+
+/* ---- レースリスト --------------------------------------------------------- */
+.secLabel { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.2em; color: var(--muted); margin-bottom: 11px; }
+.list { display: flex; flex-direction: column; gap: 9px; }
+.raceRow {
+  display: flex; align-items: center; gap: 16px; text-decoration: none; color: inherit;
+  border: 1px solid var(--border); border-radius: 13px; padding: 13px 16px;
+  background: linear-gradient(120deg, rgba(0, 234, 255, 0.045), transparent 60%); transition: border-color 0.15s ease;
+}
+.raceRow:hover { border-color: var(--border-strong); }
+.raceDate { min-width: 96px; }
+.raceMd { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--text); }
+.raceYear { font-family: var(--font-mono); font-size: 9px; color: var(--faint); }
+.raceParts { flex: 1; min-width: 0; text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.raceParts b { font-family: var(--font-display); color: var(--text); font-size: 14px; }
+.raceGo { font-family: var(--font-display); font-size: 11px; color: var(--cyan); white-space: nowrap; }
+.empty { border: 1px dashed var(--border); border-radius: 13px; padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* ---- レース詳細: ヘッダ --------------------------------------------------- */
+.crumb { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.14em; color: var(--muted); text-decoration: none; }
+.crumb:hover { color: var(--cyan); }
+.titleRow { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; margin-top: 8px; }
+.title { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: var(--text); }
+.titleMeta { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+
+/* ---- commit-reveal 検証 --------------------------------------------------- */
+.verify { border-radius: 16px; padding: 16px 18px; }
+.verifyOk { border: 1px solid rgba(53, 208, 127, 0.28); background: linear-gradient(150deg, rgba(53, 208, 127, 0.07), transparent 70%); }
+.verifyBad { border: 1px solid rgba(255, 92, 92, 0.3); background: linear-gradient(150deg, rgba(255, 92, 92, 0.07), transparent 70%); }
+.verifyPending { border: 1px solid var(--border); background: linear-gradient(150deg, rgba(255, 255, 255, 0.03), transparent 70%); }
+.verifyHead { display: flex; align-items: center; gap: 10px; }
+.verifyLabel { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.18em; color: #9dffc4; }
+.verifyBadge { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 11px; font-weight: 700; border-radius: 999px; padding: 4px 11px; }
+.vbOk { color: var(--good); border: 1px solid rgba(53, 208, 127, 0.45); background: rgba(53, 208, 127, 0.1); }
+.vbBad { color: var(--bad); border: 1px solid rgba(255, 92, 92, 0.45); background: rgba(255, 92, 92, 0.1); }
+.vbPending { color: var(--muted); border: 1px solid var(--border); background: rgba(255, 255, 255, 0.03); }
+.verifyRows { display: flex; flex-direction: column; gap: 9px; margin-top: 13px; }
+.vRow { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
+.vRow + .vRow { border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 9px; }
+.vK { font-family: var(--font-mono); font-size: 10px; color: var(--faint); flex: none; }
+.vV { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); word-break: break-all; text-align: right; }
+.verifyNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 11px; line-height: 1.6; }
+
+/* ---- 結果 + コントロール -------------------------------------------------- */
+.resHead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.resCount { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.resTally { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+.search {
+  flex: 1; min-width: 150px; background: var(--bg); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 10px; padding: 9px 12px;
+  font-size: 12.5px; font-family: var(--font-mono); outline: none;
+}
+.search:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0, 234, 255, 0.15); }
+.select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 12px; font-family: inherit; cursor: pointer; outline: none; }
+.count { font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+
+.results { display: flex; flex-direction: column; gap: 6px; }
+.rRow { display: flex; align-items: center; gap: 14px; border: 1px solid var(--border); border-radius: 11px; padding: 9px 14px; background: linear-gradient(120deg, rgba(0, 234, 255, 0.04), transparent 65%); }
+.rBurned { border-color: rgba(255, 45, 196, 0.28); background: linear-gradient(120deg, rgba(255, 45, 196, 0.06), transparent 65%); }
+.rRank { font-family: var(--font-display); font-weight: 700; font-size: 15px; min-width: 58px; color: var(--cyan); }
+.rRankTop { color: var(--gold-bright); }
+.rBurned .rRank { color: var(--magenta-soft); }
+.rId { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 11.5px; color: #c3ccd8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rScore { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); }
+.rPill { font-family: var(--font-mono); font-size: 9px; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.rPillSurvived { color: var(--good); border: 1px solid rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.08); }
+.rPillBurned { color: var(--magenta-soft); border: 1px solid rgba(255, 45, 196, 0.45); background: rgba(255, 45, 196, 0.1); }
+
+.pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+.pagerBtn { font-family: var(--font-display); font-size: 11px; font-weight: 700; border: 1px solid rgba(0, 234, 255, 0.4); border-radius: 9px; padding: 8px 14px; cursor: pointer; color: var(--cyan); background: rgba(0, 234, 255, 0.08); }
+.pagerBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pageLabel { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.selectSm { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 9px; padding: 7px 10px; font-size: 11px; font-family: inherit; cursor: pointer; outline: none; }
+.noMatch { border: 1px dashed var(--border); border-radius: 13px; padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* ---- バッジ --------------------------------------------------------------- */
+.badge {
+  display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 6px;
+  font-family: var(--font-display); font-size: 8.5px; font-weight: 700; letter-spacing: 0.06em;
+  white-space: nowrap; border: 1px solid transparent;
+}
+.stCompleted { color: var(--good); border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.08); }
+.stOpen { color: var(--cyan); border-color: rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.08); }
+.stOther { color: var(--muted); border-color: var(--border); background: rgba(255, 255, 255, 0.04); }
+
+@media (max-width: 560px) {
+  .search { flex-basis: 100%; }
+  .select { flex: 1; }
+}
+
+/* very narrow phones: tighter race rows (no overflow at 320px) */
+@media (max-width: 360px) {
+  .raceRow { gap: 8px; padding: 12px 10px; }
+  .raceGo { font-size: 10px; }
+  .raceParts { font-size: 10px; }
+}
