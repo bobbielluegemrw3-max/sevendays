@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Countdown } from '@/components/Countdown';
 import { LocalPostTime, LocalRaceTime } from '@/components/LocalPostTime';
 import { HorseArt } from '@/components/HorseArt';
-import { deriveHorse, type Rgb } from '@/lib/horse-visual';
+import { pickShowcase, type CoatPattern, type Rgb } from '@/lib/horse-visual';
 import s from './landing.module.css';
 
 /**
@@ -22,12 +22,17 @@ const TYPE_COLOR: Record<string, string> = {
 };
 
 // Hero showcase (#0001) — a fixed premium gold-metallic gallop, engine-rendered.
+// A soft top→belly two-tone (deep amber back into bright gold) shows the coat
+// pattern system on the signature horse without looking busy.
 const HERO_COAT: [Rgb, Rgb] = [[58, 40, 10], [255, 226, 150]];
+const HERO_COAT_B: [Rgb, Rgb] = [[42, 26, 6], [214, 158, 74]];
+const HERO_PATTERN: CoatPattern = { kind: 'upperLower', edge: 0.5, soft: 0.22 };
 const HERO_MANE: [Rgb, Rgb] = [[60, 50, 22], [255, 246, 214]];
 
 export function Landing() {
-  // Pre-launch showcase: a fresh set of deterministic horses on every request.
-  const horses = Array.from({ length: 8 }, () => deriveHorse((Math.random() * 0xffffffff) >>> 0));
+  // Pre-launch showcase: 8 fresh horses, each from a different colour family and
+  // ordered so no two similar colours ever sit next to each other.
+  const horses = pickShowcase(8, () => (Math.random() * 0xffffffff) >>> 0);
   return (
     <div className={s.page}>
       <span className={s.hairline} />
@@ -102,7 +107,7 @@ export function Landing() {
               <span className={s.idl}>#0001</span>
               <span className={s.idr}>♡ 2.1k</span>
               <span className={s.aura} />
-              <HorseArt baseId="base_01" coat={HERO_COAT} mane={HERO_MANE} flip={false} seed={1001} />
+              <HorseArt baseId="base_01" coat={HERO_COAT} coatB={HERO_COAT_B} pattern={HERO_PATTERN} mane={HERO_MANE} flip={false} />
             </div>
             <div className={s.cap}>
               <div>
@@ -252,18 +257,18 @@ export function Landing() {
 
         <div className={s.galGrid}>
           {horses.map((h, i) => (
-            <div key={i} className={s.galWrap} style={{ ['--rar-glow']: h.rarityGlow, ['--rar-line']: h.rarityLine } as CSSProperties}>
+            <div key={i} className={s.galWrap} style={{ ['--rar-glow']: h.frameGlow, ['--rar-line']: h.frameLine } as CSSProperties}>
               <span className={s.galGlow} />
-              <div className={s.galCard} style={{ borderColor: h.rarityLine }}>
-                <div className={s.art} style={{ background: `radial-gradient(90% 80% at 50% 42%, ${h.rarityPanel}, transparent 70%)` }}>
-                  <span className={s.id} style={{ color: h.rarityLine }}>
+              <div className={s.galCard} style={{ borderColor: h.frameLine }}>
+                <div className={s.art} style={{ background: `radial-gradient(90% 80% at 50% 42%, ${h.framePanel}, transparent 70%)` }}>
+                  <span className={s.id} style={{ color: h.frameLine }}>
                     {h.id}
                   </span>
                   <span className={s.lk}>♡ {h.likes}</span>
                   <span className={s.rib} style={{ background: h.rarityRibbon, color: h.rarityInk }}>
                     {h.rarity}
                   </span>
-                  <HorseArt baseId={h.baseId} coat={h.coat} mane={h.mane} flip={h.flip} seed={h.seed} />
+                  <HorseArt baseId={h.baseId} coat={h.coat} coatB={h.coatB} pattern={h.pattern} mane={h.mane} flip={h.flip} />
                 </div>
                 <div className={s.body}>
                   <div className={s.gnm}>
@@ -286,7 +291,7 @@ export function Landing() {
                     <span className={s.last}>last {h.last}</span>
                   </div>
                   <Link href="/login">
-                    <button style={{ color: h.rarityInk, background: h.rarityRibbon, border: 'none' }}>購入 · BUY</button>
+                    <button style={{ color: '#0a0813', background: h.frameGrad, border: 'none' }}>購入 · BUY</button>
                   </Link>
                 </div>
               </div>

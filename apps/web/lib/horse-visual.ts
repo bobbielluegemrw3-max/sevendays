@@ -27,41 +27,45 @@ const SUFFIX = [
 ] as const;
 
 /** Coat palette families: [shadow, highlight] for the luminance ramp. */
-const FAM: Record<string, [Rgb, Rgb]> = {
-  gold: [[58, 40, 10], [255, 226, 150]],
-  cyan: [[4, 32, 44], [150, 246, 255]],
-  magenta: [[40, 6, 32], [255, 150, 232]],
-  crimson: [[42, 8, 8], [255, 150, 120]],
-  emerald: [[5, 40, 24], [140, 255, 196]],
-  silver: [[28, 32, 40], [240, 246, 255]],
-  onyx: [[12, 12, 22], [150, 180, 225]],
-  electric: [[30, 26, 4], [224, 255, 110]],
-};
-const PREFIX_FAM: Record<string, string> = {
-  Golden: 'gold', Solar: 'gold', Grand: 'gold', Noble: 'gold', Royal: 'gold', Sacred: 'gold', Bright: 'gold', Dawn: 'gold', Lucky: 'gold',
-  Azure: 'cyan', Blue: 'cyan', Sky: 'cyan', Ocean: 'cyan', Crystal: 'cyan', Frozen: 'cyan',
-  Cosmic: 'magenta', Lunar: 'magenta', Mystic: 'magenta', Phantom: 'magenta',
-  Crimson: 'crimson', Scarlet: 'crimson', Burning: 'crimson',
-  Emerald: 'emerald', Wild: 'emerald', Silver: 'silver', White: 'silver',
-  Black: 'onyx', Shadow: 'onyx', Dark: 'onyx', Night: 'onyx', Silent: 'onyx', Iron: 'onyx',
-  Storm: 'electric', Thunder: 'electric', Rapid: 'electric', Rising: 'electric', Wind: 'electric', Desert: 'electric', Falling: 'electric', Brave: 'electric',
-};
-/** Mane neon (from the name suffix motif): [shadow, highlight]. */
-const MANE: Record<string, [Rgb, Rgb]> = {
-  cyan: [[4, 32, 44], [150, 246, 255]],
-  magenta: [[40, 6, 32], [255, 150, 232]],
-  gold: [[46, 32, 6], [255, 224, 150]],
-  orange: [[44, 18, 4], [255, 180, 90]],
-  lime: [[26, 34, 4], [200, 255, 120]],
-  violet: [[24, 10, 44], [190, 150, 255]],
-};
-const SUFFIX_MANE: Record<string, string> = {
-  Frost: 'cyan', Wave: 'cyan', River: 'cyan', Ocean: 'cyan', Comet: 'cyan', Star: 'cyan', Meteor: 'cyan', Flash: 'cyan', Falcon: 'cyan', Eagle: 'cyan',
-  Flame: 'orange', Blade: 'orange', Strike: 'orange', Arrow: 'orange',
-  Thunder: 'lime', Storm: 'lime', Tempest: 'lime',
-  Dream: 'violet', Spirit: 'violet', Soul: 'violet', Mirage: 'violet', Heart: 'violet',
-  Crown: 'gold', King: 'gold', Queen: 'gold', Glory: 'gold', Legend: 'gold', Star_: 'gold',
-  Dragon: 'magenta', Wolf: 'magenta', Tiger: 'magenta', Lion: 'magenta',
+function hslToRgb(h: number, s: number, l: number): Rgb {
+  h = ((h % 360) + 360) % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (h < 60) [r, g, b] = [c, x, 0];
+  else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+}
+
+/**
+ * Metallic luminance ramp for any hue: dark saturated shadow -> bright, slightly
+ * desaturated highlight (the metal sheen). `hiL` lowers the top for dark/gunmetal
+ * coats. Full-spectrum + continuous dna jitter = effectively unlimited colours.
+ */
+function metallicRamp(h: number, s: number, hiL = 0.55): [Rgb, Rgb] {
+  return [hslToRgb(h, Math.min(1, s * 1.1), 0.16), hslToRgb(h, Math.min(1, s * 0.98), hiL)];
+}
+
+/** Name prefix -> [hue, saturation, highlightLightness]. Spread across the whole
+ *  wheel with vivid primaries; name still biases the colour (Crimson=red …). */
+const PREFIX_HUE: Record<string, [number, number, number?]> = {
+  Crimson: [352, 0.92], Scarlet: [6, 0.9], Burning: [18, 0.92], Brave: [2, 0.86],
+  Rising: [28, 0.9], Dawn: [40, 0.82], Desert: [34, 0.78],
+  Solar: [44, 0.96], Golden: [47, 0.96], Grand: [48, 0.86], Sacred: [50, 0.7], Bright: [54, 0.95], Lucky: [64, 0.9],
+  Wild: [96, 0.86], Emerald: [150, 0.88],
+  Wind: [168, 0.78], Rapid: [182, 0.86], Frozen: [188, 0.82], Crystal: [192, 0.8], Ocean: [198, 0.92], Sky: [206, 0.88],
+  Azure: [214, 0.96], Blue: [224, 0.96], Noble: [228, 0.82], Royal: [238, 0.86],
+  Lunar: [252, 0.78], Thunder: [260, 0.82], Cosmic: [280, 0.92], Phantom: [288, 0.74], Mystic: [300, 0.88],
+  Falling: [326, 0.86], Storm: [222, 0.5, 0.5],
+  Silver: [212, 0.1, 0.86], White: [210, 0.05, 0.9],
+  Black: [232, 0.28, 0.34], Shadow: [258, 0.3, 0.4], Dark: [222, 0.24, 0.38], Night: [242, 0.38, 0.42], Silent: [206, 0.34, 0.5], Iron: [210, 0.22, 0.52],
 };
 
 export type Rarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';
@@ -78,41 +82,60 @@ export const HORSE_TYPES = ['SPRINTER', 'POWER', 'BALANCED', 'ENDURANCE', 'LUCK'
 export type HorseType = (typeof HORSE_TYPES)[number];
 
 /**
+ * Spatial coat pattern — how the two coat colours (coat = primary, coatB =
+ * secondary) are distributed over the body. This is what makes each horse a
+ * distinct *marking* rather than a flat recolour. `regionT()` in HorseArt maps a
+ * body-normalised (nx: tail→head, ny: back→belly) position to 0 (coat) .. 1
+ * (coatB). All fields are derived deterministically from the seed.
+ */
+export type CoatPattern =
+  | { kind: 'solid' }
+  | { kind: 'upperLower'; edge: number; soft: number } // back vs belly
+  | { kind: 'frontRear'; edge: number; soft: number } // forehand vs hindquarters
+  | { kind: 'gradient'; angle: number } // smooth two-tone sweep
+  | { kind: 'socks'; edge: number } // lower legs a different colour
+  | { kind: 'points'; edge: number } // legs + muzzle (bay-style points)
+  | { kind: 'shoulder'; cx: number; cy: number; r: number } // a localised patch ("right shoulder")
+  | { kind: 'dapple'; scale: number; thresh: number }; // metallic dappling / blotches
+
+/** Pick a spatial coat pattern from the seed. Solid is deliberately a minority
+ *  so most horses carry a real marking; each branch consumes its own rng draws. */
+function pickPattern(rng: () => number): CoatPattern {
+  const r = rng();
+  if (r < 0.12) return { kind: 'solid' };
+  if (r < 0.28) return { kind: 'upperLower', edge: 0.44 + rng() * 0.12, soft: 0.1 + rng() * 0.12 };
+  if (r < 0.42) return { kind: 'frontRear', edge: 0.42 + rng() * 0.16, soft: 0.1 + rng() * 0.14 };
+  if (r < 0.58) return { kind: 'gradient', angle: rng() * Math.PI };
+  if (r < 0.7) return { kind: 'socks', edge: 0.62 + rng() * 0.12 };
+  if (r < 0.82) return { kind: 'points', edge: 0.6 + rng() * 0.12 };
+  if (r < 0.92) return { kind: 'shoulder', cx: 0.62 + rng() * 0.16, cy: 0.28 + rng() * 0.2, r: 0.22 + rng() * 0.14 };
+  return { kind: 'dapple', scale: 4 + Math.floor(rng() * 4), thresh: 0.46 + (rng() - 0.5) * 0.2 };
+}
+
+/**
  * Base manifest — mirrors public/horses/bases/bases.json. Update when new
  * batches land (rare poses gain a higher rarityMin so they stay exclusive).
  */
 export interface BaseDef { id: string; pose: string; gender: string; rarityMin: Rarity; }
+// Owner-approved pool only. Excluded as low-value: 05,09,11,12,13,14,18,23,24,25,26,31.
 export const BASES: BaseDef[] = [
   { id: 'base_01', pose: 'gallop', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_04', pose: 'gallop_extended', gender: 'male', rarityMin: 'COMMON' },
-  { id: 'base_05', pose: 'gallop_collected', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_06', pose: 'gallop_extended', gender: 'female', rarityMin: 'COMMON' },
   { id: 'base_07', pose: 'power_kickoff', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_08', pose: 'gallop_extended', gender: 'male', rarityMin: 'COMMON' },
-  { id: 'base_09', pose: 'gallop_3q_rear', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_10', pose: 'gallop_collected', gender: 'male', rarityMin: 'COMMON' },
-  { id: 'base_11', pose: 'high_trot', gender: 'male', rarityMin: 'COMMON' },
-  { id: 'base_12', pose: 'power_kickoff', gender: 'male', rarityMin: 'COMMON' },
-  { id: 'base_13', pose: 'gliding_gallop', gender: 'male', rarityMin: 'COMMON' },
-  // batch02 (standard, COMMON)
-  { id: 'base_14', pose: 'gallop_collected', gender: 'female', rarityMin: 'COMMON' },
   { id: 'base_15', pose: 'gallop_extended', gender: 'neutral', rarityMin: 'COMMON' },
   { id: 'base_16', pose: 'power_stride', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_17', pose: 'gallop_3q_front', gender: 'female', rarityMin: 'COMMON' },
-  { id: 'base_18', pose: 'gallop_3q_rear', gender: 'neutral', rarityMin: 'COMMON' },
   { id: 'base_19', pose: 'high_trot', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_20', pose: 'leap_stride', gender: 'female', rarityMin: 'COMMON' },
   { id: 'base_21', pose: 'gliding_gallop', gender: 'neutral', rarityMin: 'COMMON' },
   { id: 'base_22', pose: 'gallop_extended', gender: 'male', rarityMin: 'COMMON' },
-  { id: 'base_23', pose: 'gallop_collected', gender: 'female', rarityMin: 'COMMON' },
-  { id: 'base_24', pose: 'power_stride', gender: 'neutral', rarityMin: 'COMMON' },
-  { id: 'base_25', pose: 'gallop_3q_front', gender: 'male', rarityMin: 'COMMON' },
-  { id: 'base_26', pose: 'gallop_3q_rear', gender: 'female', rarityMin: 'COMMON' },
   { id: 'base_27', pose: 'high_trot', gender: 'neutral', rarityMin: 'COMMON' },
   { id: 'base_28', pose: 'leap_stride', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_29', pose: 'gliding_gallop', gender: 'female', rarityMin: 'COMMON' },
   { id: 'base_30', pose: 'gallop_extended', gender: 'neutral', rarityMin: 'COMMON' },
-  { id: 'base_31', pose: 'gallop_collected', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_32', pose: 'power_stride', gender: 'female', rarityMin: 'COMMON' },
   { id: 'base_33', pose: 'gallop_3q_front', gender: 'neutral', rarityMin: 'COMMON' },
 ];
@@ -126,10 +149,6 @@ function mulberry32(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-const clamp255 = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
-function jitter(c: Rgb, rng: () => number, amt = 26): Rgb {
-  return [clamp255(c[0] + (rng() * 2 - 1) * amt), clamp255(c[1] + (rng() * 2 - 1) * amt), clamp255(c[2] + (rng() * 2 - 1) * amt)];
 }
 
 export interface DerivedHorse {
@@ -145,9 +164,15 @@ export interface DerivedHorse {
   rarityPanel: string;
   rarityInk: string;
   rarityRibbon: string;
-  family: string;
   coat: [Rgb, Rgb];
+  coatB: [Rgb, Rgb];
+  pattern: CoatPattern;
   mane: [Rgb, Rgb];
+  hue: number; // normalised coat hue 0..360 — used to spread the showcase & colour the frame
+  frameLine: string; // card border/id — a vivid tint of the horse's own colour
+  frameGlow: string; // outer glow
+  framePanel: string; // art backdrop wash
+  frameGrad: string; // CTA button fill
   baseId: string;
   flip: boolean;
   price: string;
@@ -164,17 +189,54 @@ export function deriveHorse(seed: number): DerivedHorse {
   const rar = RAR[ri]!;
   const prefix = PREFIX[Math.floor(rng() * PREFIX.length)]!;
   const suffix = SUFFIX[Math.floor(rng() * SUFFIX.length)]!;
-  const family = PREFIX_FAM[prefix] ?? 'cyan';
-  const famPair = FAM[family]!;
-  const coat: [Rgb, Rgb] = [famPair[0], jitter(famPair[1], rng)];
-  const maneKey = SUFFIX_MANE[suffix] ?? (rng() < 0.5 ? 'cyan' : 'magenta');
-  const mane = MANE[maneKey]!;
+  const [ph, ps, phiL] = PREFIX_HUE[prefix] ?? [200, 0.82];
+  const coatHue = ph + (rng() * 2 - 1) * 22;
+  const coatSat = Math.max(0.05, Math.min(1, ps + (rng() * 2 - 1) * 0.1));
+  const coat = metallicRamp(coatHue, coatSat, phiL ?? 0.82);
+  // Secondary coat colour + spatial pattern — this is what turns a flat recolour
+  // into a real per-horse marking (two-tone body, points, shoulder patch, …).
+  const cb = rng();
+  let bHue = coatHue;
+  let bSat = coatSat;
+  let bHiL = phiL ?? 0.82;
+  if (cb < 0.16) {
+    bSat = coatSat * 0.45; // metallic shade of the same hue (subtle, premium — kept rare)
+    bHiL = Math.min(0.92, (phiL ?? 0.82) + 0.16);
+  } else if (cb < 0.46) {
+    bHue = coatHue + (46 + rng() * 44) * (rng() < 0.5 ? 1 : -1); // wide analogous — clearly different
+    bSat = Math.min(1, coatSat * 1.02);
+  } else if (cb < 0.76) {
+    bHue = coatHue + 180; // complementary pop (bold two-tone)
+    bSat = Math.min(1, Math.max(0.55, coatSat));
+  } else if (cb < 0.92) {
+    bHue = coatHue + (rng() < 0.5 ? 150 : 210); // split-complementary
+    bSat = Math.min(1, Math.max(0.5, coatSat * 0.95));
+  } else {
+    bHue = coatHue + 120 * (rng() < 0.5 ? 1 : -1); // triad
+    bSat = Math.min(1, Math.max(0.5, coatSat));
+  }
+  const coatB = metallicRamp(bHue, bSat, bHiL);
+  const pattern = pickPattern(rng);
+  // mane: harmonious accent — complementary neon / analogous / bright sheen
+  const mc = rng();
+  const maneHue = mc < 0.5 ? coatHue + 180 : mc < 0.8 ? coatHue + 42 : coatHue;
+  const maneSat = mc < 0.8 ? 0.9 : 0.16;
+  const mane = metallicRamp(maneHue, maneSat, 0.86);
+  // Frame colour matches the horse (full-spectrum), not the 5 rarity colours —
+  // rarity still reads from the badge. hue drives both the frame and the
+  // showcase colour-spread logic (see pickShowcase in Landing).
+  const hue = ((coatHue % 360) + 360) % 360;
+  const H = Math.round(hue);
+  const frameLine = `hsl(${H} 82% 62%)`;
+  const frameGlow = `hsl(${H} 88% 55% / 0.5)`;
+  const framePanel = `hsl(${H} 72% 50% / 0.14)`;
+  const frameGrad = `linear-gradient(92deg, hsl(${H} 80% 58%), hsl(${H} 85% 74%))`;
   const type = HORSE_TYPES[Math.floor(rng() * HORSE_TYPES.length)]!;
 
   const eligible = BASES.filter((b) => RARITY_RANK[b.rarityMin] <= ri);
   const pool = eligible.length ? eligible : BASES;
   const baseId = pool[Math.floor(rng() * pool.length)]!.id;
-  const flip = rng() < 0.45;
+  const flip = false; // all horses face right for a consistent, curated grid
 
   const priceBase = [110, 150, 190, 300, 500][ri]!;
   const price = String(priceBase + Math.floor(rng() * priceBase * 0.5));
@@ -188,7 +250,41 @@ export function deriveHorse(seed: number): DerivedHorse {
     prefix, suffix, name: `${prefix} ${suffix}`.toUpperCase(),
     type, rarity: rar.name,
     rarityLine: rar.line, rarityGlow: rar.glow, rarityPanel: rar.panel, rarityInk: rar.ink, rarityRibbon: rar.ribbon,
-    family, coat, mane, baseId, flip,
+    coat, coatB, pattern, mane, hue, frameLine, frameGlow, framePanel, frameGrad, baseId, flip,
     price, last, likes, rank,
   };
+}
+
+/**
+ * Pick `count` showcase horses whose coat colours are guaranteed to be from
+ * DIFFERENT hue families (one per 360/count° slice of the wheel), then order
+ * them so neighbouring cards sit far apart on the wheel — no two similar-colour
+ * horses ever line up. `nextSeed` supplies fresh seeds (Math.random pre-launch;
+ * real dnaHashes post-launch). Each horse is still fully derived from its own
+ * seed, so name↔colour coherence is preserved.
+ */
+export function pickShowcase(count: number, nextSeed: () => number): DerivedHorse[] {
+  const slice = 360 / count;
+  const chosen: DerivedHorse[] = [];
+  const usedBuckets = new Set<number>();
+  for (let guard = 0; guard < 4000 && chosen.length < count; guard++) {
+    const h = deriveHorse(nextSeed());
+    const bucket = Math.floor(h.hue / slice) % count;
+    if (usedBuckets.has(bucket)) continue;
+    usedBuckets.add(bucket);
+    chosen.push(h);
+  }
+  while (chosen.length < count) chosen.push(deriveHorse(nextSeed())); // safety fill
+  chosen.sort((a, b) => a.hue - b.hue);
+  // Walk the sorted ring in a stride coprime with count (~1/3 of the wheel) so
+  // adjacent output positions are maximally far apart and the walk hits each one.
+  const n = chosen.length;
+  const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+  let stride = Math.max(1, Math.round(n / 3));
+  while (n > 1 && gcd(stride, n) !== 1) stride = (stride % n) + 1;
+  const ordered: DerivedHorse[] = [];
+  for (let i = 0, k = 0; i < n; i++, k = (k + stride) % n) {
+    ordered.push(chosen[k]!);
+  }
+  return ordered;
 }
