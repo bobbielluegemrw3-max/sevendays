@@ -2,47 +2,17 @@ import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { Countdown } from '@/components/Countdown';
 import { LocalPostTime, LocalRaceTime } from '@/components/LocalPostTime';
+import { HorseArt } from '@/components/HorseArt';
+import { deriveHorse, type Rgb } from '@/lib/horse-visual';
 import s from './landing.module.css';
 
 /**
- * Public landing page — faithful conversion of the PC design handoff
- * (Seven Days Derby - LP (PC).dc.html), made responsive.
- *
- * Copy kept natural; numbers kept honest for a pre-launch platform:
- * - mint charge 102 (100 + 2 fee, Decision 069)
- * - the collection stats/cards use real facts and the real day price
- *   ladder — no fabricated floor / 24h volume / owner counts.
+ * Public landing page. The marketplace cards are drawn by the deterministic
+ * horse visual engine (lib/horse-visual + HorseArt): each card is a unique
+ * horse derived from a seed — a fresh set on every visit pre-launch, and wired
+ * to real minted horses post-launch (HORSE_VISUAL_SYSTEM.md).
  */
 
-const RARITY_STYLE: Record<
-  string,
-  { border: string; accent: string; ribbon: string; ink: string; panel: string; glow: string }
-> = {
-  LEGENDARY: {
-    border: '#d8b25a',
-    accent: 'linear-gradient(90deg,#c9a86a,#f7eccb,#c9a86a)',
-    ribbon: 'linear-gradient(92deg,#c9a86a,#f7eccb)',
-    ink: '#0a0813',
-    panel: 'radial-gradient(90% 80% at 50% 42%,rgba(201,168,106,.2),transparent 70%)',
-    glow: 'rgba(201,168,106,.72)',
-  },
-  EPIC: {
-    border: '#ff2dc4',
-    accent: 'linear-gradient(90deg,#ff2dc4,#ff8fe4)',
-    ribbon: 'linear-gradient(92deg,#ff2dc4,#ff8fe4)',
-    ink: '#150410',
-    panel: 'radial-gradient(90% 80% at 50% 42%,rgba(255,45,196,.18),transparent 70%)',
-    glow: 'rgba(255,45,196,.68)',
-  },
-  RARE: {
-    border: '#00eaff',
-    accent: 'linear-gradient(90deg,#00eaff,#a9f6ff)',
-    ribbon: 'linear-gradient(92deg,#00eaff,#a9f6ff)',
-    ink: '#04141a',
-    panel: 'radial-gradient(90% 80% at 50% 42%,rgba(0,234,255,.16),transparent 70%)',
-    glow: 'rgba(0,234,255,.68)',
-  },
-};
 const TYPE_COLOR: Record<string, string> = {
   ENDURANCE: '#c6ff3a',
   POWER: '#ff8fe4',
@@ -51,20 +21,13 @@ const TYPE_COLOR: Record<string, string> = {
   LUCK: '#c9a86a',
 };
 
-// Gallery data — faithful to the handoff (names, likes, rank, price, last).
-const GALLERY = [
-  { id: '#0001', name: 'AURELIAN MIST', img: '/horses/onyx.png', type: 'ENDURANCE', rarity: 'LEGENDARY', price: '520', last: '480', likes: '2.1k', rank: '#2' },
-  { id: '#0142', name: 'GLACIER RUSH', img: '/horses/gold.png', type: 'SPRINTER', rarity: 'RARE', price: '180', last: '165', likes: '612', rank: '#312' },
-  { id: '#0007', name: 'SOLARIS FLARE', img: '/horses/chrome.png', type: 'POWER', rarity: 'EPIC', price: '310', last: '288', likes: '940', rank: '#41' },
-  { id: '#1024', name: 'VOID COMET', img: '/horses/hero.png', type: 'ENDURANCE', rarity: 'LEGENDARY', price: '540', last: '510', likes: '1.7k', rank: '#4' },
-  { id: '#0311', name: 'NOCTURNE EX', img: '/horses/onyx.png', type: 'BALANCED', rarity: 'RARE', price: '145', last: '132', likes: '388', rank: '#488' },
-  { id: '#0781', name: 'AUREUS BOLT', img: '/horses/chrome.png', type: 'POWER', rarity: 'EPIC', price: '298', last: '275', likes: '810', rank: '#55' },
-  // Cards 7-8 show only on desktop (>=1040px) so mobile/tablet stay a clean 2x3.
-  { id: '#0605', name: 'PLASMA DASH', img: '/horses/hero.png', type: 'LUCK', rarity: 'RARE', price: '132', last: '120', likes: '274', rank: '#602' },
-  { id: '#1330', name: 'CRYO SURGE', img: '/horses/gold.png', type: 'SPRINTER', rarity: 'RARE', price: '128', last: '119', likes: '210', rank: '#720' },
-];
+// Hero showcase (#0001) — a fixed premium gold-metallic gallop, engine-rendered.
+const HERO_COAT: [Rgb, Rgb] = [[58, 40, 10], [255, 226, 150]];
+const HERO_MANE: [Rgb, Rgb] = [[60, 50, 22], [255, 246, 214]];
 
 export function Landing() {
+  // Pre-launch showcase: a fresh set of deterministic horses on every request.
+  const horses = Array.from({ length: 8 }, () => deriveHorse((Math.random() * 0xffffffff) >>> 0));
   return (
     <div className={s.page}>
       <span className={s.hairline} />
@@ -139,7 +102,7 @@ export function Landing() {
               <span className={s.idl}>#0001</span>
               <span className={s.idr}>♡ 2.1k</span>
               <span className={s.aura} />
-              <img src="/horses/hero.png" alt="Aurelian Mist — genesis cyber horse" />
+              <HorseArt baseId="base_04" coat={HERO_COAT} mane={HERO_MANE} flip={false} seed={1001} />
             </div>
             <div className={s.cap}>
               <div>
@@ -288,21 +251,19 @@ export function Landing() {
         </div>
 
         <div className={s.galGrid}>
-          {GALLERY.map((h) => {
-            const st = RARITY_STYLE[h.rarity]!;
-            return (
-              <div key={h.id} className={s.galWrap} style={{ ['--rar-glow']: st.glow, ['--rar-line']: st.border } as CSSProperties}>
-                <span className={s.galGlow} />
-                <div className={s.galCard} style={{ borderColor: st.border }}>
-                <div className={s.art} style={{ background: st.panel }}>
-                  <span className={s.id} style={{ color: st.border }}>
+          {horses.map((h, i) => (
+            <div key={i} className={s.galWrap} style={{ ['--rar-glow']: h.rarityGlow, ['--rar-line']: h.rarityLine } as CSSProperties}>
+              <span className={s.galGlow} />
+              <div className={s.galCard} style={{ borderColor: h.rarityLine }}>
+                <div className={s.art} style={{ background: `radial-gradient(90% 80% at 50% 42%, ${h.rarityPanel}, transparent 70%)` }}>
+                  <span className={s.id} style={{ color: h.rarityLine }}>
                     {h.id}
                   </span>
                   <span className={s.lk}>♡ {h.likes}</span>
-                  <span className={s.rib} style={{ background: st.ribbon, color: st.ink }}>
+                  <span className={s.rib} style={{ background: h.rarityRibbon, color: h.rarityInk }}>
                     {h.rarity}
                   </span>
-                  <img src={h.img} alt={h.name} />
+                  <HorseArt baseId={h.baseId} coat={h.coat} mane={h.mane} flip={h.flip} seed={h.seed} />
                 </div>
                 <div className={s.body}>
                   <div className={s.gnm}>
@@ -325,13 +286,12 @@ export function Landing() {
                     <span className={s.last}>last {h.last}</span>
                   </div>
                   <Link href="/login">
-                    <button style={{ color: st.ink, background: st.ribbon, border: 'none' }}>購入 · BUY</button>
+                    <button style={{ color: h.rarityInk, background: h.rarityRibbon, border: 'none' }}>購入 · BUY</button>
                   </Link>
                 </div>
-                </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
         <div className={s.colMore}>
           <Link href="/login">

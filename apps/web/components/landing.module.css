@@ -138,8 +138,9 @@
 .featCard .art .idr { position: absolute; top: 16px; right: 20px; font-family: var(--font-mono); font-size: 12px; color: #8f8ac2; z-index: 3; }
 .featCard .art .aura { position: absolute; left: 50%; top: 50%; width: min(440px, 82%); height: 280px; transform: translate(-50%, -50%);
   border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 234, 255, 0.3), rgba(255, 45, 196, 0.14) 55%, transparent 72%); filter: blur(8px); animation: lpAura 4s ease-in-out infinite; }
-.featCard .art img { position: relative; display: block; width: 100%; height: 100%; object-fit: contain;
-  filter: drop-shadow(0 26px 30px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 26px rgba(0, 234, 255, 0.28)); }
+.featCard .art img,
+.featCard .art canvas { position: relative; display: block; width: 100%; height: 100%; object-fit: contain;
+  filter: drop-shadow(0 26px 30px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 26px rgba(201, 168, 106, 0.3)); }
 .featCard .cap { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; padding: 6px 22px 22px; gap: 12px; }
 .featCard .cap .gtag { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.16em; color: #c9a86a; }
 .featCard .cap .nm { font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 3vw, 26px);
@@ -236,7 +237,8 @@
 .galCard .art .id { position: absolute; top: 10px; left: 12px; font-family: var(--font-mono); font-size: 11px; }
 .galCard .art .lk { position: absolute; top: 9px; right: 12px; font-family: var(--font-mono); font-size: 11px; color: #8f8ac2; }
 .galCard .art .rib { position: absolute; bottom: 10px; left: 12px; font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 4px; }
-.galCard .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5)); }
+.galCard .art img,
+.galCard .art canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5)); }
 .galCard .body { padding: 13px 14px 14px; }
 .galCard .gnm { display: flex; align-items: center; gap: 5px; font-family: var(--font-display); font-weight: 700; font-size: 15px; color: #f2ead6; }
 .galCard .meta { display: flex; gap: 6px; margin-top: 7px; align-items: center; }

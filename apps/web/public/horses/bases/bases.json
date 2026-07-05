@@ -1,0 +1,116 @@
+{
+ "count": 11,
+ "canvas": 512,
+ "bases": [
+  {
+   "id": "base_01",
+   "pose_type": "gallop",
+   "gender": "male",
+   "build": "standard",
+   "mane_style": "long_flow",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_04",
+   "pose_type": "gallop_extended",
+   "gender": "male",
+   "build": "muscular",
+   "mane_style": "long_flow",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_05",
+   "pose_type": "gallop_collected",
+   "gender": "male",
+   "build": "standard",
+   "mane_style": "medium",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_06",
+   "pose_type": "gallop_extended",
+   "gender": "female",
+   "build": "slender",
+   "mane_style": "extra_long",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_07",
+   "pose_type": "leap_stride",
+   "gender": "female",
+   "build": "light",
+   "mane_style": "short_sharp",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_08",
+   "pose_type": "gallop_standard",
+   "gender": "neutral",
+   "build": "slim",
+   "mane_style": "medium_straight",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_09",
+   "pose_type": "power_kickoff",
+   "gender": "male",
+   "build": "heavy",
+   "mane_style": "wild_upswept",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_10",
+   "pose_type": "gliding_gallop",
+   "gender": "female",
+   "build": "graceful",
+   "mane_style": "long_wavy",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_11",
+   "pose_type": "high_trot",
+   "gender": "male",
+   "build": "young_slim",
+   "mane_style": "short_neat",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_12",
+   "pose_type": "gallop_3q_front",
+   "gender": "neutral",
+   "build": "standard",
+   "mane_style": "medium",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_13",
+   "pose_type": "gallop_3q_rear",
+   "gender": "male",
+   "build": "standard",
+   "mane_style": "long_flow",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  }
+ ]
+}
