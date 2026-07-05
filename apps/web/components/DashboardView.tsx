@@ -5,6 +5,21 @@ import { HorseArt } from '@/components/HorseArt';
 import { deriveHorseArt } from '@/lib/horse-visual';
 import s from '../app/dashboard.module.css';
 
+/* ============================================================================
+ * /dashboard 再設計 — Option 1c「モジュラータイル / ギャラリー」
+ *
+ * 純粋な表示コンポーネント。props の DashboardData 型に含まれる値と、価格テーブル
+ * PRICE_TABLE_V1(Day0=100 → Day6=177.16, 10%日次複利)だけを表示する。架空の
+ * 統計は一切追加しない。馬の絵は既存 HorseArt(dna_hash からの決定論生成)を
+ * そのまま使用。データ取得層 Dashboard.tsx / API は変更不要。
+ *
+ * 情報設計(5つの問い):
+ *   ① 昨夜の結果   ② 今夜のレースまで  … 最上部で同格に横並び
+ *   ③ 今日やること → ④ 資産 → マイ厩舎 → Day7買い戻し / ⑤ 通知
+ * PC(≥900px)は grid-template-areas の bento、モバイルは1カラム優先度スタック。
+ * ========================================================================== */
+
+/* ---- props 型(Dashboard.tsx が import。名称・形は不変) -------------------- */
 export interface DashHorse {
   id: string; name: string; status: string; current_day: number;
   horse_type: string; rarity: string; condition: string; fatigue: string;
@@ -28,16 +43,20 @@ export interface DashboardData {
   notifications: DashNotification[];
 }
 
-const RARITY_ORDER = ['LEGENDARY', 'EPIC', 'RARE', 'UNCOMMON', 'COMMON'];
+/* ---- helpers -------------------------------------------------------------- */
+const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
 
 function money(v: string): string {
   return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function num(n: number): string {
+  return n.toLocaleString('en-US');
 }
 function pct(raw: string): number {
   const n = Number(raw);
   return Number.isFinite(n) ? Math.max(6, Math.min(100, n)) : 60;
 }
-/** P2P value of a horse today, straight from the immutable price table. */
+/** その馬の本日の P2P 価値 — 不変の価格テーブルから。 */
 function horseValue(currentDay: number): string {
   return PRICE_TABLE_V1[Math.max(0, Math.min(6, currentDay))] ?? PRICE_TABLE_V1[0]!;
 }
@@ -47,254 +66,233 @@ function timeAgo(iso: string): string {
   if (mins < 1440) return `${Math.floor(mins / 60)}時間前`;
   return `${Math.floor(mins / 1440)}日前`;
 }
-
-function StableArt({ horse, className }: { horse: DashHorse; className?: string | undefined }) {
-  const v = deriveHorseArt(horse.dna_hash, horse.name, horse.rarity);
-  return <HorseArt baseId={v.baseId} coat={v.coat} coatB={v.coatB} pattern={v.pattern} mane={v.mane} flip={false} className={className} />;
+function rarClass(rarity: string): string {
+  return s[`rar${RARITIES.includes(rarity) ? rarity : 'COMMON'}`]!;
 }
 
+/** dna_hash から決定論生成された HorseArt を厩舎用に描画。 */
+function StableArt({ horse }: { horse: DashHorse }) {
+  const v = deriveHorseArt(horse.dna_hash, horse.name, horse.rarity);
+  return <HorseArt baseId={v.baseId} coat={v.coat} coatB={v.coatB} pattern={v.pattern} mane={v.mane} flip={false} className={s.hartCanvas} />;
+}
+
+/** 7日レール(done=通過, today=今夜のDay)。 */
+function DayRail({ day }: { day: number }) {
+  return (
+    <div className={s.rail}>
+      {Array.from({ length: 7 }, (_, i) => {
+        const d = i + 1;
+        const cls = d < day + 1 ? s.pipDone : d === day + 1 ? s.pipToday : s.pip;
+        return <span key={d} className={cls} />;
+      })}
+    </div>
+  );
+}
+
+/** 厩舎ギャラリーの1頭。PCは縦カード、モバイルは横行にリフロー(CSS側)。 */
+function HorseCard({ h }: { h: DashHorse }) {
+  const trained = h.trained_for_next_race;
+  return (
+    <Link href={`/horses/${h.id}`} className={s.hcard}>
+      <div className={s.hart}>
+        <StableArt horse={h} />
+        {/* PC: アート上のオーバーレイ badge(モバイルでは非表示) */}
+        <span className={`${s.rar} ${rarClass(h.rarity)} ${s.artBadge} ${s.artRarity}`}>{h.rarity}</span>
+        <span className={`${s.trainBadge} ${trained ? s.trainYes : s.trainNo} ${s.artBadge} ${s.artTrain}`}>{trained ? '調教済' : '未調教'}</span>
+      </div>
+      <div className={s.hbody}>
+        <div className={s.hrow1}>
+          <span className={s.hname}>{h.name}</span>
+          {/* モバイル: 名前の隣にレアリティ(PCでは非表示) */}
+          <span className={`${s.rar} ${rarClass(h.rarity)} ${s.inlineRarity}`}>{h.rarity}</span>
+          <span className={s.hday}>Day {Math.min(7, h.current_day)}/7</span>
+        </div>
+        <DayRail day={h.current_day} />
+        <div className={s.hfoot}>
+          <span className={s.hmeter}><span className="k">C</span><span className={s.track}><span className={s.fillCyan} style={{ width: `${pct(h.condition)}%` }} /></span></span>
+          <span className={s.hmeter}><span className="k">F</span><span className={s.track}><span className={s.fillMag} style={{ width: `${pct(h.fatigue)}%` }} /></span></span>
+          <span className={s.hvalue}>{horseValue(h.current_day)}</span>
+          {/* モバイル: 右端に調教バッジ(PCでは非表示 = アート上に出る) */}
+          <span className={`${s.trainBadge} ${trained ? s.trainYes : s.trainNo} ${s.inlineTrain}`}>{trained ? '調教済' : '未調教'}</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/* ---- main ----------------------------------------------------------------- */
 export function DashboardView({ data }: { data: DashboardData }) {
   const { wallet, horses, buff, pendingCount, lastRace, myResults, buybacks, notifications } = data;
+
   const active = horses.filter((h) => h.status === 'ACTIVE');
   const untrained = active.filter((h) => !h.trained_for_next_race);
   const activeBuybacks = buybacks.filter((b) => b.status !== 'COMPLETED');
-  const featured = [...active].sort(
-    (a, b) => RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity) || b.current_day - a.current_day,
-  )[0];
   const stableValue = active.reduce((sum, h) => sum + Number(horseValue(h.current_day)), 0);
+
+  const survived = myResults.filter((r) => !r.is_burned);
+  const burned = myResults.filter((r) => r.is_burned);
+  const rankPool = survived.length ? survived : myResults;
+  const bestRank = rankPool.reduce((m, r) => Math.min(m, r.final_rank), Infinity);
+  const participants = lastRace?.participant_count ?? 0;
+
   const latestNotifs = notifications.slice(0, 4);
+  const unread = notifications.filter((n) => !n.read_at).length;
+  const hasTasks = untrained.length > 0 || pendingCount > 0;
 
   return (
     <div className={s.app}>
-      {/* ===== main column ===== */}
-      <div className={s.main}>
-        {/* HERO */}
-        <section className={s.hero}>
-          <span className={s.topline} />
-          <span className={s.tickTL} />
-          <span className={s.tickTR} />
-          <div className={s.hrow}>
-            <span className={s.eyebrow}>// TONIGHT&apos;S DERBY</span>
-            <span className={s.live}>● LIVE 20:00 MYT</span>
-          </div>
-          <div className={s.lead}>本日のレース確定まで</div>
-          <Countdown className={s.countdown} />
-          <div className={s.stats}>
-            <span>MY RUNNERS <b>{active.length}</b></span>
-            <span>BURN <b className="hot">10.7%</b></span>
-            <span>POST <b>20:00 MYT</b></span>
-          </div>
-          <div className={s.cta}>
-            <Link href="/purchase" className={s.primary}>
-              <button style={{ width: '100%' }}>馬を迎える ▶</button>
-            </Link>
-            {untrained.length > 0 ? (
-              <Link href="/horses"><button className="secondary">調教する ({untrained.length})</button></Link>
-            ) : active.length > 0 ? (
-              <Link href="/horses"><button className="secondary">厩舎へ</button></Link>
-            ) : null}
-          </div>
-        </section>
-
-        {/* TODAY'S TASKS */}
-        {(untrained.length > 0 || pendingCount > 0) && (
-          <section className={s.tasks}>
-            <span className={s.tasksLab}>TODAY</span>
-            {untrained.length > 0 ? (
-              <Link href="/horses" className={s.task}>
-                <b>{untrained.length}頭</b> が未調教(1日1回・スナップショット確定まで)
-              </Link>
-            ) : null}
-            {pendingCount > 0 ? (
-              <Link href="/purchase" className={s.task}>
-                <b>{pendingCount}件</b> の購入が割当待ち(今夜のレースで確定)
-              </Link>
-            ) : null}
-          </section>
-        )}
-
-        {/* LAST NIGHT'S RESULTS */}
-        {myResults.length > 0 && lastRace ? (
-          <section>
-            <div className={s.secHead}>
-              <span className="t">昨夜の結果<small>{lastRace.batch_date} · 全{(lastRace.participant_count ?? 0).toLocaleString('en-US')}頭</small></span>
-              <Link href={`/races/${lastRace.id}`}>レース詳細 →</Link>
+      {/* ===== ① 昨夜の結果 ===== */}
+      <section className={s.result}>
+        <div className={s.tileHead}>
+          <span className={s.tileLabel}>① 昨夜の結果</span>
+          {lastRace ? <Link href={`/races/${lastRace.id}`} className={s.tileLink}>レース詳細 →</Link> : null}
+        </div>
+        {myResults.length > 0 ? (
+          <>
+            <div className={s.resSummary}>
+              <div className={`${s.resStat} ${s.survived}`}><div className="n">{survived.length}</div><div className="k">生存</div></div>
+              <div className={`${s.resStat} ${s.burned}`}><div className="n">{burned.length}</div><div className="k">Burn(消滅)</div></div>
+              <div className={s.resBest}>
+                <div className="n">#{bestRank === Infinity ? '—' : num(bestRank)}</div>
+                <div className="k">最高順位 / 全{num(participants)}頭</div>
+              </div>
             </div>
             <div className={s.resList}>
               {myResults.map((r) => (
-                <Link key={r.horse_id} href={`/horses/${r.horse_id}`} className={`${s.resRow} ${r.is_burned ? s.resBurned : ''}`}>
-                  <span className={s.resRank}>
-                    <span className="l">RANK</span>
-                    <b>#{r.final_rank.toLocaleString('en-US')}</b>
-                  </span>
+                <Link key={r.horse_id} href={`/horses/${r.horse_id}`} className={s.resRow}>
+                  <span className={s.resRank}>#{num(r.final_rank)}</span>
                   <span className={s.resName}>{r.horse.name}</span>
-                  <span className={s.resScore}>SCORE {Number(r.final_score).toFixed(2)}</span>
                   {r.is_burned ? (
-                    <span className={`${s.resBadge} ${s.resBadgeBurn}`}>BURNED</span>
+                    <span className={`${s.pill} ${s.pillBurned}`}>Burn</span>
                   ) : (
-                    <span className={s.resBadge}>SURVIVED · Day {Math.min(7, r.horse.current_day)}</span>
+                    <span className={`${s.pill} ${s.pillSurvived}`}>生存 · Day {Math.min(7, r.horse.current_day)}</span>
                   )}
                 </Link>
               ))}
             </div>
-          </section>
-        ) : null}
-
-        {/* MY STABLE */}
-        <section>
-          <div className={s.secHead}>
-            <span className="t">マイ厩舎<small>STABLE {active.length} · 評価額 {stableValue.toFixed(2)} USDT</small></span>
-            <Link href="/horses">すべて →</Link>
+          </>
+        ) : (
+          <div className={s.empty}>
+            まだレース結果はありません。今夜20:00、最初のレースであなたの馬が誕生します。
           </div>
-          <div className={s.stableList} style={{ marginTop: 10 }}>
-            {active.length > 0 ? (
-              active.slice(0, 6).map((h) => (
-                <Link key={h.id} href={`/horses/${h.id}`} className={s.stableRow}>
-                  <span className="chip"><StableArt horse={h} className={s.chipArt} /></span>
-                  <div className="body">
-                    <div className="top">
-                      <span className="nm">{h.name}</span>
-                      <span className={`badge rarity-${h.rarity}`}>{h.rarity}</span>
-                    </div>
-                    <div className={s.meters}>
-                      <span className={s.meter}><span className="k">COND</span><span className="track"><span className="cyan" style={{ width: `${pct(h.condition)}%` }} /></span></span>
-                      <span className={s.meter}><span className="k">FTG</span><span className="track"><span className="mag" style={{ width: `${pct(h.fatigue)}%` }} /></span></span>
-                    </div>
-                    <div className="rail" style={{ marginTop: 7 }}>
-                      {Array.from({ length: 7 }, (_, i) => {
-                        const day = i + 1;
-                        const cls = day < h.current_day + 1 ? 'done' : day === h.current_day + 1 ? 'today' : '';
-                        return <span key={day} className={`pip ${cls}`} />;
-                      })}
-                    </div>
-                  </div>
-                  <span className={s.rowSide}>
-                    <span className={s.rowValue}><small>現在価値</small>{horseValue(h.current_day)}<small>USDT</small></span>
-                    {h.trained_for_next_race ? (
-                      <span className={`${s.train} ${s.trainDone}`}>調教済</span>
-                    ) : (
-                      <span className={s.train}>未調教</span>
-                    )}
-                  </span>
-                </Link>
-              ))
-            ) : (
-              <div className="panel empty" style={{ margin: 0 }}>
-                {pendingCount > 0 ? `割当待ち ${pendingCount} 件 — 今夜のレースで確定します。` : '出走中の馬はいません。「馬を迎える」から今夜のダービーに参加しましょう。'}
-              </div>
-            )}
+        )}
+      </section>
+
+      {/* ===== ② 今夜のレースまで ===== */}
+      <section className={s.count}>
+        <div className={s.tileHead}>
+          <span className={s.tileLabel}>② 今夜のレース</span>
+          <span className={s.live}><span className={s.dot}>●</span> LIVE 20:00 MYT</span>
+        </div>
+        <Countdown className={s.timer} />
+        <div className={s.countMeta}>
+          <span>発走まで</span>
+          <span>RUNNERS <b>{active.length}</b></span>
+          <span>BURN <b className="hot">10.7%</b></span>
+        </div>
+        <div className={s.countNote}>下位10.7%はBurn=消滅。生き残った馬は日ごとに価値が上がります。</div>
+      </section>
+
+      {/* ===== ③ 今日やること ===== */}
+      {hasTasks ? (
+        <section className={s.task}>
+          <div className={s.taskRow}>
+            <span className={s.taskLabel}>③ 今日やること</span>
+            {untrained.length > 0 ? (
+              <span className={s.taskItem}><b>{untrained.length}頭</b> が未調教</span>
+            ) : null}
+            {pendingCount > 0 ? (
+              <span className={s.taskItem}><b>{pendingCount}件</b> が割当待ち</span>
+            ) : null}
+            <Link href={untrained.length > 0 ? '/horses' : '/purchase'} className={s.taskCta}>
+              {untrained.length > 0 ? '調教する' : '馬を迎える'} →
+            </Link>
+          </div>
+          <div className={s.taskSub}>調教は1日1回・今夜のスナップショット確定まで。割当待ちは今夜のレースで馬が確定します。</div>
+        </section>
+      ) : (
+        <section className={`${s.task} ${s.taskDone}`}>
+          <div className={s.taskRow}>
+            <span className={s.taskLabel}>③ 今日やること</span>
+            <span className={s.taskDoneText}>本日のタスクは完了。あとは20:00の発走を待つだけ。</span>
           </div>
         </section>
-      </div>
+      )}
 
-      {/* ===== right rail ===== */}
-      <aside className={s.rail}>
-        {/* FEATURED */}
-        <section>
-          <div className={s.featHead}>
-            <span className={s.lab}>FEATURED HORSE</span>
-            {featured ? <span className={s.id}>#{featured.id.slice(0, 4)}</span> : null}
+      {/* ===== ④ 資産(残高 / 評価額 / Revenge Buff) ===== */}
+      <section className={s.assets}>
+        <Link href="/wallet" className={`${s.kpi} ${s.kpiBal}`}>
+          <div className="k">④ 残高 BALANCE</div>
+          <div className="v">{wallet ? money(wallet.available) : '—'}</div>
+          <div className="s">USDT 利用可能{wallet && Number(wallet.locked) > 0 ? ` · ロック中 ${money(wallet.locked)}` : ''}</div>
+        </Link>
+        <Link href="/horses" className={`${s.kpi} ${s.kpiVal}`}>
+          <div className="k">厩舎の評価額</div>
+          <div className="v">{stableValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="s">USDT · {active.length}頭の現在価値</div>
+        </Link>
+        <div className={`${s.kpi} ${s.kpiBuff}`}>
+          <div className="k">REVENGE BUFF</div>
+          <div className="v">{buff ? `${buff.buff_rarity} +${buff.buff_bonus_score}` : 'なし'}</div>
+          <div className="s">{buff ? '次回割当に自動で加点' : 'Burnで獲得する次走ボーナス'}</div>
+        </div>
+      </section>
+
+      {/* ===== マイ厩舎(ギャラリー) ===== */}
+      <section className={s.stable}>
+        <div className={s.tileHead}>
+          <span className={s.stableTitle}>マイ厩舎<small>STABLE {active.length} · 評価額 {stableValue.toFixed(2)} USDT</small></span>
+          <Link href="/horses" className={s.tileLink}>すべて →</Link>
+        </div>
+        {active.length > 0 ? (
+          <div className={s.gallery}>
+            {active.slice(0, 8).map((h) => <HorseCard key={h.id} h={h} />)}
           </div>
-          <div className={s.featFrame}>
-            <div className={s.featInner}>
-              {featured ? (
-                <>
-                  <div className={s.featArt}>
-                    <StableArt horse={featured} className={s.featCanvas} />
-                    <div className={s.scrim} />
-                    <div className={s.tags}>
-                      <span className={`badge rarity-${featured.rarity}`}>{featured.rarity}</span>
-                      <span className="badge">{featured.horse_type}</span>
-                    </div>
-                    <div className={s.caption}>
-                      <div>
-                        <div className={s.featName}>{featured.name}</div>
-                        <div className={s.featSeed}>現在価値 {horseValue(featured.current_day)} USDT</div>
-                      </div>
-                      <div className={s.featDay}>
-                        <div className="l">DAY</div>
-                        <div className={s.v}>{featured.current_day}<small>/7</small></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className={s.abilities}>
-                    <div className={s.abGrid}>
-                      <div className={s.ab}><span className="k">COND</span><span className="track"><span className="cyan" style={{ width: `${pct(featured.condition)}%` }} /></span></div>
-                      <div className={s.ab}><span className="k">FATIGUE</span><span className="track"><span className="gold" style={{ width: `${pct(featured.fatigue)}%` }} /></span></div>
-                    </div>
-                    <div className={s.dayRail}>
-                      {Array.from({ length: 7 }, (_, i) => {
-                        const day = i + 1;
-                        const cls = day < featured.current_day + 1 ? 'done' : day === featured.current_day + 1 ? 'today' : '';
-                        return <span key={day} className={cls} />;
-                      })}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className={s.featArt}>
-                  <img className={s.img} src="/horses/hero.png" alt="Genesis horse" />
-                  <div className={s.scrim} />
-                  <div className={s.caption} style={{ justifyContent: 'flex-start' }}>
-                    <div className={s.teaser}>
-                      <div className="t">{pendingCount > 0 ? `今夜、${pendingCount}頭が発走します` : 'まだ出走馬がいません'}</div>
-                      <div className="s">{pendingCount > 0 ? '20:00 のレースであなたの馬が誕生します' : '馬を迎えて、今夜のダービーに参加しましょう'}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+        ) : (
+          <div className={s.stableEmpty}>
+            {pendingCount > 0
+              ? `割当待ち ${pendingCount} 件 — 今夜のレースで確定します。まずは馬を迎えて参加しましょう。`
+              : '出走中の馬はいません。今夜のダービーに参加しましょう。'}
+            <br />
+            <Link href="/purchase" className={s.ctaPrimary}>馬を迎える ▶</Link>
           </div>
+        )}
+      </section>
+
+      {/* ===== Day7 買い戻し(進行中のみ) ===== */}
+      {activeBuybacks.length > 0 ? (
+        <section className={s.buyback}>
+          <div className={s.bbHead}>
+            <span className={s.bbTitle}>Day7 買い戻し 進行中</span>
+            <span className={s.bbCount}>{Number(activeBuybacks[0]!.payments_paid)} / 7 回</span>
+          </div>
+          <div className={s.bar}><span style={{ width: `${(Number(activeBuybacks[0]!.payments_paid) / 7) * 100}%` }} /></div>
+          <div className={s.bbNote}>200 USDT を7回に分けて受取 · 毎晩20:00の精算で1回ずつ支払い</div>
         </section>
+      ) : null}
 
-        {/* ASSETS */}
-        <section className={s.assets}>
-          <Link href="/wallet" className={`${s.assetCard} ${s.bal}`}>
-            <div className="k">BALANCE</div>
-            <div className="v">{wallet ? money(wallet.available) : '—'}</div>
-            <div className="s">USDT · available{wallet && Number(wallet.locked) > 0 ? ` · ロック中 ${money(wallet.locked)}` : ''}</div>
-          </Link>
-          <div className={`${s.assetCard} ${s.buff}`}>
-            <div className="k">REVENGE BUFF</div>
-            <div className="v">{buff ? `${buff.buff_rarity} +${buff.buff_bonus_score}` : 'なし'}</div>
-            <div className="s">{buff ? '次回割当に自動適用' : 'Burnで獲得'}</div>
-          </div>
-        </section>
-
-        {/* BUYBACK */}
-        {activeBuybacks.length > 0 ? (
-          <section className={s.buyback}>
-            <div className="top">
-              <span className="t">Day7 買い戻し 進行中</span>
-              <span className="c">{Number(activeBuybacks[0]!.payments_paid)} / 7 payments</span>
-            </div>
-            <div className="bar" style={{ marginTop: 11 }}>
-              <span style={{ width: `${(Number(activeBuybacks[0]!.payments_paid) / 7) * 100}%` }} />
-            </div>
-            <div className="note">200 USDT を7回に分けて受取 · 毎晩20:00の精算で1回ずつ支払い</div>
-          </section>
-        ) : null}
-
-        {/* NOTIFICATIONS */}
-        <section>
-          <div className={s.secHead}>
-            <span className="t">通知</span>
-            <Link href="/notifications">すべて →</Link>
-          </div>
+      {/* ===== ⑤ 通知 ===== */}
+      <section className={s.notif}>
+        <div className={s.tileHead}>
+          <span className={s.stableTitle}>⑤ 通知{unread > 0 ? <span className={s.notifBadge}>{unread}</span> : null}</span>
+          <Link href="/notifications" className={s.tileLink}>すべて →</Link>
+        </div>
+        {latestNotifs.length > 0 ? (
           <div className={s.notifList}>
-            {latestNotifs.length > 0 ? (
-              latestNotifs.map((n) => (
-                <div key={n.id} className={s.notifRow}>
+            {latestNotifs.map((n) => (
+              <div key={n.id} className={s.notifRow}>
+                <span className={s.notifBody}>
+                  <span className={`${s.notifDot} ${n.read_at ? '' : s.unread}`} />
                   <span className={s.notifTitle}>{n.payload_json?.title ?? n.notification_type}</span>
-                  <span className={s.notifTime}>{timeAgo(n.created_at)}</span>
-                </div>
-              ))
-            ) : (
-              <div className="panel empty" style={{ margin: 0 }}>通知はまだありません。</div>
-            )}
+                </span>
+                <span className={s.notifTime}>{timeAgo(n.created_at)}</span>
+              </div>
+            ))}
           </div>
-        </section>
-      </aside>
+        ) : (
+          <div className={s.empty}>通知はまだありません。</div>
+        )}
+      </section>
     </div>
   );
 }

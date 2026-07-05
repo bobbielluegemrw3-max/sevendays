@@ -1,204 +1,291 @@
-/* Neon HUD dashboard — the signed-in game home (/dashboard).
-   Mobile: single column. Desktop (≥960px): main column + right rail. */
+/* ============================================================================
+   Seven Days Derby — /dashboard 再設計 (Option 1c: モジュラータイル / ギャラリー)
+   Next.js App Router · サーバーコンポーネント + CSS Modules 用スタイル。
 
-.app { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-.main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.rail { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+   情報設計:
+     ① 昨夜の結果   ② 今夜のレース(残り時間)  を最上部で同格に横並び。
+     ③ 今日やること → ④ 資産(残高・評価額・Buff) → 厩舎 → 買い戻し/⑤通知。
 
-@media (min-width: 960px) {
-  .app { grid-template-columns: minmax(0, 1fr) 360px; gap: 22px; align-items: start; }
+   レイアウト:
+     - PC(≥900px): CSS Grid の grid-template-areas による bento。
+     - モバイル(<900px): 1カラム縦積み・優先度順・横スクロール禁止。
+
+   CSS Modules 注意: 子孫セレクタ内のリテラル class もハッシュ化されるため、
+   本ファイルでは JSX から渡す class をすべて module class 化し、リテラル
+   class への依存(:global 事故ポイント)を排除している。色/フォントは
+   globals.css の :root トークン(var(--*))を参照。
+   ========================================================================== */
+
+/* ---- 画面ルート ------------------------------------------------------------ */
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-/* ===== hero HUD: tonight's race ===== */
-.hero {
-  position: relative; overflow: hidden; border-radius: 18px;
-  border: 1px solid rgba(0, 234, 255, 0.35);
-  background: linear-gradient(180deg, rgba(0, 234, 255, 0.07), rgba(255, 45, 196, 0.05));
-  box-shadow: 0 0 34px -6px rgba(0, 234, 255, 0.25), inset 0 0 40px rgba(255, 45, 196, 0.05);
-  padding: 18px 20px;
-}
-.hero .topline { position: absolute; top: 0; left: 14px; right: 14px; height: 1px; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
-.hero .tickTL, .hero .tickTR { position: absolute; top: 8px; width: 12px; height: 12px; }
-.hero .tickTL { left: 8px; border-top: 1px solid var(--cyan); border-left: 1px solid var(--cyan); }
-.hero .tickTR { right: 8px; border-top: 1px solid var(--magenta); border-right: 1px solid var(--magenta); }
-.hero .hrow { display: flex; justify-content: space-between; align-items: center; }
-.hero .eyebrow { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.28em; color: var(--magenta); }
-.hero .live { font-family: var(--font-mono); font-size: 10.5px; color: var(--cyan); }
-.hero .lead { font-size: 11.5px; color: var(--muted); margin-top: 9px; }
-.countdown {
-  font-family: var(--font-display); font-weight: 800; font-size: clamp(40px, 6vw, 58px); line-height: 1;
-  letter-spacing: 0.01em; color: var(--cyan); font-variant-numeric: tabular-nums; margin: 4px 0 8px;
-  text-shadow: 0 0 22px rgba(0, 234, 255, 0.55);
-}
-.hero .stats { display: flex; gap: 16px; font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); flex-wrap: wrap; }
-.hero .stats b { color: var(--text); }
-.hero .stats b:global(.hot) { color: var(--magenta-soft); }
-.hero .cta { display: flex; gap: 9px; margin-top: 15px; }
-.hero .cta .primary { flex: 1; text-align: center; }
-.hero .cta a { text-decoration: none; }
-@media (min-width: 960px) {
-  .hero { padding: 22px 26px; }
-  .hero .cta { max-width: 460px; }
+@media (min-width: 900px) {
+  .app {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    grid-template-areas:
+      "result   count"
+      "task     task"
+      "assets   assets"
+      "stable   stable"
+      "buyback  notif";
+    gap: 16px;
+    align-items: start;
+  }
+  .result  { grid-area: result; }
+  .count   { grid-area: count; }
+  .task    { grid-area: task; }
+  .assets  { grid-area: assets; }
+  .stable  { grid-area: stable; }
+  .buyback { grid-area: buyback; }
+  .notif   { grid-area: notif; }
 }
 
-/* ===== today's tasks strip ===== */
-.tasks {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  border: 1px solid rgba(255, 45, 196, 0.35); border-radius: 13px; padding: 10px 14px;
-  background: linear-gradient(120deg, rgba(255, 45, 196, 0.08), transparent 70%);
+/* 共通タイル外観 */
+.tile {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 15px 17px;
+  background: linear-gradient(180deg, rgba(20, 18, 34, 0), var(--panel));
+  min-width: 0;
 }
-.tasksLab { font-family: var(--font-display); font-size: 9.5px; letter-spacing: 0.22em; color: var(--magenta-soft); }
-.task { font-size: 12.5px; color: var(--text); text-decoration: none; }
-.task b { color: var(--magenta-soft); font-family: var(--font-mono); }
-.task:hover { color: var(--cyan); }
-.task + .task { border-left: 1px solid var(--border); padding-left: 10px; }
+.tileLabel {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.tileLink { font-size: 12px; color: var(--cyan); text-decoration: none; }
+.tileLink:hover { color: var(--gold-bright); }
+.tileHead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 
-/* ===== last night's results ===== */
-.resList { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+/* ---- ① 昨夜の結果 --------------------------------------------------------- */
+.result {
+  border: 1px solid rgba(0, 234, 255, 0.24);
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: linear-gradient(150deg, rgba(0, 234, 255, 0.06), transparent 62%);
+}
+.resSummary { display: flex; gap: 20px; margin-top: 12px; align-items: flex-end; }
+.resStat :global(.n) { font-family: var(--font-display); font-weight: 800; font-size: 30px; line-height: 1; }
+.resStat :global(.k) { font-family: var(--font-mono); font-size: 9px; color: var(--faint); margin-top: 3px; }
+.resStat.survived :global(.n) { color: var(--good); }
+.resStat.burned :global(.n) { color: var(--magenta-soft); }
+.resBest { margin-left: auto; text-align: right; }
+.resBest :global(.n) { font-family: var(--font-display); font-weight: 700; font-size: 20px; line-height: 1; color: var(--cyan); }
+.resBest :global(.k) { font-family: var(--font-mono); font-size: 9px; color: var(--faint); margin-top: 3px; }
+
+.resList { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 .resRow {
-  display: flex; align-items: center; gap: 14px;
-  border: 1px solid rgba(0, 234, 255, 0.22); border-radius: 12px; padding: 10px 14px;
-  background: linear-gradient(120deg, rgba(0, 234, 255, 0.05), transparent 65%);
-  text-decoration: none; color: inherit; transition: border-color 0.15s ease;
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 9px;
+  text-decoration: none; color: inherit;
 }
 .resRow:hover { border-color: var(--border-strong); }
-.resRow.resBurned { border-color: rgba(255, 45, 196, 0.4); background: linear-gradient(120deg, rgba(255, 45, 196, 0.08), transparent 65%); }
-.resRank { display: flex; flex-direction: column; min-width: 64px; }
-.resRank :global(.l) { font-family: var(--font-display); font-size: 8.5px; letter-spacing: 0.18em; color: var(--faint); }
-.resRank b { font-family: var(--font-display); font-size: 17px; color: var(--cyan); }
-.resBurned .resRank b { color: var(--magenta-soft); }
-.resName { flex: 1; min-width: 0; font-weight: 700; font-size: 13.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.resScore { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); }
-.resBadge {
-  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.06em; color: var(--good);
-  border: 1px solid rgba(53, 208, 127, 0.4); border-radius: 999px; padding: 3px 9px; background: rgba(53, 208, 127, 0.08);
+.resRank { font-family: var(--font-display); font-size: 11.5px; color: var(--muted); min-width: 50px; }
+.resName { flex: 1; min-width: 0; font-weight: 700; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.pill { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.04em; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.pillSurvived { color: var(--good); border: 1px solid rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.08); }
+.pillBurned { color: var(--magenta-soft); border: 1px solid rgba(255, 45, 196, 0.45); background: rgba(255, 45, 196, 0.1); }
+
+.empty { color: var(--muted); font-size: 12.5px; line-height: 1.7; margin-top: 12px; }
+
+/* ---- ② 今夜のレース(カウントダウン) -------------------------------------- */
+.count {
+  border: 1px solid rgba(0, 234, 255, 0.34);
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: linear-gradient(180deg, rgba(0, 234, 255, 0.1), rgba(255, 45, 196, 0.05));
+  display: flex; flex-direction: column; justify-content: center;
 }
-.resBadgeBurn { color: var(--magenta-soft); border-color: rgba(255, 45, 196, 0.45); background: rgba(255, 45, 196, 0.1); }
-
-/* ===== featured horse (rail) ===== */
-.featHead { display: flex; align-items: baseline; justify-content: space-between; }
-.featHead .lab { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.24em; color: var(--muted); }
-.featHead .id { font-family: var(--font-mono); font-size: 10px; color: var(--gold); }
-.featFrame {
-  position: relative; border-radius: 18px; padding: 1px; margin-top: 10px;
-  background: conic-gradient(from 140deg, #3a2f18, var(--gold), var(--gold-bright), var(--cyan), var(--magenta), var(--gold), #3a2f18);
-  box-shadow: 0 18px 40px -18px rgba(201, 168, 106, 0.5);
+.live { font-family: var(--font-mono); font-size: 10px; color: var(--cyan); }
+.live .dot { animation: sdd-pulse 1.6s infinite; }
+@keyframes sdd-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.timer {
+  font-family: var(--font-display); font-weight: 800; font-size: clamp(40px, 8vw, 48px);
+  line-height: 1; color: var(--cyan); font-variant-numeric: tabular-nums; margin: 12px 0 6px;
+  text-shadow: 0 0 24px rgba(0, 234, 255, 0.55);
 }
-.featInner { border-radius: 17px; background: linear-gradient(180deg, #12101d, #0a0813); overflow: hidden; }
-.featArt { position: relative; background: radial-gradient(90% 80% at 50% 42%, rgba(0, 234, 255, 0.07), transparent 70%); }
-.featArt .img { display: block; width: 100%; height: 220px; object-fit: cover; object-position: center 40%; background: #0a0813; }
-.featCanvas { display: block; width: 100%; height: 230px; object-fit: contain; padding: 10px 8px 26px; filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.55)); }
-.featArt .scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 8, 19, 0) 46%, rgba(10, 8, 19, 0.88) 94%); pointer-events: none; }
-.featArt .tags { position: absolute; top: 12px; left: 12px; display: flex; gap: 6px; }
-.featArt .caption { position: absolute; bottom: 12px; left: 14px; right: 14px; display: flex; justify-content: space-between; align-items: flex-end; }
-.featName { font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: 0.01em;
-  background: linear-gradient(92deg, var(--gold-bright), var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.featSeed { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 2px; }
-.featDay { text-align: right; }
-.featDay :global(.l) { font-family: var(--font-display); font-size: 9px; color: var(--faint); letter-spacing: 0.14em; }
-.featDay .v { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--cyan); }
-.featDay .v small { font-size: 12px; color: var(--faint); }
+.countMeta { display: flex; gap: 16px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+.countMeta b { color: var(--text); }
+.countMeta b:global(.hot) { color: var(--magenta-soft); }
+.countNote { font-family: var(--font-mono); font-size: 9px; color: var(--faint); margin-top: 9px; line-height: 1.5; }
 
-.abilities { padding: 13px 15px 15px; }
-.abGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 16px; }
-.ab { display: flex; align-items: center; gap: 8px; }
-.ab :global(.k) { width: 56px; font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); }
-.ab :global(.track) { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
-.ab :global(.track) > span { display: block; height: 100%; }
-.ab :global(.track) > span:global(.gold) { background: linear-gradient(90deg, #8a6d34, var(--gold-bright)); }
-.ab :global(.track) > span:global(.cyan) { background: linear-gradient(90deg, var(--cyan-deep), var(--cyan)); }
-.dayRail { display: flex; gap: 4px; margin-top: 13px; }
-.dayRail span { flex: 1; height: 6px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); }
-.dayRail span:global(.done) { background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
-.dayRail span:global(.today) { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
-
-/* teaser (no horse yet) */
-.teaser { padding: 16px; text-align: center; }
-.teaser :global(.t) { font-family: var(--font-display); font-size: 15px; color: var(--text); letter-spacing: 0.04em; }
-.teaser :global(.s) { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
-
-/* ===== assets strip (rail) ===== */
-.assets { display: flex; gap: 10px; }
-.assetCard { flex: 1; border-radius: 13px; padding: 12px 14px; text-decoration: none; }
-.assetCard.bal { border: 1px solid rgba(201, 168, 106, 0.35); background: linear-gradient(180deg, rgba(201, 168, 106, 0.1), rgba(201, 168, 106, 0.02)); }
-.assetCard.buff { border: 1px solid rgba(255, 45, 196, 0.4); background: linear-gradient(180deg, rgba(255, 45, 196, 0.12), rgba(255, 45, 196, 0.02)); }
-.assetCard :global(.k) { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; }
-.assetCard.bal :global(.k) { color: var(--gold); }
-.assetCard.buff :global(.k) { color: var(--magenta-soft); }
-.assetCard :global(.v) { font-family: var(--font-display); font-weight: 700; font-size: 22px; margin-top: 3px; }
-.assetCard.bal :global(.v) { color: var(--gold-bright); }
-.assetCard.buff :global(.v) { color: var(--magenta-soft); }
-.assetCard :global(.s) { font-family: var(--font-mono); font-size: 9px; color: var(--faint); }
-
-/* ===== section head ===== */
-.secHead { display: flex; align-items: baseline; justify-content: space-between; }
-.secHead :global(.t) { font-family: var(--font-sans); font-weight: 700; font-size: 15px; color: var(--text); }
-.secHead :global(.t) small { font-family: var(--font-display); font-size: 10px; color: var(--faint); letter-spacing: 0.1em; margin-left: 8px; }
-.secHead a { font-size: 12px; color: var(--cyan); }
-
-/* ===== stable rows ===== */
-.stableList { display: flex; flex-direction: column; gap: 9px; }
-.stableRow {
-  display: flex; align-items: center; gap: 13px; border: 1px solid var(--border); border-radius: 13px;
-  padding: 11px 14px; background: linear-gradient(120deg, rgba(0, 234, 255, 0.05), transparent 60%);
-  text-decoration: none; color: inherit; transition: border-color 0.15s ease;
+/* ---- ③ 今日やること -------------------------------------------------------- */
+.task {
+  border: 1px solid rgba(255, 45, 196, 0.32);
+  border-radius: 14px;
+  padding: 13px 16px;
+  background: linear-gradient(120deg, rgba(255, 45, 196, 0.09), transparent 72%);
 }
-.stableRow:hover { border-color: var(--border-strong); }
-.stableRow :global(.chip) {
-  width: 62px; height: 62px; border-radius: 11px; flex: none; overflow: hidden;
-  background: radial-gradient(80% 80% at 50% 45%, rgba(0, 234, 255, 0.1), rgba(10, 8, 19, 0.9) 75%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+.taskRow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.taskLabel { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.2em; color: var(--magenta-soft); white-space: nowrap; }
+.taskItem { font-size: 12.5px; color: var(--text); }
+.taskItem b { font-family: var(--font-mono); color: var(--magenta-soft); }
+.taskItem + .taskItem { border-left: 1px solid var(--border); padding-left: 12px; }
+.taskSub { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 8px; line-height: 1.5; }
+.taskCta {
+  margin-left: auto; text-decoration: none; white-space: nowrap;
+  font-family: var(--font-display); font-weight: 700; font-size: 11px; color: #150410;
+  background: linear-gradient(100deg, var(--magenta), var(--magenta-soft));
+  padding: 7px 13px; border-radius: 9px;
 }
-.chipArt { display: block; width: 100%; height: 100%; object-fit: contain; }
-.stableRow :global(.body) { flex: 1; min-width: 0; }
-.stableRow :global(.top) { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.stableRow :global(.nm) { font-weight: 700; font-size: 14px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.meters { display: flex; gap: 12px; margin-top: 7px; }
-.meter { flex: 1; display: flex; align-items: center; gap: 6px; }
-.meter :global(.k) { font-family: var(--font-mono); font-size: 8.5px; color: var(--faint); width: 30px; }
-.meter :global(.track) { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
-.meter :global(.track) > span { display: block; height: 100%; }
-.meter :global(.track) > span:global(.cyan) { background: linear-gradient(90deg, var(--cyan-deep), var(--cyan)); }
-.meter :global(.track) > span:global(.mag) { background: linear-gradient(90deg, #7a1660, var(--magenta)); }
-.rowSide { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
-.rowValue { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--gold-bright); }
-.rowValue small { display: block; font-family: var(--font-mono); font-weight: 400; font-size: 8.5px; color: var(--faint); letter-spacing: 0.08em; text-align: right; }
-.rowValue small:last-child { display: inline; margin-left: 4px; }
-.train {
-  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; color: var(--magenta-soft);
-  border: 1px solid rgba(255, 45, 196, 0.45); border-radius: 999px; padding: 2px 8px; background: rgba(255, 45, 196, 0.08);
+.taskDone {
+  border-color: rgba(53, 208, 127, 0.3);
+  background: linear-gradient(120deg, rgba(53, 208, 127, 0.08), transparent 72%);
 }
-.trainDone { color: var(--good); border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.08); }
+.taskDone .taskLabel { color: var(--good); }
+.taskDoneText { font-size: 12.5px; color: #9dffc4; }
 
-/* ===== buyback (rail) ===== */
-.buyback { border: 1px solid rgba(201, 168, 106, 0.28); border-radius: 14px; padding: 14px; background: linear-gradient(120deg, rgba(201, 168, 106, 0.08), transparent 70%); }
-.buyback :global(.top) { display: flex; justify-content: space-between; align-items: center; }
-.buyback :global(.t) { font-weight: 700; font-size: 13px; color: var(--gold-bright); }
-.buyback :global(.c) { font-family: var(--font-mono); font-size: 11px; color: var(--gold); }
-.buyback :global(.note) { font-family: var(--font-mono); font-size: 10px; color: var(--faint); margin-top: 8px; }
+/* ---- ④ 資産(KPI 3タイル) -------------------------------------------------- */
+.assets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.kpi { border-radius: 14px; padding: 13px 15px; text-decoration: none; display: block; min-width: 0; }
+.kpi :global(.k) { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; }
+.kpi :global(.v) { font-family: var(--font-display); font-weight: 700; font-size: 22px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.kpi :global(.s) { font-family: var(--font-mono); font-size: 9px; color: var(--faint); }
+.kpiBal { border: 1px solid rgba(201, 168, 106, 0.34); background: linear-gradient(180deg, rgba(201, 168, 106, 0.11), rgba(201, 168, 106, 0.02)); }
+.kpiBal :global(.k) { color: var(--gold); } .kpiBal :global(.v) { color: var(--gold-bright); }
+.kpiVal { border: 1px solid rgba(0, 234, 255, 0.28); background: linear-gradient(180deg, rgba(0, 234, 255, 0.08), rgba(0, 234, 255, 0.015)); }
+.kpiVal :global(.k) { color: var(--cyan); } .kpiVal :global(.v) { color: #a9f6ff; }
+.kpiBuff { border: 1px solid rgba(255, 45, 196, 0.36); background: linear-gradient(180deg, rgba(255, 45, 196, 0.1), rgba(255, 45, 196, 0.02)); }
+.kpiBuff :global(.k) { color: var(--magenta-soft); } .kpiBuff :global(.v) { color: var(--magenta-soft); font-size: 19px; }
 
-/* ===== notifications (rail) ===== */
+/* ---- マイ厩舎(ギャラリー) ------------------------------------------------- */
+.stable {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 15px 16px;
+  background: linear-gradient(180deg, rgba(20, 18, 34, 0), var(--panel));
+}
+.stableTitle { font-weight: 700; font-size: 15px; color: var(--text); }
+.stableTitle small { font-family: var(--font-display); font-size: 10px; color: var(--faint); letter-spacing: 0.1em; margin-left: 8px; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+
+.hcard {
+  display: flex; flex-direction: column; gap: 9px;
+  border: 1px solid var(--border); border-radius: 14px; padding: 11px;
+  background: linear-gradient(160deg, rgba(0, 234, 255, 0.05), transparent 62%);
+  text-decoration: none; color: inherit; transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.hcard:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+.hart {
+  position: relative; height: 118px; border-radius: 11px; overflow: hidden;
+  background: radial-gradient(80% 78% at 50% 42%, rgba(0, 234, 255, 0.1), rgba(10, 8, 19, 0.92) 74%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.hartCanvas { display: block; width: 100%; height: 100%; object-fit: contain; }
+.artBadge { position: absolute; }
+.artRarity { top: 8px; left: 8px; }
+.artTrain { bottom: 8px; right: 8px; }
+
+.hbody { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.hrow1 { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.hname { font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hday { font-family: var(--font-mono); font-size: 9px; color: var(--faint); flex: none; }
+.hfoot { display: flex; align-items: center; gap: 10px; }
+.hmeter { flex: 1; display: flex; align-items: center; gap: 5px; }
+.hmeter :global(.k) { font-family: var(--font-mono); font-size: 8px; color: var(--faint); }
+.hvalue { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--gold-bright); flex: none; }
+/* .rar(後段)の display:inline-flex に負けないよう .hcard で詳細度を上げる */
+.hcard .inlineRarity, .hcard .inlineTrain { display: none; }
+
+/* トラック(COND/FTG メーター & 7日レール) */
+.track { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.track > span { display: block; height: 100%; }
+.fillCyan { background: linear-gradient(90deg, var(--cyan-deep), var(--cyan)); }
+.fillMag { background: linear-gradient(90deg, #7a1660, var(--magenta)); }
+
+.rail { display: flex; gap: 4px; }
+.pip { flex: 1; height: 6px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); }
+.pipDone { flex: 1; height: 6px; border-radius: 2px; background: var(--cyan); }
+.pipToday { flex: 1; height: 6px; border-radius: 2px; background: var(--magenta); box-shadow: 0 0 7px var(--magenta); }
+
+/* 厩舎 空状態 */
+.stableEmpty {
+  border: 1px dashed var(--border-strong); border-radius: 13px; padding: 26px 16px;
+  text-align: center; color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 12px;
+}
+.ctaPrimary {
+  display: inline-block; margin-top: 12px; text-decoration: none;
+  font-family: var(--font-display); font-weight: 700; font-size: 12px; color: #04141a;
+  background: linear-gradient(100deg, var(--cyan), #5ff5ff); padding: 9px 18px; border-radius: 10px;
+}
+
+/* ---- Day7 買い戻し --------------------------------------------------------- */
+.buyback {
+  border: 1px solid rgba(201, 168, 106, 0.3); border-radius: 14px; padding: 14px 16px;
+  background: linear-gradient(120deg, rgba(201, 168, 106, 0.08), transparent 72%);
+}
+.bbHead { display: flex; justify-content: space-between; align-items: center; }
+.bbTitle { font-weight: 700; font-size: 13px; color: var(--gold-bright); }
+.bbCount { font-family: var(--font-mono); font-size: 11px; color: var(--gold); }
+.bar { height: 7px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin-top: 10px; }
+.bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); box-shadow: 0 0 10px rgba(242, 228, 191, 0.4); }
+.bbNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 8px; }
+
+/* ---- ⑤ 通知 ---------------------------------------------------------------- */
+.notif {
+  border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(20, 18, 34, 0), var(--panel));
+}
+.notifBadge { font-family: var(--font-mono); font-size: 9.5px; color: #150410; background: var(--magenta); border-radius: 999px; padding: 1px 7px; margin-left: 8px; }
 .notifList { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
-.notifRow {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
-  border: 1px solid var(--border); border-radius: 11px; padding: 9px 12px;
-  background: linear-gradient(120deg, rgba(0, 234, 255, 0.04), transparent 65%);
-}
-.notifTitle { flex: 1; min-width: 0; font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.notifTime { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); flex: none; }
+.notifRow { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 2px; }
+.notifBody { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.notifDot { flex: none; width: 6px; height: 6px; border-radius: 999px; background: #3a3658; }
+.notifDot.unread { background: var(--magenta); box-shadow: 0 0 7px var(--magenta); }
+.notifTitle { font-size: 11.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notifTime { font-family: var(--font-mono); font-size: 9px; color: var(--faint); flex: none; }
 
-/* ===== narrow screens: rows must never force horizontal overflow ===== */
-@media (max-width: 640px) {
-  .resScore { display: none; }
-  .resRow { gap: 10px; padding: 10px 12px; }
-  .resRank { min-width: 44px; }
-  .resRank b { font-size: 15px; }
-  .resBadge { font-size: 8.5px; padding: 3px 7px; }
-  .stableRow { gap: 10px; padding: 10px 11px; }
-  .stableRow :global(.chip) { width: 46px; height: 46px; border-radius: 9px; }
-  .rowSide { gap: 5px; }
-  .rowValue { font-size: 13px; }
-  .rowValue small:first-of-type { display: none; }
-  .meters { gap: 8px; }
-  .meter :global(.k) { width: 26px; }
+/* ---- レアリティバッジ(全5段階) ------------------------------------------- */
+.rar {
+  display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px;
+  font-family: var(--font-display); font-size: 8.5px; font-weight: 700; letter-spacing: 0.08em;
+  white-space: nowrap; text-transform: uppercase; border: 1px solid transparent;
+}
+.rarCOMMON    { color: #c3ccd8; border-color: #8a92a0; background: rgba(130, 140, 160, 0.14); }
+.rarUNCOMMON  { color: #9dffc4; border-color: var(--good); background: rgba(53, 208, 127, 0.15); }
+.rarRARE      { color: #a9f6ff; border-color: var(--cyan); background: rgba(0, 234, 255, 0.16); }
+.rarEPIC      { color: var(--magenta-soft); border-color: var(--magenta); background: rgba(255, 45, 196, 0.16); }
+.rarLEGENDARY { color: #0a0813; border-color: transparent; background: linear-gradient(92deg, var(--gold), #f7eccb); }
+
+/* 調教バッジ */
+.trainBadge { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.06em; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.trainYes { color: var(--good); border: 1px solid rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.08); }
+.trainNo { color: var(--magenta-soft); border: 1px solid rgba(255, 45, 196, 0.45); background: rgba(255, 45, 196, 0.08); }
+
+/* ============================================================================
+   モバイル(<900px): 1カラム・優先度順・横スクロール禁止
+   厩舎カードは「縦カード」→「横行」へリフロー。オーバーレイ badge は隠し、
+   本文中のインライン badge を表示する。
+   ========================================================================== */
+@media (max-width: 899px) {
+  .gallery { grid-template-columns: 1fr; gap: 8px; }
+
+  .hcard { flex-direction: row; align-items: center; gap: 11px; padding: 10px 12px; }
+  .hart { width: 46px; height: 46px; flex: none; }
+  .artBadge { display: none; }              /* オーバーレイ badge を隠す */
+  .hbody { flex: 1; }
+  .hday { display: none; }
+  .hmeter { display: none; }                /* 行では COND/FTG メーターは省略 */
+  .hcard .inlineRarity { display: inline-flex; }   /* 名前の隣にレアリティ */
+  .hcard .inlineTrain { display: inline-flex; }    /* 右端に調教バッジ */
+  .hvalue { margin-left: auto; }
+
+  /* 上部 2タイルはモバイルでは「② カウントダウン → ① 結果」の順で縦積み */
+  .count { order: -1; }
+}
+
+/* さらに狭い端末での結果行の詰め */
+@media (max-width: 380px) {
+  .resSummary { gap: 14px; }
+  .assets { gap: 8px; }
+  .kpi { padding: 11px 12px; }
+  .kpi .v { font-size: 18px; }
 }
