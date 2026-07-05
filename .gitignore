@@ -35,3 +35,8 @@ yarn-error.log*
 # design source drops (kept locally, not in repo)
 *.zip
 /素材/
+
+# local-only preview / POC artifacts (viewable at localhost, never deployed)
+/reference-landing.html
+/claude-code-responsive-review.md
+/apps/web/public/horse-engine-poc.html
