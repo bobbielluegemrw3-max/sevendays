@@ -117,14 +117,19 @@ function pickPattern(rng: () => number): CoatPattern {
  * batches land (rare poses gain a higher rarityMin so they stay exclusive).
  */
 export interface BaseDef { id: string; pose: string; gender: string; rarityMin: Rarity; }
-// Owner-approved pool only. Excluded as low-value: 05,09,11,12,13,14,18,23,24,25,26,31.
+// New-style pool (batch01R+02R, V2/V3/V4 liquid chrome). Owner-approved:
+// excluded 02,05,13,14,18,23 out of base_01..24. batch03R (25-36) pending.
 export const BASES: BaseDef[] = [
-  { id: 'base_01', pose: 'gallop', gender: 'male', rarityMin: 'COMMON' },
+  { id: 'base_01', pose: 'gallop_extended', gender: 'male', rarityMin: 'COMMON' },
+  { id: 'base_03', pose: 'high_trot', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_04', pose: 'gallop_extended', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_06', pose: 'gallop_extended', gender: 'female', rarityMin: 'COMMON' },
-  { id: 'base_07', pose: 'power_kickoff', gender: 'male', rarityMin: 'COMMON' },
-  { id: 'base_08', pose: 'gallop_extended', gender: 'male', rarityMin: 'COMMON' },
-  { id: 'base_10', pose: 'gallop_collected', gender: 'male', rarityMin: 'COMMON' },
+  { id: 'base_07', pose: 'leap_stride', gender: 'female', rarityMin: 'COMMON' },
+  { id: 'base_08', pose: 'gallop_standard', gender: 'neutral', rarityMin: 'COMMON' },
+  { id: 'base_09', pose: 'power_kickoff', gender: 'male', rarityMin: 'COMMON' },
+  { id: 'base_10', pose: 'gliding_gallop', gender: 'female', rarityMin: 'COMMON' },
+  { id: 'base_11', pose: 'high_trot', gender: 'male', rarityMin: 'COMMON' },
+  { id: 'base_12', pose: 'gallop_3q_front', gender: 'neutral', rarityMin: 'COMMON' },
   { id: 'base_15', pose: 'gallop_extended', gender: 'neutral', rarityMin: 'COMMON' },
   { id: 'base_16', pose: 'power_stride', gender: 'male', rarityMin: 'COMMON' },
   { id: 'base_17', pose: 'gallop_3q_front', gender: 'female', rarityMin: 'COMMON' },
@@ -132,12 +137,7 @@ export const BASES: BaseDef[] = [
   { id: 'base_20', pose: 'leap_stride', gender: 'female', rarityMin: 'COMMON' },
   { id: 'base_21', pose: 'gliding_gallop', gender: 'neutral', rarityMin: 'COMMON' },
   { id: 'base_22', pose: 'gallop_extended', gender: 'male', rarityMin: 'COMMON' },
-  { id: 'base_27', pose: 'high_trot', gender: 'neutral', rarityMin: 'COMMON' },
-  { id: 'base_28', pose: 'leap_stride', gender: 'male', rarityMin: 'COMMON' },
-  { id: 'base_29', pose: 'gliding_gallop', gender: 'female', rarityMin: 'COMMON' },
-  { id: 'base_30', pose: 'gallop_extended', gender: 'neutral', rarityMin: 'COMMON' },
-  { id: 'base_32', pose: 'power_stride', gender: 'female', rarityMin: 'COMMON' },
-  { id: 'base_33', pose: 'gallop_3q_front', gender: 'neutral', rarityMin: 'COMMON' },
+  { id: 'base_24', pose: 'power_stride', gender: 'neutral', rarityMin: 'COMMON' },
 ];
 const RARITY_RANK: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
 
@@ -169,6 +169,8 @@ export interface DerivedHorse {
   pattern: CoatPattern;
   mane: [Rgb, Rgb];
   hue: number; // normalised coat hue 0..360 — used to spread the showcase & colour the frame
+  accentHue: number; // dominant second colour on the card (coatB, or mane when solid)
+  tone: 'dark' | 'pale' | 'vivid'; // perceived family beyond hue — blacks/whites read alike whatever their hue
   frameLine: string; // card border/id — a vivid tint of the horse's own colour
   frameGlow: string; // outer glow
   framePanel: string; // art backdrop wash
@@ -192,36 +194,59 @@ export function deriveHorse(seed: number): DerivedHorse {
   const [ph, ps, phiL] = PREFIX_HUE[prefix] ?? [200, 0.82];
   const coatHue = ph + (rng() * 2 - 1) * 22;
   const coatSat = Math.max(0.05, Math.min(1, ps + (rng() * 2 - 1) * 0.1));
-  const coat = metallicRamp(coatHue, coatSat, phiL ?? 0.82);
-  // Secondary coat colour + spatial pattern — this is what turns a flat recolour
-  // into a real per-horse marking (two-tone body, points, shoulder patch, …).
-  const cb = rng();
+  // Pure single-colour horses (owner request): not every horse carries a two-tone
+  // marking. ~24% are ONE bold colour head-to-toe — 真っ赤/真っ青/真緑/真っ黄 for
+  // vivid prefixes (saturation pushed to full, punchier highlight so the primary
+  // stays saturated), and true blacks/whites/silvers for monochrome prefixes.
+  // Name↔colour coherence is untouched: only vividness changes, never the hue.
+  const pure = rng() < 0.24;
+  const monochrome = ps < 0.45; // Black/White/Silver/Shadow… families
+  const coatHiL = pure && !monochrome ? 0.58 : (phiL ?? 0.82);
+  const pureSat = pure && !monochrome ? Math.max(0.96, coatSat) : coatSat;
+  const coat = metallicRamp(coatHue, pureSat, coatHiL);
+  let coatB = coat;
+  let pattern: CoatPattern = { kind: 'solid' };
   let bHue = coatHue;
-  let bSat = coatSat;
-  let bHiL = phiL ?? 0.82;
-  if (cb < 0.16) {
-    bSat = coatSat * 0.45; // metallic shade of the same hue (subtle, premium — kept rare)
-    bHiL = Math.min(0.92, (phiL ?? 0.82) + 0.16);
-  } else if (cb < 0.46) {
-    bHue = coatHue + (46 + rng() * 44) * (rng() < 0.5 ? 1 : -1); // wide analogous — clearly different
-    bSat = Math.min(1, coatSat * 1.02);
-  } else if (cb < 0.76) {
-    bHue = coatHue + 180; // complementary pop (bold two-tone)
-    bSat = Math.min(1, Math.max(0.55, coatSat));
-  } else if (cb < 0.92) {
-    bHue = coatHue + (rng() < 0.5 ? 150 : 210); // split-complementary
-    bSat = Math.min(1, Math.max(0.5, coatSat * 0.95));
-  } else {
-    bHue = coatHue + 120 * (rng() < 0.5 ? 1 : -1); // triad
-    bSat = Math.min(1, Math.max(0.5, coatSat));
+  if (!pure) {
+    // Secondary coat colour + spatial pattern — this is what turns a flat recolour
+    // into a real per-horse marking (two-tone body, points, shoulder patch, …).
+    const cb = rng();
+    let bSat = coatSat;
+    let bHiL = phiL ?? 0.82;
+    if (cb < 0.16) {
+      bSat = coatSat * 0.45; // metallic shade of the same hue (subtle, premium — kept rare)
+      bHiL = Math.min(0.92, (phiL ?? 0.82) + 0.16);
+    } else if (cb < 0.46) {
+      bHue = coatHue + (46 + rng() * 44) * (rng() < 0.5 ? 1 : -1); // wide analogous — clearly different
+      bSat = Math.min(1, coatSat * 1.02);
+    } else if (cb < 0.76) {
+      bHue = coatHue + 180; // complementary pop (bold two-tone)
+      bSat = Math.min(1, Math.max(0.55, coatSat));
+    } else if (cb < 0.92) {
+      bHue = coatHue + (rng() < 0.5 ? 150 : 210); // split-complementary
+      bSat = Math.min(1, Math.max(0.5, coatSat * 0.95));
+    } else {
+      bHue = coatHue + 120 * (rng() < 0.5 ? 1 : -1); // triad
+      bSat = Math.min(1, Math.max(0.5, coatSat));
+    }
+    coatB = metallicRamp(bHue, bSat, bHiL);
+    pattern = pickPattern(rng);
   }
-  const coatB = metallicRamp(bHue, bSat, bHiL);
-  const pattern = pickPattern(rng);
-  // mane: harmonious accent — complementary neon / analogous / bright sheen
-  const mc = rng();
-  const maneHue = mc < 0.5 ? coatHue + 180 : mc < 0.8 ? coatHue + 42 : coatHue;
-  const maneSat = mc < 0.8 ? 0.9 : 0.16;
-  const mane = metallicRamp(maneHue, maneSat, 0.86);
+  // mane: pure horses keep the mane in their own colour (slightly brighter for
+  // silhouette); otherwise a harmonious accent — complementary neon / analogous / sheen
+  let maneHue = coatHue;
+  let mane: [Rgb, Rgb];
+  if (pure) {
+    mane = metallicRamp(coatHue, pureSat, Math.min(0.9, coatHiL + 0.14));
+  } else {
+    const mc = rng();
+    maneHue = mc < 0.5 ? coatHue + 180 : mc < 0.8 ? coatHue + 42 : coatHue;
+    const maneSat = mc < 0.8 ? 0.9 : 0.16;
+    mane = metallicRamp(maneHue, maneSat, 0.86);
+  }
+  // Perceived tone family: two dark horses (navy vs gun-teal) read as "black twins"
+  // whatever their hues — the showcase caps darks and pales at one each.
+  const tone: 'dark' | 'pale' | 'vivid' = coatHiL < 0.5 ? 'dark' : pureSat < 0.22 ? 'pale' : 'vivid';
   // Frame colour matches the horse (full-spectrum), not the 5 rarity colours —
   // rarity still reads from the badge. hue drives both the frame and the
   // showcase colour-spread logic (see pickShowcase in Landing).
@@ -250,7 +275,10 @@ export function deriveHorse(seed: number): DerivedHorse {
     prefix, suffix, name: `${prefix} ${suffix}`.toUpperCase(),
     type, rarity: rar.name,
     rarityLine: rar.line, rarityGlow: rar.glow, rarityPanel: rar.panel, rarityInk: rar.ink, rarityRibbon: rar.ribbon,
-    coat, coatB, pattern, mane, hue, frameLine, frameGlow, framePanel, frameGrad, baseId, flip,
+    coat, coatB, pattern, mane, hue,
+    accentHue: (((pattern.kind === 'solid' ? maneHue : bHue) % 360) + 360) % 360,
+    tone,
+    frameLine, frameGlow, framePanel, frameGrad, baseId, flip,
     price, last, likes, rank,
   };
 }
@@ -265,12 +293,20 @@ export function deriveHorse(seed: number): DerivedHorse {
  */
 export function pickShowcase(count: number, nextSeed: () => number): DerivedHorse[] {
   const slice = 360 / count;
+  const hueDist = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
   const chosen: DerivedHorse[] = [];
   const usedBuckets = new Set<number>();
   for (let guard = 0; guard < 4000 && chosen.length < count; guard++) {
     const h = deriveHorse(nextSeed());
     const bucket = Math.floor(h.hue / slice) % count;
     if (usedBuckets.has(bucket)) continue;
+    // Perceived-family checks on top of the hue bucket. Bucket boundaries let
+    // near-identical hues through (352° vs 30° are different buckets), and two
+    // horses with the SAME colour-pair (warm coat + teal accent, twice) or two
+    // dark/pale horses read as twins regardless of nominal hue.
+    if (chosen.some((c) => hueDist(h.hue, c.hue) < 36)) continue;
+    if (chosen.some((c) => hueDist(h.hue, c.hue) < 70 && hueDist(h.accentHue, c.accentHue) < 50)) continue;
+    if (h.tone !== 'vivid' && chosen.some((c) => c.tone === h.tone)) continue; // ≤1 dark, ≤1 pale
     usedBuckets.add(bucket);
     chosen.push(h);
   }

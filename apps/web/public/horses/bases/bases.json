@@ -1,13 +1,26 @@
 {
- "count": 11,
+ "count": 18,
  "canvas": 512,
+ "style": "v2v3v4_liquid_chrome",
  "bases": [
   {
    "id": "base_01",
-   "pose_type": "gallop",
+   "pose_type": "gallop_extended",
    "gender": "male",
-   "build": "standard",
+   "build": "muscular",
    "mane_style": "long_flow",
+   "style_ref": "v3_liquid",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_03",
+   "pose_type": "high_trot",
+   "gender": "male",
+   "build": "heavy",
+   "mane_style": "wild_upswept",
+   "style_ref": "v4_gunmetal",
    "rarity_min": "COMMON",
    "facing": "right",
    "flip_safe": true
@@ -18,16 +31,7 @@
    "gender": "male",
    "build": "muscular",
    "mane_style": "long_flow",
-   "rarity_min": "COMMON",
-   "facing": "right",
-   "flip_safe": true
-  },
-  {
-   "id": "base_05",
-   "pose_type": "gallop_collected",
-   "gender": "male",
-   "build": "standard",
-   "mane_style": "medium",
+   "style_ref": "v3_liquid",
    "rarity_min": "COMMON",
    "facing": "right",
    "flip_safe": true
@@ -38,6 +42,7 @@
    "gender": "female",
    "build": "slender",
    "mane_style": "extra_long",
+   "style_ref": "v3_liquid",
    "rarity_min": "COMMON",
    "facing": "right",
    "flip_safe": true
@@ -48,6 +53,7 @@
    "gender": "female",
    "build": "light",
    "mane_style": "short_sharp",
+   "style_ref": "v4_gunmetal",
    "rarity_min": "COMMON",
    "facing": "right",
    "flip_safe": true
@@ -58,6 +64,7 @@
    "gender": "neutral",
    "build": "slim",
    "mane_style": "medium_straight",
+   "style_ref": "v2_blackgold",
    "rarity_min": "COMMON",
    "facing": "right",
    "flip_safe": true
@@ -68,6 +75,7 @@
    "gender": "male",
    "build": "heavy",
    "mane_style": "wild_upswept",
+   "style_ref": "v4_gunmetal",
    "rarity_min": "COMMON",
    "facing": "right",
    "flip_safe": true
@@ -78,6 +86,7 @@
    "gender": "female",
    "build": "graceful",
    "mane_style": "long_wavy",
+   "style_ref": "v3_liquid",
    "rarity_min": "COMMON",
    "facing": "right",
    "flip_safe": true
@@ -88,6 +97,7 @@
    "gender": "male",
    "build": "young_slim",
    "mane_style": "short_neat",
+   "style_ref": "v2_blackgold",
    "rarity_min": "COMMON",
    "facing": "right",
    "flip_safe": true
@@ -98,16 +108,95 @@
    "gender": "neutral",
    "build": "standard",
    "mane_style": "medium",
+   "style_ref": "v3_liquid",
    "rarity_min": "COMMON",
    "facing": "right",
    "flip_safe": true
   },
   {
-   "id": "base_13",
-   "pose_type": "gallop_3q_rear",
+   "id": "base_15",
+   "pose_type": "gallop_extended",
+   "gender": "neutral",
+   "build": "standard",
+   "mane_style": "medium_wavy",
+   "style_ref": "v3_liquid",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_16",
+   "pose_type": "power_stride",
+   "gender": "male",
+   "build": "muscular",
+   "mane_style": "wild_upswept",
+   "style_ref": "v4_gunmetal",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_17",
+   "pose_type": "gallop_3q_front",
+   "gender": "female",
+   "build": "light",
+   "mane_style": "long_flow",
+   "style_ref": "v3_liquid",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_19",
+   "pose_type": "high_trot",
    "gender": "male",
    "build": "standard",
-   "mane_style": "long_flow",
+   "mane_style": "extra_long",
+   "style_ref": "v2_blackgold",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_20",
+   "pose_type": "leap_stride",
+   "gender": "female",
+   "build": "graceful",
+   "mane_style": "medium_straight",
+   "style_ref": "v3_liquid",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_21",
+   "pose_type": "gliding_gallop",
+   "gender": "neutral",
+   "build": "standard",
+   "mane_style": "short_sharp",
+   "style_ref": "v4_gunmetal",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_22",
+   "pose_type": "gallop_extended",
+   "gender": "male",
+   "build": "heavy",
+   "mane_style": "long_wavy",
+   "style_ref": "v3_liquid",
+   "rarity_min": "COMMON",
+   "facing": "right",
+   "flip_safe": true
+  },
+  {
+   "id": "base_24",
+   "pose_type": "power_stride",
+   "gender": "neutral",
+   "build": "muscular",
+   "mane_style": "short_neat",
+   "style_ref": "v4_gunmetal",
    "rarity_min": "COMMON",
    "facing": "right",
    "flip_safe": true
