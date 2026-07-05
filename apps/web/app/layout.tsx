@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import './globals.css';
 import { getAccessToken } from '@/lib/server-api';
-import { LogoutButton } from '@/components/LogoutButton';
+import { TopNav } from '@/components/TopNav';
 
 export const metadata: Metadata = {
   title: 'Seven Days Derby',
@@ -25,25 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         {/* Anonymous pages (landing / login) carry their own header. */}
-        {authed ? (
-          <nav className="topnav">
-            <Link href="/dashboard" className="brand">
-              <span className="brand-bars" aria-hidden="true">
-                <span></span>
-                <span></span>
-              </span>
-              SEVEN&nbsp;DERBY
-            </Link>
-            <Link href="/dashboard">HOME</Link>
-            <Link href="/horses">STABLE</Link>
-            <Link href="/races">RACE</Link>
-            <Link href="/wallet">WALLET</Link>
-            <Link href="/notifications">通知</Link>
-            <span className="spacer" />
-            <Link href="/account">アカウント</Link>
-            <LogoutButton />
-          </nav>
-        ) : null}
+        {authed ? <TopNav /> : null}
         <main>{children}</main>
       </body>
     </html>

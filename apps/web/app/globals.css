@@ -84,24 +84,40 @@ nav.topnav {
   background: rgba(8, 6, 17, 0.8);
   backdrop-filter: blur(12px);
 }
-nav.topnav .brand {
-  display: inline-flex; align-items: center; gap: 0.55rem;
-  font-family: var(--font-display); font-weight: 800; font-size: 1rem; letter-spacing: 0.08em;
-  background: linear-gradient(92deg, #eae7ff, var(--cyan) 45%, var(--magenta));
+/* Brand lockup — identical to the landing page (bar + SEVEN DAYS / DERBY). */
+nav.topnav .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+nav.topnav .brand-bar {
+  width: 9px; height: 18px; border-radius: 2px; flex: none;
+  background: linear-gradient(180deg, var(--cyan), var(--magenta));
+  box-shadow: 0 0 12px rgba(0, 234, 255, 0.6);
+}
+nav.topnav .brand-lock { display: flex; flex-direction: column; line-height: 0.88; }
+nav.topnav .brand-l1 { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.3em; color: #8f8ac2; }
+nav.topnav .brand-l2 {
+  font-family: var(--font-display); font-weight: 800; font-size: 16px; letter-spacing: 0.1em;
+  background: linear-gradient(92deg, #eae7ff, var(--cyan) 50%, var(--magenta));
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-nav.topnav .brand-bars { display: inline-flex; gap: 3px; align-items: center; }
-nav.topnav .brand-bars span { width: 5px; height: 15px; border-radius: 2px; }
-nav.topnav .brand-bars span:first-child {
-  background: linear-gradient(180deg, var(--cyan), var(--magenta));
-  box-shadow: 0 0 10px rgba(0, 234, 255, 0.6);
-}
-nav.topnav .brand-bars span:last-child { background: #2a2740; }
+nav.topnav .topnav-links { display: contents; }
 nav.topnav a:not(.brand) {
   font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--muted);
 }
 nav.topnav a:not(.brand):hover { color: var(--cyan); }
 nav.topnav .spacer { flex: 1; }
+
+/* Narrow screens: brand + logout on the first row, links drop to a second
+   full-width row that scrolls horizontally instead of wrapping raggedly. */
+@media (max-width: 700px) {
+  nav.topnav { gap: 0.55rem 0.9rem; padding: 0.7rem 0.95rem; }
+  nav.topnav .topnav-links {
+    display: flex; order: 3; flex-basis: 100%; gap: 0.85rem;
+    justify-content: space-between;
+    overflow-x: auto; white-space: nowrap;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  nav.topnav .topnav-links::-webkit-scrollbar { display: none; }
+  nav.topnav .topnav-links a { flex: none; padding: 2px 0; font-size: 0.62rem; letter-spacing: 0.1em; }
+}
 
 /* ---------- panels & cards ---------- */
 .panel {

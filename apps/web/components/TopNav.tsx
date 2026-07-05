@@ -1,0 +1,32 @@
+import Link from 'next/link';
+import { LogoutButton } from '@/components/LogoutButton';
+
+/**
+ * Signed-in header. The brand lockup mirrors the landing page exactly
+ * (bar + "SEVEN DAYS" over "DERBY") so the logo reads as one product on
+ * both sides of the login. On narrow screens the link row drops below the
+ * brand and scrolls horizontally instead of wrapping.
+ */
+export function TopNav() {
+  return (
+    <nav className="topnav">
+      <Link href="/dashboard" className="brand" aria-label="Seven Days Derby">
+        <span className="brand-bar" aria-hidden="true" />
+        <span className="brand-lock">
+          <span className="brand-l1">SEVEN&nbsp;DAYS</span>
+          <span className="brand-l2">DERBY</span>
+        </span>
+      </Link>
+      <div className="topnav-links">
+        <Link href="/dashboard">HOME</Link>
+        <Link href="/horses">STABLE</Link>
+        <Link href="/races">RACE</Link>
+        <Link href="/wallet">WALLET</Link>
+        <Link href="/notifications">通知</Link>
+        <Link href="/account">アカウント</Link>
+      </div>
+      <span className="spacer" />
+      <LogoutButton />
+    </nav>
+  );
+}
