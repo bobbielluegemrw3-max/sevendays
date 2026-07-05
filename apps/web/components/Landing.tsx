@@ -54,13 +54,11 @@ const TYPE_COLOR: Record<string, string> = {
 // Gallery data — faithful to the handoff (names, likes, rank, price, last).
 const GALLERY = [
   { id: '#0001', name: 'AURELIAN MIST', img: '/horses/onyx.png', type: 'ENDURANCE', rarity: 'LEGENDARY', price: '520', last: '480', likes: '2.1k', rank: '#2' },
-  { id: '#0007', name: 'SOLARIS FLARE', img: '/horses/chrome.png', type: 'POWER', rarity: 'EPIC', price: '310', last: '288', likes: '940', rank: '#41' },
   { id: '#0142', name: 'GLACIER RUSH', img: '/horses/gold.png', type: 'SPRINTER', rarity: 'RARE', price: '180', last: '165', likes: '612', rank: '#312' },
-  { id: '#0311', name: 'NOCTURNE EX', img: '/horses/onyx.png', type: 'BALANCED', rarity: 'RARE', price: '145', last: '132', likes: '388', rank: '#488' },
+  { id: '#0007', name: 'SOLARIS FLARE', img: '/horses/chrome.png', type: 'POWER', rarity: 'EPIC', price: '310', last: '288', likes: '940', rank: '#41' },
   { id: '#1024', name: 'VOID COMET', img: '/horses/hero.png', type: 'ENDURANCE', rarity: 'LEGENDARY', price: '540', last: '510', likes: '1.7k', rank: '#4' },
+  { id: '#0311', name: 'NOCTURNE EX', img: '/horses/onyx.png', type: 'BALANCED', rarity: 'RARE', price: '145', last: '132', likes: '388', rank: '#488' },
   { id: '#0781', name: 'AUREUS BOLT', img: '/horses/chrome.png', type: 'POWER', rarity: 'EPIC', price: '298', last: '275', likes: '810', rank: '#55' },
-  { id: '#0605', name: 'PLASMA DASH', img: '/horses/hero.png', type: 'LUCK', rarity: 'RARE', price: '132', last: '120', likes: '274', rank: '#602' },
-  { id: '#1330', name: 'CRYO SURGE', img: '/horses/gold.png', type: 'SPRINTER', rarity: 'RARE', price: '128', last: '119', likes: '210', rank: '#720' },
 ];
 
 export function Landing() {
@@ -310,7 +308,7 @@ export function Landing() {
                     <span className={s.last}>last {h.last}</span>
                   </div>
                   <Link href="/login">
-                    <button>購入 · BUY</button>
+                    <button style={{ color: st.ink, background: st.ribbon, border: 'none' }}>購入 · BUY</button>
                   </Link>
                 </div>
               </div>
