@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { Countdown } from '@/components/Countdown';
-import { LandingAuth } from '@/components/LandingAuth';
+import { LocalPostTime, LocalRaceTime } from '@/components/LocalPostTime';
 import s from './landing.module.css';
 
 /**
@@ -24,7 +24,7 @@ const RARITY_STYLE: Record<
     ribbon: 'linear-gradient(92deg,#c9a86a,#f7eccb)',
     ink: '#0a0813',
     panel: 'radial-gradient(90% 80% at 50% 42%,rgba(201,168,106,.2),transparent 70%)',
-    glow: 'rgba(201,168,106,.5)',
+    glow: 'rgba(201,168,106,.72)',
   },
   EPIC: {
     border: '#ff2dc4',
@@ -32,7 +32,7 @@ const RARITY_STYLE: Record<
     ribbon: 'linear-gradient(92deg,#ff2dc4,#ff8fe4)',
     ink: '#150410',
     panel: 'radial-gradient(90% 80% at 50% 42%,rgba(255,45,196,.18),transparent 70%)',
-    glow: 'rgba(255,45,196,.45)',
+    glow: 'rgba(255,45,196,.68)',
   },
   RARE: {
     border: '#00eaff',
@@ -40,7 +40,7 @@ const RARITY_STYLE: Record<
     ribbon: 'linear-gradient(92deg,#00eaff,#a9f6ff)',
     ink: '#04141a',
     panel: 'radial-gradient(90% 80% at 50% 42%,rgba(0,234,255,.16),transparent 70%)',
-    glow: 'rgba(0,234,255,.45)',
+    glow: 'rgba(0,234,255,.68)',
   },
 };
 const TYPE_COLOR: Record<string, string> = {
@@ -59,6 +59,9 @@ const GALLERY = [
   { id: '#1024', name: 'VOID COMET', img: '/horses/hero.png', type: 'ENDURANCE', rarity: 'LEGENDARY', price: '540', last: '510', likes: '1.7k', rank: '#4' },
   { id: '#0311', name: 'NOCTURNE EX', img: '/horses/onyx.png', type: 'BALANCED', rarity: 'RARE', price: '145', last: '132', likes: '388', rank: '#488' },
   { id: '#0781', name: 'AUREUS BOLT', img: '/horses/chrome.png', type: 'POWER', rarity: 'EPIC', price: '298', last: '275', likes: '810', rank: '#55' },
+  // Cards 7-8 show only on desktop (>=1040px) so mobile/tablet stay a clean 2x3.
+  { id: '#0605', name: 'PLASMA DASH', img: '/horses/hero.png', type: 'LUCK', rarity: 'RARE', price: '132', last: '120', likes: '274', rank: '#602' },
+  { id: '#1330', name: 'CRYO SURGE', img: '/horses/gold.png', type: 'SPRINTER', rarity: 'RARE', price: '128', last: '119', likes: '210', rank: '#720' },
 ];
 
 export function Landing() {
@@ -93,17 +96,16 @@ export function Landing() {
           <div>
             <span className={s.hbadge}>
               <span className={s.g} />
-              WEB3 HORSE RACING · ON-CHAIN
+              WEB3 HORSE RACING · USDT ON POLYGON
             </span>
             <h1 className={s.htitle}>
               <span className={s.l1}>SEVEN&nbsp;DAYS</span>
               <span className={s.l2}>DERBY</span>
             </h1>
             <p className={s.hlead}>
-              毎晩20時、その日のすべての馬が1つのレースを走ります。下位はBurn、勝ち残った馬はDay7で200
-              USDTの買い戻しへ。結果はすべてオンチェーンに記録され、誰でも検証できます。
+              7日間を、走り抜け。全馬が一斉に発走。下位はBurn、生き残った馬は毎日価値が高まる。P2Pで売買。
             </p>
-            <div className={s.hsub}>Every horse is an on-chain NFT. Every race is verifiable.</div>
+            <div className={s.hsub}>Provably fair. Fully replayable. No AI winners.</div>
             <div className={s.hbtns}>
               <Link href="/login">
                 <button className={s.btnPrimary}>馬を迎える ▶</button>
@@ -122,14 +124,16 @@ export function Landing() {
                 <div className={s.k}>TO GLORY</div>
               </div>
               <div>
-                <div className={`${s.n} ${s.gr}`}>0 AI</div>
-                <div className={s.k}>IN RESULTS</div>
+                <div className={`${s.n} ${s.gr}`}>100%</div>
+                <div className={s.k}>DETERMINISTIC</div>
               </div>
             </div>
           </div>
 
           {/* right featured NFT card */}
-          <div className={s.featCard}>
+          <div className={s.featWrap}>
+            <span className={s.featGlow} />
+            <div className={s.featCard}>
             <div className={s.goldbar} />
             <div className={s.art}>
               <span className={s.idl}>#0001</span>
@@ -147,6 +151,7 @@ export function Landing() {
                 <span className={`${s.tag} ${s.gold}`}>LEGENDARY</span>
               </div>
             </div>
+            </div>
           </div>
         </div>
       </div>
@@ -158,7 +163,7 @@ export function Landing() {
             <span key={k}>
               <span>◇ DETERMINISTIC</span>
               <span>◇ COMMIT-REVEAL SEED</span>
-              <span>◇ ON-CHAIN LEDGER</span>
+              <span>◇ AUDITABLE LEDGER</span>
               <span>◇ REPLAYABLE RACES</span>
               <span>◇ NO AI WINNERS</span>
               <span>◇ 200 USDT BUYBACK</span>
@@ -174,7 +179,9 @@ export function Landing() {
           <div className={s.cdCard}>
             <div className={s.l}>// NEXT POST 20:00 MYT</div>
             <Countdown className={s.cd} />
-            <div className={s.s}>毎晩 20:00(日本時間 21:00)· 全馬一斉発走</div>
+            <div className={s.s}>
+              <LocalPostTime />
+            </div>
             <Link href="/login">
               <button style={{ width: '100%' }}>レースに参加する</button>
             </Link>
@@ -185,7 +192,7 @@ export function Landing() {
               HOW IT WORKS
             </div>
             <h2 className={s.h2}>
-              7日間の<span className={s.cy}>サバイバルレース</span>
+              Play Game <span className={s.cy}>Flow</span>
             </h2>
             <div className={s.stepGrid}>
               <div className={`${s.step} ${s.cyan}`}>
@@ -193,25 +200,34 @@ export function Landing() {
                   01
                 </div>
                 <div className={s.t}>馬を迎える</div>
-                <div className={s.d}>102 USDT(価格100+手数料2)でMint。DNA・タイプ・レア度はシードから自動で決まります。</div>
+                <div className={s.d}>購入を申し込むと自動でマッチング。出走中の馬(P2P)を優先、在庫が足りなければ新規Mint(102 USDT=価格100+手数料2)。価格は割当先次第。</div>
               </div>
               <div className={s.step}>
                 <div className={s.no} style={{ color: '#ff2dc4' }}>
                   02
                 </div>
                 <div className={s.t}>調教して出走</div>
-                <div className={s.d}>レース前に1日1回だけ調教できます。毎晩20時、すべての馬が一斉に走ります。</div>
+                <div className={s.d}>
+                  レース前に1日1回だけ調教できます。毎晩 <LocalRaceTime />、すべての馬が一斉に走ります。
+                </div>
               </div>
               <div className={s.step}>
                 <div className={s.no} style={{ color: '#ff6fd0' }}>
                   03
                 </div>
                 <div className={s.t}>生存 or Burn</div>
-                <div className={s.d}>成績下位の馬はBurn。Burnされても、次の馬に引き継がれるRevenge Buffを獲得します。</div>
+                <div className={s.d}>1日1回レース開催。毎晩1回、存在する全ての馬が一斉にレース出走。出走結果の下位約10%の馬はBurnで消滅。生き残り馬は価値が高まり翌日のレースへ。</div>
+              </div>
+              <div className={s.step}>
+                <div className={s.no} style={{ color: '#c6ff3a' }}>
+                  04
+                </div>
+                <div className={s.t}>P2P売買</div>
+                <div className={s.d}>生き残り馬は価値が高まったままP2P売買に自動利確。馬の所有者は即座にUSDTになります。</div>
               </div>
               <div className={`${s.step} ${s.gold}`}>
                 <div className={s.no} style={{ color: '#c9a86a' }}>
-                  04
+                  05
                 </div>
                 <div className={s.t}>Day7 → 買い戻し</div>
                 <div className={s.d}>7日走り切れば200 USDTを7回で受取。完済で記念NFTになります。</div>
@@ -233,7 +249,7 @@ export function Landing() {
               <div className={s.nm}>
                 Seven Days Derby<span className={s.chk}>✓</span>
               </div>
-              <div className={s.by}>on Polygon · ERC-721</div>
+              <div className={s.by}>Memorial NFTs on Polygon</div>
             </div>
           </div>
           <div className={s.colStats}>
@@ -275,8 +291,9 @@ export function Landing() {
           {GALLERY.map((h) => {
             const st = RARITY_STYLE[h.rarity]!;
             return (
-              <div key={h.id} className={s.galCard} style={{ borderColor: st.border, ['--rar-glow']: st.glow } as CSSProperties}>
-                <div className={s.acc} style={{ background: st.accent }} />
+              <div key={h.id} className={s.galWrap} style={{ ['--rar-glow']: st.glow, ['--rar-line']: st.border } as CSSProperties}>
+                <span className={s.galGlow} />
+                <div className={s.galCard} style={{ borderColor: st.border }}>
                 <div className={s.art} style={{ background: st.panel }}>
                   <span className={s.id} style={{ color: st.border }}>
                     {h.id}
@@ -311,6 +328,7 @@ export function Landing() {
                     <button style={{ color: st.ink, background: st.ribbon, border: 'none' }}>購入 · BUY</button>
                   </Link>
                 </div>
+                </div>
               </div>
             );
           })}
@@ -327,11 +345,11 @@ export function Landing() {
         <div className={s.econ}>
           <div className={s.econL}>
             <div className={s.eyebrow} style={{ color: '#c9a86a' }}>
-              TRANSPARENT ECONOMY
+              PROVABLY FAIR ECONOMY
             </div>
             <h2 className={s.h2}>すべての記録が、台帳に残ります</h2>
             <p className={s.p}>
-              レース結果・Burn・残高は複式簿記の台帳で管理され、それが唯一の記録です。勝者や順位をAIが決めることはありません。レースはシード公開後、誰でも同じ結果を再現・検証できます。
+              レース結果は決定論的に計算され、シード公開後は同じ入力から再現できる設計です。勝者や順位をAIが決めることはありません。残高は複式簿記の台帳で管理され、負残高や不整合を構造的に許しません。
             </p>
           </div>
           <div className={s.econR}>
@@ -363,10 +381,12 @@ export function Landing() {
       <div className={s.finalWrap}>
         <div className={s.finalBox}>
           <div className={s.finalInner}>
-            <h2>今夜、走らせるか？</h2>
-            <p className={s.p}>ウォレット、またはGoogleアカウントで、すぐに始められます。</p>
-            <LandingAuth />
-            <div className={s.fine}>USDT · non-custodial · Polygon</div>
+            <h2>あなたの馬を、迎えよう。</h2>
+            <p className={s.p}>ウォレット・Google・メールアドレスで、すぐに始められます。</p>
+            <Link href="/login" className={s.finalCta}>
+              はじめる ▶
+            </Link>
+            <div className={s.fine}>USDT · Polygon · deterministic</div>
           </div>
         </div>
       </div>

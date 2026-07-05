@@ -1,19 +1,29 @@
 import Link from 'next/link';
 import { LoginForm } from '@/components/LoginForm';
+import s from './login.module.css';
 
 export default function LoginPage() {
   return (
-    <div style={{ maxWidth: 420, margin: '0 auto', textAlign: 'center' }}>
-      <Link href="/" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.14em', color: 'var(--gold)' }}>
-        SEVEN&nbsp;DAYS&nbsp;DERBY
+    <div className={s.wrap}>
+      <Link href="/" className={s.brand} aria-label="Seven Days Derby">
+        <span className={s.bar} />
+        <span className={s.lock}>
+          <span className={s.l1}>SEVEN&nbsp;DAYS</span>
+          <span className={s.l2}>DERBY</span>
+        </span>
       </Link>
-      <h1 style={{ marginTop: '1.2rem' }}>ようこそ</h1>
-      <p className="muted" style={{ fontSize: '0.9rem', marginTop: '-0.2rem' }}>
-        MetaMask / Google でログインして、今夜のダービーへ。
-      </p>
-      <div className="panel" style={{ textAlign: 'left', marginTop: '1.2rem' }}>
-        <LoginForm />
+
+      <div className={s.box}>
+        <div className={s.inner}>
+          <h1 className={s.title}>ログイン / はじめる</h1>
+          <p className={s.sub}>ウォレット・Google・メールアドレスで、今夜のダービーへ。</p>
+          <LoginForm />
+        </div>
       </div>
+
+      <Link href="/" className={s.back}>
+        ← トップへ戻る
+      </Link>
     </div>
   );
 }
