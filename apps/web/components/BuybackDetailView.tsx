@@ -2,7 +2,7 @@ import Link from 'next/link';
 import s from '../app/buybacks.module.css';
 
 /* ============================================================================
- * /buybacks/[id](買い戻し詳細)再設計 — 200 USDT を7回に分けて受取るスケジュール。
+ * /champion/[id](チャンピオン報酬詳細)再設計 — 200 USDT を7回に分けて受取るスケジュール。
  * 純粋な表示コンポーネント。表示数値は BuybackDetail の値のみ(架空値なし)。
  * データ取得層 page.tsx は依頼側で結線。
  * ========================================================================== */
@@ -31,9 +31,9 @@ export function BuybackDetailView({ buyback }: { buyback: BuybackDetail }) {
     <div className={s.wrap}>
       {/* ヘッダ */}
       <div>
-        <Link href="/buybacks" className={s.crumb}>← 買い戻し一覧</Link>
+        <Link href="/champion" className={s.crumb}>← チャンピオン報酬一覧</Link>
         <div className={s.titleRow}>
-          <span className={s.title}>買い戻し {buyback.day7_clear_date}</span>
+          <span className={s.title}>チャンピオン報酬 {buyback.day7_clear_date}</span>
           <span className={`${s.badge} ${done ? s.stDone : s.stProgress}`}>{done ? '完了' : '進行中'}</span>
           <Link href={`/horses/${buyback.horse_id}`} className={s.hidLink}>馬 {buyback.horse_id.slice(0, 10)} →</Link>
         </div>

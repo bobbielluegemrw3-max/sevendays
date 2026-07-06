@@ -80,7 +80,7 @@ export function Landing() {
             <div className={s.hstats}>
               <div>
                 <div className={`${s.n} ${s.go}`}>200 USDT</div>
-                <div className={s.k}>DAY7 BUYBACK</div>
+                <div className={s.k}>DAY7 CHAMPION</div>
               </div>
               <div>
                 <div className={`${s.n} ${s.cy}`}>7 DAYS</div>
@@ -129,7 +129,7 @@ export function Landing() {
               <span>◇ AUDITABLE LEDGER</span>
               <span>◇ REPLAYABLE RACES</span>
               <span>◇ NO AI WINNERS</span>
-              <span>◇ 200 USDT BUYBACK</span>
+              <span>◇ 200 USDT CHAMPION REWARD</span>
             </span>
           ))}
         </div>
@@ -192,7 +192,7 @@ export function Landing() {
                 <div className={s.no} style={{ color: '#c9a86a' }}>
                   05
                 </div>
-                <div className={s.t}>Day7 → 買い戻し</div>
+                <div className={s.t}>Day7 → チャンピオン</div>
                 <div className={s.d}>7日走り切れば200 USDTを7回で受取。完済で記念NFTになります。</div>
               </div>
             </div>
@@ -325,7 +325,7 @@ export function Landing() {
               <div className={`${s.n} ${s.cy}`}>
                 200<small> USDT</small>
               </div>
-              <div className={s.k}>Day7 Buyback</div>
+              <div className={s.k}>Champion Reward</div>
             </div>
             <div className={s.cell}>
               <div className={`${s.n} ${s.gr}`}>7×</div>

@@ -20,7 +20,7 @@ interface TypeMeta { cls: string; glyph: string; label: string }
 const TYPE_META: Record<string, TypeMeta> = {
   RACE_RESULT_READY:    { cls: 'tRace', glyph: '◈', label: 'レース結果' },
   HORSE_BURNED:         { cls: 'tBurn', glyph: '✕', label: 'Burn' },
-  BUYBACK_PAYMENT_PAID: { cls: 'tBuyback', glyph: '◆', label: '買い戻し' },
+  BUYBACK_PAYMENT_PAID: { cls: 'tBuyback', glyph: '◆', label: 'チャンピオン報酬' },
   TRAINING_COMPLETED:   { cls: 'tTraining', glyph: '⤴', label: '調教' },
   DEPOSIT_CONFIRMED:    { cls: 'tDeposit', glyph: '↓', label: '入金' },
   ASSIGNMENT_READY:     { cls: 'tAssignment', glyph: '✦', label: '割当' },
@@ -70,7 +70,7 @@ export function NotificationsList({ notifications }: { notifications: Notificati
   const reset = () => setPage(0);
 
   if (total === 0) {
-    return <div className={s.empty}>通知はまだありません。<br />レース結果・Burn・買い戻し・調教などがここに届きます。</div>;
+    return <div className={s.empty}>通知はまだありません。<br />レース結果・Burn・チャンピオン報酬・調教などがここに届きます。</div>;
   }
 
   return (

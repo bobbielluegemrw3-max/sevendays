@@ -21,7 +21,7 @@ export interface StableHorse {
   horse_type: string; rarity: string; condition: string; fatigue: string;
   dna_hash: string; trained_for_next_race: boolean;
 }
-// status: 'ACTIVE'(出走中) | 'BURNED'(消滅) | 'DAY7_CLEARED'(買い戻し中) | 'MEMORIALIZED'(記念馬)
+// status: 'ACTIVE'(出走中) | 'BURNED'(消滅) | 'DAY7_CLEARED'(チャンピオン) | 'MEMORIALIZED'(記念馬)
 export interface StableData {
   horses: StableHorse[];   // 全所有馬(現役 + 過去)
   pendingCount: number;    // 割当待ち購入セッション数
@@ -90,7 +90,7 @@ export function StableView({ data }: { data: StableData }) {
           <div className={s.secHead}>
             <span className={`${s.secLabel} ${s.secLabelPast}`}>過去の馬 · HISTORY</span>
             <span className={s.secCount}>{past.length}</span>
-            <span className={s.secNote}>Burn=消滅 · Day7走破=買い戻し / 記念NFT</span>
+            <span className={s.secNote}>Burn=消滅 · Day7走破=チャンピオン報酬 / 記念NFT</span>
           </div>
           <StableBrowser kind="past" horses={past} />
         </section>

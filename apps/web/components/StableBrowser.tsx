@@ -75,7 +75,7 @@ function ActiveCard({ h }: { h: StableHorse }) {
 function pastMeta(status: string): { mod: string; badge: string; label: string; note: string } {
   switch (status) {
     case 'DAY7_CLEARED':
-      return { mod: s.pcleared!, badge: s.stCleared!, label: '買い戻し中', note: '7日走破 · 200 USDTで買い戻し中' };
+      return { mod: s.pcleared!, badge: s.stCleared!, label: 'チャンピオン', note: '7日走破 · チャンピオン報酬 受取中' };
     case 'MEMORIALIZED':
       return { mod: s.pmemorial!, badge: s.stMemorial!, label: '記念馬 · NFT', note: '7日完走 · 記念NFT' };
     case 'BURNED':
@@ -195,7 +195,7 @@ export function StableBrowser({ kind, horses }: { kind: 'active' | 'past'; horse
             <>
               <option value="ALL">状態: すべて</option>
               <option value="BURNED">Burn(消滅)</option>
-              <option value="DAY7_CLEARED">買い戻し中</option>
+              <option value="DAY7_CLEARED">チャンピオン</option>
               <option value="MEMORIALIZED">記念馬</option>
             </>
           )}

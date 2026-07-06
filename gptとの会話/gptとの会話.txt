@@ -1,0 +1,207 @@
+作成しました。
+
+📄 ダウンロードはこちら
+
+ADR_008_Web_Live_Experience_v1.md
+
+このADRは、Webブラウザ版で「The Daily Derby」をどう実現するかを定義しています。
+
+内容には、
+
+ブラウザを開いているユーザーは20:00に自動でLive演出へ遷移
+サイト内どのページでも共通カウントダウン表示
+20:00以降にアクセスしたユーザーは現在のBatch状態へ自動同期
+リロード不要のLive体験
+将来のPWA（Push通知・ホーム画面追加）への拡張方針
+
+を含めています。
+
+このADRは、Claude CodeがWeb版のUXを実装する際の重要な設計資料になります。 
+
+次にアイテムです。まだサイトにはアイテムは実装出来ていません。
+
+アイテムはburnされた時に貰えるのと、通常時にもいつでも買えます。そしてレース直前まではアイテムを使って調教出来ます
+
+このアイテム販売の骨子がまだ決まっていません
+
+はい。ここは収益・ゲーム性・Burn後の復帰導線に直結するので、骨子を先に固めた方がいいです。
+
+私はアイテムを2系統に分けるのが良いと思います。
+
+1. Revenge Buff
+Burn時にもらえる非売買アイテム
+
+2. Training Item
+通常購入できる消費アイテム
+1. Burn時にもらえるアイテム
+
+これは既存のRevenge Buffです。
+
+N  +4 final_score
+R  +7 final_score
+SR +10 final_score
+
+ルール：
+
+Burn時に自動付与
+売買不可
+譲渡不可
+手動使用不可
+次回成功Assignment後、最初の1レースに自動適用
+1ユーザー1つまで
+
+これは「救済」です。
+
+2. 通常購入できるTraining Item
+
+これは「調教強化」です。
+
+販売方式はこうします。
+
+アイテム名
+Speed Feed
+Power Feed
+Recovery Feed
+Lucky Charm
+価格案
+Speed Feed     2 USDT
+Power Feed     2 USDT
+Recovery Feed  2 USDT
+Lucky Charm    3 USDT
+効果
+Speed Feed
+SPEED_TRAINING の効果 +1
+
+Power Feed
+POWER_TRAINING の効果 +1
+
+Recovery Feed
+RECOVERY_TRAINING の効果 +1
+
+Lucky Charm
+random_modifier 下限/上限を +0.5補正
+例: -3/+3 → -2.5/+3.5
+重要ルール
+
+アイテムは勝率保証ではないです。
+
+Race Engineの final_score にだけ影響します。
+
+Item modifies training_modifier or random_modifier only.
+Item never guarantees survival.
+Item never changes Burn Target.
+Item never changes Race Seed.
+購入タイミング
+いつでも購入可能
+
+ただし、使用できるのは
+
+Race Participant Snapshot 作成前まで
+
+です。
+
+Snapshot後に使ったアイテムは翌日Race扱い。
+
+使用ルール
+
+v1.0ではシンプルにします。
+
+1 horse / 1 race / 1 item only
+
+つまり、1頭に複数アイテムを積めない。
+
+これを守らないと、Pay to Win感が強くなります。
+
+収益設計
+
+Training Itemの売上は、運営利益にしてよいです。
+
+ただし全部利益ではなく、こう分けると安全です。
+
+Item Sale Revenue
+
+60% Platform Operating Revenue
+20% Community Growth Pool
+20% Emergency Reserve
+
+これなら、
+
+運営収益になる
+コミュニティへ還元される
+緊急時の備えにもなる
+
+ので、印象が良いです。
+
+UI
+
+Stable画面でこうします。
+
+Training
+
+Choose Training
+[ Speed ] [ Power ] [ Recovery ]
+
+Boost Item
+[ None ] [ Speed Feed ] [ Power Feed ] [ Recovery Feed ] [ Lucky Charm ]
+
+購入していなければ、
+
+Buy & Apply
+
+所有していれば、
+
+Apply
+私の推奨するv1.0仕様
+Item System v1.0
+
+1. Revenge Buff
+- Burn reward
+- Not purchasable
+- Auto apply
+- One race only
+
+2. Training Items
+- Purchasable anytime
+- One item per horse per race
+- Apply before snapshot
+- Score modifier only
+- No survival guarantee
+- No item trading
+ここで一番大事なこと
+
+アイテム販売は入れるべきですが、強くしすぎないことです。
+
+アイテムが強すぎると、
+
+アイテムを買う人だけDay7へ行ける
+
+になって、ゲームが壊れます。
+
+なのでv1.0は、
+
+小さく効く
+でも使いたくなる
+
+くらいがベストです。
+
+なるほど。これもMDにしてください
+
+作成しました。
+
+📄 ダウンロードはこちら
+
+ADR_009_Item_System_v1.md
+
+このADRには以下をまとめています。
+
+✅ Revenge Buff の役割と仕様
+✅ 通常購入できる Training Item の設計
+✅ アイテム効果（Speed Feed / Power Feed / Recovery Feed / Lucky Charm）
+✅ Snapshot前のみ適用できるルール
+✅ 「1頭1レース1アイテム」の制約
+✅ Pay-to-Winにならないための設計思想
+✅ アイテム売上の配分（Operating / Community Growth Pool / Emergency）
+✅ Ledgerを通した会計処理
+✅ Claude Code向けのConstitution Rule
+
+これで、MLM・Marketplace・Daily Derby・Item System の4つの重要ADRが揃いました。 

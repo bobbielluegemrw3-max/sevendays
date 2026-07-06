@@ -150,7 +150,7 @@ export function DailyDerbyPersonalResult({ result }: { result: PersonalResult })
               {result.buybackTotal}
               <span className={s.rBigUnit}> USDT</span>
             </div>
-            <div className={s.rBigLabel}>Buyback Started</div>
+            <div className={s.rBigLabel}>Champion Reward Started</div>
           </Row>
           <Row delay={1.8}>
             <div className={s.rNote}>

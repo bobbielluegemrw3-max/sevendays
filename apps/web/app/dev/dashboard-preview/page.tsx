@@ -46,7 +46,7 @@ export default function DashboardPreview() {
         notifications: [
           { id: 'n1', notification_type: 'RACE_RESULT_READY', payload_json: { title: '本日のレース結果が確定しました。' }, read_at: null, created_at: iso(35) },
           { id: 'n2', notification_type: 'HORSE_BURNED', payload_json: { title: 'Burning Meteor は本日のレースでBurnされました。' }, read_at: null, created_at: iso(36) },
-          { id: 'n3', notification_type: 'BUYBACK_PAYMENT_PAID', payload_json: { title: 'Buyback支払いが完了しました。' }, read_at: null, created_at: iso(37) },
+          { id: 'n3', notification_type: 'BUYBACK_PAYMENT_PAID', payload_json: { title: 'チャンピオン報酬が支払われました。' }, read_at: null, created_at: iso(37) },
           { id: 'n4', notification_type: 'TRAINING_COMPLETED', payload_json: { title: 'トレーニングが完了しました。' }, read_at: iso(300), created_at: iso(1500) },
         ],
       }}

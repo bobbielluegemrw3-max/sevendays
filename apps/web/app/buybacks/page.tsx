@@ -1,7 +1,6 @@
-import { serverApiOrLogin } from '@/lib/server-api';
-import { BuybacksView, type Buyback } from '@/components/BuybacksView';
+import { redirect } from 'next/navigation';
 
-export default async function BuybacksPage() {
-  const { buybacks } = await serverApiOrLogin<{ buybacks: Buyback[] }>('/api/v1/buybacks');
-  return <BuybacksView buybacks={buybacks} />;
+/** 旧URL互換(Decision 075): /buybacks → /champion。 */
+export default function LegacyBuybacksRedirect(): never {
+  redirect('/champion');
 }

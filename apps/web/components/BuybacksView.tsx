@@ -2,7 +2,7 @@ import Link from 'next/link';
 import s from '../app/buybacks.module.css';
 
 /* ============================================================================
- * /buybacks(買い戻し一覧)再設計 — ダッシュボード Option 1c と同じ部品言語。
+ * /champion(チャンピオン報酬一覧)再設計 — ダッシュボード Option 1c と同じ部品言語。
  * 純粋な表示コンポーネント。props は { buybacks: Buyback[] } のみ。
  * 表示数値は Buyback の値のみ(架空値なし)。データ取得層 page.tsx は依頼側で結線。
  * ========================================================================== */
@@ -23,7 +23,7 @@ function shortId(id: string): string {
 export function BuybacksView({ buybacks }: { buybacks: Buyback[] }) {
   return (
     <div className={s.wrap}>
-      <div className={s.h1}>買い戻し</div>
+      <div className={s.h1}>チャンピオン報酬</div>
       <div className={s.intro}>
         Day7を生き延びた馬は <b>200 USDT</b> で買い戻されます。翌日（D+1）から <b>7回</b>に分けて受取。
         7回完了で <b>記念NFT</b>（Polygon / ERC-721）がミントされます。
@@ -35,7 +35,7 @@ export function BuybacksView({ buybacks }: { buybacks: Buyback[] }) {
             const paid = Number(b.payments_paid) || 0;
             const done = b.status === 'COMPLETED';
             return (
-              <Link key={b.id} href={`/buybacks/${b.id}`} className={s.card}>
+              <Link key={b.id} href={`/champion/${b.id}`} className={s.card}>
                 <div className={s.cardTop}>
                   <span className={s.cardTitle}>Day7達成 {b.day7_clear_date}</span>
                   <span className={`${s.badge} ${done ? s.stDone : s.stProgress}`}>{done ? '完了' : '進行中'}</span>
@@ -52,7 +52,7 @@ export function BuybacksView({ buybacks }: { buybacks: Buyback[] }) {
           })}
         </div>
       ) : (
-        <div className={s.empty}>買い戻しスケジュールはまだありません。<br />馬がDay7を走り切ると、ここに買い戻しが表示されます。</div>
+        <div className={s.empty}>チャンピオン報酬はまだありません。<br />馬がDay7を走り切るとチャンピオンとなり、報酬(200 USDT)がここに表示されます。</div>
       )}
     </div>
   );

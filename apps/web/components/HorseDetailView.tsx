@@ -50,11 +50,11 @@ function statusMeta(horse: HorseDetail): StatusMeta {
   switch (horse.status) {
     case 'DAY7_CLEARED':
       return {
-        badge: s.stCleared!, label: '買い戻し中', isActive: false, burned: false,
-        heroValLabel: '7日走破', heroVal: '買い戻し中', heroValUnit: '', heroValMuted: false,
-        sideLabel: '結末 · OUTCOME', sideNote: '7日走破 · 200 USDTで買い戻し中',
-        dayNote: '7日間を走り切りました。200 USDTの買い戻し(7日分割)が進行中です。',
-        retiredClass: s.retiredGold!, retiredNote: '7日走破。200 USDTの買い戻しが進行中です。',
+        badge: s.stCleared!, label: 'チャンピオン', isActive: false, burned: false,
+        heroValLabel: '7日走破', heroVal: 'チャンピオン', heroValUnit: '', heroValMuted: false,
+        sideLabel: '結末 · OUTCOME', sideNote: '7日走破 · チャンピオン報酬 200 USDT 受取中',
+        dayNote: '7日間を走り切ったチャンピオンです。チャンピオン報酬 200 USDT(7日分割)を受け取り中です。',
+        retiredClass: s.retiredGold!, retiredNote: '7日走破のチャンピオン。報酬 200 USDT を受け取り中です。',
       };
     case 'MEMORIALIZED':
       return {
@@ -62,7 +62,7 @@ function statusMeta(horse: HorseDetail): StatusMeta {
         heroValLabel: '7日完走', heroVal: '記念NFT', heroValUnit: '', heroValMuted: false,
         sideLabel: '結末 · OUTCOME', sideNote: '7日完走 · 記念NFT',
         dayNote: '7日間を走り切った証。記念NFTとして厩舎に残ります。',
-        retiredClass: s.retiredGold!, retiredNote: '7日間を走り切った記念馬。200 USDTの買い戻しは完了しています。',
+        retiredClass: s.retiredGold!, retiredNote: '7日間を走り切った記念馬。チャンピオン報酬 200 USDT の受け取りは完了しています。',
       };
     case 'BURNED':
       return {
@@ -77,7 +77,7 @@ function statusMeta(horse: HorseDetail): StatusMeta {
       return {
         badge: s.stActive!, label: '出走中', isActive: true, burned: false,
         heroValLabel: '現在価値', heroVal: horseValue(d), heroValUnit: 'USDT', heroValMuted: false,
-        sideLabel: '現在価値 · VALUE', sideNote: '生き残るほど日々上昇 · Day7で200 USDT買い戻し',
+        sideLabel: '現在価値 · VALUE', sideNote: '生き残るほど日々上昇 · Day7でチャンピオン報酬 200 USDT',
         dayNote: `Day ${d} を走行中。今夜のレースを生き延びれば Day ${Math.min(7, d + 1)} へ、価値も上昇します。`,
       };
   }

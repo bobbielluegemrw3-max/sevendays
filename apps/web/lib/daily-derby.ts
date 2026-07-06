@@ -198,7 +198,7 @@ function makeLine(section: LogSection, i: number): LogLine {
       return { id, tone: 'value', text: `${tag('VAL')}${pad(horseName(i, 3), NAME_W)}  DAY ${day}  ${priceOfDay(day)} USDT  ▲` };
     }
     case 'DAY7':
-      return { id, tone: 'day7', text: `${tag('DAY7')}${pad(horseName(i, 4), NAME_W)}  CLEARED — BUYBACK 200.00 USDT` };
+      return { id, tone: 'day7', text: `${tag('DAY7')}${pad(horseName(i, 4), NAME_W)}  CLEARED — CHAMPION REWARD 200.00` };
     case 'LIST': {
       const day = dayOf(i, 5);
       return { id, tone: 'list', text: `${tag('LIST')}${pad(horseName(i, 5), NAME_W)}  ASK  ${priceOfDay(day)} USDT` };
@@ -272,7 +272,7 @@ export const FIXTURE_TICKER: readonly string[] = [
   'SOLD — Royal Thunder 177.16 USDT',
   'BURN — Black Storm',
   'DAY7 — Golden Wind CLEARED',
-  'BUYBACK PAID — 28.57 USDT',
+  'CHAMPION REWARD — 28.57 USDT',
   'REVENGE BUFF GENERATED',
   'SOLD — Azure Comet 146.41 USDT',
   'SOLD — Neon Mirage 161.05 USDT',

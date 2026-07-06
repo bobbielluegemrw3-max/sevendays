@@ -14,7 +14,7 @@ export interface AdminDashboard {
 
 function ecoMeta(status: string): { card: string; dot: string; val: string; note: string } {
   const u = (status || '').toUpperCase();
-  if (['HEALTHY', 'OK', 'NORMAL'].includes(u)) return { card: s.ecoGood!, dot: s.ecoDotGood!, val: s.ecoValGood!, note: 'バーン率・買い戻しプールは正常範囲' };
+  if (['HEALTHY', 'OK', 'NORMAL'].includes(u)) return { card: s.ecoGood!, dot: s.ecoDotGood!, val: s.ecoValGood!, note: 'バーン率・チャンピオン報酬プールは正常範囲' };
   if (['WARNING', 'DEGRADED', 'CAUTION'].includes(u)) return { card: s.ecoWarn!, dot: s.ecoDotWarn!, val: s.ecoValWarn!, note: '一部指標が閾値に接近しています' };
   if (['CRITICAL', 'HALTED', 'ERROR'].includes(u)) return { card: s.ecoBad!, dot: s.ecoDotBad!, val: s.ecoValBad!, note: '要対応: 経済指標が異常です' };
   return { card: s.ecoDefault!, dot: s.ecoDotDefault!, val: s.ecoValDefault!, note: '' };

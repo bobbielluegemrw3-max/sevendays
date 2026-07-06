@@ -47,7 +47,7 @@ export function RacesView({ races }: { races: Race[] }) {
               </div>
               <div className={s.tonightNote}>
                 <div>下位 <b>10.7%</b> が Burn</div>
-                <div>生存で価値上昇 · Day7で買い戻し</div>
+                <div>生存で価値上昇 · Day7でチャンピオン報酬</div>
               </div>
             </div>
           </section>

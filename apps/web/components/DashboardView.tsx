@@ -15,7 +15,7 @@ import s from '../app/dashboard.module.css';
  *
  * 情報設計(5つの問い):
  *   ① 昨夜の結果   ② 今夜のレースまで  … 最上部で同格に横並び
- *   ③ 今日やること → ④ 資産 → マイ厩舎 → Day7買い戻し / ⑤ 通知
+ *   ③ 今日やること → ④ 資産 → マイ厩舎 → チャンピオン報酬 / ⑤ 通知
  * PC(≥900px)は grid-template-areas の bento、モバイルは1カラム優先度スタック。
  * ========================================================================== */
 
@@ -259,11 +259,11 @@ export function DashboardView({ data }: { data: DashboardData }) {
         )}
       </section>
 
-      {/* ===== Day7 買い戻し(進行中のみ) ===== */}
+      {/* ===== チャンピオン報酬(進行中のみ) ===== */}
       {activeBuybacks.length > 0 ? (
         <section className={s.buyback}>
           <div className={s.bbHead}>
-            <span className={s.bbTitle}>Day7 買い戻し 進行中</span>
+            <span className={s.bbTitle}>チャンピオン報酬 受取中</span>
             <span className={s.bbCount}>{Number(activeBuybacks[0]!.payments_paid)} / 7 回</span>
           </div>
           <div className={s.bar}><span style={{ width: `${(Number(activeBuybacks[0]!.payments_paid) / 7) * 100}%` }} /></div>

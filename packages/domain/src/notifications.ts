@@ -1,7 +1,8 @@
 /**
  * Notification specification v1.0 (Decision 065, resolves E17).
  * In-App only; the original thirteen types and their Japanese templates are
- * fixed by the owner verbatim; SUPPORT_BONUS_PAID was added by Decision 074
+ * fixed by the owner verbatim; SUPPORT_BONUS_PAID was added by Decision 074;
+ * the two BUYBACK_* texts were renamed to チャンピオン報酬 by Decision 075
  * (copy follows the R3 naming rule — never "MLM"/"紹介報酬").
  * `{placeholder}` interpolates from params.
  */
@@ -56,11 +57,11 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
     body: '次回の成功した馬の割当で自動適用されます。',
   },
   BUYBACK_PAYMENT_PAID: {
-    title: 'Buyback支払いが完了しました。',
+    title: 'チャンピオン報酬が支払われました。',
     body: '{amount} USDT がウォレットに反映されました。',
   },
   BUYBACK_COMPLETED: {
-    title: 'Buybackが完了しました。',
+    title: 'チャンピオン報酬の受け取りが完了しました。',
     body: '記念NFTの作成準備が完了しました。',
   },
   MEMORIAL_NFT_MINTED: {

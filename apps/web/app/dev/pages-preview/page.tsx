@@ -94,12 +94,12 @@ export default function PagesPreview() {
         notifications={[
           { id: 'n1', notification_type: 'RACE_RESULT_READY', payload_json: { title: '本日のレース結果が確定しました。', body: 'Crimson Tiger の結果を確認してください。' }, read_at: null, created_at: iso(35) },
           { id: 'n2', notification_type: 'HORSE_BURNED', payload_json: { title: 'Burning Meteor は本日のレースでBurnされました。', body: 'Revenge Buffが付与されました。' }, read_at: null, created_at: iso(36) },
-          { id: 'n3', notification_type: 'BUYBACK_PAYMENT_PAID', payload_json: { title: 'Buyback支払いが完了しました。', body: '28.57 USDT がウォレットに反映されました。' }, read_at: iso(20), created_at: iso(37) },
+          { id: 'n3', notification_type: 'BUYBACK_PAYMENT_PAID', payload_json: { title: 'チャンピオン報酬が支払われました。', body: '28.57 USDT がウォレットに反映されました。' }, read_at: iso(20), created_at: iso(37) },
           { id: 'n4', notification_type: 'DEPOSIT_CONFIRMED', payload_json: { title: '入金が確認されました。', body: '250 USDT がウォレットに反映されました。' }, read_at: iso(50), created_at: iso(70) },
         ]}
       />
 
-      {sect('/buybacks 買い戻し一覧')}
+      {sect('/champion チャンピオン報酬一覧')}
       <BuybacksView
         buybacks={[
           { id: 'bb-1', horse_id: 'f003aaaa', status: 'IN_PROGRESS', total_amount: '200.00', day7_clear_date: '2026-07-03', payments_paid: 3 },
@@ -107,7 +107,7 @@ export default function PagesPreview() {
         ]}
       />
 
-      {sect('/buybacks/[id] 買い戻し詳細')}
+      {sect('/champion/[id] チャンピオン報酬詳細')}
       <BuybackDetailView
         buyback={{
           id: 'bb-1', horse_id: 'f003aaaa', status: 'IN_PROGRESS', total_amount: '200.00', day7_clear_date: '2026-07-03',

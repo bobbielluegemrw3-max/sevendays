@@ -1,10 +1,11 @@
-import { notFound } from 'next/navigation';
-import { serverApi } from '@/lib/server-api';
-import { BuybackDetailView, type BuybackDetail } from '@/components/BuybackDetailView';
+import { redirect } from 'next/navigation';
 
-export default async function BuybackDetailPage({ params }: { params: Promise<{ id: string }> }) {
+/** 旧URL互換(Decision 075): /buybacks/[id] → /champion/[id]。 */
+export default async function LegacyBuybackDetailRedirect({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<never> {
   const { id } = await params;
-  const result = await serverApi<BuybackDetail>(`/api/v1/buybacks/${id}`);
-  if (result.status !== 200) notFound();
-  return <BuybackDetailView buyback={result.body} />;
+  redirect(`/champion/${id}`);
 }

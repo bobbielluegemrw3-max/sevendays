@@ -35,7 +35,7 @@ export function WalletView({
         <div className={s.balLocked}>
           <div className={s.balK}>ロック中 · LOCKED</div>
           <div className={s.balV}>{money(wallet.locked)}<small>USDT</small></div>
-          <div className={s.balNote}>{hasLocked ? '購入・買い戻しで一時的に確保中' : 'ロック中の資金はありません'}</div>
+          <div className={s.balNote}>{hasLocked ? '購入・チャンピオン報酬で一時的に確保中' : 'ロック中の資金はありません'}</div>
         </div>
       </div>
 

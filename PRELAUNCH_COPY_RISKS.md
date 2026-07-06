@@ -67,3 +67,4 @@
 | エコノミー節 | `TRANSPARENT ECONOMY` / `誰でも同じ結果を再現・検証できます` | `PROVABLY FAIR ECONOMY` / `決定論的に…再現できる設計`(公開検証の過大主張を除去) |
 
 > 注: 上記はオフチェーン(台帳=唯一の記録)・入出金/Memorial NFTのみPolygon・決定論/監査可能、という実装事実に整合させたもの。R1/R2 は未対応の残タスク。
+> 追記(2026-07-07, Decision 075): 「buyback/買い戻し」呼称を全UI・通知・演出で「**チャンピオン報酬(Champion Reward)**」に変更(/buybacks→/champion、旧URLはリダイレクト)。R1の「償還権に見える」要素のうち最大のものを除去。ただし呼称変更で法的実態は変わらないため、景表法観点を`LEGAL_REVIEW_MEMO.md`論点8に追加済み。

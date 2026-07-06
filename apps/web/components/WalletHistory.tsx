@@ -16,7 +16,7 @@ const PAGE_SIZE = 12;
 
 const TYPE_LABEL: Record<string, string> = {
   DEPOSIT: '入金', WITHDRAWAL: '出金', PURCHASE_LOCK: '購入ロック', REFUND: 'ロック返金',
-  BUYBACK_PAYOUT: '買い戻し受取', RACE_SETTLEMENT: 'レース精算', ASSIGNMENT: '割当',
+  BUYBACK_PAYOUT: 'チャンピオン報酬受取', RACE_SETTLEMENT: 'レース精算', ASSIGNMENT: '割当',
 };
 const CREDIT = new Set(['CREDIT', 'IN', 'INBOUND', 'DEPOSIT']);
 const DEBIT = new Set(['DEBIT', 'OUT', 'OUTBOUND', 'WITHDRAWAL']);
