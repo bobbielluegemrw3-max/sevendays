@@ -667,6 +667,24 @@ describe('support bonus network (Decision 074)', () => {
     expect(body.tier_amounts).toEqual(['3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00']);
   });
 
+  it('MetaMask-first members display as a masked wallet, not the synthetic email', async () => {
+    const sponsor = await newUser();
+    const walletUid = randomUUID();
+    await client.query(
+      `insert into users (id, email, direct_referrer_user_id) values ($1, $2, $3)`,
+      [walletUid, `${walletUid}@user.sevendays`, sponsor],
+    );
+    await client.query(`insert into user_wallets (user_id, wallet_address) values ($1, $2)`, [
+      walletUid,
+      '0xabcdef1234567890abcdef1234567890abcdef12',
+    ]);
+    const pool = await call('GET', '/api/v1/support/pool', asUser(sponsor));
+    const member = (pool.body as { members: { user_id: string; display: string }[] }).members.find(
+      (m) => m.user_id === walletUid,
+    );
+    expect(member?.display).toBe('0xabcd…ef12');
+  });
+
   it('place: sponsor-only, in-scope-only, one-shot', async () => {
     const sponsor = await newUser();
     const memberA = await referredUser(sponsor);

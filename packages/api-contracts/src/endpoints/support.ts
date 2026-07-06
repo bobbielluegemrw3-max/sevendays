@@ -24,6 +24,25 @@ function maskEmail(email: string): string {
   return `${email.slice(0, Math.min(2, at))}***@${email.slice(at + 1)}`;
 }
 
+/**
+ * MetaMask-first accounts carry a synthetic `{uid}@user.sevendays` email —
+ * masking that is meaningless, so show the masked wallet instead
+ * (`0x1234…cdef`). Email-first accounts keep the masked email even when a
+ * wallet is linked (the email is their primary identity).
+ */
+function displayIdentity(email: string, walletAddress: string | null): string {
+  if (email.endsWith('@user.sevendays')) {
+    if (walletAddress) return `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}`;
+    return 'ウォレットユーザー';
+  }
+  return maskEmail(email);
+}
+
+/** First linked wallet per user (a user can have at most a few). */
+const WALLET_JOIN = `left join lateral (
+  select wallet_address from user_wallets w where w.user_id = u.id order by wallet_address limit 1
+) w on true`;
+
 async function auditAdmin(
   ctx: HandlerContext,
   action: string,
@@ -91,16 +110,23 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
     path: '/api/v1/support/pool',
     auth: 'user',
     handler: async (ctx) => {
-      const rows = await ctx.client.query<{ id: string; email: string; created_at: string }>(
-        `select id, email, created_at::text as created_at from users
-         where direct_referrer_user_id = $1 and placement_parent_user_id is null
-         order by created_at asc`,
+      const rows = await ctx.client.query<{
+        id: string;
+        email: string;
+        wallet_address: string | null;
+        created_at: string;
+      }>(
+        `select u.id, u.email, w.wallet_address, u.created_at::text as created_at
+         from users u
+         ${WALLET_JOIN}
+         where u.direct_referrer_user_id = $1 and u.placement_parent_user_id is null
+         order by u.created_at asc`,
         [ctx.userId],
       );
       return {
         members: rows.rows.map((r) => ({
           user_id: r.id,
-          display: maskEmail(r.email),
+          display: displayIdentity(r.email, r.wallet_address),
           joined_at: r.created_at,
         })),
       };
@@ -119,6 +145,7 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
         depth: number;
         placed_at: string | null;
         email: string;
+        wallet_address: string | null;
       }>(
         `with recursive tree as (
            select u.id, u.placement_parent_user_id as parent_id, 1 as depth, u.placed_at
@@ -128,8 +155,11 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
            from tree t join users c on c.placement_parent_user_id = t.id
            where t.depth < $2
          )
-         select t.id, t.parent_id, t.depth, t.placed_at::text as placed_at, u.email
-         from tree t join users u on u.id = t.id
+         select t.id, t.parent_id, t.depth, t.placed_at::text as placed_at,
+                u.email, w.wallet_address
+         from tree t
+         join users u on u.id = t.id
+         ${WALLET_JOIN}
          order by t.depth asc, t.placed_at asc nulls last, t.id asc
          limit 500`,
         [ctx.userId, SUPPORT_BONUS_MAX_TIERS_V1],
@@ -139,7 +169,7 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
           user_id: r.id,
           parent_user_id: r.parent_id,
           tier: r.depth,
-          display: maskEmail(r.email),
+          display: displayIdentity(r.email, r.wallet_address),
           placed_at: r.placed_at,
         })),
       };

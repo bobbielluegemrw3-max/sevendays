@@ -1,13 +1,14 @@
 import { Money, insertNotification } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
 import {
+  MLM_REWARD_AMOUNT,
   PRICE_TABLE_V1,
   SUPPORT_BONUS_MAX_TIERS_V1,
   SUPPORT_BONUS_TIER_AMOUNTS_V1,
   SUPPORT_BONUS_TIER_THRESHOLDS_V1,
   renderNotification,
 } from '@sevendays/domain';
-import { supportBonusPayment } from '@sevendays/ledger';
+import { getBalance, getPlatformAccountId, supportBonusPayment } from '@sevendays/ledger';
 
 /**
  * Support Bonus (サポートボーナス, Decision 074) — on each burn, walk UP the
@@ -87,6 +88,20 @@ export async function paySupportBonusesForBurns(
   burns: readonly SupportBonusBurn[],
 ): Promise<number> {
   if (burns.length === 0) return 0;
+
+  // Ops early warning (owner request 2026-07-07): flag the reserve BEFORE
+  // it actually fails a payment. Marker is picked up by log-based alerting
+  // (infra/monitoring alerts.sh: SUPPORT_RESERVE_LOW). Numbers here are for
+  // the log line only — actual payments still go through exact Money math
+  // and the ledger refuses to overdraw either way.
+  const reserveId = await getPlatformAccountId(client, 'PLATFORM_MLM_RESERVE');
+  const reserve = Number(await getBalance(client, reserveId));
+  const threeNightCap = burns.length * Number(MLM_REWARD_AMOUNT) * 3;
+  if (reserve < threeNightCap) {
+    console.warn(
+      `SUPPORT_RESERVE_LOW: PLATFORM_MLM_RESERVE ${reserve.toFixed(2)} USDT < 3 nights of full-tier liability ${threeNightCap.toFixed(2)} USDT (${burns.length} burns tonight)`,
+    );
+  }
 
   // 1. Placement ancestors for every burned owner in one recursive walk
   //    (unplaced owners have none — their full 10 stays in the reserve).

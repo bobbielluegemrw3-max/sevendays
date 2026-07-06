@@ -97,7 +97,7 @@ M5 リリース判定 ✅ **全システム本番稼働**(2026-07-04): Web=seven
 
 ### Phase 14: 総仕上げ — 14a/b完了(`89dc025`)
 - **Decision 070(2026-07-04)**: ワーカーはGCPではなく**Render Private Service**に配備。`services/render-worker`=11ロール統合+**内蔵スケジューラー**(30秒tick・日次バッチは「20:00 MYT以降+当日行なし」で自己修復発火・FAILEDは自動再試行しない・チェーンループはCHAIN_RPC_URL設定時のみ)。`render.yaml`にpserv定義済み。GCP一式(infra/cloudrun等)はスケールアウト用に残置
-- **実装済み**: `createWorkerServer`(内部トークン+ワーカー別allowlist+internal認証dispatch、HTTP実テスト)/仕様10ワーカー+`chain-worker`(watcher/broadcaster/mintジョブ)/単一Dockerfile(`SERVICE`切替)/`infra/cloudrun`(deploy.sh・scheduler.sh 5ジョブ・README)/`infra/pubsub`(再実行+DLQ)/`infra/monitoring`(11アラート+F-U滞留アラート)。`batch/start`と`check-timeouts`はbatch_date省略可(=MYT今日)
+- **実装済み**: `createWorkerServer`(内部トークン+ワーカー別allowlist+internal認証dispatch、HTTP実テスト)/仕様10ワーカー+`chain-worker`(watcher/broadcaster/mintジョブ)/単一Dockerfile(`SERVICE`切替)/`infra/cloudrun`(deploy.sh・scheduler.sh 5ジョブ・README)/`infra/pubsub`(再実行+DLQ)/`infra/monitoring`(11アラート+F-U滞留+SUPPORT_RESERVE_LOWアラート)。`batch/start`と`check-timeouts`はbatch_date省略可(=MYT今日)
 - **残(14c)**: 10万ユーザーシミュレーション(Completion Gate G10)+G1-G10チェックリスト実行
 - **残(実デプロイ)**: オーナーのGCPプロジェクト作成→`infra/cloudrun/README.md`の手順(Secret 6本、SA 2本、スクリプト4本)。QuickNodeキーが揃えばchain-workerも同時に本稼働
 - **積み残しの技術負債(診断で記録済み)**: ①カバレッジ計測導入 ②スナップショット/割当ループのN+1集合SQL化(10万頭で顕在化) ③admin retryの非同期化 ④CIグリーンの確認(**ユーザーにActionsタブ確認を4回依頼済み・未回答**)

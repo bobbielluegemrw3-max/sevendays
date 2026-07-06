@@ -39,6 +39,8 @@ metric sevendays_service_role_anomaly     "SERVICE_ROLE_ANOMALY"              "S
 metric sevendays_seed_verification        "RACE_SEED_VERIFICATION_FAILED"     "Race seed verification failed"
 # 11 Race snapshot verification failed
 metric sevendays_snapshot_verification    "RACE_SNAPSHOT_VERIFICATION_FAILED" "Race snapshot verification failed"
+# 12 Support bonus reserve low (Decision 074; Step 16 warns before payments would fail)
+metric sevendays_support_reserve_low      "SUPPORT_RESERVE_LOW"               "Support bonus reserve below 3-night full-tier liability"
 
 policy() { # display metric
   cat > /tmp/policy.json <<JSON
@@ -68,6 +70,7 @@ policy "Sevendays: Batch failed"                   sevendays_batch_failed
 policy "Sevendays: Marketplace locked too long"    sevendays_marketplace_stuck
 policy "Sevendays: Recovery timeout 24h"           sevendays_recovery_timeout
 policy "Sevendays: Cash coverage below threshold"  sevendays_cash_coverage
+policy "Sevendays: Support reserve low"            sevendays_support_reserve_low
 policy "Sevendays: Service role anomaly"           sevendays_service_role_anomaly
 policy "Sevendays: Race seed verification failed"  sevendays_seed_verification
 policy "Sevendays: Snapshot verification failed"   sevendays_snapshot_verification
