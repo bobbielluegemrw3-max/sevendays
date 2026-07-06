@@ -2,15 +2,15 @@ import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { Countdown } from '@/components/Countdown';
 import { LocalPostTime, LocalRaceTime } from '@/components/LocalPostTime';
-import { HorseArt } from '@/components/HorseArt';
-import { pickShowcase, type CoatPattern, type Rgb } from '@/lib/horse-visual';
+import { pickShowcase } from '@/lib/horse-visual';
 import s from './landing.module.css';
 
 /**
- * Public landing page. The marketplace cards are drawn by the deterministic
- * horse visual engine (lib/horse-visual + HorseArt): each card is a unique
- * horse derived from a seed — a fresh set on every visit pre-launch, and wired
- * to real minted horses post-launch (HORSE_VISUAL_SYSTEM.md).
+ * Public landing page. Showcase art = Manus full-colour masters (owner-approved
+ * quality benchmark, 2026-07-06): the deterministic engine still derives each
+ * card's name/type/rarity, but the artwork itself is the native-colour
+ * originals until the Plan-E recolour pipeline (full-colour layers + designed
+ * hue mapping) lands. See UI_REDESIGN_LOG.md.
  */
 
 const TYPE_COLOR: Record<string, string> = {
@@ -21,13 +21,18 @@ const TYPE_COLOR: Record<string, string> = {
   LUCK: '#c9a86a',
 };
 
-// Hero showcase (#0001) — a fixed premium gold-metallic gallop, engine-rendered.
-// A soft top→belly two-tone (deep amber back into bright gold) shows the coat
-// pattern system on the signature horse without looking busy.
-const HERO_COAT: [Rgb, Rgb] = [[58, 40, 10], [255, 226, 150]];
-const HERO_COAT_B: [Rgb, Rgb] = [[42, 26, 6], [214, 158, 74]];
-const HERO_PATTERN: CoatPattern = { kind: 'upperLower', edge: 0.5, soft: 0.22 };
-const HERO_MANE: [Rgb, Rgb] = [[60, 50, 22], [255, 246, 214]];
+// Manus native-colour masters + a matching frame hue per artwork.
+const MANUS_ART = [
+  { src: '/horses/manus/v3.png', h: 195 }, // 虹色クローム (シアン→マゼンタ)
+  { src: '/horses/manus/v4.png', h: 315 }, // 黒クローム × ネオン鬣
+  { src: '/horses/manus/v2.png', h: 45 }, // 金 × 黒
+] as const;
+const frameOf = (h: number) => ({
+  line: `hsl(${h} 82% 62%)`,
+  glow: `hsl(${h} 88% 55% / 0.5)`,
+  panel: `hsl(${h} 72% 50% / 0.14)`,
+  grad: `linear-gradient(92deg, hsl(${h} 80% 58%), hsl(${h} 85% 74%))`,
+});
 
 export function Landing() {
   // Pre-launch showcase: 8 fresh horses, each from a different colour family and
@@ -107,7 +112,7 @@ export function Landing() {
               <span className={s.idl}>#0001</span>
               <span className={s.idr}>♡ 2.1k</span>
               <span className={s.aura} />
-              <HorseArt baseId="base_24" coat={HERO_COAT} coatB={HERO_COAT_B} pattern={HERO_PATTERN} mane={HERO_MANE} flip={false} />
+              <img src="/horses/manus/v2.png" alt="Genesis #0001" />
             </div>
             <div className={s.cap}>
               <div>
@@ -256,23 +261,25 @@ export function Landing() {
         </div>
 
         <div className={s.galGrid}>
-          {horses.map((h, i) => (
-            <div key={i} className={s.galWrap} style={{ ['--rar-glow']: h.frameGlow, ['--rar-line']: h.frameLine } as CSSProperties}>
-              <span className={s.galGlow} />
-              <div className={s.galCard} style={{ borderColor: h.frameLine }}>
-                <div className={s.art} style={{ background: `radial-gradient(90% 80% at 50% 42%, ${h.framePanel}, transparent 70%)` }}>
-                  <span className={s.id} style={{ color: h.frameLine }}>
+          {horses.map((h, i) => {
+            const art = MANUS_ART[i % MANUS_ART.length]!;
+            const f = frameOf(art.h);
+            return (
+            <div key={i} className={s.galWrap} style={{ ['--rar-glow']: f.glow, ['--rar-line']: f.line } as CSSProperties}>
+              <div className={s.galCard} style={{ borderColor: f.line }}>
+                <div className={s.art} style={{ background: `radial-gradient(90% 80% at 50% 42%, ${f.panel}, transparent 70%)` }}>
+                  <span className={s.id} style={{ color: f.line }}>
                     {h.id}
                   </span>
                   <span className={s.lk}>♡ {h.likes}</span>
                   <span className={s.rib} style={{ background: h.rarityRibbon, color: h.rarityInk }}>
                     {h.rarity}
                   </span>
-                  <HorseArt baseId={h.baseId} coat={h.coat} coatB={h.coatB} pattern={h.pattern} mane={h.mane} flip={h.flip} />
+                  <img src={art.src} alt={h.name} loading={i > 3 ? 'lazy' : undefined} />
                 </div>
                 <div className={s.body}>
                   <div className={s.gnm}>
-                    {h.name}
+                    <span className={s.gnmT}>{h.name}</span>
                     <span style={{ color: '#00eaff', fontSize: 11 }}>✓</span>
                   </div>
                   <div className={s.meta}>
@@ -291,12 +298,13 @@ export function Landing() {
                     <span className={s.last}>last {h.last}</span>
                   </div>
                   <Link href="/login">
-                    <button style={{ color: '#0a0813', background: h.frameGrad, border: 'none' }}>購入 · BUY</button>
+                    <button style={{ color: '#0a0813', background: f.grad, border: 'none' }}>購入 · BUY</button>
                   </Link>
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
         <div className={s.colMore}>
           <Link href="/login">

@@ -136,7 +136,7 @@
 .featCard .art .aura { position: absolute; left: 50%; top: 50%; width: min(440px, 82%); height: 280px; transform: translate(-50%, -50%);
   border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 234, 255, 0.3), rgba(255, 45, 196, 0.14) 55%, transparent 72%); filter: blur(8px); animation: lpAura 4s ease-in-out infinite; }
 .featCard .art img,
-.featCard .art canvas { position: relative; display: block; width: 100%; height: 100%; object-fit: contain;
+.featCard .art canvas, .featCard .art img { position: relative; display: block; width: 100%; height: 100%; object-fit: contain;
   filter: drop-shadow(0 26px 30px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 26px rgba(201, 168, 106, 0.3)); }
 .featCard .cap { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; padding: 6px 22px 22px; gap: 12px; }
 .featCard .cap .gtag { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.16em; color: #c9a86a; }
@@ -205,9 +205,9 @@
 
 /* Explicit columns per Claude Design handoff: phone 2 / tablet 3 / desktop 4.
    8 cards total: phone/tablet hide the last 2 -> clean 2x3; desktop -> 2x4. */
-.galGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 26px; }
+.galGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 26px; }
 .galGrid > .galWrap:nth-child(n + 7) { display: none; }
-@media (min-width: 680px) { .galGrid { grid-template-columns: repeat(3, 1fr); gap: 26px; } }
+@media (min-width: 680px) { .galGrid { grid-template-columns: repeat(3, 1fr); gap: 16px; } }
 @media (min-width: 1040px) {
   .galGrid { grid-template-columns: repeat(4, 1fr); }
   .galGrid > .galWrap:nth-child(n + 7) { display: block; }
@@ -215,12 +215,10 @@
 /* each card floats on its own per-rarity backlight (an element, not a dark
    drop-shadow — dark shadows are invisible on the near-black background) */
 .galWrap { position: relative; }
-.galGlow { position: absolute; z-index: 0; inset: -20% -16%; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(56% 54% at 50% 56%, var(--rar-glow, rgba(0, 234, 255, 0.65)), transparent 70%);
-  filter: blur(34px); animation: featBreath 4.5s ease-in-out infinite; }
+/* (galGlow backlight removed 2026-07-06 — owner: floating cards looked cheap; keep the tight aligned grid) */
 .galCard { position: relative; z-index: 1; border-radius: 16px; overflow: hidden; background: #0a0813; border: 1px solid;
-  box-shadow: 0 0 30px -6px var(--rar-glow, rgba(0, 234, 255, 0.5)); transition: box-shadow 0.16s ease; }
-.galCard:hover { box-shadow: 0 0 42px -2px var(--rar-glow, rgba(0, 234, 255, 0.5)); }
+  box-shadow: 0 0 16px -10px var(--rar-glow, rgba(0, 234, 255, 0.35)); transition: box-shadow 0.16s ease; }
+.galCard:hover { box-shadow: 0 0 26px -8px var(--rar-glow, rgba(0, 234, 255, 0.5)); }
 /* running light traveling around the thin per-rarity frame (same as the hero card) */
 .galCard::before {
   content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; z-index: 3; pointer-events: none;
@@ -235,9 +233,10 @@
 .galCard .art .lk { position: absolute; top: 9px; right: 12px; font-family: var(--font-mono); font-size: 11px; color: #8f8ac2; }
 .galCard .art .rib { position: absolute; bottom: 10px; left: 12px; font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 4px; }
 .galCard .art img,
-.galCard .art canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5)); }
+.galCard .art canvas, .galCard .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5)); }
 .galCard .body { padding: 13px 14px 14px; }
 .galCard .gnm { display: flex; align-items: center; gap: 5px; font-family: var(--font-display); font-weight: 700; font-size: 15px; color: #f2ead6; }
+.galCard .gnmT { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .galCard .meta { display: flex; gap: 6px; margin-top: 7px; align-items: center; }
 .galCard .type { font-family: var(--font-display); font-size: 9px; padding: 2px 8px; border: 1px solid; border-radius: 5px; }
 .galCard .day { font-family: var(--font-mono); font-size: 9px; color: #8f8ac2; }
@@ -249,6 +248,23 @@
 .colMore { text-align: center; margin-top: 26px; }
 .colMore button { border: 1px solid rgba(255, 255, 255, 0.16); background: transparent; color: #eae7ff; box-shadow: none; padding: 15px 40px; }
 .colMore button:hover { border-color: #00eaff; filter: none; }
+
+/* narrow screens: compact equal-height cards (owner 2026-07-06 — mobile cards
+   were needlessly tall, uneven and airy) */
+@media (max-width: 679px) {
+  .galGrid { gap: 10px; }
+  .galCard .art { height: 136px; }
+  .galCard .body { padding: 10px 11px 11px; }
+  .galCard .gnm { font-size: 12.5px; }
+  .galCard .meta { margin-top: 5px; }
+  .galCard .type { font-size: 8px; padding: 2px 6px; }
+  .galCard .rank { font-size: 8px; }
+  .galCard .priceRow { margin-top: 8px; }
+  .galCard .priceRow .pv { font-size: 14px; }
+  .galCard button { margin-top: 9px; padding: 9px; font-size: 11px; }
+  .galCard .art .id, .galCard .art .lk { font-size: 9.5px; top: 8px; }
+  .galCard .art .rib { font-size: 8px; padding: 2px 6px; bottom: 8px; }
+}
 
 /* ---------- economy ---------- */
 .econ { border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 22px; overflow: hidden; background: linear-gradient(180deg, rgba(0, 234, 255, 0.04), transparent);
