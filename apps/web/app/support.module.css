@@ -1,149 +1,128 @@
 /* ============================================================
-   /support — サポートネットワーク(Decision 074)
-   招待リンク・ティア進捗・配置待ちプール・ネットワーク・ボーナス履歴。
-   コピー規範(R3): MLM/コミッション/紹介報酬と言わない。
+   /support — サポートボーナス ダッシュボード(Decision 074)リデザイン
+   情報優先度: ①ティア状態と次アクション → ②KPI → ③ティア表 → ④招待 → ⑤履歴。
+   コピー規範(R3): MLM/コミッション/紹介報酬という語は使わない。
+   注: CSS Modules は子孫リテラル class もハッシュ化。JSX 側は全て module class。
    ============================================================ */
 
-.lead { color: var(--muted); font-size: 0.9rem; max-width: 620px; }
+.lead { color: var(--muted); font-size: 0.86rem; max-width: 620px; line-height: 1.6; }
 
 .mapCta {
-  font-family: var(--font-display);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #04141a !important;
-  background: linear-gradient(100deg, var(--cyan), #5ff5ff 55%, var(--cyan));
-  border-radius: var(--radius-sm);
-  padding: 0.5rem 0.9rem;
-  box-shadow: 0 10px 24px -8px rgba(0, 234, 255, 0.7);
-  white-space: nowrap;
+  font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em;
+  color: #04141a !important; background: linear-gradient(100deg, var(--cyan), #5ff5ff 55%, var(--cyan));
+  border-radius: var(--radius-sm); padding: 0.5rem 0.9rem;
+  box-shadow: 0 10px 24px -8px rgba(0, 234, 255, 0.7); white-space: nowrap;
 }
 .mapCta:hover { filter: brightness(1.08); color: #04141a !important; }
+
+/* ---------- ① ヒーロー: ティア状態 + 次アクション ---------- */
+.hero { display: grid; grid-template-columns: 1.5fr 1fr; gap: 0.9rem; margin-top: 0.9rem; }
+@media (max-width: 760px) { .hero { grid-template-columns: 1fr; } }
+
+.tierHero {
+  border: 1px solid rgba(0, 234, 255, 0.3); border-radius: var(--radius); padding: 1.1rem 1.2rem;
+  background: linear-gradient(150deg, rgba(0, 234, 255, 0.09), transparent 68%), var(--panel);
+}
+.tierHeroK { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em; color: var(--cyan); }
+.tierHeroRow { display: flex; align-items: flex-end; gap: 0.9rem; margin-top: 0.4rem; }
+.tierHeroNum {
+  font-family: var(--font-display); font-weight: 800; font-size: 2.8rem; line-height: 1; color: var(--cyan);
+  text-shadow: 0 0 22px rgba(0, 234, 255, 0.45); font-variant-numeric: tabular-nums;
+}
+.tierHeroNum .of { font-size: 1.1rem; color: var(--faint); font-weight: 700; }
+.tierHeroBar { flex: 1; padding-bottom: 0.35rem; }
+.progress { height: 9px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), #5ff5ff); box-shadow: 0 0 10px rgba(0, 234, 255, 0.5); }
+.tierHeroNext { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); margin-top: 0.45rem; }
+.tierHeroVol { font-family: var(--font-mono); font-size: 0.64rem; color: var(--faint); margin-top: 0.7rem; line-height: 1.5; }
+.tierHeroVol b { color: #a9f6ff; }
+
+.action { border-radius: var(--radius); padding: 1rem 1.1rem; display: flex; flex-direction: column; }
+.actionPlace { border: 1px solid rgba(255, 45, 196, 0.4); background: linear-gradient(150deg, rgba(255, 45, 196, 0.09), transparent 68%), var(--panel); }
+.actionGrow { border: 1px solid rgba(0, 234, 255, 0.3); background: linear-gradient(150deg, rgba(0, 234, 255, 0.07), transparent 68%), var(--panel); }
+.actionK { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em; }
+.actionPlace .actionK { color: var(--magenta-soft); }
+.actionGrow .actionK { color: var(--cyan); }
+.actionText { font-size: 0.86rem; color: var(--text); margin-top: 0.5rem; line-height: 1.55; flex: 1; }
+.actionBtn {
+  display: inline-block; text-align: center; margin-top: 0.8rem; text-decoration: none;
+  font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em;
+  border-radius: var(--radius-sm); padding: 0.65rem 1rem;
+}
+.actionPlace .actionBtn { color: #150410 !important; background: linear-gradient(100deg, var(--magenta), var(--magenta-soft)); }
+.actionGrow .actionBtn { color: #04141a !important; background: linear-gradient(100deg, var(--cyan), #5ff5ff); }
+.actionBtn:hover { filter: brightness(1.08); }
+
+/* ---------- ② KPI タイル ---------- */
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin-top: 0.8rem; }
+@media (max-width: 620px) { .kpis { grid-template-columns: 1fr; } }
+.kpi { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.8rem 0.95rem; text-decoration: none; display: block; }
+.kpiGold { border-color: rgba(201, 168, 106, 0.32); background: linear-gradient(180deg, rgba(201, 168, 106, 0.1), transparent); }
+.kpiCyan { border-color: rgba(0, 234, 255, 0.24); background: linear-gradient(180deg, rgba(0, 234, 255, 0.06), transparent); }
+.kpiPool { border-color: var(--border); background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent); }
+.kpiPoolActive { border-color: rgba(255, 45, 196, 0.4); background: linear-gradient(180deg, rgba(255, 45, 196, 0.09), transparent); }
+.kpiK { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; }
+.kpiGold .kpiK { color: var(--gold); } .kpiCyan .kpiK { color: var(--cyan); }
+.kpiPool .kpiK { color: var(--muted); } .kpiPoolActive .kpiK { color: var(--magenta-soft); }
+.kpiV { font-family: var(--font-display); font-weight: 700; font-size: 1.55rem; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }
+.kpiGold .kpiV { color: var(--gold-bright); } .kpiCyan .kpiV { color: #a9f6ff; }
+.kpiPool .kpiV { color: var(--text); } .kpiPoolActive .kpiV { color: var(--magenta-soft); }
+.kpiV :global(.unit) { font-size: 0.72rem; color: var(--faint); margin-left: 0.25rem; font-family: var(--font-mono); font-weight: 400; }
+.kpiSub { font-family: var(--font-mono); font-size: 0.62rem; color: var(--faint); margin-top: 0.1rem; }
+.kpiPoolActive .kpiSub { color: var(--magenta-soft); }
 
 /* ---------- 招待リンク ---------- */
 .inviteRow { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
 .inviteLink {
-  flex: 1 1 260px;
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  color: var(--cyan);
-  background: var(--bg);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  padding: 0.55rem 0.7rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1 1 260px; font-family: var(--font-mono); font-size: 0.82rem; color: var(--cyan);
+  background: var(--bg); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  padding: 0.55rem 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .copied { color: var(--good); font-size: 0.8rem; }
-.inviteNote { color: var(--faint); font-size: 0.78rem; margin-top: 0.6rem; line-height: 1.7; }
+.inviteNote { color: var(--faint); font-size: 0.76rem; margin-top: 0.6rem; line-height: 1.7; }
 
-/* ---------- ティア ---------- */
-.tierHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.6rem 1.4rem; }
-.tierNow {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 2.2rem;
-  color: var(--cyan);
-  text-shadow: 0 0 22px rgba(0, 234, 255, 0.4);
-}
-.tierVolume { font-family: var(--font-mono); color: var(--muted); font-size: 0.85rem; }
-.tierProgress {
-  height: 8px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  margin: 0.7rem 0 0.3rem;
-}
-.tierProgress > span {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, var(--cyan), #5ff5ff);
-  box-shadow: 0 0 10px rgba(0, 234, 255, 0.5);
-}
-.tierNext { color: var(--faint); font-size: 0.76rem; font-family: var(--font-mono); }
-.tierTable { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 0.9rem; }
-.tierCell {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.5rem 0.3rem;
-  text-align: center;
-}
+/* ---------- ③ ティア表 ---------- */
+.tierMeta { font-family: var(--font-mono); color: var(--muted); font-size: 0.72rem; margin-bottom: 0.7rem; }
+.tierTable { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.tierCell { border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.3rem; text-align: center; }
 .tierCellOpen { border-color: rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.06); }
 .tierCellName { font-family: var(--font-display); font-size: 0.66rem; font-weight: 700; color: var(--muted); }
 .tierCellOpen .tierCellName { color: var(--cyan); }
-.tierCellAmount { font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; color: var(--text); margin-top: 0.1rem; }
-.tierCellCond { font-family: var(--font-mono); font-size: 0.56rem; color: var(--faint); margin-top: 0.15rem; }
-@media (max-width: 700px) {
-  .tierTable { grid-template-columns: repeat(4, 1fr); }
-}
+.tierCellAmount { font-family: var(--font-display); font-weight: 800; font-size: 0.95rem; color: var(--muted); margin-top: 0.15rem; }
+.tierCellOpen .tierCellAmount { color: var(--gold-bright); }
+.tierCellCond { font-family: var(--font-mono); font-size: 0.52rem; color: var(--faint); margin-top: 0.15rem; }
+.tierFoot { font-family: var(--font-mono); font-size: 0.62rem; color: var(--faint); margin-top: 0.7rem; line-height: 1.5; }
+@media (max-width: 700px) { .tierTable { grid-template-columns: repeat(4, 1fr); } }
 
-/* ---------- プール / ネットワーク ---------- */
-.memberRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.9rem;
-  padding: 0.55rem 0.2rem;
-  border-bottom: 1px solid var(--border);
+/* ---------- ⑤ ボーナス履歴 ---------- */
+.histList { display: flex; flex-direction: column; gap: 6px; }
+.histRow {
+  display: flex; align-items: center; gap: 0.9rem;
+  border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.85rem; background: rgba(0, 234, 255, 0.02);
 }
-.memberRow:last-child { border-bottom: none; }
-.memberName { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text); }
-.memberMeta { color: var(--faint); font-size: 0.74rem; font-family: var(--font-mono); }
-.tierTag {
-  font-family: var(--font-display);
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  border: 1px solid var(--border-strong);
-  border-radius: 5px;
-  color: var(--cyan);
-  padding: 0.08rem 0.4rem;
-  flex: none;
+.histTier {
+  flex: none; font-family: var(--font-display); font-size: 0.62rem; font-weight: 700;
+  border: 1px solid var(--border-strong); border-radius: 5px; padding: 0.1rem 0.45rem; background: rgba(0, 234, 255, 0.06);
 }
-.indent { display: inline-block; }
+.histDate { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
+.histWhy { font-family: var(--font-mono); font-size: 0.6rem; color: var(--faint); }
+.histAmt { font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; color: #9dffc4; }
+.histAmt :global(.unit) { font-family: var(--font-mono); font-weight: 400; font-size: 0.6rem; color: var(--faint); margin-left: 0.2rem; }
 
-/* ---------- 配置ダイアログ ---------- */
+/* ---------- 配置ダイアログ(SupportMapView から d. で参照) ---------- */
 .overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  background: rgba(3, 2, 8, 0.78);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
+  position: fixed; inset: 0; z-index: 60; background: rgba(3, 2, 8, 0.78); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
 }
 .dialog {
-  width: min(460px, 100%);
-  background: linear-gradient(180deg, var(--panel-2), var(--panel));
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  padding: 1.3rem 1.3rem 1.4rem;
-  box-shadow: var(--shadow);
+  width: min(470px, 100%); background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 1.3rem; box-shadow: var(--shadow);
 }
-.dialogTitle { font-family: var(--font-display); font-weight: 700; font-size: 1rem; letter-spacing: 0.08em; }
+.dialogTitle { font-family: var(--font-display); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; }
 .warnBox {
-  border: 1px solid rgba(230, 178, 74, 0.5);
-  background: rgba(230, 178, 74, 0.08);
-  color: var(--warn);
-  border-radius: var(--radius-sm);
-  padding: 0.7rem 0.85rem;
-  font-size: 0.82rem;
-  line-height: 1.7;
-  margin: 0.8rem 0;
+  border: 1px solid rgba(230, 178, 74, 0.5); background: rgba(230, 178, 74, 0.08); color: var(--warn);
+  border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; font-size: 0.82rem; line-height: 1.7; margin: 0.8rem 0;
 }
-.confirmLabel {
-  flex-direction: row !important;
-  align-items: center;
-  gap: 0.5rem !important;
-  font-size: 0.82rem;
-  color: var(--text);
-}
+.confirmLabel { flex-direction: row !important; align-items: center; gap: 0.5rem !important; font-size: 0.82rem; color: var(--text); }
 .confirmLabel input { width: auto; }
 .dialogActions { display: flex; gap: 0.6rem; margin-top: 1rem; justify-content: flex-end; }
-
-/* ---------- ボーナス履歴 ---------- */
-.bonusTotal { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; color: var(--gold-bright); }
-.bonusTotal .unit { font-size: 0.8rem; color: var(--muted); font-family: var(--font-mono); }

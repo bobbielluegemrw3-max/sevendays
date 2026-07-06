@@ -1,192 +1,151 @@
 /* ============================================================
-   /support/map — 組織マップ(ジェネアロジーツリー)
-   自分を頂点にしたノードカードツリー+ティア帯+ズーム+配置モード。
+   /support/map — 組織マップ(ジェネアロジーツリー)リデザイン
+   自分を頂点にしたノードカードツリー + ティア帯 + 折りたたみ + ズーム
+   + ドラッグパン + 配置モード。コピー規範(R3)遵守。
+   注: CSS Modules は子孫のリテラル class もハッシュ化するため、JSX から渡す
+   class は全て module class。グローバルは :global() で受ける(本ファイルは不要)。
    ============================================================ */
 
 .wrap { display: flex; flex-direction: column; gap: 0.7rem; }
 
 /* ---------- ツールバー ---------- */
 .toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.9rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: linear-gradient(120deg, rgba(0, 234, 255, 0.04), transparent 70%), var(--panel);
+  padding: 0.7rem 1rem;
 }
-.toolTitle { font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; letter-spacing: 0.08em; }
+.toolTitle { font-family: var(--font-display); font-weight: 800; font-size: 1rem; letter-spacing: 0.08em; }
 .toolStats { font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); }
-.zoomGroup { display: inline-flex; gap: 4px; margin-left: auto; }
-.zoomBtn {
-  padding: 0.3rem 0.7rem !important;
-  font-size: 0.8rem !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: var(--muted) !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: none !important;
+.toolSpacer { flex: 1; }
+.ghostBtn {
+  font-family: var(--font-display) !important; font-size: 0.66rem !important; font-weight: 700 !important;
+  letter-spacing: 0.04em; padding: 0.4rem 0.7rem !important;
+  color: var(--muted) !important; background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid var(--border) !important; box-shadow: none !important;
 }
-.zoomBtn:hover { color: var(--cyan) !important; border-color: var(--border-strong) !important; }
+.ghostBtn:hover { color: var(--cyan) !important; border-color: var(--border-strong) !important; filter: none; }
+.zoomGroup { display: inline-flex; gap: 4px; }
+.zoomBtn {
+  padding: 0.35rem 0.7rem !important; font-size: 0.78rem !important; min-width: 2.6rem;
+  background: rgba(255, 255, 255, 0.06) !important; color: var(--muted) !important;
+  border: 1px solid var(--border) !important; box-shadow: none !important;
+}
+.zoomBtn:hover { color: var(--cyan) !important; border-color: var(--border-strong) !important; filter: none; }
 
 /* ---------- 配置モードバナー ---------- */
 .placeBanner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem;
-  border: 1px solid rgba(0, 234, 255, 0.45);
-  background: rgba(0, 234, 255, 0.07);
-  border-radius: var(--radius-sm);
-  padding: 0.6rem 0.9rem;
-  font-size: 0.85rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+  border: 1px solid rgba(0, 234, 255, 0.5); background: rgba(0, 234, 255, 0.08);
+  border-radius: var(--radius-sm); padding: 0.6rem 0.95rem; font-size: 0.85rem;
   animation: bannerIn 0.25s ease both;
 }
-.placeBannerName { font-family: var(--font-display); font-weight: 700; color: var(--cyan); }
+.placeDot { width: 9px; height: 9px; border-radius: 999px; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: sddPulse 1.4s infinite; flex: none; }
+.placeBannerName { font-family: var(--font-mono); font-weight: 700; color: var(--cyan); }
 @keyframes bannerIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; } }
+@keyframes sddPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes targetPulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(0, 234, 255, 0.4), 0 0 22px -4px rgba(0, 234, 255, 0.5); }
+  50% { box-shadow: 0 0 0 2px rgba(0, 234, 255, 0.85), 0 0 30px -2px rgba(0, 234, 255, 0.85); }
+}
 
 /* ---------- キャンバス ---------- */
 .canvasOuter {
   position: relative;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background:
-    radial-gradient(700px 380px at 50% -8%, rgba(26, 11, 46, 0.8), transparent 70%),
-    #070510;
-  overflow: auto;
-  max-height: 72vh;
-  box-shadow: var(--shadow);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: radial-gradient(700px 380px at 50% -8%, rgba(26, 11, 46, 0.75), transparent 70%), #070510;
+  overflow: auto; max-height: 72vh; box-shadow: var(--shadow);
+  cursor: grab; overscroll-behavior: contain;
 }
-.canvas { position: relative; transform-origin: 0 0; margin: 0 auto; }
+.canvasOuter.grabbing { cursor: grabbing; }
+.canvasPad { position: relative; padding: 14px 20px 22px; }
+.canvasScale { position: relative; transform-origin: 0 0; }
 .edges { position: absolute; inset: 0; pointer-events: none; }
-.edgePath { stroke: rgba(0, 234, 255, 0.28); stroke-width: 1.5; fill: none; }
+.edgePath { stroke: rgba(0, 234, 255, 0.26); stroke-width: 1.5; fill: none; }
 
-/* ティア帯(背景の横バンド) */
-.tierBand {
-  position: absolute;
-  left: 0;
-  right: 0;
-  border-top: 1px dashed rgba(255, 255, 255, 0.05);
+/* ティア帯 */
+.tierBand { position: absolute; left: 0; border-top: 1px dashed rgba(255, 255, 255, 0.06); pointer-events: none; }
+.tierBand.tierBandRoot { border-top-style: solid; }
+.tierChipRail {
+  position: absolute; left: 8px; top: 6px;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-display); font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em;
+  background: rgba(7, 5, 16, 0.85); border: 1px solid var(--border); border-radius: 6px; padding: 0.12rem 0.45rem;
 }
-.tierBandLabel {
-  position: sticky;
-  left: 8px;
-  display: inline-block;
-  margin-top: 6px;
-  font-family: var(--font-display);
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  color: var(--faint);
-  background: rgba(7, 5, 16, 0.8);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 0.1rem 0.45rem;
-}
+.tierChipRail.open { border-color: var(--border-strong); }
+.tierChipRail .amt { font-family: var(--font-mono); }
+.tierChipRail .st { color: var(--faint); }
 
 /* ---------- ノードカード ---------- */
 .node {
-  position: absolute;
-  width: 118px;
-  height: 96px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: linear-gradient(180deg, var(--panel-2), var(--panel));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.5rem 0.4rem 0.35rem;
-  text-align: center;
-  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  position: absolute; width: 128px; height: 62px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: linear-gradient(160deg, rgba(0, 234, 255, 0.05), var(--panel-2));
+  display: flex; align-items: center; gap: 8px; padding: 0 9px; box-sizing: border-box;
+  transition: border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
 .nodeSelf {
-  border-color: rgba(201, 168, 106, 0.65);
-  box-shadow: 0 0 24px -6px rgba(201, 168, 106, 0.5);
+  border-color: rgba(201, 168, 106, 0.7);
+  background: linear-gradient(160deg, rgba(201, 168, 106, 0.16), var(--panel-2));
+  box-shadow: 0 0 22px -6px rgba(201, 168, 106, 0.55);
 }
 .avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 0.8rem;
-  color: #0a0813;
-  flex: none;
+  flex: none; width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 0.72rem; color: #0a0813;
 }
+.nodeBody { flex: 1; min-width: 0; text-align: left; }
 .nodeName {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  color: var(--text);
-  margin-top: 0.3rem;
-  max-width: 106px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: block; font-family: var(--font-mono); font-size: 0.6rem; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.nodeMeta { font-family: var(--font-mono); font-size: 0.55rem; color: var(--faint); margin-top: 0.1rem; }
+.nodeSelf .nodeName { color: var(--gold-bright); }
+.nodeMeta { display: block; font-family: var(--font-mono); font-size: 0.5rem; color: var(--faint); margin-top: 1px; }
 .nodeTier {
-  position: absolute;
-  top: -8px;
-  right: -6px;
-  font-family: var(--font-display);
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: var(--cyan);
-  background: #0a0816;
-  border: 1px solid var(--border-strong);
-  border-radius: 5px;
-  padding: 0.06rem 0.32rem;
+  position: absolute; top: -8px; right: -6px;
+  font-family: var(--font-display); font-size: 0.5rem; font-weight: 800;
+  background: #0a0816; border: 1px solid var(--border-strong); border-radius: 5px; padding: 0.04rem 0.3rem;
 }
 
-/* 配置モード中のドロップターゲット */
+/* 折りたたみトグル */
+.toggle {
+  position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%);
+  width: 20px; height: 16px; display: flex; align-items: center; justify-content: center;
+  font-size: 0.56rem; color: var(--muted); background: #0a0816;
+  border: 1px solid var(--border-strong); border-radius: 6px; cursor: pointer; z-index: 2;
+}
+.toggle.collapsed { color: var(--cyan); }
+
+/* 配置モード: ドロップターゲット */
 .nodeTarget { cursor: pointer; }
-.nodeTarget:hover,
-.nodeTargetActive {
-  border-color: var(--cyan);
-  box-shadow: 0 0 0 2px rgba(0, 234, 255, 0.35), 0 0 26px -4px rgba(0, 234, 255, 0.55);
-  transform: translateY(-2px);
-}
+.nodeTarget:hover { border-color: var(--cyan); transform: translateY(-2px); box-shadow: 0 0 0 2px rgba(0, 234, 255, 0.35), 0 0 26px -4px rgba(0, 234, 255, 0.55); }
+.nodeTargetActive { border-color: var(--cyan); animation: targetPulse 1.6s infinite; }
 .nodeTargetHint {
-  position: absolute;
-  bottom: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.55rem;
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #04141a;
-  background: linear-gradient(92deg, var(--cyan), #5ff5ff);
-  border-radius: 5px;
-  padding: 0.1rem 0.4rem;
-  white-space: nowrap;
+  position: absolute; bottom: -11px; left: 50%; transform: translateX(-50%);
+  font-family: var(--font-display); font-size: 0.5rem; font-weight: 700; letter-spacing: 0.06em;
+  color: #04141a; background: linear-gradient(92deg, var(--cyan), #5ff5ff);
+  border-radius: 5px; padding: 0.12rem 0.45rem; white-space: nowrap; z-index: 3;
 }
-.nodeDim { opacity: 0.9; }
 
 /* ---------- プールドック ---------- */
 .dock {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: linear-gradient(180deg, var(--panel-2), var(--panel));
-  padding: 0.9rem 1rem;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel)); padding: 0.9rem 1rem;
 }
-.dockHead { display: flex; align-items: baseline; gap: 0.7rem; margin-bottom: 0.5rem; }
-.dockTitle { font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; }
-.dockCount { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
-.dockRow { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.dockHead { display: flex; align-items: baseline; gap: 0.7rem; margin-bottom: 0.6rem; }
+.dockTitle { font-family: var(--font-display); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.dockCount { font-family: var(--font-mono); font-size: 0.72rem; color: var(--cyan); }
+.dockHint { margin-left: auto; font-family: var(--font-mono); font-size: 0.6rem; color: var(--faint); }
+.dockRow { display: flex; flex-wrap: wrap; gap: 0.55rem; }
 .poolCard {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 0.45rem 0.6rem;
+  display: flex; align-items: center; gap: 0.55rem;
+  border: 1px solid var(--border); border-radius: 10px; background: rgba(255, 255, 255, 0.03); padding: 0.45rem 0.6rem;
 }
 .poolCardActive { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(0, 234, 255, 0.25); }
-.poolName { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text); }
-.poolMeta { font-family: var(--font-mono); font-size: 0.6rem; color: var(--faint); }
-.poolBtn { padding: 0.32rem 0.7rem !important; font-size: 0.66rem !important; }
+.poolText { min-width: 0; }
+.poolName { display: block; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.poolMeta { font-family: var(--font-mono); font-size: 0.58rem; color: var(--faint); }
+.poolBtn { padding: 0.34rem 0.75rem !important; font-size: 0.66rem !important; }
 .dockEmpty { color: var(--muted); font-size: 0.8rem; }
 
 /* ---------- 空ツリー ---------- */
@@ -194,4 +153,6 @@
 
 @media (max-width: 700px) {
   .canvasOuter { max-height: 62vh; }
+  .canvasPad { padding: 10px 12px 16px; }
+  .toolTitle { font-size: 0.9rem; }
 }
