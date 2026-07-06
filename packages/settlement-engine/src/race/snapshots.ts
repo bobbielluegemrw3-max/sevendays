@@ -57,11 +57,20 @@ export async function createParticipantSnapshots(
   const weather = deriveWeather(input.raceSeed, input.raceEngineVersion);
   const track = deriveTrackCondition(input.raceSeed, input.raceEngineVersion);
 
+  // Market Lock (Decision 076): a manually listed horse does not race —
+  // excluded from the snapshot, so current_day and value stay frozen while
+  // it waits on the marketplace. Smart (system) listings keep racing.
   const horses = await client.query<HorseRow>(
-    `select id, owner_user_id, current_day, horse_type::text as horse_type,
-            rarity::text as rarity, dna_hash, dna_modifier::text as dna_modifier,
-            ability_json, condition::text as condition, fatigue::text as fatigue
-     from horses where status = 'ACTIVE' order by id`,
+    `select h.id, h.owner_user_id, h.current_day, h.horse_type::text as horse_type,
+            h.rarity::text as rarity, h.dna_hash, h.dna_modifier::text as dna_modifier,
+            h.ability_json, h.condition::text as condition, h.fatigue::text as fatigue
+     from horses h
+     where h.status = 'ACTIVE'
+       and not exists (
+         select 1 from market_listings ml
+         where ml.horse_id = h.id and ml.status = 'LISTED' and ml.source = 'MANUAL'
+       )
+     order by h.id`,
   );
 
   let created = 0;

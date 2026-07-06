@@ -983,3 +983,26 @@ describe('row level security', () => {
     });
   });
 });
+
+describe('manual marketplace listings (Decision 076)', () => {
+  it('MANUAL listings have no batch; SMART listings require one', async () => {
+    const seller = await insertUser();
+    const horse = await insertHorse(seller, { current_day: 2 });
+    await db.query(
+      `insert into market_listings (horse_id, seller_user_id, listing_price, current_day,
+                                    batch_run_id, deterministic_market_tiebreak_score, source)
+       values ($1, $2, 121.00, 2, null, 0.5, 'MANUAL')`,
+      [horse, seller],
+    );
+    const horse2 = await insertHorse(seller, { current_day: 2 });
+    await expectDbError(
+      db.query(
+        `insert into market_listings (horse_id, seller_user_id, listing_price, current_day,
+                                      batch_run_id, deterministic_market_tiebreak_score, source)
+         values ($1, $2, 121.00, 2, null, 0.5, 'SMART')`,
+        [horse2, seller],
+      ),
+      'market_listings_source_batch',
+    );
+  });
+});

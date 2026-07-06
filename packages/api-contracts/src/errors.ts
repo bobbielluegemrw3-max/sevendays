@@ -45,6 +45,10 @@ export const API_ERROR_STATUS: Record<string, number> = {
   SUPPORT_ALREADY_PLACED: 409,
   SUPPORT_PARENT_OUT_OF_SCOPE: 400,
   SUPPORT_PLACEMENT_CYCLE: 409,
+  // manual marketplace (Decision 076)
+  MARKET_ALREADY_LISTED: 409,
+  MARKET_ACTION_LIMIT: 409,
+  MARKET_DAY_RANGE: 400,
 };
 
 export class ApiError extends Error {

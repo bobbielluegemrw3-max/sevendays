@@ -204,7 +204,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
             {pendingCount > 0 ? (
               <span className={s.taskItem}><b>{pendingCount}件</b> が割当待ち</span>
             ) : null}
-            <Link href={untrained.length > 0 ? '/horses' : '/purchase'} className={s.taskCta}>
+            <Link href={untrained.length > 0 ? '/horses' : '/market'} className={s.taskCta}>
               {untrained.length > 0 ? '調教する' : '馬を迎える'} →
             </Link>
           </div>
@@ -254,7 +254,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
               ? `割当待ち ${pendingCount} 件 — 今夜のレースで確定します。まずは馬を迎えて参加しましょう。`
               : '出走中の馬はいません。今夜のダービーに参加しましょう。'}
             <br />
-            <Link href="/purchase" className={s.ctaPrimary}>馬を迎える ▶</Link>
+            <Link href="/market" className={s.ctaPrimary}>馬を迎える ▶</Link>
           </div>
         )}
       </section>

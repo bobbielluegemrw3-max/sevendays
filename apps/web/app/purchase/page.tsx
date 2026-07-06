@@ -1,14 +1,6 @@
-import { serverApi, serverApiOrLogin } from '@/lib/server-api';
-import { PurchaseView, type Session } from '@/components/PurchaseView';
-import type { Assignment } from '@/components/AssignmentList';
+import { redirect } from 'next/navigation';
 
-export default async function PurchasePage() {
-  const { sessions } = await serverApiOrLogin<{ sessions: Session[] }>('/api/v1/purchase');
-  const assignments = await serverApi<{ assignments: Assignment[] }>('/api/v1/assignments');
-  return (
-    <PurchaseView
-      sessions={sessions}
-      assignments={assignments.status === 200 ? assignments.body.assignments : []}
-    />
-  );
+/** 旧URL互換(Decision 076): /purchase → /market(購入UIはマーケットに統合)。 */
+export default function LegacyPurchaseRedirect(): never {
+  redirect('/market');
 }

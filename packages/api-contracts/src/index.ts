@@ -2,6 +2,7 @@ import { ApiRegistry } from './router.js';
 import { registerUserEndpoints } from './endpoints/user.js';
 import { registerAdminEndpoints } from './endpoints/admin.js';
 import { registerSupportEndpoints } from './endpoints/support.js';
+import { registerMarketEndpoints } from './endpoints/market.js';
 import { registerInternalEndpoints } from './endpoints/internal.js';
 
 export * from './errors.js';
@@ -14,6 +15,7 @@ export function buildApiRegistry(): ApiRegistry {
   const registry = new ApiRegistry();
   registerUserEndpoints(registry);
   registerSupportEndpoints(registry);
+  registerMarketEndpoints(registry);
   registerAdminEndpoints(registry);
   registerInternalEndpoints(registry);
   return registry;

@@ -782,3 +782,95 @@ describe('support bonus network (Decision 074)', () => {
     expect(sneaky.status).toBe(409);
   });
 });
+
+describe('manual marketplace (Decision 076)', () => {
+  async function newHorse(ownerId: string, day: number): Promise<string> {
+    const r = await client.query<{ id: string }>(
+      `insert into horses (owner_user_id, current_day, name, horse_type, rarity, dna_hash, dna_modifier,
+                           horse_generation_version, mint_seed_hash, ability_json)
+       values ($1, $2, $3, 'BALANCED', 'COMMON', $4, 0.5, 'horse_generation_v1.0', $5, $6)
+       returning id`,
+      [
+        ownerId,
+        day,
+        `Mkt Horse ${randomUUID().slice(0, 15)}`,
+        randomUUID().replaceAll('-', ''),
+        randomUUID().replaceAll('-', ''),
+        JSON.stringify({ speed: 75, power: 74, stamina: 73, recovery: 72, luck: 71 }),
+      ],
+    );
+    return r.rows[0]!.id;
+  }
+
+  it('list -> visible on the place -> unlist is next-batch pending; one action per day', async () => {
+    const seller = await newUser();
+    const horse = await newHorse(seller, 3);
+
+    // Day-range guard: a Day0 horse cannot be listed.
+    const day0 = await newHorse(seller, 0);
+    const tooEarly = await call('POST', '/api/v1/market/list', asUser(seller), {
+      body: { horse_id: day0 },
+    });
+    expect(tooEarly.status).toBe(400);
+
+    // Others cannot list my horse.
+    const stranger = await newUser();
+    const notOwner = await call('POST', '/api/v1/market/list', asUser(stranger), {
+      body: { horse_id: horse },
+    });
+    expect(notOwner.status).toBe(403);
+
+    const listed = await call('POST', '/api/v1/market/list', asUser(seller), {
+      body: { horse_id: horse },
+    });
+    expect(listed.status).toBe(200);
+    expect((listed.body as { price: string }).price).toBe('133.10'); // Day3 ladder
+
+    // Already listed -> 409.
+    const dup = await call('POST', '/api/v1/market/list', asUser(seller), {
+      body: { horse_id: horse },
+    });
+    expect(dup.status).toBe(409);
+
+    // Visible on the place, in matching order, with my_listings populated.
+    const place = await call('GET', '/api/v1/market/place', asUser(seller));
+    expect(place.status).toBe(200);
+    const placeBody = place.body as {
+      shelf: { horse_id: string; price: string }[];
+      my_listings: { horse_id: string; cancel_after_batch: boolean }[];
+      pending_buy_count: number;
+    };
+    expect(placeBody.shelf.some((s) => s.horse_id === horse)).toBe(true);
+    expect(placeBody.my_listings.some((l) => l.horse_id === horse)).toBe(true);
+    expect(typeof placeBody.pending_buy_count).toBe('number');
+
+    // Unlist the SAME day -> blocked by the one-action-per-day rule.
+    const sameDay = await call('POST', '/api/v1/market/unlist', asUser(seller), {
+      body: { horse_id: horse },
+    });
+    expect(sameDay.status).toBe(409);
+
+    // Simulate the next day, then unlist -> pending until after the batch.
+    await client.query(`update horses set last_manual_market_action_date = null where id = $1`, [horse]);
+    const unlist = await call('POST', '/api/v1/market/unlist', asUser(seller), {
+      body: { horse_id: horse },
+    });
+    expect(unlist.status).toBe(200);
+    expect((unlist.body as { cancel_pending: boolean }).cancel_pending).toBe(true);
+
+    // Replaying the unlist converges quietly.
+    const replay = await call('POST', '/api/v1/market/unlist', asUser(seller), {
+      body: { horse_id: horse },
+    });
+    expect(replay.status).toBe(200);
+    expect((replay.body as { replay?: boolean }).replay).toBe(true);
+
+    // Still LISTED until the batch completes (tonight's matching wins).
+    const still = await client.query<{ status: string; cancel_after_batch: boolean }>(
+      `select status::text as status, cancel_after_batch from market_listings where horse_id = $1`,
+      [horse],
+    );
+    expect(still.rows[0]!.status).toBe('LISTED');
+    expect(still.rows[0]!.cancel_after_batch).toBe(true);
+  });
+});

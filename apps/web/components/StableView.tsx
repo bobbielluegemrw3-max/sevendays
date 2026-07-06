@@ -63,7 +63,7 @@ export function StableView({ data }: { data: StableData }) {
             {pendingCount > 0 ? <span className={s.welcomePending}> 現在 {pendingCount}件 割当待ち。</span> : null}
           </div>
         </div>
-        <Link href="/purchase" className={s.welcomeCta}>馬を迎える ▶</Link>
+        <Link href="/market" className={s.welcomeCta}>馬を迎える ▶</Link>
       </section>
 
       {/* ===== 出走中(検索/ソート/絞り込み/ページング) ===== */}

@@ -40,6 +40,9 @@ All public APIs are versioned:
 - GET `/api/v1/buybacks/{id}`
 - GET `/api/v1/notifications`
 - POST `/api/v1/horses/{id}/training` (Decision 066)
+- POST `/api/v1/market/list` (Decision 076)
+- POST `/api/v1/market/unlist` (Decision 076)
+- GET `/api/v1/market/place` (Decision 076)
 - GET `/api/v1/support/summary` (Decision 074)
 - GET `/api/v1/support/pool` (Decision 074)
 - GET `/api/v1/support/network` (Decision 074)
@@ -62,6 +65,11 @@ Support Bonus (Decision 074; user-facing name サポートボーナス — never
 - GET `/support/pool` lists unplaced direct referrals (masked display names). GET `/support/network` returns the placement subtree down to tier 7 (max 500 nodes). GET `/support/bonuses` lists received payments (amount, tier, burn_event_id).
 - POST `/support/place` `{user_id, parent_user_id}` places a pooled referral either directly under the sponsor (unlimited width) or under any node inside the sponsor's own placement subtree. ONE-SHOT: replaying the identical placement succeeds quietly; any different placement is refused. Errors: SUPPORT_NOT_YOUR_REFERRAL, SUPPORT_ALREADY_PLACED, SUPPORT_PARENT_OUT_OF_SCOPE, SUPPORT_PLACEMENT_CYCLE.
 - POST `/admin/support/replace` `{user_id, new_parent_user_id|null, reason}` is the audited SUPER_ADMIN-only exception path (placement_audit ADMIN_OVERRIDE + audit_logs).
+
+Manual Marketplace (Decision 076):
+- POST `/market/list` `{horse_id}` lists the caller's ACTIVE Day1-6 horse at the CURRENT ladder price (no free pricing). While listed the horse does not race (Market Lock, snapshot exclusion). Errors: HORSE_NOT_FOUND, NOT_HORSE_OWNER, HORSE_NOT_ACTIVE, MARKET_DAY_RANGE, MARKET_ALREADY_LISTED, MARKET_ACTION_LIMIT, MARKETPLACE_LOCKED.
+- POST `/market/unlist` `{horse_id}` requests delisting; it takes effect AFTER the next batch (a sale tonight wins). Replays converge quietly. Listing operations are limited to one per horse per day.
+- GET `/market/place` returns the shelf (all LISTED horses in matching order, Decision 012), tonight's pending buy-reservation COUNT, the last 20 settled P2P matches (anonymized: horse name, price, masked buyer id) and the caller's own manual listings. The buy side itself is unchanged (POST /purchase reservations).
 
 ## Admin APIs
 

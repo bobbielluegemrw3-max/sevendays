@@ -38,6 +38,14 @@ export async function lockMarketplace(client: SqlClient, batchRunId: string): Pr
 }
 
 export async function reopenMarketplace(client: SqlClient, batchRunId: string): Promise<void> {
+  // Manual Marketplace (Decision 076): unlist requests take effect AFTER
+  // the batch. A listing that survived tonight's matching is delisted now
+  // (a sale tonight wins — matched listings are no longer LISTED) and the
+  // horse races again from tomorrow. Idempotent by shape.
+  await client.query(
+    `update market_listings set status = 'CANCELLED'
+     where status = 'LISTED' and source = 'MANUAL' and cancel_after_batch = true`,
+  );
   await client.query(
     `update marketplace_status
      set state = 'OPEN', locked_by_batch_run_id = null, locked_at = null, updated_at = now()

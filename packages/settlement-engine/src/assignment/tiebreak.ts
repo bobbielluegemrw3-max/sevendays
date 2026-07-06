@@ -17,6 +17,13 @@ export function marketTiebreakScore(
   return deterministicScore(batchRunId, marketPoolId, horseUuid, assignmentAlgorithmVersion);
 }
 
+/** Manual listings (Decision 076) are created OUTSIDE a batch; their stored
+ *  tiebreak is derived from the horse and the listing timestamp instead.
+ *  (The nightly queue recomputes its own batch-scoped tiebreak either way.) */
+export function manualMarketTiebreakScore(horseUuid: string, listedAtIso: string): number {
+  return deterministicScore('manual_listing', horseUuid, listedAtIso);
+}
+
 /** SHA-256(batch_id + purchase_session_uuid + assignment_algorithm_version) */
 export function purchaseTiebreakScore(
   batchRunId: string,
