@@ -62,6 +62,41 @@ export function DailyDerbyStage({
   const fanfareRef = useRef<HTMLAudioElement | null>(null);
   const hoofsRef = useRef<HTMLAudioElement | null>(null);
   const prevRemaining = useRef(secondsToStart);
+  const primed = useRef(false);
+
+  /* iOS/Safariはユーザー操作の文脈外の音声再生をブロックし、許可は音声要素
+     ごとに別。ファンファーレは「タップの数秒後にタイマーが鳴らす」ため、
+     最初のタップで両音源を無音再生→即停止してロック解除しておく(priming)。 */
+  useEffect(() => {
+    const prime = () => {
+      if (primed.current) return;
+      primed.current = true;
+      if (!fanfareRef.current) fanfareRef.current = new Audio(fanfareSrc);
+      if (!hoofsRef.current) {
+        hoofsRef.current = new Audio(hoofbeatsSrc);
+        hoofsRef.current.loop = true;
+      }
+      for (const audio of [fanfareRef.current, hoofsRef.current]) {
+        audio.muted = true;
+        void audio
+          .play()
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.muted = false;
+          })
+          .catch(() => {
+            audio.muted = false;
+          });
+      }
+    };
+    window.addEventListener('pointerdown', prime, { once: true });
+    window.addEventListener('touchend', prime, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', prime);
+      window.removeEventListener('touchend', prime);
+    };
+  }, [fanfareSrc, hoofbeatsSrc]);
 
   /* 20:00 をまたいだ瞬間にファンファーレ(実尺16.8秒がオープニングのBGM。
      途中参加では鳴らさない — ライブの一回性を守る)。 */
