@@ -7,7 +7,7 @@ import {
   rollBuffRarity,
   selectBurnTargets,
 } from '@sevendays/race-engine';
-import { paySupportBonusesForBurn } from './support-bonus.js';
+import { paySupportBonusesForBurns, type SupportBonusBurn } from './support-bonus.js';
 
 /**
  * Batch Steps 11-16 — Finalize rankings, calculate burn target count,
@@ -94,11 +94,12 @@ export async function finalizeAndBurn(
     );
   }
 
-  // 5. Execute burns + buffs + support bonuses.
+  // 5. Execute burns + buffs; support bonuses are paid AFTER the whole
+  //    loop so tier volumes see one consistent post-burn snapshot.
   let buffsGenerated = 0;
   let buffsRefreshed = 0;
-  let supportBonusPayments = 0;
   const burnedHorseIds: string[] = [];
+  const supportBonusBurns: SupportBonusBurn[] = [];
 
   for (const horseId of burnTargets) {
     const ownerId = ownerByHorse.get(horseId)!;
@@ -148,12 +149,12 @@ export async function finalizeAndBurn(
       buffsGenerated += 1;
     }
 
-    // Support Bonus (Decision 074): up to 7 placement tiers per burn.
-    supportBonusPayments += await paySupportBonusesForBurn(client, {
-      burnedOwnerUserId: ownerId,
-      burnEventId,
-    });
+    supportBonusBurns.push({ burnedOwnerUserId: ownerId, burnEventId });
   }
+
+  // Support Bonus (Decision 074): up to 7 placement tiers per burn, all of
+  // tonight's burns evaluated against the same post-burn state.
+  const supportBonusPayments = await paySupportBonusesForBurns(client, supportBonusBurns);
 
   // In-App notifications (Decision 065): results per participant, burn +
   // buff per burned owner. Deterministic dedupe keys — retries converge.

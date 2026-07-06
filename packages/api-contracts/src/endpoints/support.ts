@@ -216,22 +216,31 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
         }
       }
 
+      // Placement + audit row commit atomically. A concurrent competing
+      // placement serializes on the row lock and the write-once trigger
+      // rejects the loser (PLACEMENT_IMMUTABLE) — no double placement.
+      await ctx.client.query('begin');
       try {
         await ctx.client.query(`update users set placement_parent_user_id = $1 where id = $2`, [
           input.parent_user_id,
           input.user_id,
         ]);
+        await ctx.client.query(
+          `insert into placement_audit (user_id, old_parent_user_id, new_parent_user_id, actor_user_id, action)
+           values ($1, null, $2, $3, 'PLACE')`,
+          [input.user_id, input.parent_user_id, ctx.userId],
+        );
+        await ctx.client.query('commit');
       } catch (error) {
+        await ctx.client.query('rollback').catch(() => undefined);
         if (/PLACEMENT_CYCLE_DETECTED/.test((error as Error).message)) {
           throw new ApiError('SUPPORT_PLACEMENT_CYCLE', 'This placement would create a cycle');
         }
+        if (/PLACEMENT_IMMUTABLE/.test((error as Error).message)) {
+          throw new ApiError('SUPPORT_ALREADY_PLACED', 'Placement is permanent and cannot be changed');
+        }
         throw error;
       }
-      await ctx.client.query(
-        `insert into placement_audit (user_id, old_parent_user_id, new_parent_user_id, actor_user_id, action)
-         values ($1, null, $2, $3, 'PLACE')`,
-        [input.user_id, input.parent_user_id, ctx.userId],
-      );
       const placed = await ctx.client.query<{ placed_at: string }>(
         `select placed_at::text as placed_at from users where id = $1`,
         [input.user_id],
@@ -266,28 +275,33 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
       if (!target.rows[0]) throw new ApiError('NOT_FOUND', 'User not found');
       const oldParent = target.rows[0].placement_parent_user_id;
 
-      await ctx.client.query(`select set_config('sevendays.placement_admin_override', 'on', false)`);
+      // TRANSACTION-LOCAL override flag (is_local = true): it dies with the
+      // commit/rollback, so a crashed request can never return a pooled
+      // connection whose session still bypasses placement immutability.
+      // The change and both audit rows commit atomically.
+      await ctx.client.query('begin');
       try {
+        await ctx.client.query(
+          `select set_config('sevendays.placement_admin_override', 'on', true)`,
+        );
         await ctx.client.query(`update users set placement_parent_user_id = $1 where id = $2`, [
           input.new_parent_user_id,
           input.user_id,
         ]);
+        await ctx.client.query(
+          `insert into placement_audit (user_id, old_parent_user_id, new_parent_user_id, actor_user_id, action, reason)
+           values ($1, $2, $3, $4, 'ADMIN_OVERRIDE', $5)`,
+          [input.user_id, oldParent, input.new_parent_user_id, ctx.userId, input.reason],
+        );
+        await auditAdmin(ctx, 'SUPPORT_PLACEMENT_OVERRIDE', 'user', input.user_id);
+        await ctx.client.query('commit');
       } catch (error) {
+        await ctx.client.query('rollback').catch(() => undefined);
         if (/PLACEMENT_CYCLE_DETECTED/.test((error as Error).message)) {
           throw new ApiError('SUPPORT_PLACEMENT_CYCLE', 'This placement would create a cycle');
         }
         throw error;
-      } finally {
-        await ctx.client
-          .query(`select set_config('sevendays.placement_admin_override', '', false)`)
-          .catch(() => undefined);
       }
-      await ctx.client.query(
-        `insert into placement_audit (user_id, old_parent_user_id, new_parent_user_id, actor_user_id, action, reason)
-         values ($1, $2, $3, $4, 'ADMIN_OVERRIDE', $5)`,
-        [input.user_id, oldParent, input.new_parent_user_id, ctx.userId, input.reason],
-      );
-      await auditAdmin(ctx, 'SUPPORT_PLACEMENT_OVERRIDE', 'user', input.user_id);
       return {
         user_id: input.user_id,
         old_parent_user_id: oldParent,
