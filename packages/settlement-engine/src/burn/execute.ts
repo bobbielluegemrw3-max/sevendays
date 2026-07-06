@@ -7,11 +7,12 @@ import {
   rollBuffRarity,
   selectBurnTargets,
 } from '@sevendays/race-engine';
-import { mlmRewardPayment } from '@sevendays/ledger';
+import { paySupportBonusesForBurn } from './support-bonus.js';
 
 /**
  * Batch Steps 11-16 — Finalize rankings, calculate burn target count,
- * select and execute burns, generate/refresh revenge buffs, pay MLM.
+ * select and execute burns, generate/refresh revenge buffs, pay Support
+ * Bonuses (Decision 074).
  *
  * Everything here is deterministic given (snapshots, race_seed, policy):
  *   - ranking: final_score desc -> tiebreak desc -> uuid asc
@@ -19,8 +20,9 @@ import { mlmRewardPayment } from '@sevendays/ledger';
  *   - burn targets: bottom `count` ranks, ties resolved by the total order
  *   - burn_event_id: hash-derived, stable across retries
  *   - buff rarity: SHA-256 roll per spec
- * Idempotent: race_results / horse_burns inserts are conflict-guarded, MLM
- * uses ledger idempotency keys, buffs refresh rather than duplicate.
+ * Idempotent: race_results / horse_burns inserts are conflict-guarded, the
+ * support bonus uses ledger idempotency keys, buffs refresh rather than
+ * duplicate.
  */
 
 export interface FinalizeAndBurnInput {
@@ -39,7 +41,7 @@ export interface FinalizeAndBurnResult {
   burnedHorseIds: string[];
   buffsGenerated: number;
   buffsRefreshed: number;
-  mlmPaymentsMade: number;
+  supportBonusPayments: number;
 }
 
 /** Deterministic UUID (v4 format) from hash input — stable across retries. */
@@ -92,10 +94,10 @@ export async function finalizeAndBurn(
     );
   }
 
-  // 5. Execute burns + buffs + MLM.
+  // 5. Execute burns + buffs + support bonuses.
   let buffsGenerated = 0;
   let buffsRefreshed = 0;
-  let mlmPaymentsMade = 0;
+  let supportBonusPayments = 0;
   const burnedHorseIds: string[] = [];
 
   for (const horseId of burnTargets) {
@@ -146,23 +148,11 @@ export async function finalizeAndBurn(
       buffsGenerated += 1;
     }
 
-    // MLM Reward: valid direct referrer = ACTIVE only (Decision 041).
-    const referrer = await client.query<{ id: string; status: string }>(
-      `select ref.id, ref.status::text as status
-       from users u join users ref on ref.id = u.direct_referrer_user_id
-       where u.id = $1`,
-      [ownerId],
-    );
-    const ref = referrer.rows[0];
-    if (ref && ref.status === 'ACTIVE') {
-      const payment = await mlmRewardPayment(client, {
-        referrerUserId: ref.id,
-        idempotencyKey: `mlm:${burnEventId}`,
-        referenceType: 'horse_burn_event',
-        referenceId: burnEventId,
-      });
-      if (!payment.alreadyPosted) mlmPaymentsMade += 1;
-    }
+    // Support Bonus (Decision 074): up to 7 placement tiers per burn.
+    supportBonusPayments += await paySupportBonusesForBurn(client, {
+      burnedOwnerUserId: ownerId,
+      burnEventId,
+    });
   }
 
   // In-App notifications (Decision 065): results per participant, burn +
@@ -212,6 +202,6 @@ export async function finalizeAndBurn(
     burnedHorseIds,
     buffsGenerated,
     buffsRefreshed,
-    mlmPaymentsMade,
+    supportBonusPayments,
   };
 }

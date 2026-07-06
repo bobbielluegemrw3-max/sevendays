@@ -43,7 +43,9 @@ export const getAccessToken = cache(async (): Promise<string | null> => {
 const getAuthContext = cache(async (): Promise<AuthContext> => {
   const accessToken = await getAccessToken();
   if (!accessToken) return { kind: 'anonymous' };
-  return withSqlClient((client) => buildAuthContext(client, accessToken, jwtSecret()));
+  // Invite cookie (Decision 074) — consumed only at first provisioning.
+  const referralCode = (await cookies()).get('sdd_ref')?.value ?? null;
+  return withSqlClient((client) => buildAuthContext(client, accessToken, jwtSecret(), { referralCode }));
 });
 
 export interface ServerApiResult<T> {

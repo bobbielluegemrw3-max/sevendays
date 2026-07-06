@@ -17,7 +17,7 @@ import {
   day0MintSettlement,
   reserveAllocation,
   buybackPayment,
-  mlmRewardPayment,
+  supportBonusPayment,
   withdrawalFundLock,
   withdrawalRejectionRefund,
   reconcile,
@@ -238,13 +238,22 @@ describe('buyback / MLM payments', () => {
       amount: Money.of('28.57142857'),
       idempotencyKey: randomUUID(),
     });
-    const referrer = await newUser();
-    await mlmRewardPayment(client, { referrerUserId: referrer, idempotencyKey: randomUUID() });
+    const supporter = await newUser();
+    await supportBonusPayment(client, {
+      userId: supporter,
+      amount: Money.of('3.00'), // Tier 1 (Decision 074)
+      idempotencyKey: randomUUID(),
+    });
+    await supportBonusPayment(client, {
+      userId: supporter,
+      amount: Money.of('2.00'), // Tier 2
+      idempotencyKey: randomUUID(),
+    });
 
     const receiverAccounts = await ensureUserAccounts(client, receiver);
-    const referrerAccounts = await ensureUserAccounts(client, referrer);
+    const supporterAccounts = await ensureUserAccounts(client, supporter);
     expect(await getBalance(client, receiverAccounts.available)).toBe('28.57142857');
-    expect(await getBalance(client, referrerAccounts.available)).toBe('10.00000000');
+    expect(await getBalance(client, supporterAccounts.available)).toBe('5.00000000');
   });
 
   it('buyback payment fails when the reserve lacks funds (never prints money)', async () => {

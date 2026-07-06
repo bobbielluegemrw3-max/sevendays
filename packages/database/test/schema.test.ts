@@ -325,6 +325,97 @@ describe('users and referral integrity', () => {
 });
 
 // ---------------------------------------------------------------------------
+// support bonus placement (Decision 074)
+// ---------------------------------------------------------------------------
+
+describe('support bonus placement (Decision 074)', () => {
+  it('assigns a deterministic unique referral code on insert', async () => {
+    const a = await insertUser();
+    const r = await db.query<{ referral_code: string }>(
+      `select referral_code from users where id = $1`,
+      [a],
+    );
+    const code = r.rows[0]!.referral_code;
+    expect(code).toMatch(/^[0-9a-f]{12}$/);
+    const expected = createHash('sha256').update(`${a}:sdd-ref-v1`).digest('hex').slice(0, 12);
+    expect(code).toBe(expected);
+  });
+
+  it('placement is write-once and stamps placed_at', async () => {
+    const parent = await insertUser();
+    const child = await insertUser();
+    await db.query(`update users set placement_parent_user_id = $1 where id = $2`, [parent, child]);
+    const placed = await db.query<{ placed_at: string | null }>(
+      `select placed_at::text as placed_at from users where id = $1`,
+      [child],
+    );
+    expect(placed.rows[0]!.placed_at).not.toBeNull();
+    const other = await insertUser();
+    await expectDbError(
+      db.query(`update users set placement_parent_user_id = $1 where id = $2`, [other, child]),
+      'PLACEMENT_IMMUTABLE',
+    );
+    // clearing placement is a change too
+    await expectDbError(
+      db.query(`update users set placement_parent_user_id = null where id = $1`, [child]),
+      'PLACEMENT_IMMUTABLE',
+    );
+  });
+
+  it('admin override flag permits a placement change', async () => {
+    const parent = await insertUser();
+    const child = await insertUser();
+    const newParent = await insertUser();
+    await db.query(`update users set placement_parent_user_id = $1 where id = $2`, [parent, child]);
+    await db.query(`select set_config('sevendays.placement_admin_override', 'on', false)`);
+    try {
+      await db.query(`update users set placement_parent_user_id = $1 where id = $2`, [newParent, child]);
+    } finally {
+      await db.query(`select set_config('sevendays.placement_admin_override', '', false)`);
+    }
+    const r = await db.query<{ p: string }>(
+      `select placement_parent_user_id::text as p from users where id = $1`,
+      [child],
+    );
+    expect(r.rows[0]!.p).toBe(newParent);
+    // flag is off again — further changes are blocked
+    await expectDbError(
+      db.query(`update users set placement_parent_user_id = $1 where id = $2`, [parent, child]),
+      'PLACEMENT_IMMUTABLE',
+    );
+  });
+
+  it('rejects self-placement and placement cycles', async () => {
+    const a = await insertUser();
+    const b = await insertUser();
+    await expectDbError(
+      db.query(`update users set placement_parent_user_id = $1 where id = $1`, [a]),
+      'PLACEMENT_CYCLE_DETECTED',
+    );
+    await db.query(`update users set placement_parent_user_id = $1 where id = $2`, [a, b]);
+    await expectDbError(
+      db.query(`update users set placement_parent_user_id = $1 where id = $2`, [b, a]),
+      'PLACEMENT_CYCLE_DETECTED',
+    );
+  });
+
+  it('placement_audit accepts rows and is service-only (RLS, no policies)', async () => {
+    const a = await insertUser();
+    const b = await insertUser();
+    await db.query(
+      `insert into placement_audit (user_id, new_parent_user_id, actor_user_id, action)
+       values ($1, $2, $2, 'PLACE')`,
+      [a, b],
+    );
+    const visible = await asUser(db, a, async () => {
+      const r = await db.query<{ count: string }>(`select count(*)::text as count from placement_audit`);
+      return r.rows[0]!.count;
+    });
+    expect(visible).toBe('0');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // horses
 // ---------------------------------------------------------------------------
 

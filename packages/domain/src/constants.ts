@@ -133,12 +133,29 @@ export const BUFF_TABLE_V1: Readonly<
 };
 
 // ---------------------------------------------------------------------------
-// MLM Reward v1.0 (Decision 021, 041)
+// Support Bonus v2 (Decision 074; supersedes the Decision 021 payout rule)
+// User-facing name: サポートボーナス (Support Bonus) — never "MLM"/"commission".
 // ---------------------------------------------------------------------------
 
+/** Total paid per burn (cap; unpaid tiers stay in PLATFORM_MLM_RESERVE). */
 export const MLM_REWARD_AMOUNT = '10.00';
-/** Valid referrer = ACTIVE only (Decision 041). */
+/** Valid recipient = ACTIVE only (Decision 041 semantics carry over). */
 export const VALID_REFERRER_STATUS = 'ACTIVE';
+export const SUPPORT_BONUS_MAX_TIERS_V1 = 7;
+/** Payout per tier; index 0 = Tier 1 (the burned owner's placement parent). */
+export const SUPPORT_BONUS_TIER_AMOUNTS_V1: readonly string[] = [
+  '3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00',
+];
+/**
+ * Tier unlock thresholds (USDT, inclusive lower bounds): tier N (1-based)
+ * unlocks while the combined CURRENT value (PRICE_TABLE_V1) of ACTIVE horses
+ * held by the user's direct referrals is >= THRESHOLDS[N-1]. Tier 1 is
+ * unconditional; fractional volumes between bounds fall to the lower tier.
+ * Point-in-time stock — evaluated at every 20:00 batch, downgrades freely.
+ */
+export const SUPPORT_BONUS_TIER_THRESHOLDS_V1: readonly string[] = [
+  '0', '3001', '5001', '10001', '30001', '50001', '70001',
+];
 
 // ---------------------------------------------------------------------------
 // Horse Generation v1.0 (03_GAME_DESIGN.md)

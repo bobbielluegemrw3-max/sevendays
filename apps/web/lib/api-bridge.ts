@@ -55,6 +55,9 @@ function supabaseRemoteJwks(): JWTVerifyGetKey | null {
 export interface AuthVerifyOptions {
   /** JWKS override for asymmetric tokens (tests use a local key set). */
   jwks?: JWTVerifyGetKey;
+  /** Invite code (sdd_ref cookie) — binds direct_referrer_user_id at FIRST
+   *  provisioning only (Decision 074); the DB keeps it immutable after. */
+  referralCode?: string | null;
 }
 
 async function verifyAccessToken(
@@ -139,10 +142,24 @@ export async function buildAuthContext(
   // First-login provisioning: everything downstream (RLS, ledger accounts,
   // deposit addresses) keys on users.id = auth.uid().
   const email = typeof payload.email === 'string' && payload.email !== '' ? payload.email : `${userId}@user.sevendays`;
+
+  // Invite capture (Decision 074): resolve the sdd_ref cookie to a sponsor
+  // exactly once, here. An unknown/own code degrades to "no sponsor" —
+  // signup must never fail because of a bad invite link.
+  let referrerId: string | null = null;
+  if (options?.referralCode) {
+    const sponsor = await client.query<{ id: string }>(
+      `select id from users where referral_code = $1`,
+      [options.referralCode.toLowerCase()],
+    );
+    referrerId = sponsor.rows[0]?.id ?? null;
+    if (referrerId === userId) referrerId = null;
+  }
+
   try {
     await client.query(
-      `insert into users (id, email) values ($1, $2) on conflict (id) do nothing`,
-      [userId, email],
+      `insert into users (id, email, direct_referrer_user_id) values ($1, $2, $3) on conflict (id) do nothing`,
+      [userId, email, referrerId],
     );
   } catch (error) {
     if (!/duplicate key/i.test((error as Error).message)) throw error;
@@ -155,8 +172,8 @@ export async function buildAuthContext(
       [userId, email],
     );
     await client.query(
-      `insert into users (id, email) values ($1, $2) on conflict (id) do nothing`,
-      [userId, email],
+      `insert into users (id, email, direct_referrer_user_id) values ($1, $2, $3) on conflict (id) do nothing`,
+      [userId, email, referrerId],
     );
   }
 
@@ -177,8 +194,9 @@ export async function dispatchBridge(
   client: SqlClient,
   request: BridgeRequest,
   jwtSecret: string,
+  options?: AuthVerifyOptions,
 ): Promise<ApiResponse> {
-  const auth = await buildAuthContext(client, request.accessToken, jwtSecret);
+  const auth = await buildAuthContext(client, request.accessToken, jwtSecret, options);
   return dispatchWithAuth(client, request, auth);
 }
 

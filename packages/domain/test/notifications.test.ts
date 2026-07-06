@@ -6,9 +6,16 @@ import {
 } from '../src/index.js';
 
 describe('notification templates (Decision 065)', () => {
-  it('defines exactly the thirteen owner-adopted types', () => {
-    expect(NOTIFICATION_TYPES_V1).toHaveLength(13);
+  it('defines the thirteen owner-adopted types + SUPPORT_BONUS_PAID (Decision 074)', () => {
+    expect(NOTIFICATION_TYPES_V1).toHaveLength(14);
+    expect(NOTIFICATION_TYPES_V1).toContain('SUPPORT_BONUS_PAID');
     expect(Object.keys(NOTIFICATION_TEMPLATES_V1).sort()).toEqual([...NOTIFICATION_TYPES_V1].sort());
+  });
+
+  it('the support bonus copy follows the R3 naming rule (never MLM/紹介報酬)', () => {
+    const rendered = renderNotification('SUPPORT_BONUS_PAID', { amount: '3.00', tier: 1 });
+    expect(rendered.title).toBe('サポートボーナスを受け取りました。');
+    expect(`${rendered.title}${rendered.body}`).not.toMatch(/MLM|コミッション|紹介報酬/);
   });
 
   it('renders placeholders with params', () => {
@@ -39,6 +46,7 @@ describe('notification templates (Decision 065)', () => {
       current_day: 1,
       price: '1',
       training_type: 'SPEED_TRAINING',
+      tier: 1,
     };
     for (const type of NOTIFICATION_TYPES_V1) {
       const rendered = renderNotification(type, generic);

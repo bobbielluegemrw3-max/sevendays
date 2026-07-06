@@ -10,7 +10,7 @@
  *   30-62s    レースターン結果 — BURN(赤)→生存(緑)→価値上昇→DAY7(金)の
  *             高速ログ濁流
  *   62-90s    P2Pターン — 出品→入札→マッチング→Day0新規発行のログ濁流
- *   90-96.5s  リワード — MLM 10 USDT 配布+Revenge Buff 配布のログ
+ *   90-96.5s  リワード — サポートボーナス(7ティア、Decision 074)+Revenge Buff 配布のログ
  *   97s       TODAY RACE END → 個人結果
  *
  * ログは全て決定論的に index から導出(乱数なし・表示専用のダミーデータ)。
@@ -103,7 +103,7 @@ export const LOG_SECTIONS: readonly LogSection[] = [
   { key: 'BID', tone: 'bid', header: '═══ P2P MARKETPLACE — BUY ORDERS ═══', startAt: 72, endAt: 78, rate: 20 },
   { key: 'MATCH', tone: 'match', header: '═══ P2P MATCHING ═══', startAt: 78, endAt: 85, rate: 20 },
   { key: 'MINT', tone: 'mint', header: '═══ DAY0 NEW HORSES ═══', startAt: 85, endAt: 90, rate: 14 },
-  { key: 'MLM', tone: 'mlm', header: '═══ MLM REWARDS ═══', startAt: 90, endAt: 93.5, rate: 14 },
+  { key: 'MLM', tone: 'mlm', header: '═══ SUPPORT BONUS ═══', startAt: 90, endAt: 93.5, rate: 14 },
   { key: 'ITEM', tone: 'item', header: '═══ REVENGE BUFF DROPS ═══', startAt: 93.5, endAt: 96.5, rate: 14 },
 ] as const;
 
@@ -213,8 +213,12 @@ function makeLine(section: LogSection, i: number): LogLine {
     }
     case 'MINT':
       return { id, tone: 'mint', text: `${tag('MINT')}${pad(horseName(i, 8), NAME_W)}  DAY0 → ${userId(i, 8)}` };
-    case 'MLM':
-      return { id, tone: 'mlm', text: `${tag('MLM')}+10.00 USDT → SPONSOR OF ${userId(i, 9)}` };
+    case 'MLM': {
+      // サポートボーナス(Decision 074): T1=3 / T2=2 / T3-7=1 USDT
+      const tiers = ['3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00'] as const;
+      const t = 1 + (mix(i, 41) % 7);
+      return { id, tone: 'mlm', text: `${tag('BONUS')}T${t}  +${tiers[t - 1]!} USDT → ${userId(i, 9)}` };
+    }
     case 'ITEM': {
       const rarities = ['N', 'N', 'N', 'R', 'R', 'SR'] as const;
       const rarity = rarities[mix(i, 31) % rarities.length]!;

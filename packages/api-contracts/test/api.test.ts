@@ -642,3 +642,125 @@ describe('wallet linking (Decision 072)', () => {
     expect(again.status).toBe(404);
   });
 });
+
+describe('support bonus network (Decision 074)', () => {
+  async function referredUser(sponsorId: string): Promise<string> {
+    const r = await client.query<{ id: string }>(
+      `insert into users (email, direct_referrer_user_id) values ($1, $2) returning id`,
+      [`${randomUUID()}@test.dev`, sponsorId],
+    );
+    return r.rows[0]!.id;
+  }
+
+  it('summary exposes the referral code, tier status and pool count', async () => {
+    const sponsor = await newUser();
+    await referredUser(sponsor);
+    await referredUser(sponsor);
+
+    const res = await call('GET', '/api/v1/support/summary', asUser(sponsor));
+    expect(res.status).toBe(200);
+    const body = res.body as Record<string, unknown>;
+    expect(body.referral_code).toMatch(/^[0-9a-f]{12}$/);
+    expect(body.unlocked_tiers).toBe(1); // no referral volume yet
+    expect(body.max_tiers).toBe(7);
+    expect(body.pool_count).toBe(2);
+    expect(body.tier_amounts).toEqual(['3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00']);
+  });
+
+  it('place: sponsor-only, in-scope-only, one-shot', async () => {
+    const sponsor = await newUser();
+    const memberA = await referredUser(sponsor);
+    const memberB = await referredUser(sponsor);
+    const stranger = await newUser();
+
+    // A stranger cannot place someone else's referral.
+    const forbidden = await call('POST', '/api/v1/support/place', asUser(stranger), {
+      body: { user_id: memberA, parent_user_id: stranger },
+    });
+    expect(forbidden.status).toBe(403);
+
+    // The sponsor places A directly under themself (unlimited width).
+    const placeA = await call('POST', '/api/v1/support/place', asUser(sponsor), {
+      body: { user_id: memberA, parent_user_id: sponsor },
+    });
+    expect(placeA.status).toBe(200);
+
+    // Replay converges quietly.
+    const replay = await call('POST', '/api/v1/support/place', asUser(sponsor), {
+      body: { user_id: memberA, parent_user_id: sponsor },
+    });
+    expect(replay.status).toBe(200);
+
+    // Out-of-scope parent (a stranger's node) is rejected.
+    const outOfScope = await call('POST', '/api/v1/support/place', asUser(sponsor), {
+      body: { user_id: memberB, parent_user_id: stranger },
+    });
+    expect(outOfScope.status).toBe(400);
+
+    // B goes under A (depth placement inside the sponsor's subtree).
+    const placeB = await call('POST', '/api/v1/support/place', asUser(sponsor), {
+      body: { user_id: memberB, parent_user_id: memberA },
+    });
+    expect(placeB.status).toBe(200);
+
+    // Placement is permanent — a second, different placement is refused.
+    const change = await call('POST', '/api/v1/support/place', asUser(sponsor), {
+      body: { user_id: memberB, parent_user_id: sponsor },
+    });
+    expect(change.status).toBe(409);
+
+    // The pool drained and the network shows both tiers.
+    const pool = await call('GET', '/api/v1/support/pool', asUser(sponsor));
+    expect((pool.body as { members: unknown[] }).members).toHaveLength(0);
+    const network = await call('GET', '/api/v1/support/network', asUser(sponsor));
+    const nodes = (network.body as { nodes: { user_id: string; tier: number }[] }).nodes;
+    expect(nodes.find((n) => n.user_id === memberA)?.tier).toBe(1);
+    expect(nodes.find((n) => n.user_id === memberB)?.tier).toBe(2);
+
+    // Audit rows exist for both placements.
+    const audit = await client.query<{ count: string }>(
+      `select count(*)::text as count from placement_audit
+       where user_id = any($1) and action = 'PLACE'`,
+      [[memberA, memberB]],
+    );
+    expect(audit.rows[0]!.count).toBe('2');
+  });
+
+  it('admin replace requires SUPER_ADMIN and writes the override audit', async () => {
+    const sponsor = await newUser();
+    const member = await referredUser(sponsor);
+    await call('POST', '/api/v1/support/place', asUser(sponsor), {
+      body: { user_id: member, parent_user_id: sponsor },
+    });
+    const newParent = await newUser();
+
+    const plainAdmin: AuthContext = { kind: 'admin', userId: await newUser(), roles: ['FINANCE_ADMIN'] };
+    const refused = await call('POST', '/api/v1/admin/support/replace', plainAdmin, {
+      body: { user_id: member, new_parent_user_id: newParent, reason: 'support ticket 123' },
+    });
+    expect(refused.status).toBe(403);
+
+    const superAdmin: AuthContext = { kind: 'admin', userId: await newUser(), roles: ['SUPER_ADMIN'] };
+    const moved = await call('POST', '/api/v1/admin/support/replace', superAdmin, {
+      body: { user_id: member, new_parent_user_id: newParent, reason: 'support ticket 123' },
+    });
+    expect(moved.status).toBe(200);
+
+    const placed = await client.query<{ p: string }>(
+      `select placement_parent_user_id::text as p from users where id = $1`,
+      [member],
+    );
+    expect(placed.rows[0]!.p).toBe(newParent);
+    const audit = await client.query<{ count: string }>(
+      `select count(*)::text as count from placement_audit where user_id = $1 and action = 'ADMIN_OVERRIDE'`,
+      [member],
+    );
+    expect(audit.rows[0]!.count).toBe('1');
+
+    // The override flag did not leak: normal users still cannot re-place.
+    const sneaky = await call('POST', '/api/v1/support/place', asUser(sponsor), {
+      body: { user_id: member, parent_user_id: sponsor },
+    });
+    expect(sneaky.status).toBe(409);
+  });
+});

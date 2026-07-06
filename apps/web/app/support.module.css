@@ -1,0 +1,135 @@
+/* ============================================================
+   /support — サポートネットワーク(Decision 074)
+   招待リンク・ティア進捗・配置待ちプール・ネットワーク・ボーナス履歴。
+   コピー規範(R3): MLM/コミッション/紹介報酬と言わない。
+   ============================================================ */
+
+.lead { color: var(--muted); font-size: 0.9rem; max-width: 620px; }
+
+/* ---------- 招待リンク ---------- */
+.inviteRow { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.inviteLink {
+  flex: 1 1 260px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--cyan);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.copied { color: var(--good); font-size: 0.8rem; }
+.inviteNote { color: var(--faint); font-size: 0.78rem; margin-top: 0.6rem; line-height: 1.7; }
+
+/* ---------- ティア ---------- */
+.tierHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.6rem 1.4rem; }
+.tierNow {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 2.2rem;
+  color: var(--cyan);
+  text-shadow: 0 0 22px rgba(0, 234, 255, 0.4);
+}
+.tierVolume { font-family: var(--font-mono); color: var(--muted); font-size: 0.85rem; }
+.tierProgress {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin: 0.7rem 0 0.3rem;
+}
+.tierProgress > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), #5ff5ff);
+  box-shadow: 0 0 10px rgba(0, 234, 255, 0.5);
+}
+.tierNext { color: var(--faint); font-size: 0.76rem; font-family: var(--font-mono); }
+.tierTable { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 0.9rem; }
+.tierCell {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.3rem;
+  text-align: center;
+}
+.tierCellOpen { border-color: rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.06); }
+.tierCellName { font-family: var(--font-display); font-size: 0.66rem; font-weight: 700; color: var(--muted); }
+.tierCellOpen .tierCellName { color: var(--cyan); }
+.tierCellAmount { font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; color: var(--text); margin-top: 0.1rem; }
+.tierCellCond { font-family: var(--font-mono); font-size: 0.56rem; color: var(--faint); margin-top: 0.15rem; }
+@media (max-width: 700px) {
+  .tierTable { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ---------- プール / ネットワーク ---------- */
+.memberRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  padding: 0.55rem 0.2rem;
+  border-bottom: 1px solid var(--border);
+}
+.memberRow:last-child { border-bottom: none; }
+.memberName { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text); }
+.memberMeta { color: var(--faint); font-size: 0.74rem; font-family: var(--font-mono); }
+.tierTag {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  color: var(--cyan);
+  padding: 0.08rem 0.4rem;
+  flex: none;
+}
+.indent { display: inline-block; }
+
+/* ---------- 配置ダイアログ ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(3, 2, 8, 0.78);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.dialog {
+  width: min(460px, 100%);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 1.3rem 1.3rem 1.4rem;
+  box-shadow: var(--shadow);
+}
+.dialogTitle { font-family: var(--font-display); font-weight: 700; font-size: 1rem; letter-spacing: 0.08em; }
+.warnBox {
+  border: 1px solid rgba(230, 178, 74, 0.5);
+  background: rgba(230, 178, 74, 0.08);
+  color: var(--warn);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.85rem;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  margin: 0.8rem 0;
+}
+.confirmLabel {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem !important;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+.confirmLabel input { width: auto; }
+.dialogActions { display: flex; gap: 0.6rem; margin-top: 1rem; justify-content: flex-end; }
+
+/* ---------- ボーナス履歴 ---------- */
+.bonusTotal { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; color: var(--gold-bright); }
+.bonusTotal .unit { font-size: 0.8rem; color: var(--muted); font-family: var(--font-mono); }

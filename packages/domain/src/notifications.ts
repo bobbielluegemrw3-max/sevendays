@@ -1,7 +1,9 @@
 /**
  * Notification specification v1.0 (Decision 065, resolves E17).
- * In-App only; the thirteen types and their Japanese templates are fixed
- * by the owner verbatim. `{placeholder}` interpolates from params.
+ * In-App only; the original thirteen types and their Japanese templates are
+ * fixed by the owner verbatim; SUPPORT_BONUS_PAID was added by Decision 074
+ * (copy follows the R3 naming rule — never "MLM"/"紹介報酬").
+ * `{placeholder}` interpolates from params.
  */
 
 export const NOTIFICATION_TYPES_V1 = [
@@ -18,6 +20,7 @@ export const NOTIFICATION_TYPES_V1 = [
   'WITHDRAWAL_FAILED',
   'MARKETPLACE_LOCKED',
   'MARKETPLACE_REOPENED',
+  'SUPPORT_BONUS_PAID',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES_V1)[number];
@@ -79,6 +82,10 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   MARKETPLACE_REOPENED: {
     title: 'Daily Settlementが完了しました。',
     body: 'Marketplaceが再開されました。',
+  },
+  SUPPORT_BONUS_PAID: {
+    title: 'サポートボーナスを受け取りました。',
+    body: '{amount} USDT がウォレットに反映されました。(Tier {tier})',
   },
 };
 

@@ -19,6 +19,9 @@ import {
   trainingModifierV1,
   MLM_REWARD_AMOUNT,
   MAX_CONCURRENT_PURCHASE_SESSIONS,
+  SUPPORT_BONUS_MAX_TIERS_V1,
+  SUPPORT_BONUS_TIER_AMOUNTS_V1,
+  SUPPORT_BONUS_TIER_THRESHOLDS_V1,
 } from '../src/constants.js';
 import { BATCH_STEPS_V1, STRESS_SCENARIOS_V1 } from '../src/batch-steps.js';
 import { ECONOMY_STATUS_SEVERITY } from '../src/enums.js';
@@ -182,6 +185,16 @@ describe('misc fixed values', () => {
   it('MLM reward is 10.00, max sessions 10', () => {
     expect(MLM_REWARD_AMOUNT).toBe('10.00');
     expect(MAX_CONCURRENT_PURCHASE_SESSIONS).toBe(10);
+  });
+
+  it('support bonus tiers (Decision 074): 3/2/1x5 summing to the 10.00 cap', () => {
+    expect(SUPPORT_BONUS_MAX_TIERS_V1).toBe(7);
+    expect(SUPPORT_BONUS_TIER_AMOUNTS_V1).toEqual(['3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00']);
+    const total = SUPPORT_BONUS_TIER_AMOUNTS_V1.reduce((acc, a) => acc + Math.round(Number(a) * 100), 0);
+    expect(total).toBe(Math.round(Number(MLM_REWARD_AMOUNT) * 100));
+    expect(SUPPORT_BONUS_TIER_THRESHOLDS_V1).toEqual(['0', '3001', '5001', '10001', '30001', '50001', '70001']);
+    expect(SUPPORT_BONUS_TIER_THRESHOLDS_V1).toHaveLength(SUPPORT_BONUS_MAX_TIERS_V1);
+    expect(SUPPORT_BONUS_TIER_AMOUNTS_V1).toHaveLength(SUPPORT_BONUS_MAX_TIERS_V1);
   });
 
   it('economy severity order is EMERGENCY > WINTER > WATCH > NORMAL', () => {

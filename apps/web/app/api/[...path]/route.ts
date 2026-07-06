@@ -38,6 +38,14 @@ async function handle(request: Request, params: Promise<{ path: string[] }>): Pr
     }
   }
 
+  // Invite cookie (Decision 074) — consumed only at first provisioning.
+  const referralCode =
+    request.headers
+      .get('cookie')
+      ?.split(/;\s*/)
+      .find((c) => c.startsWith('sdd_ref='))
+      ?.slice('sdd_ref='.length) ?? null;
+
   const result = await withSqlClient((client) =>
     dispatchBridge(
       client,
@@ -49,6 +57,7 @@ async function handle(request: Request, params: Promise<{ path: string[] }>): Pr
         accessToken,
       },
       secret,
+      { referralCode },
     ),
   );
   return Response.json(result.body, { status: result.status });

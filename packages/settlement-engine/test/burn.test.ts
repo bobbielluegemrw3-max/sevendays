@@ -130,10 +130,19 @@ async function buildScoredRace(n: number, referrerFor: (i: number) => string | u
   return { raceId, raceSeed, batchDate, horses, owners };
 }
 
+/** Placement (Decision 074): the payout path is the placement tree. */
+async function placeUnder(childId: string, parentId: string): Promise<void> {
+  await client.query(`update users set placement_parent_user_id = $1 where id = $2`, [
+    parentId,
+    childId,
+  ]);
+}
+
 describe('snapshot -> score -> finalize -> burn pipeline', () => {
   it('runs the full deterministic pipeline with WATCH burn rate (25 horses -> 2 burns)', async () => {
-    const refA = await newUser(); // ACTIVE referrer for every owner
+    const refA = await newUser(); // ACTIVE sponsor + Tier-1 placement parent for every owner
     const setup = await buildScoredRace(25, () => refA);
+    for (const owner of setup.owners) await placeUnder(owner, refA);
 
     const result = await finalizeAndBurn(client, {
       raceId: setup.raceId,
@@ -190,10 +199,12 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
       expect(Number(buff.rows[0]!.buff_bonus_score)).toBe(expected.bonusScore);
     }
 
-    // MLM: every burned owner has ACTIVE referrer refA -> 2 payments of 10
-    expect(result.mlmPaymentsMade).toBe(2);
+    // Support Bonus: every burned owner is placed under ACTIVE refA (Tier 1,
+    // unconditional) -> 2 payments of 3.00; tiers 2-7 have no ancestors and
+    // stay in the reserve.
+    expect(result.supportBonusPayments).toBe(2);
     const refAccounts = await ensureUserAccounts(client, refA);
-    expect(await getBalance(client, refAccounts.available)).toBe('20.00000000');
+    expect(await getBalance(client, refAccounts.available)).toBe('6.00000000');
 
     // idempotency: re-running changes nothing financially
     const rerun = await finalizeAndBurn(client, {
@@ -205,8 +216,8 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
       buffPolicyVersion: 'buff_policy_v1.0',
     });
     expect(rerun.burnedHorseIds.sort()).toEqual(result.burnedHorseIds.sort());
-    expect(rerun.mlmPaymentsMade).toBe(0); // ledger idempotency absorbed the replay
-    expect(await getBalance(client, refAccounts.available)).toBe('20.00000000');
+    expect(rerun.supportBonusPayments).toBe(0); // ledger idempotency absorbed the replay
+    expect(await getBalance(client, refAccounts.available)).toBe('6.00000000');
     const buffCount = await client.query<{ count: string }>(
       `select count(*)::text as count from revenge_buffs`,
     );
@@ -214,9 +225,10 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
     expect(Number(buffCount.rows[0]!.count)).toBe(2);
   });
 
-  it('no MLM for BANNED referrers; existing buff is refreshed, not duplicated', async () => {
+  it('no support bonus for BANNED ancestors; existing buff is refreshed, not duplicated', async () => {
     const refB = await newUser();
     const setup = await buildScoredRace(10, () => refB); // NORMAL: floor(10*0.1)=1 burn
+    for (const owner of setup.owners) await placeUnder(owner, refB);
     await client.query(`update users set status = 'BANNED' where id = $1`, [refB]);
 
     // pre-seed an ACTIVE buff for every owner so the burn refreshes instead of creating
@@ -241,7 +253,7 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
     });
 
     expect(result.burnTargetCount).toBe(1);
-    expect(result.mlmPaymentsMade).toBe(0); // BANNED referrer receives nothing
+    expect(result.supportBonusPayments).toBe(0); // BANNED ancestor receives nothing
     expect(await getBalance(client, refBAccounts.available)).toBe(before);
     expect(result.buffsGenerated).toBe(0);
     expect(result.buffsRefreshed).toBe(1); // refreshed the pre-existing buff
@@ -256,6 +268,79 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
     );
     expect(buffs.rows).toHaveLength(1);
     expect(buffs.rows[0]!.refreshed_at).not.toBeNull();
+  });
+
+  it('pays tiers along the placement chain gated by direct-referral volume (Decision 074)', async () => {
+    // Chain (top to bottom): A <- B <- C <- every race owner.
+    // C: Tier 1 is unconditional. B: needs T2 (volume >= 3,001).
+    // A: needs T3 (volume >= 5,001).
+    const a = await newUser();
+    const b = await newUser();
+    const c = await newUser();
+    await placeUnder(b, a);
+    await placeUnder(c, b);
+
+    const setup = await buildScoredRace(10, () => c); // NORMAL: 1 burn
+    for (const owner of setup.owners) await placeUnder(owner, c);
+
+    // Volume horses are created AFTER the race snapshot, so they are not
+    // race participants — they only count toward the point-in-time volume.
+    // B's direct referral holds 31 Day0 horses = 3,100 >= 3,001 -> T2 open.
+    const bReferral = await newUser(b);
+    for (let i = 0; i < 31; i += 1) await newHorse(bReferral, i);
+    // A's direct referral holds 30 Day0 horses = 3,000 < 5,001 -> T3 locked.
+    const aReferral = await newUser(a);
+    for (let i = 0; i < 30; i += 1) await newHorse(aReferral, i);
+
+    const [accA, accB, accC] = await Promise.all([
+      ensureUserAccounts(client, a),
+      ensureUserAccounts(client, b),
+      ensureUserAccounts(client, c),
+    ]);
+
+    const result = await finalizeAndBurn(client, {
+      raceId: setup.raceId,
+      raceSeed: setup.raceSeed,
+      raceEngineVersion: VERSION,
+      economyStatus: 'NORMAL',
+      liquidityPolicyVersion: 'liquidity_policy_v1.0',
+      buffPolicyVersion: 'buff_policy_v1.0',
+    });
+
+    expect(result.burnTargetCount).toBe(1);
+    // C: T1 3.00 (unconditional) / B: T2 2.00 (volume 3,100) / A: T3 locked.
+    expect(result.supportBonusPayments).toBe(2);
+    expect(await getBalance(client, accC.available)).toBe('3.00000000');
+    expect(await getBalance(client, accB.available)).toBe('2.00000000');
+    expect(await getBalance(client, accA.available)).toBe('0');
+
+    // The paid ancestors were notified with the R3-compliant copy.
+    const notif = await client.query<{ user_id: string; payload_json: { title: string } }>(
+      `select user_id, payload_json from notifications
+       where notification_type = 'SUPPORT_BONUS_PAID' and user_id = any($1)`,
+      [[a, b, c]],
+    );
+    expect(notif.rows.map((r) => r.user_id).sort()).toEqual([b, c].sort());
+    expect(notif.rows[0]!.payload_json.title).toBe('サポートボーナスを受け取りました。');
+
+    // Volume is a point-in-time stock: retire B's referral horses and burn
+    // again in a fresh race -> B downgrades to T1-only coverage (tier 2 of
+    // the NEW burn goes unpaid).
+    await client.query(`update horses set status = 'BURNED' where owner_user_id = $1`, [bReferral]);
+    const setup2 = await buildScoredRace(10, () => c);
+    for (const owner of setup2.owners) await placeUnder(owner, c);
+    const result2 = await finalizeAndBurn(client, {
+      raceId: setup2.raceId,
+      raceSeed: setup2.raceSeed,
+      raceEngineVersion: VERSION,
+      economyStatus: 'NORMAL',
+      liquidityPolicyVersion: 'liquidity_policy_v1.0',
+      buffPolicyVersion: 'buff_policy_v1.0',
+    });
+    expect(result2.burnTargetCount).toBe(1);
+    expect(result2.supportBonusPayments).toBe(1); // C only
+    expect(await getBalance(client, accC.available)).toBe('6.00000000');
+    expect(await getBalance(client, accB.available)).toBe('2.00000000'); // unchanged
   });
 
   it('APPLIED buff boosts exactly one race, then is CONSUMED (Decision 057)', async () => {

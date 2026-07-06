@@ -51,6 +51,43 @@ describe('buildAuthContext', () => {
     expect(again.kind).toBe('user');
   });
 
+  it('binds the invite code to direct_referrer_user_id at first provisioning only (Decision 074)', async () => {
+    const sponsor = randomUUID();
+    await client.query(`insert into users (id, email) values ($1, $2)`, [sponsor, `${randomUUID()}@ref.dev`]);
+    const code = (
+      await client.query<{ referral_code: string }>(`select referral_code from users where id = $1`, [sponsor])
+    ).rows[0]!.referral_code;
+
+    const uid = randomUUID();
+    const token = await signToken(uid, `${randomUUID()}@invited.dev`);
+    const auth = await buildAuthContext(client, token, JWT_SECRET, { referralCode: code });
+    expect(auth).toEqual({ kind: 'user', userId: uid });
+    const row = await client.query<{ ref: string | null }>(
+      `select direct_referrer_user_id::text as ref from users where id = $1`,
+      [uid],
+    );
+    expect(row.rows[0]!.ref).toBe(sponsor);
+
+    // A later login with a DIFFERENT code changes nothing (write-once).
+    const other = randomUUID();
+    await client.query(`insert into users (id, email) values ($1, $2)`, [other, `${randomUUID()}@ref2.dev`]);
+    const otherCode = (
+      await client.query<{ referral_code: string }>(`select referral_code from users where id = $1`, [other])
+    ).rows[0]!.referral_code;
+    await buildAuthContext(client, token, JWT_SECRET, { referralCode: otherCode });
+    const after = await client.query<{ ref: string | null }>(
+      `select direct_referrer_user_id::text as ref from users where id = $1`,
+      [uid],
+    );
+    expect(after.rows[0]!.ref).toBe(sponsor);
+
+    // An unknown code never blocks signup.
+    const uid2 = randomUUID();
+    const token2 = await signToken(uid2, `${randomUUID()}@invited2.dev`);
+    const auth2 = await buildAuthContext(client, token2, JWT_SECRET, { referralCode: 'ffffffffffff' });
+    expect(auth2.kind).toBe('user');
+  });
+
   it('resolves a Web3 session for a LINKED wallet to the linked game account (Decision 072)', async () => {
     // Existing game account with a linked wallet.
     const gameUser = randomUUID();

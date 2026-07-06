@@ -2,7 +2,6 @@ import { Money, sumMoney } from '@sevendays/shared';
 import {
   DAY0_MINT_PRICE,
   DAY0_MINT_TOTAL_CHARGE,
-  MLM_REWARD_AMOUNT,
   P2P_FEE_SPLIT_RATE,
   RESERVE_ALLOCATION_V1,
 } from '@sevendays/domain';
@@ -207,21 +206,22 @@ export async function buybackPayment(
   });
 }
 
-/** MLM Reward: PLATFORM_MLM_RESERVE -> referrer USER_AVAILABLE (10 USDT, Level 1 only). */
-export async function mlmRewardPayment(
+/** Support Bonus (Decision 074): PLATFORM_MLM_RESERVE -> USER_AVAILABLE,
+ *  tiered amount (T1=3, T2=2, T3-7=1; the tx type keeps the historical
+ *  MLM_REWARD_PAYMENT enum value — renaming a DB enum buys nothing). */
+export async function supportBonusPayment(
   client: SqlClient,
-  args: Ref & { referrerUserId: string },
+  args: Ref & { userId: string; amount: Money },
 ): Promise<PostedTransaction> {
-  const amount = Money.of(MLM_REWARD_AMOUNT);
-  const user = await ensureUserAccounts(client, args.referrerUserId);
+  const user = await ensureUserAccounts(client, args.userId);
   const reserve = await getPlatformAccountId(client, 'PLATFORM_MLM_RESERVE');
   return postTransaction(client, {
     type: 'MLM_REWARD_PAYMENT',
     idempotencyKey: args.idempotencyKey,
     ...refFields(args),
     entries: [
-      { accountId: reserve, direction: 'DEBIT', amount },
-      { accountId: user.available, direction: 'CREDIT', amount },
+      { accountId: reserve, direction: 'DEBIT', amount: args.amount },
+      { accountId: user.available, direction: 'CREDIT', amount: args.amount },
     ],
   });
 }
