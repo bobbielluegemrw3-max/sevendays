@@ -1,0 +1,552 @@
+/* ============================================================
+   THE DAILY DERBY — live event stage (ADR-006/007/008)
+   ターミナル風ライブ中継。fade / glow / progress / ticker のみ
+   (3D・点滅過多・カジノ演出は禁止)。
+   ============================================================ */
+
+.stage {
+  position: relative;
+  min-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(720px 420px at 50% -10%, rgba(26, 11, 46, 0.9) 0%, rgba(10, 7, 20, 0.96) 55%, #050409 100%),
+    #050409;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.stageInner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.2rem 1.2rem 3.4rem;
+  text-align: center;
+}
+
+/* ---------- sound toggle ---------- */
+.soundBtn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.8rem;
+  z-index: 5;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  box-shadow: none;
+}
+.soundBtn:hover { color: var(--cyan); border-color: var(--border-strong); filter: none; }
+
+/* ---------- WAITING ---------- */
+.waitLabel {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.waitClock {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 7vw, 3.4rem);
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin: 0.5rem 0 0.3rem;
+}
+.waitNote { color: var(--faint); font-size: 0.8rem; font-family: var(--font-mono); }
+
+/* ---------- COUNTDOWN(3分前〜・デジタルウォッチ) ---------- */
+.cdWrap { animation: fadeIn 0.8s ease both; }
+.cdTitle {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(0.9rem, 2.6vw, 1.25rem);
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+.cdSub {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+}
+.cdClock {
+  color: var(--cyan);
+  font-size: clamp(6rem, 24vw, 13rem);
+  filter: drop-shadow(0 0 22px rgba(0, 234, 255, 0.55)) drop-shadow(0 0 70px rgba(0, 234, 255, 0.25));
+  transition: color 0.5s ease, filter 0.5s ease;
+}
+.cdClockAlert {
+  color: #ff4d4d;
+  filter: drop-shadow(0 0 22px rgba(255, 77, 77, 0.6)) drop-shadow(0 0 70px rgba(255, 45, 100, 0.3));
+  animation: alertPulse 1s ease-in-out infinite;
+}
+.cdNote {
+  margin-top: 2.1rem;
+  color: var(--faint);
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.2em;
+}
+@keyframes alertPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
+}
+
+/* ---------- LIVE title ---------- */
+.liveTitle { animation: fadeIn 0.7s ease both; }
+.liveRule {
+  width: min(420px, 70vw);
+  height: 1px;
+  margin: 0.9rem auto;
+  background: linear-gradient(90deg, transparent, var(--cyan), var(--magenta), transparent);
+}
+.liveTitleText {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.5rem, 6vw, 2.6rem);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  background: linear-gradient(92deg, #eae7ff, var(--cyan) 50%, var(--magenta));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.liveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+  color: #ff5c7a;
+}
+.liveDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ff3b5c;
+  box-shadow: 0 0 12px rgba(255, 59, 92, 0.9);
+  animation: liveDot 1.4s ease-in-out infinite;
+}
+@keyframes liveDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* ---------- terminal ---------- */
+.terminal {
+  width: min(660px, 100%);
+  margin: 1.6rem auto 0;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: clamp(0.78rem, 2.4vw, 0.95rem);
+  background: rgba(5, 4, 9, 0.65);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.2rem;
+  min-height: 200px;
+}
+.tLine {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.22rem 0;
+  color: var(--muted);
+  animation: lineIn 0.35s ease both;
+}
+.tLineDone { color: var(--text); }
+.tLineDone .tCheck { color: var(--good); }
+.tCheck { flex: none; }
+.tSpinner {
+  flex: none;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 234, 255, 0.25);
+  border-top-color: var(--cyan);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes lineIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+.tProgress {
+  height: 8px;
+  margin: 0.35rem 0 0.45rem 1.55rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.tProgress > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), #5ff5ff);
+  box-shadow: 0 0 12px rgba(0, 234, 255, 0.6);
+  transition: width 0.25s linear;
+}
+
+/* ---------- log flood(レース結果〜配布の高速ログ) ---------- */
+.logPhase {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  animation: fadeIn 0.5s ease both;
+  text-align: left;
+}
+.logHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1.2rem;
+  padding: 0 0.2rem 0.55rem;
+  border-bottom: 1px solid var(--border);
+}
+.logBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  background: linear-gradient(92deg, #eae7ff, var(--cyan) 60%, var(--magenta));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.logBrand .liveDot { margin-left: 0.15rem; }
+.logTurn {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.3em;
+  color: var(--gold-bright);
+  text-shadow: 0 0 16px rgba(201, 168, 106, 0.4);
+}
+.logCounter {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--cyan);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 12px rgba(0, 234, 255, 0.5);
+}
+.mktOpen {
+  text-align: center;
+  padding: 0.9rem 0 0.4rem;
+  animation: fadeIn 0.5s ease both;
+}
+.mktTitle {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(0.95rem, 3.4vw, 1.35rem);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--gold-bright);
+  text-shadow: 0 0 24px rgba(201, 168, 106, 0.45);
+}
+.logStream {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  height: min(56vh, 480px);
+  padding: 0.5rem 0.2rem 0.3rem;
+  font-family: var(--font-mono);
+  font-size: clamp(0.62rem, 1.9vw, 0.8rem);
+  line-height: 1.5;
+  /* pre: タグ/名前の桁揃え(makeLine の padEnd)を保持する */
+  white-space: pre;
+  /* 上端をフェードアウトさせて「流れ続けている」感を出す */
+  mask-image: linear-gradient(180deg, transparent 0%, #000 14%, #000 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 14%, #000 100%);
+}
+/* 絵文字の代わり: 行頭の色ティック(行色 currentColor を継承) */
+.lg {
+  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 2px solid currentColor;
+  padding-left: 0.6rem;
+  margin: 1px 0;
+}
+.lgHeader {
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  padding: 0.3rem 0 0.1rem 0.6rem;
+  border-left-color: transparent;
+}
+.lgBurn { color: #ff5c5c; text-shadow: 0 0 10px rgba(255, 92, 92, 0.35); }
+.lgSurvive { color: #35d07f; }
+.lgValue { color: var(--cyan); }
+.lgDay7 { color: var(--gold-bright); text-shadow: 0 0 12px rgba(242, 228, 191, 0.45); }
+.lgList { color: var(--magenta-soft); }
+.lgBid { color: #5ff5ff; }
+.lgMatch { color: var(--gold); text-shadow: 0 0 10px rgba(201, 168, 106, 0.35); }
+.lgMint { color: #eae7ff; }
+.lgMlm { color: var(--warn); }
+.lgItem { color: #b18cff; }
+.lgEnd {
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  padding: 0.3rem 0 0.1rem 0.6rem;
+  border-left-color: transparent;
+}
+
+/* ---------- completion ---------- */
+.doneBanner { animation: fadeIn 0.9s ease both; }
+.doneText {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.15rem, 4.6vw, 1.9rem);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--text);
+}
+
+/* ---------- personal result(フィナーレ) ---------- */
+.rWrap { animation: fadeIn 0.6s ease both; width: min(440px, 100%); margin: 0 auto; }
+.rKicker {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.44em;
+  text-indent: 0.44em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.9rem;
+}
+.rCard {
+  position: relative;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(420px 260px at 50% -8%, rgba(0, 234, 255, 0.1), transparent 70%),
+    linear-gradient(165deg, rgba(0, 234, 255, 0.05), rgba(14, 12, 24, 0.95));
+  padding: 1.7rem 1.4rem 1.7rem;
+  box-shadow: 0 0 54px -18px rgba(0, 234, 255, 0.45), var(--shadow);
+}
+.rCardBurn {
+  border-color: rgba(255, 92, 92, 0.4);
+  background:
+    radial-gradient(420px 260px at 50% -8%, rgba(255, 92, 92, 0.12), transparent 70%),
+    linear-gradient(165deg, rgba(255, 45, 100, 0.06), rgba(14, 12, 24, 0.95));
+  box-shadow: 0 0 54px -18px rgba(255, 92, 92, 0.4), var(--shadow);
+}
+.rCardGold {
+  border-color: rgba(201, 168, 106, 0.6);
+  background:
+    radial-gradient(420px 260px at 50% -8%, rgba(201, 168, 106, 0.16), transparent 70%),
+    linear-gradient(165deg, rgba(201, 168, 106, 0.08), rgba(14, 12, 24, 0.95));
+  box-shadow: 0 0 64px -14px rgba(201, 168, 106, 0.55), var(--shadow);
+}
+.rRow { animation: riseIn 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+/* 馬アート: 発光リングの台座に載せる */
+.rArtFrame {
+  width: clamp(150px, 42vw, 190px);
+  aspect-ratio: 1;
+  margin: 0 auto 0.4rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(closest-side, rgba(0, 234, 255, 0.14), rgba(0, 234, 255, 0.04) 62%, transparent 74%);
+  border: 1px solid rgba(0, 234, 255, 0.25);
+  box-shadow: inset 0 0 34px rgba(0, 234, 255, 0.12), 0 0 34px -8px rgba(0, 234, 255, 0.35);
+}
+.rArtFrameSmall {
+  width: 74px;
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(closest-side, rgba(201, 168, 106, 0.16), transparent 74%);
+  border: 1px solid rgba(201, 168, 106, 0.35);
+}
+.rArt { width: 86%; height: 86%; display: block; }
+.rArtBurned { filter: grayscale(0.75) brightness(0.6); border-color: rgba(255, 92, 92, 0.35); background: radial-gradient(closest-side, rgba(255, 92, 92, 0.12), transparent 74%); box-shadow: inset 0 0 34px rgba(255, 92, 92, 0.12), 0 0 34px -8px rgba(255, 92, 92, 0.3); }
+.rArtGold { border-color: rgba(201, 168, 106, 0.5); background: radial-gradient(closest-side, rgba(201, 168, 106, 0.2), rgba(201, 168, 106, 0.05) 62%, transparent 74%); box-shadow: inset 0 0 34px rgba(201, 168, 106, 0.16), 0 0 44px -8px rgba(201, 168, 106, 0.5); }
+.rName {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.3rem, 5vw, 1.65rem);
+  letter-spacing: 0.06em;
+  color: var(--text);
+  margin-bottom: 0.7rem;
+}
+.rNameGold {
+  background: linear-gradient(92deg, var(--gold), var(--gold-bright));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.rChips { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; margin-bottom: 0.9rem; }
+.rChip {
+  font-family: var(--font-display);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.22rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  color: var(--muted);
+  background: rgba(0, 234, 255, 0.06);
+}
+.rChipGood { color: var(--good); border-color: rgba(53, 208, 127, 0.45); background: rgba(53, 208, 127, 0.08); }
+.rChipBad { color: #ff8a8a; border-color: rgba(255, 92, 92, 0.5); background: rgba(255, 92, 92, 0.09); }
+.rChipGold { color: #0a0813; border-color: transparent; background: linear-gradient(92deg, var(--gold), var(--gold-bright)); }
+.rBig {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2rem, 8vw, 2.7rem);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  text-shadow: 0 0 28px rgba(0, 234, 255, 0.35);
+}
+.rBigGold {
+  background: linear-gradient(92deg, var(--gold), var(--gold-bright));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 0 22px rgba(201, 168, 106, 0.5));
+}
+.rBigUnit { font-size: 0.42em; color: var(--muted); font-weight: 700; }
+.rBigLabel {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0.3rem 0 0.4rem;
+}
+.rDivider {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1.1rem 0 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  white-space: nowrap;
+}
+.rDivider::before,
+.rDivider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201, 168, 106, 0.45));
+}
+.rDivider::after { background: linear-gradient(90deg, rgba(201, 168, 106, 0.45), transparent); }
+.rNewRow { display: flex; align-items: center; justify-content: center; gap: 0.9rem; text-align: left; }
+.rNewName {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.2rem;
+  background: linear-gradient(92deg, var(--gold), var(--gold-bright));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.rNewDay { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.2em; color: var(--muted); margin-top: 0.15rem; }
+.rNote { font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); line-height: 1.7; }
+.rBuffPanel {
+  border: 1px solid rgba(177, 140, 255, 0.4);
+  border-radius: var(--radius-sm);
+  background: rgba(177, 140, 255, 0.07);
+  padding: 0.9rem 1rem 1rem;
+}
+.rBuffTitle {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.26em;
+  color: #b18cff;
+  text-shadow: 0 0 16px rgba(177, 140, 255, 0.5);
+}
+.rBuffRarity {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 2.1rem;
+  margin: 0.15rem 0 0.3rem;
+  color: var(--text);
+  text-shadow: 0 0 24px rgba(177, 140, 255, 0.6);
+}
+
+/* ---------- failure safe mode ---------- */
+.failWrap { animation: fadeIn 0.8s ease both; width: min(460px, 100%); margin: 0 auto; }
+.failCard {
+  border: 1px solid rgba(230, 178, 74, 0.4);
+  border-radius: var(--radius);
+  background: linear-gradient(165deg, rgba(230, 178, 74, 0.07), rgba(18, 16, 29, 0.92));
+  padding: 1.5rem 1.4rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+.failTitle { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.14em; color: var(--warn); margin-bottom: 0.6rem; font-size: 1rem; }
+
+/* ---------- ticker ---------- */
+.ticker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-top: 1px solid var(--border);
+  background: rgba(5, 4, 9, 0.85);
+  overflow: hidden;
+  padding: 0.5rem 0;
+  animation: fadeIn 0.8s ease both;
+}
+.tickerTrack {
+  display: inline-flex;
+  gap: 2.6rem;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  animation: tickerMove 38s linear infinite;
+  will-change: transform;
+}
+.tickerItem { display: inline-flex; gap: 0.45rem; }
+@keyframes tickerMove {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tickerTrack, .beam, .liveDot, .cdClockAlert, .tSpinner { animation-duration: 0.01s; animation-iteration-count: 1; }
+}
