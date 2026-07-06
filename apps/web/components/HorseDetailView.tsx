@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { PRICE_TABLE_V1 } from '@sevendays/domain';
-import { HorseArt } from '@/components/HorseArt';
+import { NftHorseArt } from '@/components/NftHorseArt';
 import { TrainingForm } from '@/components/TrainingForm';
-import { deriveHorseArt } from '@/lib/horse-visual';
+import { deriveNftLook } from '@/lib/nft-visual';
 import s from '../app/horse-detail.module.css';
 
 /* ============================================================================
@@ -96,7 +96,7 @@ function DayRail({ day }: { day: number }) {
 }
 
 export function HorseDetailView({ horse }: { horse: HorseDetail }) {
-  const v = deriveHorseArt(horse.dna_hash, horse.name, horse.rarity);
+  const look = deriveNftLook(horse.dna_hash, horse.name);
   const m = statusMeta(horse);
   const abilities = Object.entries(horse.ability_json ?? {});
   const abMax = Math.max(1, ...abilities.map(([, val]) => Number(val) || 0));
@@ -119,7 +119,7 @@ export function HorseDetailView({ horse }: { horse: HorseDetail }) {
         <div className={`${s.hero} ${m.burned ? s.heroBurned : ''}`}>
           <div className={s.heroInner}>
             <div className={s.heroArtBox}>
-              <HorseArt baseId={v.baseId} coat={v.coat} coatB={v.coatB} pattern={v.pattern} mane={v.mane} flip={false} className={s.heroCanvas} />
+              <NftHorseArt look={look} className={s.heroCanvas} />
               <div className={s.scrim} />
               <div className={s.heroCaption}>
                 <div>

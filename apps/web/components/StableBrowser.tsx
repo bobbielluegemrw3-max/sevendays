@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { HorseArt } from '@/components/HorseArt';
-import { deriveHorseArt } from '@/lib/horse-visual';
+import { NftHorseArt } from '@/components/NftHorseArt';
+import { deriveNftLook } from '@/lib/nft-visual';
 import { pct, horseValue, rarClass } from '@/components/stable-shared';
 import type { StableHorse } from '@/components/StableView';
 import s from '../app/stable.module.css';
@@ -23,8 +23,8 @@ const PAGE_SIZES = [24, 48, 96, 99999];
 
 /* ---- 部品 ----------------------------------------------------------------- */
 function StableArt({ horse }: { horse: StableHorse }) {
-  const v = deriveHorseArt(horse.dna_hash, horse.name, horse.rarity);
-  return <HorseArt baseId={v.baseId} coat={v.coat} coatB={v.coatB} pattern={v.pattern} mane={v.mane} flip={false} className={s.hartCanvas} />;
+  const look = deriveNftLook(horse.dna_hash, horse.name);
+  return <NftHorseArt look={look} className={s.hartCanvas} />;
 }
 
 function DayRail({ day }: { day: number }) {

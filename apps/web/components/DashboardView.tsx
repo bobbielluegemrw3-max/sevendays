@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { Countdown } from '@/components/Countdown';
-import { HorseArt } from '@/components/HorseArt';
-import { deriveHorseArt } from '@/lib/horse-visual';
+import { NftHorseArt } from '@/components/NftHorseArt';
+import { deriveNftLook } from '@/lib/nft-visual';
 import s from '../app/dashboard.module.css';
 
 /* ============================================================================
@@ -72,8 +72,8 @@ function rarClass(rarity: string): string {
 
 /** dna_hash から決定論生成された HorseArt を厩舎用に描画。 */
 function StableArt({ horse }: { horse: DashHorse }) {
-  const v = deriveHorseArt(horse.dna_hash, horse.name, horse.rarity);
-  return <HorseArt baseId={v.baseId} coat={v.coat} coatB={v.coatB} pattern={v.pattern} mane={v.mane} flip={false} className={s.hartCanvas} />;
+  const look = deriveNftLook(horse.dna_hash, horse.name);
+  return <NftHorseArt look={look} className={s.hartCanvas} />;
 }
 
 /** 7日レール(done=通過, today=今夜のDay)。 */

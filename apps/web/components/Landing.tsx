@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { Countdown } from '@/components/Countdown';
 import { LocalPostTime, LocalRaceTime } from '@/components/LocalPostTime';
 import { pickShowcase } from '@/lib/horse-visual';
+import { pickNftShowcase } from '@/lib/nft-visual';
+import { NftHorseArt } from '@/components/NftHorseArt';
 import s from './landing.module.css';
 
 /**
@@ -21,23 +23,11 @@ const TYPE_COLOR: Record<string, string> = {
   LUCK: '#c9a86a',
 };
 
-// Manus native-colour masters + a matching frame hue per artwork.
-const MANUS_ART = [
-  { src: '/horses/manus/v3.png', h: 195 }, // 虹色クローム (シアン→マゼンタ)
-  { src: '/horses/manus/v4.png', h: 315 }, // 黒クローム × ネオン鬣
-  { src: '/horses/manus/v2.png', h: 45 }, // 金 × 黒
-] as const;
-const frameOf = (h: number) => ({
-  line: `hsl(${h} 82% 62%)`,
-  glow: `hsl(${h} 88% 55% / 0.5)`,
-  panel: `hsl(${h} 72% 50% / 0.14)`,
-  grad: `linear-gradient(92deg, hsl(${h} 80% 58%), hsl(${h} 85% 74%))`,
-});
-
 export function Landing() {
-  // Pre-launch showcase: 8 fresh horses, each from a different colour family and
-  // ordered so no two similar colours ever sit next to each other.
+  // Pre-launch showcase: names/prices from the deterministic engine, artwork
+  // from the approved NFT-look space (3 archetypes × body × mane, sheets A/B).
   const horses = pickShowcase(8, () => (Math.random() * 0xffffffff) >>> 0);
+  const looks = pickNftShowcase(8, () => (Math.random() * 0xffffffff) >>> 0);
   return (
     <div className={`landing-bleed ${s.page}`}>
       <span className={s.hairline} />
@@ -262,20 +252,19 @@ export function Landing() {
 
         <div className={s.galGrid}>
           {horses.map((h, i) => {
-            const art = MANUS_ART[i % MANUS_ART.length]!;
-            const f = frameOf(art.h);
+            const f = looks[i]!;
             return (
-            <div key={i} className={s.galWrap} style={{ ['--rar-glow']: f.glow, ['--rar-line']: f.line } as CSSProperties}>
-              <div className={s.galCard} style={{ borderColor: f.line }}>
-                <div className={s.art} style={{ background: `radial-gradient(90% 80% at 50% 42%, ${f.panel}, transparent 70%)` }}>
-                  <span className={s.id} style={{ color: f.line }}>
+            <div key={i} className={s.galWrap} style={{ ['--rar-glow']: f.frameGlow, ['--rar-line']: f.frameLine } as CSSProperties}>
+              <div className={s.galCard} style={{ borderColor: f.frameLine }}>
+                <div className={s.art} style={{ background: `radial-gradient(90% 80% at 50% 42%, ${f.framePanel}, transparent 70%)` }}>
+                  <span className={s.id} style={{ color: f.frameLine }}>
                     {h.id}
                   </span>
                   <span className={s.lk}>♡ {h.likes}</span>
                   <span className={s.rib} style={{ background: h.rarityRibbon, color: h.rarityInk }}>
                     {h.rarity}
                   </span>
-                  <img src={art.src} alt={h.name} loading={i > 3 ? 'lazy' : undefined} />
+                  <NftHorseArt look={f} />
                 </div>
                 <div className={s.body}>
                   <div className={s.gnm}>
@@ -298,7 +287,7 @@ export function Landing() {
                     <span className={s.last}>last {h.last}</span>
                   </div>
                   <Link href="/login">
-                    <button style={{ color: '#0a0813', background: f.grad, border: 'none' }}>購入 · BUY</button>
+                    <button style={{ color: '#0a0813', background: f.frameGrad, border: 'none' }}>購入 · BUY</button>
                   </Link>
                 </div>
               </div>
