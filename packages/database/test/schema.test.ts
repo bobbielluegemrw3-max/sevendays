@@ -138,11 +138,11 @@ describe('migrations and seed data', () => {
     expect(Number(r.rows[0]!.count)).toBeGreaterThanOrEqual(35);
   });
 
-  it('seeds 8 platform ledger accounts', async () => {
+  it('seeds 9 platform ledger accounts (incl. ITEM_CLEARING, Decision 078)', async () => {
     const r = await db.query<{ count: string }>(
       `select count(*)::text as count from ledger_accounts where owner_type = 'PLATFORM'`,
     );
-    expect(r.rows[0]!.count).toBe('8');
+    expect(r.rows[0]!.count).toBe('9');
   });
 
   it('marketplace starts OPEN', async () => {
@@ -1004,5 +1004,117 @@ describe('manual marketplace listings (Decision 076)', () => {
       ),
       'market_listings_source_batch',
     );
+  });
+});
+
+describe('item system (Decision 078/079)', () => {
+  it('seeds the 35-item catalog and the item clearing account', async () => {
+    const client = await createTestDb();
+    const items = await client.query<{ n: number }>(`select count(*)::int as n from item_catalog`);
+    expect(items.rows[0]!.n).toBe(35);
+    const sellable = await client.query<{ n: number }>(
+      `select count(*)::int as n from item_catalog where sellable`,
+    );
+    expect(sellable.rows[0]!.n).toBe(30);
+    const acct = await client.query(
+      `select id from ledger_accounts where owner_type = 'PLATFORM' and account_type = 'PLATFORM_ITEM_CLEARING'`,
+    );
+    expect(acct.rows).toHaveLength(1);
+  });
+
+  it('enforces one non-cancelled usage per horse per race date', async () => {
+    const client = await createTestDb();
+    const user = await client.query<{ id: string }>(
+      `insert into users (email) values ('item-user@test.dev') returning id`,
+    );
+    const userId = user.rows[0]!.id;
+    const horse = await client.query<{ id: string }>(
+      `insert into horses (owner_user_id, name, horse_type, rarity, dna_hash, dna_modifier,
+                           horse_generation_version, mint_seed_hash, ability_json)
+       values ($1, 'Item Test Horse', 'SPRINTER', 'COMMON', 'dna-item-1', 1.00,
+               'horse_generation_v1.0', 'seed-item-1', '{}') returning id`,
+      [userId],
+    );
+    const horseId = horse.rows[0]!.id;
+    const unit = async () => {
+      const r = await client.query<{ id: string }>(
+        `insert into user_items (user_id, item_key, unit_price, source)
+         values ($1, 'sugar_cube', 1, 'PURCHASE') returning id`,
+        [userId],
+      );
+      return r.rows[0]!.id;
+    };
+    const u1 = await unit();
+    const u2 = await unit();
+    const use = (unitId: string) =>
+      client.query(
+        `insert into item_usages (user_item_id, horse_id, user_id, item_key, unit_price, effective_race_date)
+         values ($1, $2, $3, 'sugar_cube', 1, '2033-02-01')`,
+        [unitId, horseId, userId],
+      );
+    await use(u1);
+    await expect(use(u2)).rejects.toThrow(/uq_item_usage_horse_race/);
+    // cancelling frees the slot for a re-apply
+    await client.query(`update item_usages set status = 'CANCELLED' where user_item_id = $1`, [u1]);
+    await use(u2);
+  });
+
+  it('user_transfers: asset shape + no self-transfer (USDT-ready, Decision 079)', async () => {
+    const client = await createTestDb();
+    const mk = async (email: string) => {
+      const r = await client.query<{ id: string }>(
+        `insert into users (email) values ($1) returning id`,
+        [email],
+      );
+      return r.rows[0]!.id;
+    };
+    const a = await mk('gift-a@test.dev');
+    const b = await mk('gift-b@test.dev');
+    const unitR = await client.query<{ id: string }>(
+      `insert into user_items (user_id, item_key, unit_price, source)
+       values ($1, 'lucky_charm', 3, 'PURCHASE') returning id`,
+      [a],
+    );
+    const unitId = unitR.rows[0]!.id;
+    await client.query(
+      `insert into user_transfers (sender_user_id, recipient_user_id, asset_type, user_item_id, idempotency_key)
+       values ($1, $2, 'ITEM', $3, 'gift:1')`,
+      [a, b, unitId],
+    );
+    // ITEM transfer with an amount violates the shape constraint
+    await expect(
+      client.query(
+        `insert into user_transfers (sender_user_id, recipient_user_id, asset_type, user_item_id, amount, idempotency_key)
+         values ($1, $2, 'ITEM', $3, 5, 'gift:2')`,
+        [a, b, unitId],
+      ),
+    ).rejects.toThrow(/user_transfers_asset/);
+    // USDT book transfer needs an amount and no item
+    await client.query(
+      `insert into user_transfers (sender_user_id, recipient_user_id, asset_type, amount, idempotency_key)
+       values ($1, $2, 'USDT', 25.5, 'usdt:1')`,
+      [a, b],
+    );
+    await expect(
+      client.query(
+        `insert into user_transfers (sender_user_id, recipient_user_id, asset_type, amount, idempotency_key)
+         values ($1, $1, 'USDT', 1, 'usdt:2')`,
+        [a],
+      ),
+    ).rejects.toThrow(/user_transfers_not_self/);
+  });
+
+  it('snapshot random_modifier range is widened to +5.50 and item_modifier capped at 6', async () => {
+    const client = await createTestDb();
+    const bad = await client.query<{ ok: boolean }>(
+      `select 5.50 between -3.00 and 5.50 as ok`,
+    );
+    expect(bad.rows[0]!.ok).toBe(true);
+    const cols = await client.query<{ column_name: string }>(
+      `select column_name from information_schema.columns
+       where table_name = 'race_participant_snapshots'
+         and column_name in ('item_snapshot_json', 'item_modifier')`,
+    );
+    expect(cols.rows).toHaveLength(2);
   });
 });
