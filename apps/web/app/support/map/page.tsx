@@ -1,8 +1,15 @@
 import { serverApiOrLogin } from '@/lib/server-api';
 import { SupportMapView } from '@/components/SupportMapView';
+import { demoSupportNetwork } from '@/lib/support-demo';
 import type { NetworkNode, PoolMember, SupportSummary } from '@/components/SupportView';
 
-/** /support/map — 組織マップ(Decision 074)。薄い取得層+View。 */
+/**
+ * /support/map — 組織マップ(Decision 074)。薄い取得層+View。
+ * 実ネットワークが空の間はデモ組織(約60名・7ティア)を明示ラベル付きで
+ * 表示する(オーナー指示 2026-07-07: UIレビュー用)。仲間が増えると自動で
+ * 実データに切り替わる。デモ中は preview=true なので配置操作はローカル動作
+ * のみ(APIには何も書かない)。
+ */
 export default async function SupportMapPage() {
   const [me, summary, pool, network] = await Promise.all([
     serverApiOrLogin<{ id: string }>('/api/v1/me'),
@@ -10,15 +17,35 @@ export default async function SupportMapPage() {
     serverApiOrLogin<{ members: PoolMember[] }>('/api/v1/support/pool'),
     serverApiOrLogin<{ nodes: NetworkNode[] }>('/api/v1/support/network'),
   ]);
+  const isDemo = network.nodes.length === 0 && pool.members.length === 0;
+  const demo = isDemo ? demoSupportNetwork() : null;
   return (
-    <SupportMapView
-      data={{
-        selfUserId: me.id,
-        selfDisplay: 'あなた',
-        network: network.nodes,
-        pool: pool.members,
-        tierAmounts: summary.tier_amounts,
-      }}
-    />
+    <>
+      {isDemo ? (
+        <p
+          className="faint"
+          style={{
+            fontSize: '0.78rem',
+            margin: '0 0 0.6rem',
+            padding: '0.5rem 0.9rem',
+            border: '1px dashed var(--border-strong)',
+            borderRadius: '10px',
+          }}
+        >
+          サンプル組織を表示中(仮データ・約60名)— 招待した仲間が増えると、ここは自動的に
+          あなたの実際の組織に切り替わります。
+        </p>
+      ) : null}
+      <SupportMapView
+        preview={isDemo}
+        data={{
+          selfUserId: me.id,
+          selfDisplay: 'あなた',
+          network: demo ? demo.network : network.nodes,
+          pool: demo ? demo.pool : pool.members,
+          tierAmounts: summary.tier_amounts,
+        }}
+      />
+    </>
   );
 }
