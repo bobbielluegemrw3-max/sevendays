@@ -186,8 +186,6 @@ export function ItemsView({
                         className={s.cardArt}
                         src={`/items/${item.key}.webp`}
                         alt={item.name_ja}
-                        width={512}
-                        height={512}
                         loading="lazy"
                       />
                       <div className={s.cardHead}>
