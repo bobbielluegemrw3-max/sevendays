@@ -91,6 +91,8 @@ Daily Derby live status (ADR-008 R1, Decision 073):
 | Method | Path | Notes |
 |---|---|---|
 | GET | /api/v1/daily-derby/status | read-only: phase (WAITING/LIVE/COMPLETED/FAILED_SAFE_MODE from tonight's batch_runs), server_time + next_derby_at (client clock sync), live_started_at, tonight's real counts (participants/burns/listed/assignments/mints), revealed item_setting, anonymized ticker (sold/burn/day7 lines), the caller's personal result (DAY7 > SOLD > BURNED > SURVIVED, with dna_hash for the finale art) and my_horse_names (log-flood YOU highlight). Log-flood lines stay client-side deterministic generation (plan A) |
+| GET | /api/v1/support/member/:id | member modal (owner request 2026-07-08): masked display, tier depth, placed_at, ACTIVE horses + their ladder value, lifetime burns, items used, direct/subtree counts. 404 unless the target sits in the CALLER's 7-tier placement subtree — no balances |
+| POST | /api/v1/support/search | `{email}` exact match (case-insensitive) within the caller's 7-tier subtree -> `{user_id | null}`; enumeration outside one's own org is impossible by construction |
 
 ## Admin APIs
 

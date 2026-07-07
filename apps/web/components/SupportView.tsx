@@ -36,6 +36,7 @@ export interface NetworkNode {
   tier: number;
   display: string;
   placed_at: string | null;
+  horses?: number;
 }
 
 export interface BonusRow {

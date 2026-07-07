@@ -41,6 +41,7 @@ export function demoSupportNetwork(): DemoSupportData {
       tier,
       display: display(seq),
       placed_at: iso(seq, seq * 7),
+      horses: (seq * 5) % 7,
     });
     return id;
   };

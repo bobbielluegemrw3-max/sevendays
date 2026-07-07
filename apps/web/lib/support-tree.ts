@@ -14,6 +14,8 @@ export interface SupportTreeInput {
   tier: number;
   display: string;
   placed_at: string | null;
+  /** 稼働馬数(ドリルダウン/カード表示用・省略可)。 */
+  horses?: number;
 }
 
 export interface LaidOutNode extends SupportTreeInput {

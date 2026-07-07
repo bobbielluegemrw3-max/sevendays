@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  PRICE_TABLE_V1,
   SUPPORT_BONUS_DIRECT_REQUIRED_FROM_TIER,
   SUPPORT_BONUS_MAX_TIERS_V1,
   SUPPORT_BONUS_ORG_THRESHOLDS_V1,
@@ -56,6 +57,28 @@ async function auditAdmin(
      values ('ADMIN', $1, $2, $3, $4)`,
     [ctx.userId, action, referenceType, referenceId],
   );
+}
+
+const PRICE_CASE = Object.entries(PRICE_TABLE_V1)
+  .map(([day, price]) => `when ${Number(day)} then ${price}::numeric`)
+  .join(' ');
+
+/** The caller's placement subtree, 7 levels down: id -> depth (1..7). */
+async function subtreeDepths(
+  ctx: HandlerContext,
+): Promise<Map<string, number>> {
+  const rows = await ctx.client.query<{ id: string; depth: number }>(
+    `with recursive tree as (
+       select u.id, 1 as depth from users u where u.placement_parent_user_id = $1
+       union all
+       select c.id, t.depth + 1 from tree t
+       join users c on c.placement_parent_user_id = t.id
+       where t.depth < $2
+     )
+     select id, depth from tree`,
+    [ctx.userId, SUPPORT_BONUS_MAX_TIERS_V1],
+  );
+  return new Map(rows.rows.map((r) => [r.id, r.depth]));
 }
 
 export function registerSupportEndpoints(registry: ApiRegistry): void {
@@ -161,7 +184,9 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
            where t.depth < $2
          )
          select t.id, t.parent_id, t.depth, t.placed_at::text as placed_at,
-                u.email, w.wallet_address
+                u.email, w.wallet_address,
+                (select count(*)::int from horses h
+                  where h.owner_user_id = t.id and h.status = 'ACTIVE') as horses
          from tree t
          join users u on u.id = t.id
          ${WALLET_JOIN}
@@ -176,8 +201,96 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
           tier: r.depth,
           display: displayIdentity(r.email, r.wallet_address),
           placed_at: r.placed_at,
+          horses: (r as unknown as { horses: number }).horses,
         })),
       };
+    },
+  });
+
+  // Member detail modal (owner request 2026-07-08): visible only within the
+  // caller's 7-tier placement subtree. No balances — game stats only.
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/support/member/:id',
+    auth: 'user',
+    handler: async (ctx) => {
+      const depths = await subtreeDepths(ctx);
+      const targetId = ctx.params.id ?? '';
+      const depth = depths.get(targetId);
+      if (depth === undefined) {
+        throw new ApiError('NOT_FOUND', 'Member is not in your organization');
+      }
+      const who = await ctx.client.query<{
+        email: string;
+        wallet_address: string | null;
+        placed_at: string | null;
+      }>(
+        `select u.email, w.wallet_address, u.placed_at::text as placed_at
+         from users u ${WALLET_JOIN} where u.id = $1`,
+        [targetId],
+      );
+      const stats = await ctx.client.query<{
+        active_horses: number;
+        horses_value: string;
+        burns_total: number;
+        items_used: number;
+        direct_count: number;
+      }>(
+        `select
+           (select count(*)::int from horses h where h.owner_user_id = $1 and h.status = 'ACTIVE') as active_horses,
+           (select coalesce(sum(case h.current_day ${PRICE_CASE} end), 0)::text from horses h
+             where h.owner_user_id = $1 and h.status = 'ACTIVE') as horses_value,
+           (select count(*)::int from horse_burns hb where hb.owner_user_id_at_snapshot = $1) as burns_total,
+           (select count(*)::int from item_usages iu where iu.user_id = $1 and iu.status <> 'CANCELLED') as items_used,
+           (select count(*)::int from users c where c.placement_parent_user_id = $1) as direct_count`,
+        [targetId],
+      );
+      // Descendants of the target INSIDE the caller's 7-tier window.
+      const sub = await ctx.client.query<{ n: number }>(
+        `with recursive tree as (
+           select u.id, 1 as depth from users u where u.placement_parent_user_id = $1
+           union all
+           select c.id, t.depth + 1 from tree t
+           join users c on c.placement_parent_user_id = t.id
+           where t.depth < $2
+         ) select count(*)::int as n from tree`,
+        [targetId, Math.max(0, SUPPORT_BONUS_MAX_TIERS_V1 - depth)],
+      );
+      const row = who.rows[0]!;
+      const st = stats.rows[0]!;
+      return {
+        user_id: targetId,
+        display: displayIdentity(row.email, row.wallet_address),
+        tier: depth,
+        placed_at: row.placed_at,
+        active_horses: st.active_horses,
+        horses_value: st.horses_value,
+        burns_total: st.burns_total,
+        items_used: st.items_used,
+        direct_count: st.direct_count,
+        subtree_count: sub.rows[0]!.n,
+      };
+    },
+  });
+
+  // Exact-email locator within the caller's organization (owner request:
+  // "find where this person sits in my org"). Returns null when absent —
+  // enumeration outside one's own subtree is impossible by construction.
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/support/search',
+    auth: 'user',
+    input: z.object({ email: z.string() }),
+    handler: async (ctx, input) => {
+      const q = input.email.trim();
+      if (!q || !q.includes('@')) return { user_id: null };
+      const depths = await subtreeDepths(ctx);
+      if (depths.size === 0) return { user_id: null };
+      const hit = await ctx.client.query<{ id: string }>(
+        `select id from users where lower(email) = lower($1) and id = any($2)`,
+        [q, [...depths.keys()]],
+      );
+      return { user_id: hit.rows[0]?.id ?? null };
     },
   });
 

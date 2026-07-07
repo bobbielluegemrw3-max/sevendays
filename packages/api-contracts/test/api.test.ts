@@ -1143,3 +1143,54 @@ describe('daily derby status (ADR-008 R1)', () => {
     await client.query(`delete from batch_runs where id = $1`, [batch.rows[0]!.id]);
   });
 });
+
+describe('support member detail + search (owner request 2026-07-08)', () => {
+  it('detail visible only inside my 7-tier subtree; email search locates members', async () => {
+    const me = await newUser();
+    const childId = await newUser();
+    const stranger = await newUser();
+    await client.query(`update users set placement_parent_user_id = $1, placed_at = now() where id = $2`, [me, childId]);
+    const grand = await newUser();
+    await client.query(`update users set placement_parent_user_id = $1, placed_at = now() where id = $2`, [childId, grand]);
+    // child owns a Day2 horse (121) and burned once historically
+    const horse = await client.query<{ id: string }>(
+      `insert into horses (owner_user_id, current_day, name, horse_type, rarity, dna_hash, dna_modifier,
+                           horse_generation_version, mint_seed_hash, ability_json)
+       values ($1, 2, 'Member Detail Horse', 'BALANCED', 'COMMON', 'dna-md-1', 0.5,
+               'horse_generation_v1.0', 'seed-md-1', '{}') returning id`,
+      [childId],
+    );
+    void horse;
+
+    const detail = await call('GET', `/api/v1/support/member/${childId}`, asUser(me));
+    expect(detail.status).toBe(200);
+    const body = detail.body as {
+      tier: number; active_horses: number; horses_value: string;
+      burns_total: number; items_used: number; direct_count: number; subtree_count: number;
+    };
+    expect(body.tier).toBe(1);
+    expect(body.active_horses).toBe(1);
+    expect(Number(body.horses_value)).toBe(121);
+    expect(body.direct_count).toBe(1);
+    expect(body.subtree_count).toBe(1);
+
+    // outside my subtree -> 404 (stranger asks about my child)
+    const outside = await call('GET', `/api/v1/support/member/${childId}`, asUser(stranger));
+    expect(outside.status).toBe(404);
+    // and I cannot inspect a stranger
+    const notMine = await call('GET', `/api/v1/support/member/${stranger}`, asUser(me));
+    expect(notMine.status).toBe(404);
+
+    // exact-email search inside my org
+    const childEmail = await client.query<{ email: string }>(`select email from users where id = $1`, [childId]);
+    const found = await call('POST', '/api/v1/support/search', asUser(me), {
+      body: { email: childEmail.rows[0]!.email.toUpperCase() },
+    });
+    expect((found.body as { user_id: string | null }).user_id).toBe(childId);
+    const strangerEmail = await client.query<{ email: string }>(`select email from users where id = $1`, [stranger]);
+    const miss = await call('POST', '/api/v1/support/search', asUser(me), {
+      body: { email: strangerEmail.rows[0]!.email },
+    });
+    expect((miss.body as { user_id: string | null }).user_id).toBeNull();
+  });
+});
