@@ -37,6 +37,8 @@ create table user_items (
   item_key text not null references item_catalog (key),
   unit_price numeric(20, 8) not null check (unit_price >= 0),
   source text not null check (source in ('PURCHASE', 'BURN_DROP', 'GIFT')),
+  -- burn drops are granted once per burn event (idempotent batch retries)
+  source_burn_event_id uuid unique,
   status text not null default 'AVAILABLE' check (status in ('AVAILABLE', 'APPLIED', 'CONSUMED')),
   acquired_at timestamptz not null default now()
 );

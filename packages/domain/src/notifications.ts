@@ -14,6 +14,8 @@ export const NOTIFICATION_TYPES_V1 = [
   'RACE_RESULT_READY',
   'HORSE_BURNED',
   'REVENGE_BUFF_GENERATED',
+  'ITEM_DROPPED',
+  'ITEM_GIFT_RECEIVED',
   'BUYBACK_PAYMENT_PAID',
   'BUYBACK_COMPLETED',
   'MEMORIAL_NFT_MINTED',
@@ -55,6 +57,14 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   REVENGE_BUFF_GENERATED: {
     title: 'Revenge Buffを獲得しました。',
     body: '次回の成功した馬の割当で自動適用されます。',
+  },
+  ITEM_DROPPED: {
+    title: 'アイテムを獲得しました。',
+    body: '{item_name} を受け取りました。厩舎の仲間からの弔いです。',
+  },
+  ITEM_GIFT_RECEIVED: {
+    title: 'アイテムが届きました。',
+    body: '{sender} さんから {item_name} が届きました。',
   },
   BUYBACK_PAYMENT_PAID: {
     title: 'チャンピオン報酬が支払われました。',

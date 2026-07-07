@@ -226,6 +226,49 @@ export async function supportBonusPayment(
   });
 }
 
+/** Item purchase (Decision 078): USER_AVAILABLE -> ITEM_CLEARING (deferred). */
+export async function itemPurchase(
+  client: SqlClient,
+  args: Ref & { userId: string; amount: Money },
+): Promise<PostedTransaction> {
+  const user = await ensureUserAccounts(client, args.userId);
+  const clearing = await getPlatformAccountId(client, 'PLATFORM_ITEM_CLEARING');
+  return postTransaction(client, {
+    type: 'ITEM_PURCHASE',
+    idempotencyKey: args.idempotencyKey,
+    ...refFields(args),
+    entries: [
+      { accountId: user.available, direction: 'DEBIT', amount: args.amount },
+      { accountId: clearing, direction: 'CREDIT', amount: args.amount },
+    ],
+  });
+}
+
+/**
+ * Item settlement at burn resolution (Decision 078): the horse that used the
+ * item BURNED -> the full price funds the Support Bonus reserve; it SURVIVED
+ * -> the full price becomes operating revenue.
+ */
+export async function itemSettlement(
+  client: SqlClient,
+  args: Ref & { amount: Money; outcome: 'BURNED' | 'SURVIVED' },
+): Promise<PostedTransaction> {
+  const clearing = await getPlatformAccountId(client, 'PLATFORM_ITEM_CLEARING');
+  const target = await getPlatformAccountId(
+    client,
+    args.outcome === 'BURNED' ? 'PLATFORM_MLM_RESERVE' : 'PLATFORM_OPERATING_RESERVE',
+  );
+  return postTransaction(client, {
+    type: args.outcome === 'BURNED' ? 'ITEM_SUPPORT_FUNDING' : 'ITEM_REVENUE_SETTLEMENT',
+    idempotencyKey: args.idempotencyKey,
+    ...refFields(args),
+    entries: [
+      { accountId: clearing, direction: 'DEBIT', amount: args.amount },
+      { accountId: target, direction: 'CREDIT', amount: args.amount },
+    ],
+  });
+}
+
 /** Withdrawal fund lock (BEFORE broadcast): USER_AVAILABLE -> WITHDRAWAL_CLEARING. */
 export async function withdrawalFundLock(
   client: SqlClient,

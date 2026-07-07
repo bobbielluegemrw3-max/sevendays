@@ -1,12 +1,19 @@
-import { insertNotification, sha256Parts } from '@sevendays/shared';
+import { Money, insertNotification, sha256Parts } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import { renderNotification, type EconomyStatus } from '@sevendays/domain';
+import {
+  BURN_DROP_KEYS_V1,
+  ITEM_BY_KEY_V1,
+  renderNotification,
+  type EconomyStatus,
+} from '@sevendays/domain';
 import {
   burnTargetCount,
   rankParticipants,
   rollBuffRarity,
   selectBurnTargets,
+  unitFromParts,
 } from '@sevendays/race-engine';
+import { itemSettlement } from '@sevendays/ledger';
 import { paySupportBonusesForBurns, type SupportBonusBurn } from './support-bonus.js';
 
 /**
@@ -42,6 +49,8 @@ export interface FinalizeAndBurnResult {
   buffsGenerated: number;
   buffsRefreshed: number;
   supportBonusPayments: number;
+  itemDrops: number;
+  itemSettlements: number;
 }
 
 /** Deterministic UUID (v4 format) from hash input — stable across retries. */
@@ -152,6 +161,73 @@ export async function finalizeAndBurn(
     supportBonusBurns.push({ burnedOwnerUserId: ownerId, burnEventId });
   }
 
+  // Burn drops (Decision 078): alongside the Revenge Buff, every burn grants
+  // one of the five non-sellable items — seed-deterministic pick, idempotent
+  // via the unique source_burn_event_id.
+  let itemDrops = 0;
+  for (const horseId of burnTargets) {
+    const ownerId = ownerByHorse.get(horseId)!;
+    const burnEventId = uuidFromParts(input.raceId, horseId, 'burn_event');
+    const u = unitFromParts(input.raceSeed, burnEventId, 'item_drop', input.raceEngineVersion);
+    const dropKey = BURN_DROP_KEYS_V1[Math.min(BURN_DROP_KEYS_V1.length - 1, Math.floor(u * BURN_DROP_KEYS_V1.length))]!;
+    const dropped = await client.query<{ id: string }>(
+      `insert into user_items (user_id, item_key, unit_price, source, source_burn_event_id)
+       values ($1, $2, 0, 'BURN_DROP', $3)
+       on conflict (source_burn_event_id) do nothing
+       returning id`,
+      [ownerId, dropKey, burnEventId],
+    );
+    if (dropped.rows.length > 0) {
+      itemDrops += 1;
+      const rendered = renderNotification('ITEM_DROPPED', {
+        item_name: ITEM_BY_KEY_V1.get(dropKey)?.nameJa ?? dropKey,
+      });
+      await insertNotification(client, {
+        userId: ownerId,
+        type: 'ITEM_DROPPED',
+        dedupeKey: `notif:ITEM_DROPPED:${burnEventId}`,
+        payload: { ...rendered, item_key: dropKey },
+      });
+    }
+  }
+
+  // Item settlement (Decision 078): every item committed to this race pays
+  // out of the clearing account — the horse BURNED -> full price funds the
+  // Support Bonus reserve; it SURVIVED -> full price is operating revenue.
+  // Ledger idempotency keys make retries converge; price-0 drops just close.
+  let itemSettlements = 0;
+  const usages = await client.query<{
+    id: string;
+    user_item_id: string;
+    horse_id: string;
+    unit_price: string;
+  }>(
+    `select id, user_item_id, horse_id, unit_price::text as unit_price
+     from item_usages where race_id = $1 and status = 'SNAPSHOTTED'
+     order by id`,
+    [input.raceId],
+  );
+  for (const usage of usages.rows) {
+    const outcome = burnTargets.has(usage.horse_id) ? 'BURNED' : 'SURVIVED';
+    if (Number(usage.unit_price) > 0) {
+      await itemSettlement(client, {
+        amount: Money.of(usage.unit_price),
+        outcome,
+        idempotencyKey: `item:${usage.id}:settle`,
+        referenceType: 'item_usage',
+        referenceId: usage.id,
+      });
+    }
+    await client.query(
+      `update item_usages set status = 'SETTLED', settled_outcome = $2 where id = $1 and status = 'SNAPSHOTTED'`,
+      [usage.id, outcome],
+    );
+    await client.query(`update user_items set status = 'CONSUMED' where id = $1`, [
+      usage.user_item_id,
+    ]);
+    itemSettlements += 1;
+  }
+
   // Support Bonus (Decision 074): up to 7 placement tiers per burn, all of
   // tonight's burns evaluated against the same post-burn state.
   const supportBonusPayments = await paySupportBonusesForBurns(client, supportBonusBurns);
@@ -204,5 +280,7 @@ export async function finalizeAndBurn(
     buffsGenerated,
     buffsRefreshed,
     supportBonusPayments,
+    itemDrops,
+    itemSettlements,
   };
 }

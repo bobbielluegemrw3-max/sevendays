@@ -31,6 +31,7 @@ interface SnapshotRow {
   };
   training_snapshot_json: { training_type: TrainingType } | null;
   revenge_buff_snapshot_json: { buff_rarity: BuffRarity } | null;
+  item_snapshot_json: { item_points: number; item_random_shift: number } | null;
   weather: Weather;
   track_condition: TrackCondition;
   dna_modifier_horse: string;
@@ -46,6 +47,7 @@ export async function runRaceScores(client: SqlClient, input: RunScoresInput): P
   const snapshots = await client.query<SnapshotRow>(
     `select s.id, s.horse_id, s.horse_type::text as horse_type, s.rarity::text as rarity,
             s.ability_snapshot_json, s.training_snapshot_json, s.revenge_buff_snapshot_json,
+            s.item_snapshot_json,
             s.weather::text as weather, s.track_condition::text as track_condition,
             h.dna_modifier::text as dna_modifier_horse
      from race_participant_snapshots s
@@ -69,6 +71,8 @@ export async function runRaceScores(client: SqlClient, input: RunScoresInput): P
       condition: row.ability_snapshot_json.condition,
       fatigue: row.ability_snapshot_json.fatigue,
       buffRarity: row.revenge_buff_snapshot_json?.buff_rarity ?? null,
+      itemPoints: row.item_snapshot_json?.item_points ?? 0,
+      itemRandomShift: row.item_snapshot_json?.item_random_shift ?? 0,
       raceSeed: input.raceSeed,
       raceEngineVersion: input.raceEngineVersion,
     };
@@ -78,7 +82,8 @@ export async function runRaceScores(client: SqlClient, input: RunScoresInput): P
          base_ability_score = $2, horse_type_modifier = $3, rarity_modifier = $4,
          dna_modifier = $5, training_modifier = $6, weather_modifier = $7,
          track_modifier = $8, condition_modifier = $9, fatigue_modifier = $10,
-         revenge_buff_modifier = $11, random_modifier = $12, final_score = $13
+         revenge_buff_modifier = $11, random_modifier = $12, item_modifier = $13,
+         final_score = $14
        where id = $1`,
       [
         row.id,
@@ -93,6 +98,7 @@ export async function runRaceScores(client: SqlClient, input: RunScoresInput): P
         s.fatigueModifier,
         s.revengeBuffModifier,
         s.randomModifier,
+        s.itemModifier,
         s.finalScore,
       ],
     );

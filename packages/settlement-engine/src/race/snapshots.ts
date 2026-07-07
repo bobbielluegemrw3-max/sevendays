@@ -1,12 +1,25 @@
 import { sha256Parts } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import { ABILITY_WEIGHTS_V1, type AbilityName, type HorseType, type Rarity, type TrainingType } from '@sevendays/domain';
+import {
+  ABILITY_WEIGHTS_V1,
+  ITEM_POLICY_VERSION_V1,
+  type AbilityName,
+  type HorseType,
+  type Rarity,
+  type TrainingType,
+} from '@sevendays/domain';
 import {
   computeDailyState,
+  deriveItemSetting,
   deriveTrackCondition,
   deriveWeather,
+  resolveItemEffect,
   round2,
 } from '@sevendays/race-engine';
+
+function clampStat(x: number): number {
+  return Math.min(100, Math.max(0, round2(x)));
+}
 
 /**
  * Batch Step 7 — Create Race Participant Snapshots (03_GAME_DESIGN.md).
@@ -56,6 +69,12 @@ export async function createParticipantSnapshots(
 ): Promise<number> {
   const weather = deriveWeather(input.raceSeed, input.raceEngineVersion);
   const track = deriveTrackCondition(input.raceSeed, input.raceEngineVersion);
+  // Item setting (設定1〜6, Decision 078) — seed commit-reveal like weather.
+  const itemSetting = deriveItemSetting(input.raceSeed, input.raceEngineVersion);
+  await client.query(`update races set item_setting = $2 where id = $1`, [
+    input.raceId,
+    itemSetting,
+  ]);
 
   // Market Lock (Decision 076): a manually listed horse does not race —
   // excluded from the snapshot, so current_day and value stay frozen while
@@ -83,6 +102,40 @@ export async function createParticipantSnapshots(
     const trainingRow = training.rows[0] ?? null;
     const trainingType = trainingRow?.training_type ?? null;
 
+    // Item usage for this race (Decision 078): resolve the public rule
+    // against the stats the player saw (yesterday's condition/fatigue) and
+    // today's seed-derived weather/setting, then freeze the result.
+    const usage = await client.query<{ id: string; item_key: string; unit_price: string }>(
+      `select id, item_key, unit_price::text as unit_price from item_usages
+       where horse_id = $1 and effective_race_date = $2 and status = 'PENDING'`,
+      [horse.id, input.batchDate],
+    );
+    const usageRow = usage.rows[0] ?? null;
+    const itemEffect = resolveItemEffect(
+      usageRow?.item_key ?? null,
+      {
+        horseType: horse.horse_type,
+        currentDay: horse.current_day,
+        training: trainingType,
+        prevCondition: Number(horse.condition),
+        prevFatigue: Number(horse.fatigue),
+        weather,
+      },
+      itemSetting,
+    );
+    const itemSnapshot = usageRow
+      ? {
+          item_key: usageRow.item_key,
+          item_policy_version: ITEM_POLICY_VERSION_V1,
+          item_setting: itemSetting,
+          item_points: itemEffect.itemPoints,
+          item_random_shift: itemEffect.randomShift,
+          condition_delta: itemEffect.conditionDelta,
+          fatigue_delta: itemEffect.fatigueDelta,
+          unit_price: usageRow.unit_price,
+        }
+      : null;
+
     // Buff bound to this horse via the owner's last successful assignment.
     const buff = await client.query<{ id: string; buff_rarity: string; buff_bonus_score: string }>(
       `select id, buff_rarity::text as buff_rarity, buff_bonus_score::text as buff_bonus_score
@@ -95,10 +148,12 @@ export async function createParticipantSnapshots(
       ? { buff_rarity: buffRow.buff_rarity, bonus_score: Number(buffRow.buff_bonus_score) }
       : null;
 
-    // Advance the daily state (deterministic order, Decision 054).
+    // Advance the daily state (deterministic order, Decision 054). Item stat
+    // effects (already setting-scaled) adjust the PREVIOUS values before the
+    // recurrence — conditions were evaluated on the raw values above.
     const state = computeDailyState({
-      prevCondition: Number(horse.condition),
-      prevFatigue: Number(horse.fatigue),
+      prevCondition: clampStat(Number(horse.condition) + itemEffect.conditionDelta),
+      prevFatigue: clampStat(Number(horse.fatigue) + itemEffect.fatigueDelta),
       training: trainingType,
       ranRace: true,
     });
@@ -129,6 +184,7 @@ export async function createParticipantSnapshots(
       JSON.stringify(abilitySnapshot),
       JSON.stringify(trainingSnapshot),
       JSON.stringify(buffSnapshot),
+      JSON.stringify(itemSnapshot),
       weather,
       track,
       input.raceEngineVersion,
@@ -143,14 +199,15 @@ export async function createParticipantSnapshots(
         `insert into race_participant_snapshots (
          race_id, horse_id, owner_user_id, current_day, horse_type, rarity, dna_hash,
          ability_snapshot_json, training_snapshot_json, revenge_buff_snapshot_json,
+         item_snapshot_json,
          weather, track_condition, race_engine_version, liquidity_policy_version,
          price_table_version, race_seed_hash, snapshot_hash
        )
-       select $1, $2, $3, $4, $5::horse_type, $6::rarity, $7, $8, $9, $10,
-              $11::weather, $12::track_condition, $13, $14, $15,
+       select $1, $2, $3, $4, $5::horse_type, $6::rarity, $7, $8, $9, $10, $11,
+              $12::weather, $13::track_condition, $14, $15, $16,
               (select commit_hash from randomness_commits rc
                  join races r on r.seed_commit_id = rc.id where r.id = $1),
-              $16
+              $17
        on conflict (race_id, horse_id) do nothing
        returning id`,
       [
@@ -164,6 +221,7 @@ export async function createParticipantSnapshots(
         JSON.stringify(abilitySnapshot),
         trainingSnapshot ? JSON.stringify(trainingSnapshot) : null,
         buffSnapshot ? JSON.stringify(buffSnapshot) : null,
+        itemSnapshot ? JSON.stringify(itemSnapshot) : null,
         weather,
         track,
         input.raceEngineVersion,
@@ -190,6 +248,13 @@ export async function createParticipantSnapshots(
           await client.query(
             `update revenge_buffs set status = 'CONSUMED', consumed_at = now() where id = $1`,
             [buffRow.id],
+          );
+        }
+        if (usageRow) {
+          // Snapshot inclusion commits the item to exactly this race.
+          await client.query(
+            `update item_usages set status = 'SNAPSHOTTED', race_id = $2 where id = $1`,
+            [usageRow.id, input.raceId],
           );
         }
       }
