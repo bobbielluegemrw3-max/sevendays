@@ -874,3 +874,160 @@ describe('manual marketplace (Decision 076)', () => {
     expect(still.rows[0]!.cancel_after_batch).toBe(true);
   });
 });
+
+describe('item system (Decisions 078/079)', () => {
+  async function fundedUser(amount = '100'): Promise<string> {
+    const id = await newUser();
+    await depositConfirmation(client, {
+      userId: id,
+      amount: Money.of(amount),
+      idempotencyKey: randomUUID(),
+    });
+    return id;
+  }
+
+  async function itemHorse(ownerId: string, day: number): Promise<string> {
+    const r = await client.query<{ id: string }>(
+      `insert into horses (owner_user_id, current_day, name, horse_type, rarity, dna_hash, dna_modifier,
+                           horse_generation_version, mint_seed_hash, ability_json)
+       values ($1, $2, $3, 'SPRINTER', 'COMMON', $4, 0.5, 'horse_generation_v1.0', $5, $6)
+       returning id`,
+      [
+        ownerId,
+        day,
+        `Item Horse ${randomUUID().slice(0, 14)}`,
+        randomUUID().replaceAll('-', ''),
+        randomUUID().replaceAll('-', ''),
+        JSON.stringify({ speed: 75, power: 74, stamina: 73, recovery: 72, luck: 71 }),
+      ],
+    );
+    return r.rows[0]!.id;
+  }
+
+  it('catalog serves the 35 items; burn drops are not purchasable', async () => {
+    const user = await fundedUser();
+    const catalog = await call('GET', '/api/v1/items/catalog', asUser(user));
+    expect(catalog.status).toBe(200);
+    expect((catalog.body as { items: unknown[] }).items).toHaveLength(35);
+    const drop = await call('POST', '/api/v1/items/purchase', asUser(user), {
+      body: { item_key: 'memento_horseshoe' },
+    });
+    expect(drop.status).toBe(400);
+  });
+
+  it('purchase -> inventory -> apply -> one per horse -> cancel returns the unit', async () => {
+    const user = await fundedUser();
+    const horse = await itemHorse(user, 2);
+
+    const poor = await newUser();
+    const broke = await call('POST', '/api/v1/items/purchase', asUser(poor), {
+      body: { item_key: 'sugar_cube' },
+    });
+    expect(broke.status).toBe(402);
+
+    const buy = await call('POST', '/api/v1/items/purchase', asUser(user), {
+      body: { item_key: 'sugar_cube', quantity: 2 },
+    });
+    expect(buy.status).toBe(200);
+    expect((buy.body as { total: string }).total).toBe('2');
+
+    const inv = await call('GET', '/api/v1/items/inventory', asUser(user));
+    expect((inv.body as { available: { item_key: string; n: number }[] }).available).toEqual([
+      { item_key: 'sugar_cube', n: 2 },
+    ]);
+
+    const apply = await call('POST', `/api/v1/horses/${horse}/item`, asUser(user), {
+      body: { item_key: 'sugar_cube' },
+    });
+    expect(apply.status).toBe(200);
+
+    const again = await call('POST', `/api/v1/horses/${horse}/item`, asUser(user), {
+      body: { item_key: 'sugar_cube' },
+    });
+    expect(again.status).toBe(409);
+
+    const cancel = await call('POST', `/api/v1/horses/${horse}/item/cancel`, asUser(user), {});
+    expect(cancel.status).toBe(200);
+    const inv2 = await call('GET', '/api/v1/items/inventory', asUser(user));
+    expect((inv2.body as { available: { n: number }[] }).available[0]!.n).toBe(2);
+    // slot freed — reapply works
+    const reapply = await call('POST', `/api/v1/horses/${horse}/item`, asUser(user), {
+      body: { item_key: 'sugar_cube' },
+    });
+    expect(reapply.status).toBe(200);
+  });
+
+  it('champion saddle respects the Day5-6 window', async () => {
+    const user = await fundedUser();
+    const young = await itemHorse(user, 3);
+    await call('POST', '/api/v1/items/purchase', asUser(user), {
+      body: { item_key: 'champion_saddle' },
+    });
+    const tooYoung = await call('POST', `/api/v1/horses/${young}/item`, asUser(user), {
+      body: { item_key: 'champion_saddle' },
+    });
+    expect(tooYoung.status).toBe(400);
+    const day5 = await itemHorse(user, 5);
+    const ok = await call('POST', `/api/v1/horses/${day5}/item`, asUser(user), {
+      body: { item_key: 'champion_saddle' },
+    });
+    expect(ok.status).toBe(200);
+  });
+
+  it('gift by email moves the unit, notifies, and enforces the daily cap (Decision 079)', async () => {
+    const sender = await fundedUser();
+    const recipientId = await newUser();
+    const recipient = await client.query<{ email: string }>(
+      `select email from users where id = $1`,
+      [recipientId],
+    );
+    await call('POST', '/api/v1/items/purchase', asUser(sender), {
+      body: { item_key: 'lucky_charm' },
+    });
+
+    const nobody = await call('POST', '/api/v1/items/gift', asUser(sender), {
+      body: { recipient_email: 'ghost@nowhere.dev', item_key: 'lucky_charm' },
+    });
+    expect(nobody.status).toBe(404);
+
+    const gift = await call('POST', '/api/v1/items/gift', asUser(sender), {
+      body: { recipient_email: recipient.rows[0]!.email.toUpperCase(), item_key: 'lucky_charm' },
+    });
+    expect(gift.status).toBe(200);
+
+    const recInv = await call('GET', '/api/v1/items/inventory', asUser(recipientId));
+    expect((recInv.body as { available: { item_key: string }[] }).available[0]!.item_key).toBe('lucky_charm');
+    const senderInv = await call('GET', '/api/v1/items/inventory', asUser(sender));
+    expect((senderInv.body as { available: unknown[] }).available).toHaveLength(0);
+
+    const notif = await client.query(
+      `select 1 from notifications where user_id = $1 and notification_type = 'ITEM_GIFT_RECEIVED'`,
+      [recipientId],
+    );
+    expect(notif.rows).toHaveLength(1);
+
+    // gifted unit price still travels with the unit for settlement
+    const unit = await client.query<{ unit_price: string; source: string }>(
+      `select unit_price::text as unit_price, source from user_items where user_id = $1`,
+      [recipientId],
+    );
+    expect(Number(unit.rows[0]!.unit_price)).toBe(3);
+    expect(unit.rows[0]!.source).toBe('GIFT');
+
+    // daily cap: 20 transfers in 24h -> 429
+    await call('POST', '/api/v1/items/purchase', asUser(sender), {
+      body: { item_key: 'sugar_cube' },
+    });
+    for (let i = 0; i < 19; i += 1) {
+      await client.query(
+        `insert into user_transfers (sender_user_id, recipient_user_id, asset_type, amount, idempotency_key)
+         values ($1, $2, 'USDT', 1, $3)`,
+        [sender, recipientId, `cap:${i}:${randomUUID()}`],
+      );
+    }
+    const capped = await call('POST', '/api/v1/items/gift', asUser(sender), {
+      body: { recipient_email: recipient.rows[0]!.email, item_key: 'sugar_cube' },
+    });
+    expect(capped.status).toBe(429);
+  });
+});

@@ -6,7 +6,7 @@ import {
   RESERVE_ALLOCATION_V1,
 } from '@sevendays/domain';
 import { ensureUserAccounts, getPlatformAccountId, getUserAccountId } from './accounts.js';
-import { postTransaction } from './post.js';
+import { postTransaction, type PostOptions } from './post.js';
 import { LedgerError, type EntryDraft, type PostedTransaction, type SqlClient } from './types.js';
 
 /**
@@ -230,18 +230,23 @@ export async function supportBonusPayment(
 export async function itemPurchase(
   client: SqlClient,
   args: Ref & { userId: string; amount: Money },
+  options?: PostOptions,
 ): Promise<PostedTransaction> {
   const user = await ensureUserAccounts(client, args.userId);
   const clearing = await getPlatformAccountId(client, 'PLATFORM_ITEM_CLEARING');
-  return postTransaction(client, {
-    type: 'ITEM_PURCHASE',
-    idempotencyKey: args.idempotencyKey,
-    ...refFields(args),
-    entries: [
-      { accountId: user.available, direction: 'DEBIT', amount: args.amount },
-      { accountId: clearing, direction: 'CREDIT', amount: args.amount },
-    ],
-  });
+  return postTransaction(
+    client,
+    {
+      type: 'ITEM_PURCHASE',
+      idempotencyKey: args.idempotencyKey,
+      ...refFields(args),
+      entries: [
+        { accountId: user.available, direction: 'DEBIT', amount: args.amount },
+        { accountId: clearing, direction: 'CREDIT', amount: args.amount },
+      ],
+    },
+    options,
+  );
 }
 
 /**

@@ -71,6 +71,19 @@ Manual Marketplace (Decision 076):
 - POST `/market/unlist` `{horse_id}` requests delisting; it takes effect AFTER the next batch (a sale tonight wins). Replays converge quietly. Listing operations are limited to one per horse per day.
 - GET `/market/place` returns the shelf (all LISTED horses in matching order, Decision 012), tonight's pending buy-reservation COUNT, the last 20 settled P2P matches (anonymized: horse name, price, masked buyer id) and the caller's own manual listings. The buy side itself is unchanged (POST /purchase reservations).
 
+Item System (Decisions 078/079) — effects are public deterministic rules (item_policy_v1.0); the daily setting 1-6 is seed-committed and revealed with results (`races.item_setting`):
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | /api/v1/items/catalog | 35 items (30 sellable / 5 burn drops); `active=false` rows hidden |
+| GET | /api/v1/items/inventory | AVAILABLE units grouped by key + PENDING usages |
+| POST | /api/v1/items/purchase | `{item_key, quantity<=10}`; USER_AVAILABLE -> PLATFORM_ITEM_CLEARING. ITEM_NOT_FOUND / ITEM_NOT_SELLABLE / INSUFFICIENT_BALANCE |
+| POST | /api/v1/horses/:id/item | `{item_key}` apply for the next race (training boundary; oldest unit first). NOT_HORSE_OWNER / HORSE_NOT_ACTIVE / MARKETPLACE_LOCKED / ITEM_DAY_RANGE / ITEM_NOT_OWNED / ITEM_ALREADY_APPLIED (409) |
+| POST | /api/v1/horses/:id/item/cancel | pending usage -> CANCELLED, unit returns to inventory. ITEM_USAGE_NOT_FOUND |
+| POST | /api/v1/items/gift | `{recipient_email, item_key}` (Decision 079): case-insensitive email, ACTIVE recipients only; the unit and its clearing money move together; ITEM_GIFT_RECEIVED notification. ITEM_NOT_GIFTABLE / GIFT_RECIPIENT_NOT_FOUND / GIFT_SELF / GIFT_LIMIT (429; 20 transfers/24h across user_transfers) |
+
+Batch settlement (not an API): usages freeze at Step 7; at finalize BURNED -> full unit price to PLATFORM_MLM_RESERVE, SURVIVED -> PLATFORM_OPERATING_RESERVE; each burn drops 1 of 5 non-sellable items (seed-deterministic).
+
 ## Admin APIs
 
 - GET `/api/v1/admin/dashboard`
