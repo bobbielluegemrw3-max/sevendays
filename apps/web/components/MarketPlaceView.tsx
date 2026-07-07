@@ -9,13 +9,14 @@ import s from '../app/market.module.css';
 import d from '../app/support.module.css';
 
 /**
- * /market — 見えるマーケットプレイス(Decision 076)。
- * 需要(今夜の買い予約件数)・出品棚(マッチング順)・直近の成約・自分の出品
- * 管理と手動出品。買い予約そのもの(購入セッション)は既存の購入UIが担う。
+ * /market — 見えるマーケットプレイス(Decision 076) リデザイン。
+ * 需要(今夜の買い予約件数)・供給(出品棚)・直近の成約を「市場の鼓動」として
+ * 上部に。続いて自分の出品管理+手動出品、マッチング順の出品棚、成約フィード。
+ * 買い予約そのもの(購入セッション)は既存の購入UIが担う(page.tsx で下段に併置)。
  *
- * 手動出品の約束事(UIで明示): 出品中はレースに出走しない(Market Lock・
- * day/価値凍結)、価格は当日ラダー固定、取り下げは翌バッチ反映、
- * 出品操作は馬ごとに1日1回。
+ * 手動出品の約束事(UIで明示・不変): 出品中はレースに出走しない(Market Lock・
+ * day/価値凍結)、価格は当日ラダー固定、取り下げは翌バッチ反映、出品は馬ごと1日1回。
+ * props 型・list/unlist の API・確認チェックボックスは既存のまま。
  */
 
 export interface ShelfItem {
@@ -26,6 +27,8 @@ export interface ShelfItem {
   listed_at: string;
   name: string;
   dna_hash: string;
+  /** レアリティ(新規): COMMON/UNCOMMON/RARE/EPIC/LEGENDARY。 */
+  rarity: string;
 }
 export interface MatchRow {
   horse_name: string;
@@ -42,6 +45,8 @@ export interface MyListing {
   cancel_after_batch: boolean;
   name: string;
   dna_hash: string;
+  /** レアリティ(新規)。 */
+  rarity: string;
 }
 export interface ListableHorse {
   id: string;
@@ -60,6 +65,10 @@ export interface MarketPlaceData {
 
 const fmt = (v: string): string =>
   Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** レアリティ(5段階)→ CSS Module のバッジクラス。未知値は COMMON 扱い。 */
+const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
+const rarClass = (rarity: string): string => (RARITIES.includes(rarity) ? rarity : 'COMMON');
 
 export function MarketPlaceView({
   data,
@@ -128,24 +137,24 @@ export function MarketPlaceView({
     <div className={s.wrap}>
       <div className={s.head}>
         <span className={s.h1}>Marketplace</span>
-        <span className={s.headNote}>毎晩20:00 (GMT+8) のバッチが、予約と出品を古い順に自動マッチングします</span>
+        <span className={s.headNote}>毎晩20:00 (GMT+8) のバッチが、買い予約と出品を古い順に自動マッチングします</span>
       </div>
 
       {/* ---- 市場の鼓動 ---- */}
       <div className={s.pulse}>
         <div className={`${s.pulseCard} ${s.pulseBuy}`}>
-          <div className={s.pulseK}>今夜の買い予約</div>
-          <div className={s.pulseV}>{data.pending_buy_count.toLocaleString('en-US')}<span className={s.pulseSub}> 件</span></div>
+          <div className={s.pulseK}>今夜の買い予約 · DEMAND</div>
+          <div className={s.pulseV}>{data.pending_buy_count.toLocaleString('en-US')}<span className={s.pulseUnit}> 件</span></div>
           <div className={s.pulseSub}>全プレイヤー合計(匿名)</div>
         </div>
         <div className={`${s.pulseCard} ${s.pulseSell}`}>
-          <div className={s.pulseK}>出品中の馬</div>
-          <div className={s.pulseV}>{data.shelf.length.toLocaleString('en-US')}<span className={s.pulseSub}> 頭</span></div>
+          <div className={s.pulseK}>出品中の馬 · SUPPLY</div>
+          <div className={s.pulseV}>{data.shelf.length.toLocaleString('en-US')}<span className={s.pulseUnit}> 頭</span></div>
           <div className={s.pulseSub}>マッチング順に掲載</div>
         </div>
         <div className={`${s.pulseCard} ${s.pulseMatch}`}>
-          <div className={s.pulseK}>直近の成約</div>
-          <div className={s.pulseV}>{data.recent_matches.length > 0 ? `${fmt(data.recent_matches[0]!.price)}` : '—'}</div>
+          <div className={s.pulseK}>直近の成約 · LAST MATCH</div>
+          <div className={s.pulseV}>{data.recent_matches.length > 0 ? fmt(data.recent_matches[0]!.price) : '—'}</div>
           <div className={s.pulseSub}>{data.recent_matches.length > 0 ? `${data.recent_matches[0]!.horse_name} · 最新` : 'まだありません'}</div>
         </div>
       </div>
@@ -165,8 +174,11 @@ export function MarketPlaceView({
         ) : (
           data.my_listings.map((l) => (
             <div key={l.listing_id} className={s.myRow}>
+              <NftHorseArt look={deriveNftLook(l.dna_hash, l.name)} className={s.myArt} />
               <span className={s.myName}>{l.name}</span>
+              <span className={`${s.rar} ${s[`rar${rarClass(l.rarity)}`]}`}>{l.rarity}</span>
               <span className={s.myMeta}>Day {l.current_day} · {fmt(l.price)} USDT · 出品 {l.listed_at.slice(0, 10)}</span>
+              <span className={s.mySpacer} />
               {l.cancel_after_batch ? (
                 <span className={s.pendingBadge}>取り下げ予約済(今夜のバッチ後)</span>
               ) : (
@@ -199,6 +211,7 @@ export function MarketPlaceView({
                 {myIds.has(item.horse_id) && <span className={s.mineTag}>MINE</span>}
                 <NftHorseArt look={deriveNftLook(item.dna_hash, item.name)} className={s.shelfArt} />
                 <div className={s.shelfName}>{item.name}</div>
+                <div className={s.shelfRar}><span className={`${s.rar} ${s[`rar${rarClass(item.rarity)}`]}`}>{item.rarity}</span></div>
                 <div className={s.shelfMeta}>DAY {item.current_day}</div>
                 <div className={s.shelfPrice}>{fmt(item.price)} USDT</div>
               </div>
@@ -228,7 +241,7 @@ export function MarketPlaceView({
         )}
       </section>
 
-      {/* ---- 出品ダイアログ ---- */}
+      {/* ---- 出品ダイアログ(確認チェックボックスを維持) ---- */}
       {dialogOpen && (
         <div className={d.overlay} role="dialog" aria-modal="true">
           <div className={d.dialog}>
@@ -244,6 +257,7 @@ export function MarketPlaceView({
                     onClick={() => setPick(h)}
                     role="button"
                   >
+                    <NftHorseArt look={deriveNftLook(h.dna_hash, h.name)} className={s.pickArt} />
                     <div className={s.pickName}>{h.name}</div>
                     <div className={s.pickMeta}>DAY {h.current_day}</div>
                   </div>

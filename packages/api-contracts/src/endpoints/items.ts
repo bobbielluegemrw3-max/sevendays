@@ -256,7 +256,98 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
     },
   });
 
-  // Gift a unit to another user by email (Decision 079).
+  // Item history: purchases / gifts both ways / usages, newest first.
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/items/transactions',
+    auth: 'user',
+    handler: async (ctx) => {
+      const rows = await ctx.client.query<{
+        id: string;
+        kind: string;
+        item_key: string;
+        quantity: number;
+        counterparty: string | null;
+        horse_name: string | null;
+        created_at: string;
+      }>(
+        `(
+          -- Purchases from the ledger (inventory rows change owners via gifts,
+          -- so they cannot be the source of purchase history).
+          select t.id::text as id, 'PURCHASED' as kind, ui.item_key,
+                 round(e.amount / ui.unit_price)::int as quantity,
+                 null as counterparty, null as horse_name, t.created_at::text as created_at
+          from ledger_transactions t
+          join ledger_entries e on e.transaction_id = t.id and e.direction = 'DEBIT'
+          join ledger_accounts a on a.id = e.account_id
+            and a.owner_type = 'USER' and a.owner_id = $1 and a.account_type = 'USER_AVAILABLE'
+          join user_items ui on ui.id = t.reference_id
+          where t.transaction_type = 'ITEM_PURCHASE' and ui.unit_price > 0
+        )
+        union all
+        (
+          select ui.id::text, 'RECEIVED', ui.item_key, 1, null, null, ui.acquired_at::text
+          from user_items ui
+          where ui.user_id = $1 and ui.source = 'BURN_DROP'
+        )
+        union all
+        (
+          select min(t.id::text), 'RECEIVED', ui.item_key, count(*)::int,
+                 max(case when su.email like '%@user.sevendays' then 'ウォレットユーザー'
+                          else left(su.email, 2) || '***' end),
+                 null, t.created_at::text
+          from user_transfers t
+          join user_items ui on ui.id = t.user_item_id
+          join users su on su.id = t.sender_user_id
+          where t.recipient_user_id = $1 and t.asset_type = 'ITEM'
+          group by ui.item_key, t.created_at, t.sender_user_id
+        )
+        union all
+        (
+          select min(t.id::text), 'SENT', ui.item_key, count(*)::int,
+                 max(case when ru.email like '%@user.sevendays' then 'ウォレットユーザー'
+                          else left(ru.email, 2) || '***' end),
+                 null, t.created_at::text
+          from user_transfers t
+          join user_items ui on ui.id = t.user_item_id
+          join users ru on ru.id = t.recipient_user_id
+          where t.sender_user_id = $1 and t.asset_type = 'ITEM'
+          group by ui.item_key, t.created_at, t.recipient_user_id
+        )
+        union all
+        (
+          select u.id::text, 'USED', u.item_key, 1, null, h.name, u.created_at::text
+          from item_usages u join horses h on h.id = u.horse_id
+          where u.user_id = $1 and u.status <> 'CANCELLED'
+        )
+        order by created_at desc
+        limit 100`,
+        [ctx.userId],
+      );
+      return { transactions: rows.rows };
+    },
+  });
+
+  // Revealed daily settings (public after each race) + today's batch date.
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/items/settings',
+    auth: 'user',
+    handler: async (ctx) => {
+      const rows = await ctx.client.query<{ date: string; setting: number }>(
+        `select b.batch_date::text as date, r.item_setting as setting
+         from races r
+         join batch_runs b on b.id = r.batch_run_id
+         where r.item_setting is not null and r.status = 'FINALIZED'
+         order by b.batch_date desc
+         limit 62`,
+        [],
+      );
+      return { history: rows.rows.reverse(), today: batchDateFor(new Date()) };
+    },
+  });
+
+  // Gift units to another user by email (Decision 079; bulk since redesign).
   registry.register({
     method: 'POST',
     path: '/api/v1/items/gift',
@@ -264,6 +355,7 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
     input: z.object({
       recipient_email: z.string().email(),
       item_key: z.string(),
+      quantity: z.number().int().min(1).max(50).default(1),
     }),
     handler: async (ctx, input) => {
       const item = await catalogRow(ctx, input.item_key);
@@ -299,24 +391,30 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
         ? 'ウォレットユーザー'
         : `${senderEmail.slice(0, 2)}***`;
 
+      const quantity = input.quantity ?? 1;
       await ctx.client.query('begin');
       try {
-        const unit = await ctx.client.query<{ id: string }>(
+        const units = await ctx.client.query<{ id: string }>(
           `select id from user_items
            where user_id = $1 and item_key = $2 and status = 'AVAILABLE'
-           order by acquired_at asc, id asc limit 1 for update`,
-          [ctx.userId, input.item_key],
+           order by acquired_at asc, id asc limit $3 for update`,
+          [ctx.userId, input.item_key, quantity],
         );
-        if (!unit.rows[0]) throw new ApiError('ITEM_NOT_OWNED', 'You do not own this item');
+        if (units.rows.length < quantity) {
+          throw new ApiError('ITEM_NOT_OWNED', `You own only ${units.rows.length} of this item`);
+        }
+        const unitIds = units.rows.map((u) => u.id);
         await ctx.client.query(
-          `update user_items set user_id = $2, source = 'GIFT' where id = $1`,
-          [unit.rows[0].id, recipientId],
+          `update user_items set user_id = $2, source = 'GIFT' where id = any($1)`,
+          [unitIds, recipientId],
         );
-        await ctx.client.query(
-          `insert into user_transfers (sender_user_id, recipient_user_id, asset_type, user_item_id, idempotency_key)
-           values ($1, $2, 'ITEM', $3, $4)`,
-          [ctx.userId, recipientId, unit.rows[0].id, `gift:${unit.rows[0].id}`],
-        );
+        for (const unitId of unitIds) {
+          await ctx.client.query(
+            `insert into user_transfers (sender_user_id, recipient_user_id, asset_type, user_item_id, idempotency_key)
+             values ($1, $2, 'ITEM', $3, $4)`,
+            [ctx.userId, recipientId, unitId, `gift:${unitId}`],
+          );
+        }
         const rendered = renderNotification('ITEM_GIFT_RECEIVED', {
           sender: maskedSender,
           item_name: ITEM_BY_KEY_V1.get(input.item_key)?.nameJa ?? input.item_key,
@@ -324,8 +422,8 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
         await insertNotification(ctx.client, {
           userId: recipientId,
           type: 'ITEM_GIFT_RECEIVED',
-          dedupeKey: `notif:ITEM_GIFT_RECEIVED:gift:${unit.rows[0].id}`,
-          payload: { ...rendered, item_key: input.item_key },
+          dedupeKey: `notif:ITEM_GIFT_RECEIVED:gift:${unitIds[0]!}`,
+          payload: { ...rendered, item_key: input.item_key, quantity },
         });
         await ctx.client.query('commit');
       } catch (error) {
@@ -335,7 +433,7 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
         }
         throw error;
       }
-      return { item_key: input.item_key, recipient: input.recipient_email };
+      return { item_key: input.item_key, recipient: input.recipient_email, quantity };
     },
   });
 }

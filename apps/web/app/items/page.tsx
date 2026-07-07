@@ -1,12 +1,22 @@
-import { serverApiOrLogin } from '@/lib/server-api';
+import { serverApi, serverApiOrLogin } from '@/lib/server-api';
 import { ItemsView } from '@/components/ItemsView';
-import type { CatalogItem, InventoryData } from '@/lib/items';
+import type { CatalogItem, DailySetting, InventoryData, ItemTransaction } from '@/lib/items';
 
-/** /items — アイテムショップ+インベントリ+ギフト(Decision 078/079)。 */
+/** /items — アイテムショップ+インベントリ+ギフト+履歴+設定結果(Decision 078/079)。 */
 export default async function ItemsPage() {
-  const [catalog, inventory] = await Promise.all([
+  const [catalog, inventory, txns, settings] = await Promise.all([
     serverApiOrLogin<{ items: CatalogItem[] }>('/api/v1/items/catalog'),
     serverApiOrLogin<InventoryData>('/api/v1/items/inventory'),
+    serverApi<{ transactions: ItemTransaction[] }>('/api/v1/items/transactions'),
+    serverApi<{ history: DailySetting[]; today: string }>('/api/v1/items/settings'),
   ]);
-  return <ItemsView catalog={catalog.items} inventory={inventory} />;
+  return (
+    <ItemsView
+      catalog={catalog.items}
+      inventory={inventory}
+      transactions={txns.status === 200 ? txns.body.transactions : []}
+      settingHistory={settings.status === 200 ? settings.body.history : []}
+      {...(settings.status === 200 ? { today: settings.body.today } : {})}
+    />
+  );
 }

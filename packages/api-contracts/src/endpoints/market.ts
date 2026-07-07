@@ -178,7 +178,7 @@ export function registerMarketEndpoints(registry: ApiRegistry): void {
       const mine = await ctx.client.query(
         `select l.id as listing_id, l.horse_id, l.listing_price::text as price,
                 l.current_day, l.listed_at::text as listed_at, l.cancel_after_batch,
-                h.name, h.dna_hash
+                h.name, h.dna_hash, h.rarity::text as rarity
          from market_listings l
          join horses h on h.id = l.horse_id
          where l.seller_user_id = $1 and l.status = 'LISTED' and l.source = 'MANUAL'

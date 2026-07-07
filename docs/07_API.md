@@ -80,7 +80,9 @@ Item System (Decisions 078/079) — effects are public deterministic rules (item
 | POST | /api/v1/items/purchase | `{item_key, quantity<=10}`; USER_AVAILABLE -> PLATFORM_ITEM_CLEARING. ITEM_NOT_FOUND / ITEM_NOT_SELLABLE / INSUFFICIENT_BALANCE |
 | POST | /api/v1/horses/:id/item | `{item_key}` apply for the next race (training boundary; oldest unit first). NOT_HORSE_OWNER / HORSE_NOT_ACTIVE / MARKETPLACE_LOCKED / ITEM_DAY_RANGE / ITEM_NOT_OWNED / ITEM_ALREADY_APPLIED (409) |
 | POST | /api/v1/horses/:id/item/cancel | pending usage -> CANCELLED, unit returns to inventory. ITEM_USAGE_NOT_FOUND |
-| POST | /api/v1/items/gift | `{recipient_email, item_key}` (Decision 079): case-insensitive email, ACTIVE recipients only; the unit and its clearing money move together; ITEM_GIFT_RECEIVED notification. ITEM_NOT_GIFTABLE / GIFT_RECIPIENT_NOT_FOUND / GIFT_SELF / GIFT_LIMIT (429; 20 transfers/24h across user_transfers) |
+| POST | /api/v1/items/gift | `{recipient_email, item_key, quantity<=50}` (Decision 079): case-insensitive email, ACTIVE recipients only; the N oldest units and their clearing money move together; ITEM_GIFT_RECEIVED notification. ITEM_NOT_GIFTABLE / GIFT_RECIPIENT_NOT_FOUND / GIFT_SELF / GIFT_LIMIT (429; 20 transfers/24h across user_transfers) / ITEM_NOT_OWNED (owns fewer than quantity) |
+| GET | /api/v1/items/transactions | history (newest 100): PURCHASED (from the ledger — inventory rows change owners) / RECEIVED (gifts + burn drops, masked counterparty) / SENT / USED (horse name) |
+| GET | /api/v1/items/settings | revealed daily settings of FINALIZED races (last 62) + today's batch date |
 
 Batch settlement (not an API): usages freeze at Step 7; at finalize BURNED -> full unit price to PLATFORM_MLM_RESERVE, SURVIVED -> PLATFORM_OPERATING_RESERVE; each burn drops 1 of 5 non-sellable items (seed-deterministic).
 

@@ -12,12 +12,12 @@ export default function MarketPreview() {
   const iso = (d: number, h = 10) => new Date(Date.UTC(2026, 6, d, h)).toISOString();
   const dna = (seed: string) => `0x${seed.repeat(32).slice(0, 64)}`;
   const shelf = [
-    { listing_id: 'l1', horse_id: 'h1', price: '121.00', current_day: 2, listed_at: iso(5), name: 'Azure Comet', dna_hash: dna('1a') },
-    { listing_id: 'l2', horse_id: 'h2', price: '146.41', current_day: 4, listed_at: iso(5, 12), name: 'Neon Mirage', dna_hash: dna('2b') },
-    { listing_id: 'l3', horse_id: 'mine1', price: '133.10', current_day: 3, listed_at: iso(6), name: 'Crimson Tiger', dna_hash: dna('3c') },
-    { listing_id: 'l4', horse_id: 'h4', price: '110.00', current_day: 1, listed_at: iso(6, 14), name: 'Silent Dash', dna_hash: dna('4d') },
-    { listing_id: 'l5', horse_id: 'h5', price: '161.05', current_day: 5, listed_at: iso(6, 20), name: 'Golden Wolf', dna_hash: dna('5e') },
-    { listing_id: 'l6', horse_id: 'h6', price: '121.00', current_day: 2, listed_at: iso(7), name: 'Phantom Frost', dna_hash: dna('6f') },
+    { listing_id: 'l1', horse_id: 'h1', price: '121.00', current_day: 2, listed_at: iso(5), name: 'Azure Comet', dna_hash: dna('1a'), rarity: 'COMMON' },
+    { listing_id: 'l2', horse_id: 'h2', price: '146.41', current_day: 4, listed_at: iso(5, 12), name: 'Neon Mirage', dna_hash: dna('2b'), rarity: 'UNCOMMON' },
+    { listing_id: 'l3', horse_id: 'mine1', price: '133.10', current_day: 3, listed_at: iso(6), name: 'Crimson Tiger', dna_hash: dna('3c'), rarity: 'RARE' },
+    { listing_id: 'l4', horse_id: 'h4', price: '110.00', current_day: 1, listed_at: iso(6, 14), name: 'Silent Dash', dna_hash: dna('4d'), rarity: 'COMMON' },
+    { listing_id: 'l5', horse_id: 'h5', price: '161.05', current_day: 5, listed_at: iso(6, 20), name: 'Golden Wolf', dna_hash: dna('5e'), rarity: 'EPIC' },
+    { listing_id: 'l6', horse_id: 'h6', price: '121.00', current_day: 2, listed_at: iso(7), name: 'Phantom Frost', dna_hash: dna('6f'), rarity: 'LEGENDARY' },
   ];
   return (
     <MarketPlaceView
@@ -31,8 +31,8 @@ export default function MarketPreview() {
           { horse_name: 'Lunar Echo', price: '121.00', buyer: 'U-77b0', matched_at: iso(6, 12) },
         ],
         my_listings: [
-          { listing_id: 'l3', horse_id: 'mine1', price: '133.10', current_day: 3, listed_at: iso(6), cancel_after_batch: false, name: 'Crimson Tiger', dna_hash: dna('3c') },
-          { listing_id: 'l9', horse_id: 'mine2', price: '110.00', current_day: 1, listed_at: iso(4), cancel_after_batch: true, name: 'Emerald Storm', dna_hash: dna('7e') },
+          { listing_id: 'l3', horse_id: 'mine1', price: '133.10', current_day: 3, listed_at: iso(6), cancel_after_batch: false, name: 'Crimson Tiger', dna_hash: dna('3c'), rarity: 'COMMON' },
+          { listing_id: 'l9', horse_id: 'mine2', price: '110.00', current_day: 1, listed_at: iso(4), cancel_after_batch: true, name: 'Emerald Storm', dna_hash: dna('7e'), rarity: 'RARE' },
         ],
       }}
       myHorses={[

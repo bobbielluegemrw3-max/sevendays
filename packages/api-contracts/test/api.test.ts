@@ -1030,4 +1030,69 @@ describe('item system (Decisions 078/079)', () => {
     });
     expect(capped.status).toBe(429);
   });
+
+  it('bulk gift moves N oldest units; over-quantity is rejected (redesign)', async () => {
+    const sender = await fundedUser();
+    const recipientId = await newUser();
+    const recipient = await client.query<{ email: string }>(
+      `select email from users where id = $1`,
+      [recipientId],
+    );
+    await call('POST', '/api/v1/items/purchase', asUser(sender), {
+      body: { item_key: 'mint_herb', quantity: 3 },
+    });
+    const tooMany = await call('POST', '/api/v1/items/gift', asUser(sender), {
+      body: { recipient_email: recipient.rows[0]!.email, item_key: 'mint_herb', quantity: 4 },
+    });
+    expect(tooMany.status).toBe(404);
+    const bulk = await call('POST', '/api/v1/items/gift', asUser(sender), {
+      body: { recipient_email: recipient.rows[0]!.email, item_key: 'mint_herb', quantity: 2 },
+    });
+    expect(bulk.status).toBe(200);
+    expect((bulk.body as { quantity: number }).quantity).toBe(2);
+    const recInv = await call('GET', '/api/v1/items/inventory', asUser(recipientId));
+    expect((recInv.body as { available: { n: number }[] }).available[0]!.n).toBe(2);
+    const senderInv = await call('GET', '/api/v1/items/inventory', asUser(sender));
+    expect((senderInv.body as { available: { n: number }[] }).available[0]!.n).toBe(1);
+  });
+
+  it('transactions history covers purchase / sent / received / used (redesign)', async () => {
+    const user = await fundedUser();
+    const friendId = await newUser();
+    const friend = await client.query<{ email: string }>(
+      `select email from users where id = $1`,
+      [friendId],
+    );
+    const horse = await itemHorse(user, 2);
+    await call('POST', '/api/v1/items/purchase', asUser(user), {
+      body: { item_key: 'cool_towel', quantity: 3 },
+    });
+    await call('POST', '/api/v1/items/gift', asUser(user), {
+      body: { recipient_email: friend.rows[0]!.email, item_key: 'cool_towel', quantity: 2 },
+    });
+    await call('POST', `/api/v1/horses/${horse}/item`, asUser(user), {
+      body: { item_key: 'cool_towel' },
+    });
+    const mine = await call('GET', '/api/v1/items/transactions', asUser(user));
+    expect(mine.status).toBe(200);
+    const kinds = (mine.body as { transactions: { kind: string; quantity: number }[] }).transactions;
+    const byKind = new Map(kinds.map((t) => [t.kind, t.quantity]));
+    expect(byKind.get('PURCHASED')).toBe(3);
+    expect(byKind.get('SENT')).toBe(2);
+    expect(byKind.get('USED')).toBe(1);
+    const theirs = await call('GET', '/api/v1/items/transactions', asUser(friendId));
+    const received = (theirs.body as { transactions: { kind: string; quantity: number; counterparty: string | null }[] }).transactions
+      .find((t) => t.kind === 'RECEIVED');
+    expect(received?.quantity).toBe(2);
+    expect(received?.counterparty).toMatch(/\*\*\*/);
+  });
+
+  it('settings endpoint returns revealed history + today (redesign)', async () => {
+    const user = await fundedUser();
+    const r = await call('GET', '/api/v1/items/settings', asUser(user));
+    expect(r.status).toBe(200);
+    const body = r.body as { history: unknown[]; today: string };
+    expect(Array.isArray(body.history)).toBe(true);
+    expect(body.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
 });
