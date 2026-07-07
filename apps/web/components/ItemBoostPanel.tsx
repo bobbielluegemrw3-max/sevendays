@@ -121,6 +121,7 @@ export function ItemBoostPanel({
 
       {pendingHere ? (
         <div className={s.boostApplied}>
+          <img className={s.thumb} src={`/items/${pendingHere.item_key}.webp`} alt="" width={42} height={42} />
           <span className={s.pendingBadge}>適用予定</span>
           <b>{byKey.get(pendingHere.item_key)?.name_ja ?? pendingHere.item_key}</b>
           <span style={{ color: 'var(--faint)', fontSize: '0.75rem' }}>
@@ -160,7 +161,10 @@ export function ItemBoostPanel({
       )}
 
       {selected && !pendingHere ? (
-        <div className={s.boostHint}>{byKey.get(selected)?.description_ja}</div>
+        <div className={s.boostHint} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+          <img className={s.thumb} src={`/items/${selected}.webp`} alt="" width={42} height={42} />
+          <span>{byKey.get(selected)?.description_ja}</span>
+        </div>
       ) : null}
       {error ? <p className="error">{error}</p> : null}
       {message ? <p className="ok">{message}</p> : null}

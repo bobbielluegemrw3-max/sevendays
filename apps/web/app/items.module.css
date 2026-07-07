@@ -55,6 +55,25 @@
 .cardPREMIUM { border-top: 2px solid var(--gold-bright); }
 .cardBURN_DROP { border-top: 2px solid rgba(255, 92, 92, 0.65); }
 
+.cardArt {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #0a0714;
+}
+
+.thumb {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  flex: none;
+  background: #0a0714;
+}
+
 .cardHead { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
 .cardName { font-weight: 700; font-size: 0.9rem; }
 .cardNameEn { color: var(--faint); font-size: 0.68rem; font-family: var(--font-mono); letter-spacing: 0.06em; }

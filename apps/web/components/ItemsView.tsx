@@ -107,6 +107,7 @@ export function ItemsView({
           <>
             {inventory.available.map((e) => (
               <div key={e.item_key} className={s.invRow}>
+                <img className={s.thumb} src={`/items/${e.item_key}.webp`} alt="" width={42} height={42} loading="lazy" />
                 <span className={s.invName}>{byKey.get(e.item_key)?.name_ja ?? e.item_key}</span>
                 <span className={s.invCount}>× {e.n}</span>
                 <span className={s.invSpacer} />
@@ -117,6 +118,7 @@ export function ItemsView({
             ))}
             {inventory.pending.map((p) => (
               <div key={p.usage_id} className={s.pendingRow}>
+                <img className={s.thumb} src={`/items/${p.item_key}.webp`} alt="" width={42} height={42} loading="lazy" />
                 <span className={s.pendingBadge}>適用予定</span>
                 <b>{byKey.get(p.item_key)?.name_ja ?? p.item_key}</b>
                 <span>→ {p.horse_name}</span>
@@ -180,6 +182,14 @@ export function ItemsView({
                   const owned = ownedByKey.get(item.key) ?? 0;
                   return (
                     <div key={item.key} className={`${s.card} ${s[`card${item.band}`] ?? ''}`}>
+                      <img
+                        className={s.cardArt}
+                        src={`/items/${item.key}.webp`}
+                        alt={item.name_ja}
+                        width={512}
+                        height={512}
+                        loading="lazy"
+                      />
                       <div className={s.cardHead}>
                         <div>
                           <div className={s.cardName}>{item.name_ja}</div>
