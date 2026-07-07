@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ALERT_SECONDS,
   COMPLETE_AT,
@@ -62,57 +62,75 @@ export function DailyDerbyStage({
 }: DailyDerbyStageProps) {
   const elapsed = -secondsToStart;
   const [soundOn, setSoundOn] = useState(true);
-  const fanfareRef = useRef<HTMLAudioElement | null>(null);
-  const hoofsRef = useRef<HTMLAudioElement | null>(null);
-  const prevRemaining = useRef(secondsToStart);
+  const prevElapsed = useRef(elapsed);
   const primed = useRef(false);
-  const chimeCtxRef = useRef<AudioContext | null>(null);
-  const lastChimeAt = useRef(0);
+  const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const lastOwnSoundAt = useRef(0);
 
-  /* 自分該当行のチャイム(音源ファイル不要のWebAudio合成・2音の短いピン)。
-     iOSではAudioContextもジェスチャ内での生成/再開が必要 — priming で確保。 */
-  const playChime = () => {
-    if (!soundOn) return;
-    const ctx = chimeCtxRef.current;
-    if (!ctx || ctx.state !== 'running') return;
-    const now = ctx.currentTime;
-    if (performance.now() - lastChimeAt.current < 400) return; // 連発抑制
-    lastChimeAt.current = performance.now();
-    for (const [freq, at] of [[880, 0], [1318.5, 0.09]] as const) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.0001, now + at);
-      gain.gain.exponentialRampToValueAtTime(0.14, now + at + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.22);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(now + at);
-      osc.stop(now + at + 0.25);
-    }
-  };
+  /* 音源カタログ(オーナー支給の実音源、2026-07-07)。 */
+  const soundCatalog = useMemo(
+    () =>
+      ({
+        fanfare: { src: fanfareSrc },
+        hoofs: { src: hoofbeatsSrc, loop: true },
+        gate: { src: '/sounds/gate-open.mp3' },
+        whinny: { src: '/sounds/horse-whinny.mp3' },
+        crowd: { src: '/sounds/crowd.mp3', loop: true, volume: 0.45 },
+        ownBurn: { src: '/sounds/own-burn.mp3' },
+        ownGood: { src: '/sounds/own-good.mp3' },
+        finale: { src: '/sounds/finale.mp3' },
+      }) satisfies Record<string, { src: string; loop?: boolean; volume?: number }>,
+    [fanfareSrc, hoofbeatsSrc],
+  );
+
+  const getAudio = useCallback(
+    (key: string): HTMLAudioElement | null => {
+      const conf = (soundCatalog as Record<string, { src: string; loop?: boolean; volume?: number }>)[key];
+      if (!conf) return null;
+      let audio = audioRefs.current.get(key) ?? null;
+      if (!audio) {
+        audio = new Audio(conf.src);
+        if (conf.loop) audio.loop = true;
+        if (conf.volume !== undefined) audio.volume = conf.volume;
+        audioRefs.current.set(key, audio);
+      }
+      return audio;
+    },
+    [soundCatalog],
+  );
+
+  const playOneShot = useCallback(
+    (key: string) => {
+      if (!soundOn || failed) return;
+      const audio = getAudio(key);
+      if (!audio) return;
+      audio.currentTime = 0;
+      void audio.play().catch(() => {
+        /* 音源未配置/未アンロックでも演出は続行 */
+      });
+    },
+    [soundOn, failed, getAudio],
+  );
+
+  /* 自分該当行の効果音: BURNは専用音、それ以外(生存/マッチング等)は汎用音。 */
+  const playOwnLine = useCallback(
+    (hasBurn: boolean) => {
+      if (performance.now() - lastOwnSoundAt.current < 400) return; // 連発抑制
+      lastOwnSoundAt.current = performance.now();
+      playOneShot(hasBurn ? 'ownBurn' : 'ownGood');
+    },
+    [playOneShot],
+  );
 
   /* iOS/Safariはユーザー操作の文脈外の音声再生をブロックし、許可は音声要素
-     ごとに別。ファンファーレは「タップの数秒後にタイマーが鳴らす」ため、
-     最初のタップで両音源を無音再生→即停止してロック解除しておく(priming)。 */
+     ごとに別。最初のタップで全音源を無音再生→即停止してロック解除(priming)。 */
   useEffect(() => {
     const prime = () => {
       if (primed.current) return;
       primed.current = true;
-      if (!fanfareRef.current) fanfareRef.current = new Audio(fanfareSrc);
-      if (!hoofsRef.current) {
-        hoofsRef.current = new Audio(hoofbeatsSrc);
-        hoofsRef.current.loop = true;
-      }
-      if (!chimeCtxRef.current) {
-        try {
-          chimeCtxRef.current = new AudioContext();
-          void chimeCtxRef.current.resume().catch(() => undefined);
-        } catch {
-          /* WebAudio未対応環境ではチャイムなしで続行 */
-        }
-      }
-      for (const audio of [fanfareRef.current, hoofsRef.current]) {
+      for (const key of Object.keys(soundCatalog)) {
+        const audio = getAudio(key);
+        if (!audio) continue;
         audio.muted = true;
         void audio
           .play()
@@ -132,55 +150,57 @@ export function DailyDerbyStage({
       window.removeEventListener('pointerdown', prime);
       window.removeEventListener('touchend', prime);
     };
-  }, [fanfareSrc, hoofbeatsSrc]);
+  }, [soundCatalog, getAudio]);
 
-  /* 20:00 をまたいだ瞬間にファンファーレ(実尺16.8秒がオープニングのBGM。
-     途中参加では鳴らさない — ライブの一回性を守る)。 */
+  /* 一発モノのキュー(経過秒の通過検知)。freshを超えて飛び越えた場合は鳴らさ
+     ない — 途中参加でフィナーレ音だけ鳴る事故を防ぐ。ファンファーレの
+     「20:00通過の瞬間だけ」というライブの一回性もこの仕組みで維持。 */
   useEffect(() => {
-    const prev = prevRemaining.current;
-    prevRemaining.current = secondsToStart;
+    const prev = prevElapsed.current;
+    prevElapsed.current = elapsed;
     if (failed || !soundOn) return;
-    if (prev > 0 && secondsToStart <= 0 && elapsed < 6) {
-      const audio = fanfareRef.current ?? new Audio(fanfareSrc);
-      fanfareRef.current = audio;
-      audio.currentTime = 0;
-      void audio.play().catch(() => {
-        /* 音源未配置 or ブラウザの自動再生ブロック — 演出は音なしで続行 */
-      });
+    const cues: ReadonlyArray<{ at: number; key: string; fresh: number }> = [
+      { at: 0, key: 'fanfare', fresh: 6 },
+      { at: RACE_RUN.startAt, key: 'gate', fresh: 3 },
+      { at: RACE_RUN.startAt + 1.6, key: 'whinny', fresh: 3 },
+      { at: COMPLETE_AT, key: 'finale', fresh: 4 },
+    ];
+    for (const cue of cues) {
+      if (prev < cue.at && elapsed >= cue.at && elapsed < cue.at + cue.fresh) {
+        playOneShot(cue.key);
+      }
     }
-  }, [secondsToStart, elapsed, failed, soundOn, fanfareSrc]);
+  }, [elapsed, failed, soundOn, playOneShot]);
 
-  /* レース実走の間だけ蹄音ループ(窓に入ったら再生、出たら停止)。 */
+  /* ループ音の窓同期: 蹄音=レース実走、群衆の話し声=ログ濁流の間ずっと。 */
   useEffect(() => {
-    const inWindow =
-      !failed && soundOn && elapsed >= RACE_RUN.startAt && elapsed < RACE_RUN.endAt;
-    if (inWindow && !hoofsRef.current) {
-      hoofsRef.current = new Audio(hoofbeatsSrc);
-      hoofsRef.current.loop = true;
+    const windows: ReadonlyArray<{ key: string; from: number; to: number }> = [
+      { key: 'hoofs', from: RACE_RUN.startAt, to: RACE_RUN.endAt },
+      { key: 'crowd', from: LOGS_FROM, to: COMPLETE_AT },
+    ];
+    for (const w of windows) {
+      const inWindow = !failed && soundOn && elapsed >= w.from && elapsed < w.to;
+      const audio = inWindow ? getAudio(w.key) : (audioRefs.current.get(w.key) ?? null);
+      if (!audio) continue;
+      if (inWindow && audio.paused) {
+        void audio.play().catch(() => {});
+      } else if (!inWindow && !audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
     }
-    const audio = hoofsRef.current;
-    if (!audio) return;
-    if (inWindow && audio.paused) {
-      void audio.play().catch(() => {});
-    } else if (!inWindow && !audio.paused) {
-      audio.pause();
-      audio.currentTime = 0;
-    }
-  }, [elapsed, failed, soundOn, hoofbeatsSrc]);
+  }, [elapsed, failed, soundOn, getAudio]);
 
   /* サウンドOFF即時反映+アンマウント時の停止。 */
   useEffect(() => {
-    if (!soundOn) {
-      fanfareRef.current?.pause();
-      hoofsRef.current?.pause();
-    }
+    if (!soundOn) for (const audio of audioRefs.current.values()) audio.pause();
   }, [soundOn]);
+  const refsForUnmount = audioRefs;
   useEffect(
     () => () => {
-      fanfareRef.current?.pause();
-      hoofsRef.current?.pause();
+      for (const audio of refsForUnmount.current.values()) audio.pause();
     },
-    [],
+    [refsForUnmount],
   );
 
   const showTicker = !failed && elapsed >= LOGS_FROM && elapsed < SHOW_TOTAL + 30;
@@ -204,7 +224,7 @@ export function DailyDerbyStage({
         ) : secondsToStart > 0 ? (
           <PreShowCountdown secondsToStart={secondsToStart} />
         ) : elapsed < SHOW_TOTAL ? (
-          <LiveShow elapsed={elapsed} counts={counts} myHorseNames={myHorseNames} onMine={playChime} />
+          <LiveShow elapsed={elapsed} counts={counts} myHorseNames={myHorseNames} onMine={playOwnLine} />
         ) : (
           <PersonalOrDone personal={personal} />
         )}
@@ -272,7 +292,7 @@ function LiveShow({
   elapsed: number;
   counts: DerbyCounts;
   myHorseNames: readonly string[];
-  onMine: () => void;
+  onMine: (hasBurn: boolean) => void;
 }) {
   if (elapsed >= COMPLETE_AT) {
     return (
@@ -373,7 +393,7 @@ function LogPhase({
   elapsed: number;
   counts: DerbyCounts;
   myHorseNames: readonly string[];
-  onMine: () => void;
+  onMine: (hasBurn: boolean) => void;
 }) {
   const myNames = useMemo(() => new Set(myHorseNames), [myHorseNames]);
   const lines = logWindow(elapsed, 44, myNames);
@@ -381,13 +401,15 @@ function LogPhase({
   const seenMine = useRef<Set<string>>(new Set());
   useEffect(() => {
     let fresh = false;
+    let hasBurn = false;
     for (const line of lines) {
       if (line.mine && !seenMine.current.has(line.id)) {
         seenMine.current.add(line.id);
         fresh = true;
+        if (line.tone === 'burn') hasBurn = true;
       }
     }
-    if (fresh) onMine();
+    if (fresh) onMine(hasBurn);
   }, [lines, onMine]);
   const matched = matchingCount(elapsed, counts);
   const inMarketOpen = elapsed >= MARKET_OPEN.startAt && elapsed < MARKET_OPEN.endAt;
