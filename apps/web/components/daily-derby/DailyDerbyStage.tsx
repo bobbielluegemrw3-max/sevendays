@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ALERT_SECONDS,
   COMPLETE_AT,
@@ -46,6 +46,8 @@ export interface DailyDerbyStageProps {
   failed?: boolean;
   fanfareSrc?: string;
   hoofbeatsSrc?: string;
+  /** 自分の馬名(ログ濁流で該当行をハイライト+チャイム)。 */
+  myHorseNames?: readonly string[];
 }
 
 export function DailyDerbyStage({
@@ -56,6 +58,7 @@ export function DailyDerbyStage({
   failed = false,
   fanfareSrc = '/sounds/fanfare.mp3',
   hoofbeatsSrc = '/sounds/hoofbeats.mp3',
+  myHorseNames = [],
 }: DailyDerbyStageProps) {
   const elapsed = -secondsToStart;
   const [soundOn, setSoundOn] = useState(true);
@@ -63,6 +66,31 @@ export function DailyDerbyStage({
   const hoofsRef = useRef<HTMLAudioElement | null>(null);
   const prevRemaining = useRef(secondsToStart);
   const primed = useRef(false);
+  const chimeCtxRef = useRef<AudioContext | null>(null);
+  const lastChimeAt = useRef(0);
+
+  /* 自分該当行のチャイム(音源ファイル不要のWebAudio合成・2音の短いピン)。
+     iOSではAudioContextもジェスチャ内での生成/再開が必要 — priming で確保。 */
+  const playChime = () => {
+    if (!soundOn) return;
+    const ctx = chimeCtxRef.current;
+    if (!ctx || ctx.state !== 'running') return;
+    const now = ctx.currentTime;
+    if (performance.now() - lastChimeAt.current < 400) return; // 連発抑制
+    lastChimeAt.current = performance.now();
+    for (const [freq, at] of [[880, 0], [1318.5, 0.09]] as const) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, now + at);
+      gain.gain.exponentialRampToValueAtTime(0.14, now + at + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.22);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + at);
+      osc.stop(now + at + 0.25);
+    }
+  };
 
   /* iOS/Safariはユーザー操作の文脈外の音声再生をブロックし、許可は音声要素
      ごとに別。ファンファーレは「タップの数秒後にタイマーが鳴らす」ため、
@@ -75,6 +103,14 @@ export function DailyDerbyStage({
       if (!hoofsRef.current) {
         hoofsRef.current = new Audio(hoofbeatsSrc);
         hoofsRef.current.loop = true;
+      }
+      if (!chimeCtxRef.current) {
+        try {
+          chimeCtxRef.current = new AudioContext();
+          void chimeCtxRef.current.resume().catch(() => undefined);
+        } catch {
+          /* WebAudio未対応環境ではチャイムなしで続行 */
+        }
       }
       for (const audio of [fanfareRef.current, hoofsRef.current]) {
         audio.muted = true;
@@ -168,7 +204,7 @@ export function DailyDerbyStage({
         ) : secondsToStart > 0 ? (
           <PreShowCountdown secondsToStart={secondsToStart} />
         ) : elapsed < SHOW_TOTAL ? (
-          <LiveShow elapsed={elapsed} counts={counts} />
+          <LiveShow elapsed={elapsed} counts={counts} myHorseNames={myHorseNames} onMine={playChime} />
         ) : (
           <PersonalOrDone personal={personal} />
         )}
@@ -227,7 +263,17 @@ const RACE_STEP: ShowStep = {
   progress: true,
 };
 
-function LiveShow({ elapsed, counts }: { elapsed: number; counts: DerbyCounts }) {
+function LiveShow({
+  elapsed,
+  counts,
+  myHorseNames,
+  onMine,
+}: {
+  elapsed: number;
+  counts: DerbyCounts;
+  myHorseNames: readonly string[];
+  onMine: () => void;
+}) {
   if (elapsed >= COMPLETE_AT) {
     return (
       <div className={s.doneBanner}>
@@ -237,7 +283,9 @@ function LiveShow({ elapsed, counts }: { elapsed: number; counts: DerbyCounts })
       </div>
     );
   }
-  if (elapsed >= LOGS_FROM) return <LogPhase elapsed={elapsed} counts={counts} />;
+  if (elapsed >= LOGS_FROM) {
+    return <LogPhase elapsed={elapsed} counts={counts} myHorseNames={myHorseNames} onMine={onMine} />;
+  }
   return (
     <div>
       <div className={s.liveTitle}>
@@ -316,8 +364,31 @@ const TONE_CLASS: Record<LogTone, string> = {
   end: s.lgEnd!,
 };
 
-function LogPhase({ elapsed, counts }: { elapsed: number; counts: DerbyCounts }) {
-  const lines = logWindow(elapsed);
+function LogPhase({
+  elapsed,
+  counts,
+  myHorseNames,
+  onMine,
+}: {
+  elapsed: number;
+  counts: DerbyCounts;
+  myHorseNames: readonly string[];
+  onMine: () => void;
+}) {
+  const myNames = useMemo(() => new Set(myHorseNames), [myHorseNames]);
+  const lines = logWindow(elapsed, 44, myNames);
+  // 自分該当行が新しく現れたらチャイム(1行につき1回)
+  const seenMine = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    let fresh = false;
+    for (const line of lines) {
+      if (line.mine && !seenMine.current.has(line.id)) {
+        seenMine.current.add(line.id);
+        fresh = true;
+      }
+    }
+    if (fresh) onMine();
+  }, [lines, onMine]);
   const matched = matchingCount(elapsed, counts);
   const inMarketOpen = elapsed >= MARKET_OPEN.startAt && elapsed < MARKET_OPEN.endAt;
   const matchSection = LOG_SECTIONS.find((sec) => sec.key === 'MATCH')!;
@@ -346,8 +417,12 @@ function LogPhase({ elapsed, counts }: { elapsed: number; counts: DerbyCounts })
 
       <div className={s.logStream} aria-live="off">
         {lines.map((line) => (
-          <div key={line.id} className={`${s.lg} ${TONE_CLASS[line.tone]}`}>
+          <div
+            key={line.id}
+            className={`${s.lg} ${TONE_CLASS[line.tone]} ${line.mine ? s.lgMine : ''}`}
+          >
             {line.text}
+            {line.mine ? '  ◀ YOU' : ''}
           </div>
         ))}
       </div>

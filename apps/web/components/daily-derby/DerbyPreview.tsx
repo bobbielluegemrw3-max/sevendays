@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FIXTURE_RESULTS, FIXTURE_TICKER, PRE_SHOW_SECONDS, SHOW_TOTAL } from '@/lib/daily-derby';
+import {
+  FIXTURE_RESULTS,
+  FIXTURE_TICKER,
+  PRE_SHOW_SECONDS,
+  SHOW_TOTAL,
+  fixtureMyHorseNames,
+} from '@/lib/daily-derby';
 import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
 
 /**
@@ -141,6 +147,7 @@ export function DerbyPreview() {
         tickerEvents={FIXTURE_TICKER}
         personal={FIXTURE_RESULTS[scenario] ?? null}
         failed={failed}
+        myHorseNames={fixtureMyHorseNames()}
       />
 
       <p className="faint" style={{ fontSize: '0.78rem', marginTop: '0.8rem' }}>

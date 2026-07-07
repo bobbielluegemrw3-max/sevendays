@@ -303,6 +303,21 @@
 .lgMint { color: #eae7ff; }
 .lgMlm { color: var(--warn); }
 .lgItem { color: #b18cff; }
+/* 自分該当行(オーナー指示 2026-07-07): 金色の帯で「自分の分」を一目に */
+.lgMine {
+  background: linear-gradient(90deg, rgba(242, 228, 191, 0.22), rgba(242, 228, 191, 0.06) 70%, transparent);
+  border-left-color: var(--gold-bright);
+  color: var(--gold-bright);
+  font-weight: 700;
+  text-shadow: 0 0 12px rgba(242, 228, 191, 0.45);
+  border-radius: 0 6px 6px 0;
+  animation: mineIn 0.5s ease both;
+}
+@keyframes mineIn {
+  from { background-color: rgba(242, 228, 191, 0.5); }
+  to { background-color: transparent; }
+}
+
 .lgEnd {
   color: var(--text);
   font-weight: 700;

@@ -173,6 +173,10 @@ export interface LogLine {
   id: string;
   tone: LogTone;
   text: string;
+  /** 行に含まれる馬名(自分該当ハイライトの判定に使う)。 */
+  name?: string;
+  /** 自分の該当行(myNames にヒット)。 */
+  mine?: boolean;
 }
 
 /* 絵文字は使わない(オーナー指示 2026-07-06)— Bloomberg端末風の
@@ -187,21 +191,28 @@ function makeLine(section: LogSection, i: number): LogLine {
   switch (section.key) {
     case 'BURN': {
       const day = dayOf(i, 1);
-      return { id, tone: 'burn', text: `${tag('BURN')}${horseId(i, 1)}  ${pad(horseName(i, 1), NAME_W)}  DAY ${day}  ELIMINATED` };
+      const name = horseName(i, 1);
+      return { id, tone: 'burn', name, text: `${tag('BURN')}${horseId(i, 1)}  ${pad(name, NAME_W)}  DAY ${day}  ELIMINATED` };
     }
     case 'SURVIVE': {
       const day = dayOf(i, 2, 0, 5);
-      return { id, tone: 'survive', text: `${tag('SRVD')}${horseId(i, 2)}  ${pad(horseName(i, 2), NAME_W)}  DAY ${day} → DAY ${day + 1}` };
+      const name = horseName(i, 2);
+      return { id, tone: 'survive', name, text: `${tag('SRVD')}${horseId(i, 2)}  ${pad(name, NAME_W)}  DAY ${day} → DAY ${day + 1}` };
     }
     case 'VALUE': {
       const day = dayOf(i, 3);
-      return { id, tone: 'value', text: `${tag('VAL')}${pad(horseName(i, 3), NAME_W)}  DAY ${day}  ${priceOfDay(day)} USDT  ▲` };
+      const name = horseName(i, 3);
+      return { id, tone: 'value', name, text: `${tag('VAL')}${pad(name, NAME_W)}  DAY ${day}  ${priceOfDay(day)} USDT  ▲` };
     }
     case 'DAY7':
-      return { id, tone: 'day7', text: `${tag('DAY7')}${pad(horseName(i, 4), NAME_W)}  CLEARED — CHAMPION REWARD 200.00` };
+    {
+      const name = horseName(i, 4);
+      return { id, tone: 'day7', name, text: `${tag('DAY7')}${pad(name, NAME_W)}  CLEARED — CHAMPION REWARD 200.00` };
+    }
     case 'LIST': {
       const day = dayOf(i, 5);
-      return { id, tone: 'list', text: `${tag('LIST')}${pad(horseName(i, 5), NAME_W)}  ASK  ${priceOfDay(day)} USDT` };
+      const name = horseName(i, 5);
+      return { id, tone: 'list', name, text: `${tag('LIST')}${pad(name, NAME_W)}  ASK  ${priceOfDay(day)} USDT` };
     }
     case 'BID': {
       const day = dayOf(i, 6);
@@ -209,10 +220,14 @@ function makeLine(section: LogSection, i: number): LogLine {
     }
     case 'MATCH': {
       const day = dayOf(i, 7);
-      return { id, tone: 'match', text: `${tag('MATCH')}${pad(horseName(i, 7), NAME_W)}  ${priceOfDay(day)} USDT → ${userId(i, 7)}` };
+      const name = horseName(i, 7);
+      return { id, tone: 'match', name, text: `${tag('MATCH')}${pad(name, NAME_W)}  ${priceOfDay(day)} USDT → ${userId(i, 7)}` };
     }
     case 'MINT':
-      return { id, tone: 'mint', text: `${tag('MINT')}${pad(horseName(i, 8), NAME_W)}  DAY0 → ${userId(i, 8)}` };
+    {
+      const name = horseName(i, 8);
+      return { id, tone: 'mint', name, text: `${tag('MINT')}${pad(name, NAME_W)}  DAY0 → ${userId(i, 8)}` };
+    }
     case 'MLM': {
       // サポートボーナス(Decision 074): T1=3 / T2=2 / T3-7=1 USDT
       const tiers = ['3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00'] as const;
@@ -233,20 +248,39 @@ function makeLine(section: LogSection, i: number): LogLine {
  * elapsed 時点で画面に出ているべきログの「末尾 window 行」を返す。
  * 全行は生成せず、必要な index だけ導出する(高速)。
  */
-export function logWindow(elapsed: number, window = 44): LogLine[] {
+export function logWindow(
+  elapsed: number,
+  window = 44,
+  myNames?: ReadonlySet<string>,
+): LogLine[] {
   const out: LogLine[] = [];
   for (let sIdx = LOG_SECTIONS.length - 1; sIdx >= 0 && out.length < window; sIdx--) {
     const sec = LOG_SECTIONS[sIdx]!;
     if (elapsed < sec.startAt) continue;
     const emitted = Math.floor((Math.min(elapsed, sec.endAt) - sec.startAt) * sec.rate);
     for (let i = emitted - 1; i >= 0 && out.length < window; i--) {
-      out.push(makeLine(sec, i));
+      const line = makeLine(sec, i);
+      if (myNames && line.name && myNames.has(line.name)) line.mine = true;
+      out.push(line);
     }
     if (out.length < window) {
       out.push({ id: `${sec.key}:header`, tone: 'header', text: sec.header });
     }
   }
   return out.reverse();
+}
+
+/**
+ * プレビュー用: ショーの途中で必ず流れる「自分の馬」の名前(各セクションの
+ * 固定インデックスから逆引き)。実結線時はAPIの実保有馬名に差し替える。
+ */
+export function fixtureMyHorseNames(): string[] {
+  return [
+    makeLine(LOG_SECTIONS.find((s) => s.key === 'BURN')!, 24).name!,
+    makeLine(LOG_SECTIONS.find((s) => s.key === 'SURVIVE')!, 60).name!,
+    makeLine(LOG_SECTIONS.find((s) => s.key === 'DAY7')!, 10).name!,
+    makeLine(LOG_SECTIONS.find((s) => s.key === 'MATCH')!, 50).name!,
+  ];
 }
 
 /* ---- 個人結果(ADR-006 §6) --------------------------------------------- */
