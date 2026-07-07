@@ -1,0 +1,159 @@
+/* ============================================================
+   Item System (Decision 078/079) — ショップ / インベントリ / ギフト
+   帯色: BASIC=シアン / STANDARD=バイオレット / PREMIUM=ゴールド /
+   非売品=エンバー(Burnの弔い)。
+   ============================================================ */
+
+.intro {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.75;
+}
+
+.settingNote {
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--faint);
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+}
+
+.bandTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 1.4rem 0 0.7rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+}
+.bandRange { color: var(--faint); font-size: 0.75rem; font-family: var(--font-mono); letter-spacing: 0.05em; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.7rem;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.cardBASIC { border-top: 2px solid rgba(0, 234, 255, 0.55); }
+.cardSTANDARD { border-top: 2px solid rgba(179, 199, 255, 0.6); }
+.cardPREMIUM { border-top: 2px solid var(--gold-bright); }
+.cardBURN_DROP { border-top: 2px solid rgba(255, 92, 92, 0.65); }
+
+.cardHead { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.cardName { font-weight: 700; font-size: 0.9rem; }
+.cardNameEn { color: var(--faint); font-size: 0.68rem; font-family: var(--font-mono); letter-spacing: 0.06em; }
+.cardPrice {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--cyan);
+  white-space: nowrap;
+}
+.cardPrice :global(.unit) { font-size: 0.65rem; color: var(--faint); margin-left: 0.15rem; }
+.cardDesc { color: var(--muted); font-size: 0.78rem; line-height: 1.6; min-height: 2.6em; }
+.cardMeta { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.ownTag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--good);
+  border: 1px solid rgba(0, 220, 130, 0.35);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+.dayTag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--gold-bright);
+  border: 1px solid rgba(201, 168, 106, 0.4);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+.dropTag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: #ff8a8a;
+  border: 1px solid rgba(255, 92, 92, 0.4);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+.cardActions { display: flex; gap: 0.45rem; margin-top: auto; }
+.cardActions button {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.72rem;
+}
+
+/* ---- インベントリ / ギフト ---- */
+.invRow {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.2rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.invName { font-weight: 600; }
+.invCount { font-family: var(--font-mono); color: var(--cyan); }
+.invSpacer { flex: 1; }
+.pendingRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.2rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.pendingBadge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--gold-bright);
+  border: 1px solid rgba(201, 168, 106, 0.4);
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+  white-space: nowrap;
+}
+
+.giftForm {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.4fr) minmax(160px, 1fr) auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+@media (max-width: 640px) {
+  .giftForm { grid-template-columns: 1fr; }
+}
+.giftNote { color: var(--faint); font-size: 0.75rem; margin-top: 0.5rem; line-height: 1.6; }
+
+/* ---- 馬詳細の Boost Item パネル ---- */
+.boost { margin-top: 0.9rem; border-top: 1px dashed var(--border); padding-top: 0.9rem; }
+.boostTitle { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.2rem; }
+.boostDesc { color: var(--faint); font-size: 0.76rem; margin-bottom: 0.6rem; line-height: 1.6; }
+.boostRow { display: flex; flex-wrap: wrap; gap: 0.55rem; align-items: center; }
+.boostRow select { flex: 1; min-width: 220px; }
+.boostApplied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(201, 168, 106, 0.4);
+  border-radius: var(--radius-sm);
+  background: rgba(201, 168, 106, 0.07);
+  font-size: 0.82rem;
+}
+.boostHint { color: var(--faint); font-size: 0.74rem; margin-top: 0.45rem; line-height: 1.6; }

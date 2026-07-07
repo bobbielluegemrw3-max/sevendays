@@ -22,6 +22,7 @@ export function TopNav() {
         <Link href="/horses">STABLE</Link>
         <Link href="/races">RACE</Link>
         <Link href="/market">MARKET</Link>
+        <Link href="/items">ITEMS</Link>
         <Link href="/wallet">WALLET</Link>
         <Link href="/support">TEAM</Link>
         <Link href="/notifications">通知</Link>

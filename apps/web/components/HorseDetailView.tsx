@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { TrainingForm } from '@/components/TrainingForm';
+import { ItemBoostPanel } from '@/components/ItemBoostPanel';
 import { deriveNftLook } from '@/lib/nft-visual';
 import s from '../app/horse-detail.module.css';
 
@@ -187,7 +188,10 @@ export function HorseDetailView({ horse }: { horse: HorseDetail }) {
               <div className={s.trainDesc}>コンディションを整え、今夜のレースに備えましょう。疲労とのバランスが鍵です。</div>
             </div>
           </div>
-          <div className={s.trainForm}><TrainingForm horseId={horse.id} /></div>
+          <div className={s.trainForm}>
+            <TrainingForm horseId={horse.id} />
+            <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} />
+          </div>
           <div className={s.trainNote}>調教は1日1回。今夜20:00のスナップショット確定までに実施すると、今夜のレースに反映されます。</div>
         </div>
       ) : (
