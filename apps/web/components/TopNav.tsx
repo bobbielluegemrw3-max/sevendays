@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { LogoutButton } from '@/components/LogoutButton';
+import { DerbyCountdown } from '@/components/DerbyCountdown';
 
 /**
  * Signed-in header. The brand lockup mirrors the landing page exactly
@@ -29,6 +30,7 @@ export function TopNav() {
         <Link href="/account">アカウント</Link>
       </div>
       <span className="spacer" />
+      <DerbyCountdown />
       <LogoutButton />
     </nav>
   );

@@ -1096,3 +1096,50 @@ describe('item system (Decisions 078/079)', () => {
     expect(body.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });
+
+describe('daily derby status (ADR-008 R1)', () => {
+  it('phases: WAITING -> LIVE -> COMPLETED with counts and my horse names', async () => {
+    const user = await newUser();
+    await client.query(
+      `insert into horses (owner_user_id, name, horse_type, rarity, dna_hash, dna_modifier,
+                           horse_generation_version, mint_seed_hash, ability_json)
+       values ($1, 'Derby Status Horse', 'BALANCED', 'COMMON', 'dna-derby-1', 0.5,
+               'horse_generation_v1.0', 'seed-derby-1', '{}')`,
+      [user],
+    );
+
+    const waiting = await call('GET', '/api/v1/daily-derby/status', asUser(user));
+    expect(waiting.status).toBe(200);
+    const w = waiting.body as { phase: string; next_derby_at: string; my_horse_names: string[] };
+    expect(w.phase).toBe('WAITING');
+    expect(new Date(w.next_derby_at).getTime()).toBeGreaterThan(Date.now());
+    expect(w.my_horse_names).toContain('Derby Status Horse');
+
+    // Tonight's batch RUNNING -> LIVE
+    const today = new Date().toISOString().slice(0, 10);
+    const batch = await client.query<{ id: string }>(
+      `insert into batch_runs (batch_date, batch_algorithm_version, status)
+       values ((now() at time zone 'Asia/Kuala_Lumpur')::date, 'batch_v1.0', 'RUNNING') returning id`,
+    );
+    void today;
+    const live = await call('GET', '/api/v1/daily-derby/status', asUser(user));
+    expect((live.body as { phase: string }).phase).toBe('LIVE');
+
+    await client.query(`update batch_runs set status = 'COMPLETED', completed_at = now() where id = $1`, [
+      batch.rows[0]!.id,
+    ]);
+    const done = await call('GET', '/api/v1/daily-derby/status', asUser(user));
+    const d = done.body as { phase: string; counts: unknown; personal: unknown };
+    expect(d.phase).toBe('COMPLETED');
+    // No race row for the batch in this fixture -> counts/personal are null, no crash.
+    expect(d.counts).toBeNull();
+    expect(d.personal).toBeNull();
+
+    await client.query(`update batch_runs set status = 'FAILED' where id = $1`, [batch.rows[0]!.id]);
+    const failed = await call('GET', '/api/v1/daily-derby/status', asUser(user));
+    expect((failed.body as { phase: string }).phase).toBe('FAILED_SAFE_MODE');
+
+    // cleanup so other tests see no batch for today
+    await client.query(`delete from batch_runs where id = $1`, [batch.rows[0]!.id]);
+  });
+});

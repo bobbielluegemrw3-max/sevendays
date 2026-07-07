@@ -86,6 +86,12 @@ Item System (Decisions 078/079) — effects are public deterministic rules (item
 
 Batch settlement (not an API): usages freeze at Step 7; at finalize BURNED -> full unit price to PLATFORM_MLM_RESERVE, SURVIVED -> PLATFORM_OPERATING_RESERVE; each burn drops 1 of 5 non-sellable items (seed-deterministic).
 
+Daily Derby live status (ADR-008 R1, Decision 073):
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | /api/v1/daily-derby/status | read-only: phase (WAITING/LIVE/COMPLETED/FAILED_SAFE_MODE from tonight's batch_runs), server_time + next_derby_at (client clock sync), live_started_at, tonight's real counts (participants/burns/listed/assignments/mints), revealed item_setting, anonymized ticker (sold/burn/day7 lines), the caller's personal result (DAY7 > SOLD > BURNED > SURVIVED, with dna_hash for the finale art) and my_horse_names (log-flood YOU highlight). Log-flood lines stay client-side deterministic generation (plan A) |
+
 ## Admin APIs
 
 - GET `/api/v1/admin/dashboard`

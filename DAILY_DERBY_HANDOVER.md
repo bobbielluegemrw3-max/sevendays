@@ -29,7 +29,14 @@
 
 ## 2. 残作業(リリース前・優先順)
 
-### R1. バッチ状態API `GET /api/v1/daily-derby/status` の新設
+### ✅ R1〜R3 実装済み(2026-07-07)— 本番切替は環境変数
+- **`DAILY_DERBY_LIVE=1`(Render環境変数)で /races が実バッチ結線のライブモードに切り替わる**。未設定(現状)はプロトタイプのまま=開発中はユーザー不在でログが流れないため意図的にOFF(オーナー決定)。ローンチ日はenvを立てるだけ・再デプロイ不要
+- R1: `GET /api/v1/daily-derby/status`(`endpoints/derby.ts`) — phase/サーバー時刻/実カウント/匿名ティッカー/個人結果(DAY7>SOLD>BURNED>SURVIVED・dna_hash付き)/自分の馬名
+- R2: `components/daily-derby/DerbyLive.tsx` — サーバー時刻オフセット補正・ショー窓5秒/平常60秒ポーリング+タブ復帰時・途中参加は経過秒に合流・1時間以上過ぎていれば個人結果へ直行。**ログ濁流は案①(行は決定論生成・件数だけ実数・自分の馬名はハイライト)**
+- R3: `components/DerbyCountdown.tsx` — 全ページヘッダーに「NEXT DERBY HH:MM:SS」(12:00 UTCからローカル計算・API不要)、ショー中は「DERBY IS LIVE」赤バナー→/races
+- ライブモードの実地確認はローンチ前に1晩、envを立てて20:00の実バッチで行うこと(残テスト)
+
+### (旧記載)R1. バッチ状態API `GET /api/v1/daily-derby/status` の新設
 - 認証必須・読み取り専用・冪等性不要。**07_API.md更新+Decision Log追記の運用を忘れない**(禁止APIゲートはリテラルgrep)
 - レスポンス設計案:
   - `serverTime` / `nextDerbyAt`(クライアント時計ズレ補正。20:00 MYT=12:00 UTCは `lib/race-time.ts` に既存)
