@@ -1,5 +1,7 @@
 import {
   HORSE_TYPE_MODIFIER_V1,
+  ITEM_MODIFIER_RANGE_V1,
+  ITEM_RANDOM_MODIFIER_RANGE_V1,
   LUCK_TRAINED_RANDOM_RANGE_V1,
   MODIFIER_RANGES_V1,
   RARITY_MODIFIER_V1,
@@ -22,10 +24,14 @@ import { round2, uniformInRange, unitFromParts } from './random.js';
  *   final_score = base_ability_score + horse_type_modifier + rarity_modifier
  *               + dna_modifier + training_modifier + weather_modifier
  *               + track_modifier + condition_modifier + fatigue_modifier
- *               + revenge_buff_modifier + random_modifier
+ *               + revenge_buff_modifier + random_modifier [+ item_modifier]
  *
- * Every modifier is range-checked against the v1.0 table; violations throw —
- * an out-of-range value means corrupted inputs, never a legal score.
+ * v1.1 (Decision 078): item_modifier (0..+6, resolved at snapshot time and
+ * frozen as itemPoints) plus an item random-range shift (itemRandomShift).
+ * Snapshots without items resolve both to 0, so v1.0 rows replay unchanged.
+ *
+ * Every modifier is range-checked against the versioned table; violations
+ * throw — an out-of-range value means corrupted inputs, never a legal score.
  */
 
 export interface ScoreInput {
@@ -40,6 +46,9 @@ export interface ScoreInput {
   condition: number;
   fatigue: number;
   buffRarity: BuffRarity | null;
+  /** v1.1: frozen snapshot values (0 when no item was applied). */
+  itemPoints?: number;
+  itemRandomShift?: number;
   raceSeed: string;
   raceEngineVersion: string;
 }
@@ -57,6 +66,7 @@ export interface ScoreBreakdown {
   fatigueModifier: number;
   revengeBuffModifier: number;
   randomModifier: number;
+  itemModifier: number;
   finalScore: number;
 }
 
@@ -92,11 +102,22 @@ export function computeScore(input: ScoreInput): ScoreBreakdown {
   // range to -2.00/+4.00 for this race only. Deterministic and replayable.
   const luckActive = input.horseType === 'LUCK' && input.training !== null;
   const randomRange = luckActive ? LUCK_TRAINED_RANDOM_RANGE_V1 : MODIFIER_RANGES_V1.random_modifier;
-  const randomMod = uniformInRange(
+  const baseRandom = uniformInRange(
     unitFromParts(input.raceSeed, input.horseUuid, input.raceEngineVersion, 'random'),
     randomRange.min,
     randomRange.max,
   );
+
+  // Item System v1.1 (Decision 078): both values were resolved at snapshot
+  // time (public rule x seed-derived setting) and frozen as inputs.
+  const itemMod = input.itemPoints ?? 0;
+  if (itemMod < ITEM_MODIFIER_RANGE_V1.min || itemMod > ITEM_MODIFIER_RANGE_V1.max) {
+    throw new ScoreRangeError('item_modifier', itemMod);
+  }
+  const randomMod = round2(baseRandom + (input.itemRandomShift ?? 0));
+  if (randomMod < ITEM_RANDOM_MODIFIER_RANGE_V1.min || randomMod > ITEM_RANDOM_MODIFIER_RANGE_V1.max) {
+    throw new ScoreRangeError('random_modifier', randomMod);
+  }
 
   const finalScore = round2(
     base +
@@ -109,7 +130,8 @@ export function computeScore(input: ScoreInput): ScoreBreakdown {
       conditionMod +
       fatigueMod +
       buffMod +
-      randomMod,
+      randomMod +
+      itemMod,
   );
 
   return {
@@ -125,6 +147,7 @@ export function computeScore(input: ScoreInput): ScoreBreakdown {
     fatigueModifier: fatigueMod,
     revengeBuffModifier: buffMod,
     randomModifier: randomMod,
+    itemModifier: itemMod,
     finalScore,
   };
 }
