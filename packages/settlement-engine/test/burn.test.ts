@@ -270,10 +270,10 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
     expect(buffs.rows[0]!.refreshed_at).not.toBeNull();
   });
 
-  it('pays tiers along the placement chain gated by direct-referral volume (Decision 074)', async () => {
+  it('pays tiers along the placement chain gated by ORG volume (Decision 077)', async () => {
     // Chain (top to bottom): A <- B <- C <- every race owner.
-    // C: Tier 1 is unconditional. B: needs T2 (volume >= 3,001).
-    // A: needs T3 (volume >= 5,001).
+    // C: Tier 1 is unconditional. B: needs T2 (org >= 10,000).
+    // A: needs T3 (org >= 20,000).
     const a = await newUser();
     const b = await newUser();
     const c = await newUser();
@@ -285,12 +285,12 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
 
     // Volume horses are created AFTER the race snapshot, so they are not
     // race participants — they only count toward the point-in-time volume.
-    // B's direct referral holds 31 Day0 horses = 3,100 >= 3,001 -> T2 open.
-    const bReferral = await newUser(b);
-    for (let i = 0; i < 31; i += 1) await newHorse(bReferral, i);
-    // A's direct referral holds 30 Day0 horses = 3,000 < 5,001 -> T3 locked.
-    const aReferral = await newUser(a);
-    for (let i = 0; i < 30; i += 1) await newHorse(aReferral, i);
+    // B's PLACED member holds 95 Day0 horses = 9,500; plus the 9 surviving
+    // race owners under C (900) -> B org = 10,400 >= 10,000 -> T2 open.
+    // A org = the same 10,400 (B/C hold no horses) < 20,000 -> T3 locked.
+    const bMember = await newUser(b);
+    await placeUnder(bMember, b);
+    for (let i = 0; i < 95; i += 1) await newHorse(bMember, i);
 
     const [accA, accB, accC] = await Promise.all([
       ensureUserAccounts(client, a),
@@ -308,7 +308,7 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
     });
 
     expect(result.burnTargetCount).toBe(1);
-    // C: T1 3.00 (unconditional) / B: T2 2.00 (volume 3,100) / A: T3 locked.
+    // C: T1 3.00 (unconditional) / B: T2 2.00 (org 10,400) / A: T3 locked.
     expect(result.supportBonusPayments).toBe(2);
     expect(await getBalance(client, accC.available)).toBe('3.00000000');
     expect(await getBalance(client, accB.available)).toBe('2.00000000');
@@ -323,10 +323,9 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
     expect(notif.rows.map((r) => r.user_id).sort()).toEqual([b, c].sort());
     expect(notif.rows[0]!.payload_json.title).toBe('サポートボーナスを受け取りました。');
 
-    // Volume is a point-in-time stock: retire B's referral horses and burn
-    // again in a fresh race -> B downgrades to T1-only coverage (tier 2 of
-    // the NEW burn goes unpaid).
-    await client.query(`update horses set status = 'BURNED' where owner_user_id = $1`, [bReferral]);
+    // Volume is a point-in-time stock: the next race's setup sweep retires
+    // bMember's horses (all ACTIVE horses), so B's org collapses to the new
+    // owners' 900 -> downgrade to T1-only coverage (tier 2 goes unpaid).
     const setup2 = await buildScoredRace(10, () => c);
     for (const owner of setup2.owners) await placeUnder(owner, c);
     const result2 = await finalizeAndBurn(client, {

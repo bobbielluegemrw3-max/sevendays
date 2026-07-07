@@ -19,7 +19,9 @@ import {
   trainingModifierV1,
   MLM_REWARD_AMOUNT,
   MAX_CONCURRENT_PURCHASE_SESSIONS,
+  SUPPORT_BONUS_DIRECT_REQUIRED_FROM_TIER,
   SUPPORT_BONUS_MAX_TIERS_V1,
+  SUPPORT_BONUS_ORG_THRESHOLDS_V1,
   SUPPORT_BONUS_TIER_AMOUNTS_V1,
   SUPPORT_BONUS_TIER_THRESHOLDS_V1,
 } from '../src/constants.js';
@@ -195,6 +197,12 @@ describe('misc fixed values', () => {
     expect(SUPPORT_BONUS_TIER_THRESHOLDS_V1).toEqual(['0', '3001', '5001', '10001', '30001', '50001', '70001']);
     expect(SUPPORT_BONUS_TIER_THRESHOLDS_V1).toHaveLength(SUPPORT_BONUS_MAX_TIERS_V1);
     expect(SUPPORT_BONUS_TIER_AMOUNTS_V1).toHaveLength(SUPPORT_BONUS_MAX_TIERS_V1);
+  });
+
+  it('org unlock thresholds (Decision 077) with the direct requirement from T5', () => {
+    expect(SUPPORT_BONUS_ORG_THRESHOLDS_V1).toEqual(['0', '10000', '20000', '50000', '250000', '400000', '600000']);
+    expect(SUPPORT_BONUS_ORG_THRESHOLDS_V1).toHaveLength(SUPPORT_BONUS_MAX_TIERS_V1);
+    expect(SUPPORT_BONUS_DIRECT_REQUIRED_FROM_TIER).toBe(5);
   });
 
   it('economy severity order is EMERGENCY > WINTER > WATCH > NORMAL', () => {

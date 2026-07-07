@@ -10,10 +10,15 @@ export interface SupportSummary {
   has_sponsor: boolean;
   is_placed: boolean;
   unlocked_tiers: number;
-  volume: string;
+  /** 配置ツリー配下7段の稼働馬価値(全ティアの主条件、Decision 077)。 */
+  org_volume: string;
+  /** 直接紹介のみの稼働馬価値(T5以上で追加要求)。 */
+  direct_volume: string;
   max_tiers: number;
   tier_amounts: readonly string[];
-  tier_thresholds: readonly string[];
+  org_thresholds: readonly string[];
+  direct_thresholds: readonly string[];
+  direct_required_from_tier: number;
   pool_count: number;
   bonuses_received_total: string;
   bonuses_received_count: number;

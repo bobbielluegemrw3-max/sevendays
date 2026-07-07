@@ -32,10 +32,15 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
   useEffect(() => setOrigin(window.location.origin), []);
   const inviteUrl = `${origin.replace(/\/$/, '')}/?ref=${summary.referral_code}`;
 
-  const nextThreshold =
-    summary.unlocked_tiers < summary.max_tiers ? summary.tier_thresholds[summary.unlocked_tiers]! : null;
-  const progress = nextThreshold
-    ? Math.min(100, Math.round((Number(summary.volume) / Number(nextThreshold)) * 100))
+  // Decision 077: 主条件=組織(配下7段)ボリューム、T5以上は直接紹介も必要
+  const nextTier = summary.unlocked_tiers < summary.max_tiers ? summary.unlocked_tiers + 1 : null;
+  const nextOrgThreshold = nextTier ? summary.org_thresholds[nextTier - 1]! : null;
+  const nextDirectThreshold =
+    nextTier && nextTier >= summary.direct_required_from_tier
+      ? summary.direct_thresholds[nextTier - 1]!
+      : null;
+  const progress = nextOrgThreshold
+    ? Math.min(100, Math.round((Number(summary.org_volume) / Number(nextOrgThreshold)) * 100))
     : 100;
 
   const copyInvite = () => {
@@ -67,14 +72,16 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
             <span className={s.tierHeroBar}>
               <span className={s.progress}><span style={{ width: `${progress}%` }} /></span>
               <span className={s.tierHeroNext} style={{ display: 'block' }}>
-                {nextThreshold
-                  ? `T${summary.unlocked_tiers + 1}まで ${fmtUsdt(nextThreshold)} USDT 以上を維持`
+                {nextOrgThreshold
+                  ? `T${summary.unlocked_tiers + 1}まで 組織 ${fmtUsdt(nextOrgThreshold)} USDT 以上を維持` +
+                    (nextDirectThreshold ? `(+直接 ${fmtUsdt(nextDirectThreshold)} 以上)` : '')
                   : '最上位ティアに到達しています'}
               </span>
             </span>
           </div>
           <div className={s.tierHeroVol}>
-            直接招待した仲間の稼働馬 現在価値: <b>{fmtUsdt(summary.volume)} USDT</b> ·
+            組織(配下7段)の稼働馬 現在価値: <b>{fmtUsdt(summary.org_volume)} USDT</b> ·
+            直接招待分: <b>{fmtUsdt(summary.direct_volume)} USDT</b> ·
             毎日20:00 (GMT+8) に再評価(下回ると自動で下がります)
           </div>
         </div>
@@ -84,8 +91,8 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
           <div className={s.actionText}>
             {hasPool
               ? `配置待ちの仲間が ${summary.pool_count}名 います。配置するとネットワークに加わり、ティア維持につながります。`
-              : nextThreshold
-                ? `次のティア解放まで ${fmtUsdt(nextThreshold)} USDT。仲間を招待して、稼働馬の価値合計を伸ばしましょう。`
+              : nextOrgThreshold
+                ? `次のティア解放は組織 ${fmtUsdt(nextOrgThreshold)} USDT から。仲間を招待して、ネットワーク全体を育てましょう。`
                 : 'すべてのティアが解放されています。ネットワークの維持を続けましょう。'}
           </div>
           <Link href="/support/map" className={s.actionBtn}>
@@ -125,14 +132,20 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
                 <div className={s.tierCellName}>T{i + 1}{open ? ' ✓' : ''}</div>
                 <div className={s.tierCellAmount}>{Number(amount).toFixed(0)} USDT</div>
                 <div className={s.tierCellCond}>
-                  {i === 0 ? '常時' : `≥ ${Number(summary.tier_thresholds[i]).toLocaleString('en-US')}`}
+                  {i === 0
+                    ? '常時'
+                    : `組織 ≥ ${Number(summary.org_thresholds[i]).toLocaleString('en-US')}` +
+                      (i + 1 >= summary.direct_required_from_tier
+                        ? ` +直接 ≥ ${Number(summary.direct_thresholds[i]).toLocaleString('en-US')}`
+                        : '')}
                 </div>
               </div>
             );
           })}
         </div>
         <div className={s.tierFoot}>
-          ティア解放条件 = 直接招待した仲間の稼働馬の現在価値合計。横並び(直下の系列数)は無制限です。
+          組織ボリューム = あなたの組織マップ配下7段(サポートボーナスが届く範囲)の稼働馬価値の合計。
+          T5以上は「直接招待した仲間の稼働馬価値」も併せて必要です。横並び(直下の系列数)は無制限。
         </div>
       </section>
 

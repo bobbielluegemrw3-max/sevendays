@@ -147,15 +147,27 @@ export const SUPPORT_BONUS_TIER_AMOUNTS_V1: readonly string[] = [
   '3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00',
 ];
 /**
- * Tier unlock thresholds (USDT, inclusive lower bounds): tier N (1-based)
- * unlocks while the combined CURRENT value (PRICE_TABLE_V1) of ACTIVE horses
- * held by the user's direct referrals is >= THRESHOLDS[N-1]. Tier 1 is
- * unconditional; fractional volumes between bounds fall to the lower tier.
- * Point-in-time stock — evaluated at every 20:00 batch, downgrades freely.
+ * Tier unlocking v2 (Decision 077, amends 074): two point-in-time metrics,
+ * both the combined CURRENT value (PRICE_TABLE_V1) of ACTIVE horses held by
+ * ACTIVE members, evaluated at every 20:00 batch with automatic downgrade.
+ * Fractional volumes between bounds fall to the lower tier.
+ *
+ * ORG volume  — the user's PLACEMENT subtree down to 7 levels (= exactly the
+ *               payout depth). Governs every tier.
+ * DIRECT volume — direct referrals only (the Decision 074 metric, the
+ *               owner's field-tested numbers). ADDITIONALLY required from
+ *               tier 5 (a leader must remain an active recruiter; org volume
+ *               alone does not separate the top tiers — see
+ *               SUPPORT_TIER_SIMULATION.md).
  */
+export const SUPPORT_BONUS_ORG_THRESHOLDS_V1: readonly string[] = [
+  '0', '10000', '20000', '50000', '250000', '400000', '600000',
+];
 export const SUPPORT_BONUS_TIER_THRESHOLDS_V1: readonly string[] = [
   '0', '3001', '5001', '10001', '30001', '50001', '70001',
 ];
+/** DIRECT volume is required in addition to ORG volume from this tier on. */
+export const SUPPORT_BONUS_DIRECT_REQUIRED_FROM_TIER = 5;
 
 // ---------------------------------------------------------------------------
 // Horse Generation v1.0 (03_GAME_DESIGN.md)

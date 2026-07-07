@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import {
+  SUPPORT_BONUS_DIRECT_REQUIRED_FROM_TIER,
   SUPPORT_BONUS_MAX_TIERS_V1,
+  SUPPORT_BONUS_ORG_THRESHOLDS_V1,
   SUPPORT_BONUS_TIER_AMOUNTS_V1,
   SUPPORT_BONUS_TIER_THRESHOLDS_V1,
 } from '@sevendays/domain';
@@ -94,10 +96,13 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
         has_sponsor: me.rows[0].direct_referrer_user_id !== null,
         is_placed: me.rows[0].placement_parent_user_id !== null,
         unlocked_tiers: tier.unlockedTiers,
-        volume: tier.volume,
+        org_volume: tier.orgVolume,
+        direct_volume: tier.directVolume,
         max_tiers: SUPPORT_BONUS_MAX_TIERS_V1,
         tier_amounts: SUPPORT_BONUS_TIER_AMOUNTS_V1,
-        tier_thresholds: SUPPORT_BONUS_TIER_THRESHOLDS_V1,
+        org_thresholds: SUPPORT_BONUS_ORG_THRESHOLDS_V1,
+        direct_thresholds: SUPPORT_BONUS_TIER_THRESHOLDS_V1,
+        direct_required_from_tier: SUPPORT_BONUS_DIRECT_REQUIRED_FROM_TIER,
         pool_count: pool.rows[0]!.n,
         bonuses_received_total: received.rows[0]!.total,
         bonuses_received_count: received.rows[0]!.n,

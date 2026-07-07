@@ -3,7 +3,9 @@ import type { SqlClient } from '@sevendays/shared';
 import {
   MLM_REWARD_AMOUNT,
   PRICE_TABLE_V1,
+  SUPPORT_BONUS_DIRECT_REQUIRED_FROM_TIER,
   SUPPORT_BONUS_MAX_TIERS_V1,
+  SUPPORT_BONUS_ORG_THRESHOLDS_V1,
   SUPPORT_BONUS_TIER_AMOUNTS_V1,
   SUPPORT_BONUS_TIER_THRESHOLDS_V1,
   renderNotification,
@@ -18,30 +20,92 @@ import { getBalance, getPlatformAccountId, supportBonusPayment } from '@sevenday
  * and its unlocked tier count >= d. Anything unpaid stays in the reserve
  * (no redistribution — the EMERGENCY-mode safety surplus).
  *
- * Tier unlocking is a point-in-time stock: the combined CURRENT value
- * (PRICE_TABLE_V1) of ACTIVE horses held by the ancestor's DIRECT referrals
- * (sponsor relation), evaluated at this batch — so tiers downgrade
- * automatically when the volume is not maintained.
+ * Tier unlocking (Decision 077) is a point-in-time stock evaluated at this
+ * batch (downgrades freely): ORG volume — ACTIVE horses' current value held
+ * by ACTIVE members of the PLACEMENT subtree down to 7 levels — governs
+ * every tier; DIRECT-referral volume is additionally required from tier 5
+ * (org volume alone does not separate the top tiers).
  *
  * Idempotent: ledger keys are `mlm:{burnEventId}:t{tier}` and notification
  * dedupe keys mirror them, so a step retry converges.
  */
 
-// SQL fragments generated from the domain constants (trusted literals, both
-// sides numeric) so the boundary comparisons happen in exact NUMERIC math —
-// a float64 re-sum in JS could land 3001.00 at 3000.999… and misgrade.
+// SQL fragment generated from the domain price table (trusted literals) so
+// volume sums happen in exact NUMERIC math; boundary comparisons then run in
+// TS on integer cents (prices are 2-decimal, so sums are exact 2-decimal).
 const PRICE_CASE = Object.entries(PRICE_TABLE_V1)
   .map(([day, price]) => `when ${Number(day)} then ${price}::numeric`)
   .join(' ');
-const TIER_CASE = SUPPORT_BONUS_TIER_THRESHOLDS_V1
-  .map((min, i) => ({ min, tier: i + 1 }))
-  .sort((a, b) => b.tier - a.tier)
-  .map(({ min, tier }) => `when s.volume >= ${min}::numeric then ${tier}`)
-  .join(' ');
+
+/** Exact cents from a NUMERIC::text like "10400.00" (no float math). */
+function usdtTextToCents(text: string): number {
+  const [intPart, fracPart = ''] = text.split('.');
+  const frac = (fracPart + '00').slice(0, 2);
+  return Number(intPart) * 100 + Number(frac);
+}
+
+/**
+ * Decision 077 unlock rule (pure): ORG volume (placement subtree <=7 levels)
+ * governs every tier; DIRECT volume is additionally required from tier 5.
+ */
+export function computeUnlockedTiers(orgVolumeText: string, directVolumeText: string): number {
+  const org = usdtTextToCents(orgVolumeText);
+  const direct = usdtTextToCents(directVolumeText);
+  let unlocked = 1;
+  for (let tier = 2; tier <= SUPPORT_BONUS_MAX_TIERS_V1; tier += 1) {
+    if (org < Number(SUPPORT_BONUS_ORG_THRESHOLDS_V1[tier - 1]) * 100) break;
+    if (
+      tier >= SUPPORT_BONUS_DIRECT_REQUIRED_FROM_TIER &&
+      direct < Number(SUPPORT_BONUS_TIER_THRESHOLDS_V1[tier - 1]) * 100
+    ) {
+      break;
+    }
+    unlocked = tier;
+  }
+  return unlocked;
+}
+
+/** DIRECT volumes (Decision 074 metric) for a set of users, as NUMERIC text. */
+async function directVolumes(client: SqlClient, ids: readonly string[]): Promise<Map<string, string>> {
+  const r = await client.query<{ id: string; volume: string }>(
+    `select u.id, coalesce(sum(case h.current_day ${PRICE_CASE} end), 0)::text as volume
+     from users u
+     left join users r on r.direct_referrer_user_id = u.id and r.status = 'ACTIVE'
+     left join horses h on h.owner_user_id = r.id and h.status = 'ACTIVE'
+     where u.id = any($1)
+     group by u.id`,
+    [ids],
+  );
+  return new Map(r.rows.map((row) => [row.id, row.volume]));
+}
+
+/** ORG volumes (placement subtree, <=7 levels down) for a set of users. */
+async function orgVolumes(client: SqlClient, ids: readonly string[]): Promise<Map<string, string>> {
+  const r = await client.query<{ id: string; volume: string }>(
+    `with recursive org as (
+       select a.id as root_id, a.id as member_id, 0 as depth
+       from users a where a.id = any($1)
+       union all
+       select o.root_id, c.id, o.depth + 1
+       from org o join users c on c.placement_parent_user_id = o.member_id
+       where o.depth < ${SUPPORT_BONUS_MAX_TIERS_V1}
+     )
+     select o.root_id as id, coalesce(sum(case h.current_day ${PRICE_CASE} end), 0)::text as volume
+     from org o
+     join users m on m.id = o.member_id and m.status = 'ACTIVE'
+     left join horses h on h.owner_user_id = o.member_id and h.status = 'ACTIVE'
+     where o.depth >= 1
+     group by o.root_id`,
+    [ids],
+  );
+  return new Map(r.rows.map((row) => [row.id, row.volume]));
+}
 
 export interface SupportTierStatus {
-  /** Combined current value of ACTIVE horses held by direct referrals. */
-  volume: string;
+  /** Placement-subtree (<=7 levels) volume — governs every tier. */
+  orgVolume: string;
+  /** Direct referrals' volume — additionally required from tier 5. */
+  directVolume: string;
   /** 1..7 — tier 1 is unconditional. */
   unlockedTiers: number;
 }
@@ -51,20 +115,13 @@ export async function supportTierStatus(
   client: SqlClient,
   userId: string,
 ): Promise<SupportTierStatus> {
-  const r = await client.query<{ volume: string; unlocked: number }>(
-    `select s.volume::text as volume, (case ${TIER_CASE} else 1 end)::int as unlocked
-     from (
-       select u.id, coalesce(sum(case h.current_day ${PRICE_CASE} end), 0) as volume
-       from users u
-       left join users r on r.direct_referrer_user_id = u.id and r.status = 'ACTIVE'
-       left join horses h on h.owner_user_id = r.id and h.status = 'ACTIVE'
-       where u.id = $1
-       group by u.id
-     ) s`,
-    [userId],
-  );
-  const row = r.rows[0];
-  return row ? { volume: row.volume, unlockedTiers: row.unlocked } : { volume: '0', unlockedTiers: 1 };
+  const [org, direct] = await Promise.all([
+    orgVolumes(client, [userId]),
+    directVolumes(client, [userId]),
+  ]);
+  const orgVolume = org.get(userId) ?? '0';
+  const directVolume = direct.get(userId) ?? '0';
+  return { orgVolume, directVolume, unlockedTiers: computeUnlockedTiers(orgVolume, directVolume) };
 }
 
 export interface SupportBonusBurn {
@@ -135,21 +192,16 @@ export async function paySupportBonusesForBurns(
   }
 
   // 2. Unlocked tiers per distinct ancestor — one evaluation for the whole
-  //    race (exact NUMERIC comparison in SQL).
+  //    race against the same post-burn snapshot (Decision 077: org subtree
+  //    <=7 levels for every tier, plus the direct metric from tier 5).
   const ancestorIds = [...new Set(ancestors.rows.map((r) => r.id))];
-  const tiers = await client.query<{ id: string; unlocked: number }>(
-    `select s.id, (case ${TIER_CASE} else 1 end)::int as unlocked
-     from (
-       select u.id, coalesce(sum(case h.current_day ${PRICE_CASE} end), 0) as volume
-       from users u
-       left join users r on r.direct_referrer_user_id = u.id and r.status = 'ACTIVE'
-       left join horses h on h.owner_user_id = r.id and h.status = 'ACTIVE'
-       where u.id = any($1)
-       group by u.id
-     ) s`,
-    [ancestorIds],
+  const [orgById, directById] = await Promise.all([
+    orgVolumes(client, ancestorIds),
+    directVolumes(client, ancestorIds),
+  ]);
+  const unlockedById = new Map(
+    ancestorIds.map((id) => [id, computeUnlockedTiers(orgById.get(id) ?? '0', directById.get(id) ?? '0')]),
   );
-  const unlockedById = new Map(tiers.rows.map((r) => [r.id, r.unlocked]));
 
   // 3. Pay qualifying tiers per burn event; skipped tiers are never debited.
   let payments = 0;
