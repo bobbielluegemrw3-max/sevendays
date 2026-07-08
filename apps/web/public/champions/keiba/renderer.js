@@ -1639,37 +1639,65 @@
     _spriteFramesFor(h) {
       if (!this._gallop) return null;
       if (!this._spriteCache) this._spriteCache = new Map();
-      const tintA = this.env && Number.isFinite(this.env.tintAlpha) ? this.env.tintAlpha : 0.7;
-      const goldA = this.env && Number.isFinite(this.env.goldAlpha) ? this.env.goldAlpha : 0.55;
-      const key = h.num + ":" + (h.coat || "") + ":" + tintA + ":" + goldA;
+      const key = h.num + ":" + (h.coat || "");
       let baked = this._spriteCache.get(key);
       if (baked) return baked;
       const S = 384;
+      // 着色はNFTアート(NftHorseArt)と同一: 真HSVの色相回転。マスター(シアン
+      // ≈190°)から各馬の色相への差分だけ回す。彩度・明度=絵の質感は不変なので
+      // 「NFTと同じ発色」になる。hue/color合成の即席着色は廃止(2026-07-08)。
+      const hex = h.coat || "#7de3ff";
+      const hr = parseInt(hex.slice(1, 3), 16) / 255,
+            hg = parseInt(hex.slice(3, 5), 16) / 255,
+            hb = parseInt(hex.slice(5, 7), 16) / 255;
+      const hmx = Math.max(hr, hg, hb), hmn = Math.min(hr, hg, hb), hd = hmx - hmn;
+      let targetHue = 0;
+      if (hd > 1e-6) {
+        if (hmx === hr) targetHue = ((hg - hb) / hd) % 6;
+        else if (hmx === hg) targetHue = (hb - hr) / hd + 2;
+        else targetHue = (hr - hg) / hd + 4;
+        targetHue *= 60; if (targetHue < 0) targetHue += 360;
+      }
+      const rotDeg = ((targetHue - 190) % 360 + 360) % 360;
+      const rotNorm = rotDeg / 360;
       baked = this._gallop.map((img, i) => {
         const c = document.createElement("canvas");
         c.width = S; c.height = S;
         const g = c.getContext("2d");
         g.drawImage(img, 0, 0, S, S);
-        // 鬣などの有彩色部分の色相を差し替え
-        g.globalCompositeOperation = "hue";
-        g.fillStyle = h.coat || "#7de3ff";
-        g.fillRect(0, 0, S, S);
-        // 無彩色の黒クローム馬体にも各馬の色を注入(彩度を与える。alpha控えめで
-        // クロームの陰影は残す)— これが無いと個体色が鬣だけになり全馬同じに見える
-        g.globalCompositeOperation = "color";
-        g.globalAlpha = tintA;
-        g.fillRect(0, 0, S, S);
-        g.globalAlpha = 1;
-        g.globalCompositeOperation = "destination-in";
-        g.drawImage(img, 0, 0, S, S);
-        g.globalCompositeOperation = "source-over";
-        // 金装甲レイヤーは色相回転させず重ねる(NFTのaccents層と同じ思想)
-        const gold = this._gallopGold && this._gallopGold[i];
-        if (gold && gold.complete && gold.naturalWidth && goldA > 0) {
-          g.globalAlpha = goldA;
-          g.drawImage(gold, 0, 0, S, S);
-          g.globalAlpha = 1;
+        if (rotDeg > 0.5 && rotDeg < 359.5) {
+          const id = g.getImageData(0, 0, S, S);
+          const d = id.data;
+          for (let px = 0; px < d.length; px += 4) {
+            if (d[px + 3] === 0) continue;
+            const r = d[px] / 255, gg2 = d[px + 1] / 255, b = d[px + 2] / 255;
+            const mx = Math.max(r, gg2, b), mn = Math.min(r, gg2, b), diff = mx - mn;
+            if (diff < 1e-6) continue; // 無彩色(クローム)は回転不要
+            let hh = 0;
+            if (mx === r) hh = ((gg2 - b) / diff) % 6;
+            else if (mx === gg2) hh = (b - r) / diff + 2;
+            else hh = (r - gg2) / diff + 4;
+            hh /= 6; if (hh < 0) hh += 1;
+            const sat = mx > 1e-6 ? diff / mx : 0;
+            const v = mx;
+            hh = (hh + rotNorm) % 1;
+            const k = Math.floor(hh * 6) % 6;
+            const f = hh * 6 - Math.floor(hh * 6);
+            const p0 = v * (1 - sat), q0 = v * (1 - f * sat), t0 = v * (1 - (1 - f) * sat);
+            let nr = v, ng = t0, nb = p0;
+            if (k === 1) { nr = q0; ng = v; nb = p0; }
+            else if (k === 2) { nr = p0; ng = v; nb = t0; }
+            else if (k === 3) { nr = p0; ng = q0; nb = v; }
+            else if (k === 4) { nr = t0; ng = p0; nb = v; }
+            else if (k === 5) { nr = v; ng = p0; nb = q0; }
+            d[px] = Math.round(nr * 255); d[px + 1] = Math.round(ng * 255); d[px + 2] = Math.round(nb * 255);
+          }
+          g.putImageData(id, 0, 0);
         }
+        // 金装甲レイヤーは回転させず不透明で重ねる(NFTのaccents層と同一思想。
+        // 半透明重ねは他馬が透けるためやらない — オーナー指摘 2026-07-08)
+        const gold = this._gallopGold && this._gallopGold[i];
+        if (gold && gold.complete && gold.naturalWidth) g.drawImage(gold, 0, 0, S, S);
         return c;
       });
       this._spriteCache.set(key, baked);
