@@ -85,6 +85,7 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
         setSpeed: (v: number) => void;
         setCamera: (m: string) => void;
         setMiniMap: (b: boolean) => void;
+        setCamZoom?: (z: number) => void;
       } | null;
       if (!engine || !el) return;
       const input = {
@@ -120,6 +121,8 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
         el.setSpeed(2.5);
         el.setCamera('auto');
         el.setMiniMap(false);
+        // 接写寄り: レース距離だと馬が小さくテクスチャが見えないため
+        el.setCamZoom?.(1.45);
         el.start();
       } catch (err) {
         console.error('ChampionHero race build failed:', err);
