@@ -511,7 +511,7 @@
                   if (t._emisTex && t._emisTex[coatIdx]) {
                     cl.emissiveMap = t._emisTex[coatIdx];
                     if (cl.emissive) cl.emissive.setRGB(1, 1, 1);
-                    cl.emissiveIntensity = 1.1;
+                    cl.emissiveIntensity = 1.5;
                   }
                   if (t._ormTex) {
                     cl.roughnessMap = t._ormTex;
@@ -522,10 +522,17 @@
                     if ("metalness" in cl) cl.metalness = 0.85;
                     if ("roughness" in cl) cl.roughness = 0.28;
                   }
-                  if ("envMapIntensity" in cl) cl.envMapIntensity = 1.5;
+                  if ("envMapIntensity" in cl) cl.envMapIntensity = 2.2;
                 }
               }
-                else if (hairMesh) { cl.map = null; if (cl.color) cl.color.set(coat.hair); } // 緑のデータテクスチャを外し自然な毛色に
+                else if (hairMesh) {
+                  cl.map = null;
+                  if (METALLIC) {
+                    // Seven Days: たてがみ/尻尾はネオン発光(NFTの流れる鬣の同一性)
+                    if (cl.color) cl.color.set("#0a0714");
+                    if (cl.emissive) { cl.emissive.set(coat.hair); cl.emissiveIntensity = 2.2; }
+                  } else if (cl.color) cl.color.set(coat.hair);
+                } // 緑のデータテクスチャを外し自然な毛色に
                 else if (cl.color) cl.color.setRGB(coat.mul[0], coat.mul[1], coat.mul[2]);
                 return cl;
               });
@@ -589,9 +596,9 @@
         // Seven Days CHAMPION: 漆黒のアリーナに金のリムライト
         t.hemi.color.set(0xf2e4bf);
         if (t.hemi.groundColor) t.hemi.groundColor.set(0x0b0814);
-        t.hemi.intensity = 0.55;
+        t.hemi.intensity = 0.8;
         t.sun.color.set(0xf2e4bf);
-        t.sun.intensity = 1.4;
+        t.sun.intensity = 1.9;
         return;
       }
       t.hemi.color.set(dusk ? 0xd8b9a0 : 0xeaf2ff);
@@ -1149,7 +1156,7 @@
         else if (b.kind === "finpole") this._drawFinPole(ctx, cam, b.o);
         else if (b.kind === "ad") this._drawAd(ctx, cam, b.o);
         else if (b.kind === "vision") this._drawVision(ctx, cam);
-        else if (b.kind === "gate") this._drawGate(ctx, cam);
+        else if (b.kind === "gate") { if (!(this.env && this.env.metallic)) this._drawGate(ctx, cam); }
         else if (b.kind === "pt") {
           const p = cam.proj(b.o.x, b.o.y, b.o.z);
           if (p) { ctx.fillStyle = b.o.c; ctx.globalAlpha = clamp(b.o.life * 1.6, 0, 0.8); ctx.fillRect(p.x, p.y, Math.max(1.5, p.s * 0.1), Math.max(1.5, p.s * 0.1)); ctx.globalAlpha = 1; }
