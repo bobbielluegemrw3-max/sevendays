@@ -1630,8 +1630,8 @@
       // 完歩≈7.4m。個体位相(_ph)でコマをずらし、脚並びの揃いすぎを防ぐ
       const cyc = (s.d / 7.4 + (this._ph[s.h.num] || 0)) % 1;
       const img = frames[Math.floor(((cyc + 1) % 1) * frames.length) % frames.length];
-      // 画像内で馬体は約45%(鬣・余白込みの1024px正方)— 実寸で映えるよう全高≈5.4m相当
-      const H = 5.4 * ppm;
+      // 画像内で馬体は約45%(鬣・余白込みの1024px正方)— 追走カメラで映える全高≈4.6m相当
+      const H = 4.6 * ppm;
       const FEET = 0.92;     // 接地基準(納品仕様: 下端から8%)
       // 接地影
       ctx.fillStyle = "rgba(0,0,0,0.5)";

@@ -120,10 +120,11 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
         el.loadRace(race, { time: 'void', season: 'winter', metallic: true });
         // 1.6倍: 実時間だと間延び、速すぎると小走りに見える中庸
         el.setSpeed(1.6);
-        // ビルボード(NFT連続画)は真横が最も美しい — サイドカメラ固定
-        el.setCamera('side');
+        // 'side'はコース全体の固定引きカメラ(馬が光点になる)。追走カメラで
+        // 馬に寄る。スプライトは常にカメラを向くのでどのカットでも成立する
+        el.setCamera('auto');
         el.setMiniMap(false);
-        el.setCamZoom?.(1.9);
+        el.setCamZoom?.(1.5);
         el.start();
       } catch (err) {
         console.error('ChampionHero race build failed:', err);
