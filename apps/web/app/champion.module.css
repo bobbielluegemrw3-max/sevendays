@@ -1,0 +1,159 @@
+/* ============================================================
+   CHAMPION — 栄誉の集約ページ(ADR-011 / Decision 080)
+   黒×金。ヒーロー=シアター移植のループアニメ。
+   ============================================================ */
+
+.hero {
+  position: relative;
+  height: min(52vh, 440px);
+  border: 1px solid rgba(201, 168, 106, 0.35);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #050409;
+  box-shadow: 0 0 60px rgba(201, 168, 106, 0.08) inset, var(--shadow);
+}
+.heroCanvas { position: absolute; inset: 0; }
+.heroLoading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold-bright);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.4em;
+  text-indent: 0.4em;
+  animation: heroPulse 2s ease-in-out infinite;
+}
+@keyframes heroPulse { 0%, 100% { opacity: 0.9; } 50% { opacity: 0.4; } }
+
+.heroOverlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1.1rem 1.3rem 1rem;
+  background: linear-gradient(180deg, transparent, rgba(5, 4, 9, 0.9) 60%);
+  pointer-events: none;
+}
+.heroKicker {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.42em;
+  color: var(--faint);
+}
+.heroTitle {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(1.4rem, 5vw, 2.4rem);
+  letter-spacing: 0.18em;
+  background: linear-gradient(92deg, #f6ecd2, var(--gold-bright) 45%, #8a6d3b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.heroComing {
+  display: inline-block;
+  margin-top: 0.3rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+  color: var(--gold-bright);
+  border: 1px solid rgba(201, 168, 106, 0.5);
+  border-radius: 999px;
+  padding: 0.22rem 0.9rem 0.22rem 1.1rem;
+}
+.heroNote { margin-top: 0.4rem; color: var(--muted); font-size: 0.76rem; }
+
+/* ---- セクション共通 ---- */
+.secTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  font-size: 1rem;
+  margin-bottom: 0.2rem;
+}
+.secSub { color: var(--faint); font-size: 0.74rem; font-family: var(--font-mono); }
+
+/* ---- 殿堂 ---- */
+.hallGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.7rem;
+}
+.hallCard {
+  border: 1px solid rgba(201, 168, 106, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem;
+  background:
+    radial-gradient(300px 160px at 50% 0%, rgba(201, 168, 106, 0.08), transparent 70%),
+    rgba(255, 255, 255, 0.015);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.hallArt { width: 100%; border-radius: 8px; overflow: hidden; }
+.hallName { font-weight: 700; font-size: 0.88rem; }
+.hallMeta { color: var(--faint); font-size: 0.7rem; font-family: var(--font-mono); display: flex; flex-wrap: wrap; gap: 0.35rem 0.7rem; }
+.hallDate { color: var(--gold-bright); }
+.hallSample {
+  color: var(--faint);
+  font-size: 0.74rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  padding: 0.5rem 0.8rem;
+  margin-bottom: 0.7rem;
+}
+
+/* ---- リーグ予告 ---- */
+.leagueGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.7rem;
+}
+.leagueCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 0.95rem;
+  background: rgba(255, 255, 255, 0.015);
+}
+.leagueK {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.2em;
+  color: var(--gold-bright);
+  margin-bottom: 0.35rem;
+}
+.leagueV { color: var(--muted); font-size: 0.8rem; line-height: 1.7; }
+
+.classRow { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.2rem; }
+.classChip {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  padding: 0.14rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+}
+.classChipG {
+  border-color: rgba(201, 168, 106, 0.55);
+  color: var(--gold-bright);
+}
+.comingTag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.25em;
+  color: var(--faint);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}

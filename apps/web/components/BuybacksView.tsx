@@ -25,7 +25,7 @@ export function BuybacksView({ buybacks }: { buybacks: Buyback[] }) {
     <div className={s.wrap}>
       <div className={s.h1}>チャンピオン報酬</div>
       <div className={s.intro}>
-        Day7を生き延びた馬は <b>200 USDT</b> で買い戻されます。翌日（D+1）から <b>7回</b>に分けて受取。
+        Day7を走破した馬はチャンピオンとして <b>200 USDT</b> のチャンピオン報酬を受け取ります。翌日（D+1）から <b>7回</b>に分けて自動で支払われます。
         7回完了で <b>記念NFT</b>（Polygon / ERC-721）がミントされます。
       </div>
 

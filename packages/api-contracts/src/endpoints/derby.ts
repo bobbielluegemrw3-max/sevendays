@@ -22,6 +22,49 @@ function nextDerbyAt(now: Date): string {
 }
 
 export function registerDerbyEndpoints(registry: ApiRegistry): void {
+  // Hall of Champions (ADR-011): every Day7 clearer, newest first. Owner is
+  // masked (R3 display rules); no balances.
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/champions/hall',
+    auth: 'user',
+    handler: async (ctx) => {
+      const rows = await ctx.client.query<{
+        id: string;
+        name: string;
+        dna_hash: string;
+        horse_type: string;
+        rarity: string;
+        email: string;
+        day7_clear_date: string | null;
+      }>(
+        `select h.id, h.name, h.dna_hash, h.horse_type::text as horse_type,
+                h.rarity::text as rarity, u.email,
+                bb.day7_clear_date::text as day7_clear_date
+         from horses h
+         join users u on u.id = h.owner_user_id
+         left join buybacks bb on bb.horse_id = h.id
+         where h.status in ('DAY7_CLEARED', 'MEMORIALIZED')
+         order by bb.day7_clear_date desc nulls last, h.id
+         limit 60`,
+        [],
+      );
+      return {
+        champions: rows.rows.map((r) => ({
+          horse_id: r.id,
+          name: r.name,
+          dna_hash: r.dna_hash,
+          horse_type: r.horse_type,
+          rarity: r.rarity,
+          owner: r.email.endsWith('@user.sevendays')
+            ? 'ウォレットユーザー'
+            : `${r.email.slice(0, 2)}***`,
+          cleared_at: r.day7_clear_date,
+        })),
+      };
+    },
+  });
+
   registry.register({
     method: 'GET',
     path: '/api/v1/daily-derby/status',
