@@ -119,8 +119,8 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       try {
         const race = engine.generateRaceFromInput(input, { seed: seedRef.current });
         el.loadRace(race, { time: 'void', season: 'winter', metallic: true });
-        // 接写では等速に近いほど重厚(速いと小走りに見える)
-        el.setSpeed(1.25);
+        // 接写では等速が最も重厚(速いと小走りに見える)
+        el.setSpeed(1.0);
         // 'side'はコース全体の固定引きカメラ(馬が光点になる)。追走カメラで
         // 馬に寄る。スプライトは常にカメラを向くのでどのカットでも成立する
         el.setCamera('auto');

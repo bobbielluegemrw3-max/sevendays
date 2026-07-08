@@ -1659,8 +1659,9 @@
       const w2 = this.track.laneWorld(Math.min(s.d, this.race.distance + 80) + 3, s.l);
       const p2 = cam.proj(w2.x, 0, w2.z);
       const dir = p2 && p2.x < p.x ? -1 : 1;
-      // 完歩≈7.4m。個体位相(_ph)でコマをずらし、脚並びの揃いすぎを防ぐ
-      const cyc = (s.d / 7.4 + (this._ph[s.h.num] || 0)) % 1;
+      // コマ送りは映像優先: 完歩16m相当のスローモーション(実寸の脚回転だと
+      // 接写では4倍速の小走りに見える — オーナー指摘 2026-07-08)
+      const cyc = (s.d / 16 + (this._ph[s.h.num] || 0)) % 1;
       const img = frames[Math.floor(((cyc + 1) % 1) * frames.length) % frames.length];
       // 画像内で馬体は約45%(鬣・余白込みの1024px正方)— 追走カメラで映える全高≈4.6m相当
       const H = 4.6 * ppm;
