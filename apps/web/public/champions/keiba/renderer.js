@@ -1647,26 +1647,33 @@
       const set = this._gallopSets[h.arch] || this._gallopSets.v2;
       if (!set) return null;
       if (!this._spriteCache) this._spriteCache = new Map();
-      const key = h.num + ":" + (h.coat || "") + ":" + (h.arch || "v2");
+      const key = h.num + ":" + (h.coat || "") + ":" + (h.arch || "v2") + ":" + (h.coatDeg ?? "x");
       let baked = this._spriteCache.get(key);
       if (baked) return baked;
       const S = 512;
       // 着色はNFTアート(NftHorseArt)と同一: 真HSVの色相回転。マスター(シアン
       // ≈190°)から各馬の色相への差分だけ回す。彩度・明度=絵の質感は不変なので
       // 「NFTと同じ発色」になる。hue/color合成の即席着色は廃止(2026-07-08)。
-      const hex = h.coat || "#7de3ff";
-      const hr = parseInt(hex.slice(1, 3), 16) / 255,
-            hg = parseInt(hex.slice(3, 5), 16) / 255,
-            hb = parseInt(hex.slice(5, 7), 16) / 255;
-      const hmx = Math.max(hr, hg, hb), hmn = Math.min(hr, hg, hb), hd = hmx - hmn;
-      let targetHue = 0;
-      if (hd > 1e-6) {
-        if (hmx === hr) targetHue = ((hg - hb) / hd) % 6;
-        else if (hmx === hg) targetHue = (hb - hr) / hd + 2;
-        else targetHue = (hr - hg) / hd + 4;
-        targetHue *= 60; if (targetHue < 0) targetHue += 360;
+      // NFTカードと完全同一の回転: 承認済みbodyDeg(12角度)をそのまま使う。
+      // 独自hex→絶対色相の変換は公式576ルック外の色を作るため廃止(2026-07-08)。
+      let rotDeg;
+      if (Number.isFinite(h.coatDeg)) {
+        rotDeg = ((h.coatDeg % 360) + 360) % 360;
+      } else {
+        const hex = h.coat || "#7de3ff";
+        const hr = parseInt(hex.slice(1, 3), 16) / 255,
+              hg = parseInt(hex.slice(3, 5), 16) / 255,
+              hb = parseInt(hex.slice(5, 7), 16) / 255;
+        const hmx = Math.max(hr, hg, hb), hmn = Math.min(hr, hg, hb), hd = hmx - hmn;
+        let targetHue = 0;
+        if (hd > 1e-6) {
+          if (hmx === hr) targetHue = ((hg - hb) / hd) % 6;
+          else if (hmx === hg) targetHue = (hb - hr) / hd + 2;
+          else targetHue = (hr - hg) / hd + 4;
+          targetHue *= 60; if (targetHue < 0) targetHue += 360;
+        }
+        rotDeg = ((targetHue - 190) % 360 + 360) % 360;
       }
-      const rotDeg = ((targetHue - 190) % 360 + 360) % 360;
       const rotNorm = rotDeg / 360;
       const bakeOne = (SZ) => set.coats.map((img, i) => {
         const c = document.createElement("canvas");
@@ -1689,7 +1696,7 @@
             hh /= 6; if (hh < 0) hh += 1;
             let sat = mx > 1e-6 ? diff / mx : 0;
             // webp圧縮で眠くなった彩度を補正(NFT原画のくっきり感に寄せる)
-            sat = Math.min(1, sat * 1.12);
+            sat = Math.min(1, sat * 1.05);
             const v = mx;
             hh = (hh + rotNorm) % 1;
             const k = Math.floor(hh * 6) % 6;

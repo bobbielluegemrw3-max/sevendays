@@ -113,8 +113,10 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
             finishRank: rot(seed * 3 + 5),
             stability: 0.75,
             coat: metallicCoat(h.dna_hash, h.name),
-            // NFTルックと同じアーキタイプ(v2=金×黒/v3=虹クローム/v4=黒メカ)
+            // NFTルックそのもの: アーキタイプ+承認済み回転角(bodyDeg)。
+            // スプライトはカードと同じ角度で回す=マケプレと同じ公式パレット
             arch: deriveNftLook(h.dna_hash, h.name).arch,
+            coatDeg: deriveNftLook(h.dna_hash, h.name).bodyDeg,
           };
         }),
       };
@@ -155,8 +157,8 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=20260709d')
-      .then(() => addScript('/champions/keiba/renderer.js?v=20260709d'))
+    addScript('/champions/keiba/engine.js?v=20260709e')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260709e'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;
