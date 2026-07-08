@@ -138,8 +138,8 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=20260708c')
-      .then(() => addScript('/champions/keiba/renderer.js?v=20260708c'))
+    addScript('/champions/keiba/engine.js?v=20260708d')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260708d'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;

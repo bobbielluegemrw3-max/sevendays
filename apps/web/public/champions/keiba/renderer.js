@@ -1661,10 +1661,14 @@
       const w2 = this.track.laneWorld(Math.min(s.d, this.race.distance + 80) + 3, s.l);
       const p2 = cam.proj(w2.x, 0, w2.z);
       const dir = p2 && p2.x < p.x ? -1 : 1;
-      // コマ送りは映像優先: 完歩16m相当のスローモーション(実寸の脚回転だと
-      // 接写では4倍速の小走りに見える — オーナー指摘 2026-07-08)
+      // AI生成コマは1枚ごとに模様が揺れる(ボイリング)ため、切替を隣接コマの
+      // クロスフェードで滑らかにする。コマ切替そのものが「本体が高速で描き
+      // 直される」16倍速感の正体(オーナー観察 2026-07-08)。
       const cyc = (s.d / 6 + (this._ph[s.h.num] || 0)) % 1;
-      const img = frames[Math.floor(((cyc + 1) % 1) * frames.length) % frames.length];
+      const fpos = ((cyc + 1) % 1) * frames.length;
+      const f0 = Math.floor(fpos) % frames.length;
+      const f1 = (f0 + 1) % frames.length;
+      const mix = fpos - Math.floor(fpos);
       // 画像内で馬体は約45%(鬣・余白込みの1024px正方)— 追走カメラで映える全高≈4.6m相当
       const H = 4.6 * ppm;
       const FEET = 0.92;     // 接地基準(納品仕様: 下端から8%)
@@ -1676,7 +1680,10 @@
       ctx.save();
       ctx.translate(p.x, p.y);
       if (dir < 0) ctx.scale(-1, 1);
-      ctx.drawImage(img, -H / 2, -H * FEET, H, H);
+      ctx.drawImage(frames[f0], -H / 2, -H * FEET, H, H);
+      ctx.globalAlpha = mix;
+      ctx.drawImage(frames[f1], -H / 2, -H * FEET, H, H);
+      ctx.globalAlpha = 1;
       ctx.restore();
     }
     _drawGate(ctx, cam) {
