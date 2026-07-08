@@ -706,7 +706,7 @@
       const ground = new T.Mesh(
         new T.PlaneGeometry(6000, 6000),
         V
-          ? new T.MeshStandardMaterial({ color: 0xffffff, map: floorTex, roughness: 0.85, metalness: 0.1 })
+          ? new T.MeshStandardMaterial({ color: 0xffffff, map: floorTex, roughness: 0.95, metalness: 0.02, envMapIntensity: 0.2 })
           : new T.MeshStandardMaterial({ color: 0x4f9255, map: mkTex(1400, 1400), roughness: 1, metalness: 0 }),
       );
       ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; ground.receiveShadow = true;
@@ -733,7 +733,7 @@
       const trackMesh = new T.Mesh(
         rg,
         V
-          ? new T.MeshStandardMaterial({ vertexColors: false, color: 0xffffff, map: trackTex, roughness: 0.55, metalness: 0.15 })
+          ? new T.MeshStandardMaterial({ vertexColors: false, color: 0xffffff, map: trackTex, roughness: 0.92, metalness: 0.04, envMapIntensity: 0.25 })
           : new T.MeshStandardMaterial({ vertexColors: true, map: mkTex(1, 1), roughness: 1, metalness: 0 }),
       );
       trackMesh.receiveShadow = true;
@@ -1173,15 +1173,18 @@
         }
         else if (b.kind === "horse") {
           if (this.env && this.env.metallic) {
-            // Seven Days: NFTスプライト経路(コマ未ロード中は描かない=フラッシュ防止)
+            // Seven Days: NFTスプライト経路(コマ未ロード中は描かない=フラッシュ防止)。
+            // ⚠ キャンバスは3層(cv=2D背景 / glcv=3D / fxcv=最上)。cvに描くと
+            // 3Dの床に隠れるため、スプライトはチップと同じ最上層(fctx)に描く。
             if (this._gallop) {
-              this._drawSpriteHorse(ctx, cam, b.o, b.w);
+              const octx = this.fctx || ctx;
+              this._drawSpriteHorse(octx, cam, b.o, b.w);
               const pj = cam.proj(b.w.x, 0, b.w.z);
               if (pj) {
                 if ((this._flash[b.o.h.num] || 0) > this.t && pj.s > 3) {
-                  ctx.strokeStyle = "rgba(255,205,80,0.8)";
-                  ctx.lineWidth = Math.max(1.5, pj.s * 0.07);
-                  ctx.beginPath(); ctx.ellipse(pj.x, pj.y + 0.04 * pj.s, 1.95 * pj.s, 0.34 * pj.s, 0, 0, 7); ctx.stroke();
+                  octx.strokeStyle = "rgba(255,205,80,0.8)";
+                  octx.lineWidth = Math.max(1.5, pj.s * 0.07);
+                  octx.beginPath(); octx.ellipse(pj.x, pj.y + 0.04 * pj.s, 1.95 * pj.s, 0.34 * pj.s, 0, 0, 7); octx.stroke();
                 }
                 this._badges.push({ num: b.o.h.num, x: pj.x, y: pj.y, ppm: pj.s });
                 const mk = this.race.marks;

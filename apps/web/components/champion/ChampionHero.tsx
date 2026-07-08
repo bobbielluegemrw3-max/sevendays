@@ -82,6 +82,7 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       const el = cvRef.current as unknown as {
         loadRace: (race: unknown, env: unknown) => void;
         start: () => void;
+        seek?: (t: number) => void;
         setSpeed: (v: number) => void;
         setCamera: (m: string) => void;
         setMiniMap: (b: boolean) => void;
@@ -126,6 +127,9 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
         el.setMiniMap(false);
         el.setCamZoom?.(1.5);
         el.start();
+        // 視覚QA用: ?heroseek=<秒> でレース途中へ直行(スクリーンショット検証の決定論化)
+        const qa = new URLSearchParams(window.location.search).get('heroseek');
+        if (qa && Number.isFinite(Number(qa))) el.seek?.(Number(qa));
       } catch (err) {
         console.error('ChampionHero race build failed:', err);
         setState('failed');
