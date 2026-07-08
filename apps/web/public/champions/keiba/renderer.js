@@ -925,7 +925,9 @@
         // 背景パノラマの比率を上げて体感速度を抑える。
         // 走路の内側から外向きに構える: 最終直線で馬が左→右(ゴールへ前進)に
         // 見える向き。外側からだと右→左になり「後退感」が出る(2026-07-08)
-        ex = pw.x + pw.nx * 17; ey = 3.6; ez = pw.z + pw.nz * 17;
+        // 24m: 近いレーンの馬が巨大化してサイズが暴れる(=揺れ・文字への
+        // 重なり)のを防ぐ距離。17mでは至近5mの馬が画面を食っていた
+        ex = pw.x + pw.nx * 24; ey = 3.8; ez = pw.z + pw.nz * 24;
         const tgt = tr.laneWorld(focus + 2.5, tr.width * 0.45);
         tx = tgt.x; ty = 2.1; tz = tgt.z;
         f = Math.min(w * 0.92, h * 1.65) * (this._camZoom || 1);
@@ -1826,7 +1828,9 @@
       // 動きの滲み対策(2026-07-08): 位置は整数px・サイズは8px刻みに量子化。
       // サブピクセル移動+毎フレームの微小スケール変化が再サンプリング揺らぎ
       // (=動くと滲む)の正体。静止画が綺麗で動画が滲む場合はここ。
-      const Hq = Math.max(48, Math.round(H / 8) * 8);
+      // 上限=キャンバス高の62%: 至近の馬が画面とタイトルを覆い尽くさない
+      const Hcap = (this.cv ? this.cv.height : 1200) * 0.62;
+      const Hq = Math.max(48, Math.min(Math.round(H / 8) * 8, Math.round(Hcap / 8) * 8));
       const dyPix = mips.dy ? Math.round((mips.dy[f0] || 0) * Hq) : 0;
       ctx.translate(Math.round(p.x), Math.round(p.y) + dyPix);
       if (dir < 0) ctx.scale(-1, 1);

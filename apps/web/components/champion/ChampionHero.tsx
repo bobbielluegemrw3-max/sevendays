@@ -204,8 +204,8 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=20260709s')
-      .then(() => addScript('/champions/keiba/renderer.js?v=20260709s'))
+    addScript('/champions/keiba/engine.js?v=20260709t')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260709t'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;
