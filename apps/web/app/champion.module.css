@@ -1,6 +1,8 @@
 /* ============================================================
-   CHAMPION — 栄誉の集約ページ(ADR-011 / Decision 080)
+   CHAMPION — 栄誉の集約ページ(ADR-011 / Decision 080) リデザイン
    黒×金。ヒーロー=シアター移植のループアニメ。
+   注: CSS Modules は子孫リテラル class もハッシュ化。JSX から渡す class は
+   すべて module class。グローバル(.panel/.muted 等)は globals.css 由来。
    ============================================================ */
 
 .hero {
@@ -33,7 +35,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 1.1rem 1.3rem 1rem;
+  padding: 1.2rem 1.3rem 1.2rem;
+  text-align: center;
   background: linear-gradient(180deg, transparent, rgba(5, 4, 9, 0.9) 60%);
   pointer-events: none;
 }
@@ -46,8 +49,9 @@
 .heroTitle {
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(1.4rem, 5vw, 2.4rem);
-  letter-spacing: 0.18em;
+  font-size: clamp(1.6rem, 5.5vw, 2.8rem);
+  letter-spacing: 0.16em;
+  margin-top: 0.4rem;
   background: linear-gradient(92deg, #f6ecd2, var(--gold-bright) 45%, #8a6d3b);
   -webkit-background-clip: text;
   background-clip: text;
@@ -55,7 +59,7 @@
 }
 .heroComing {
   display: inline-block;
-  margin-top: 0.3rem;
+  margin-top: 0.5rem;
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 0.78rem;
@@ -66,13 +70,22 @@
   border-radius: 999px;
   padding: 0.22rem 0.9rem 0.22rem 1.1rem;
 }
-.heroNote { margin-top: 0.4rem; color: var(--muted); font-size: 0.76rem; }
+.heroNote { margin-top: 0.45rem; color: var(--muted); font-size: 0.76rem; }
+
+/* ---- 下段 2カラム ---- */
+.lower { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1rem; align-items: start; }
+.lowerMain { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+@media (min-width: 960px) {
+  .lower { grid-template-columns: 1.6fr 1fr; }
+  .leaguePanel { position: sticky; top: 1rem; }
+}
 
 /* ---- セクション共通 ---- */
 .secTitle {
   display: flex;
   align-items: baseline;
   gap: 0.6rem;
+  flex-wrap: wrap;
   font-family: var(--font-display);
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -80,14 +93,68 @@
   margin-bottom: 0.2rem;
 }
 .secSub { color: var(--faint); font-size: 0.74rem; font-family: var(--font-mono); }
+.hallCount { margin-left: auto; font-family: var(--font-display); font-weight: 700; font-size: 0.82rem; color: var(--gold-bright); }
 
-/* ---- 殿堂 ---- */
+/* ---- ② 報酬 ---- */
+.rewards {
+  border-color: rgba(201, 168, 106, 0.3) !important;
+  background:
+    radial-gradient(500px 220px at 12% 0%, rgba(201, 168, 106, 0.1), transparent 68%),
+    var(--panel);
+}
+.rewardsNote { font-family: var(--font-mono); font-size: 0.72rem; color: var(--faint); line-height: 1.7; margin: 0.35rem 0 0.9rem; }
+.rewardsNote b { color: var(--gold-bright); }
+
+/* ---- ③ 殿堂: 絞り込み/並び替え ---- */
+.hallControls { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0.4rem 0 0.9rem; }
+.rarTabs { display: flex; gap: 4px; flex-wrap: wrap; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 4px; }
+.rarTab, .rarTabOn {
+  font-family: var(--font-display); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em;
+  border: none; border-radius: 7px; padding: 0.3rem 0.6rem; cursor: pointer;
+}
+.rarTab { color: var(--muted); background: transparent; }
+.rarTabOn { color: #150410; background: linear-gradient(100deg, var(--gold), var(--gold-bright)); }
+.sortSelect {
+  margin-left: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+  padding: 0.4rem 0.7rem; color: var(--text); font-size: 0.72rem; font-family: var(--font-mono);
+}
+
+/* ---- 最新チャンピオン スポットライト ---- */
+.spotlightFrame {
+  border-radius: 16px; padding: 1px;
+  background: conic-gradient(from 140deg, #3a2f18, var(--gold), #f2e4bf, var(--gold), #3a2f18);
+  margin-bottom: 0.9rem;
+}
+.spotlight {
+  position: relative; display: flex; gap: 1rem; align-items: center;
+  border-radius: 15px; padding: 0.9rem 1rem;
+  background:
+    radial-gradient(400px 200px at 16% 0%, rgba(201, 168, 106, 0.16), transparent 70%),
+    var(--panel);
+}
+.spotlightTag { position: absolute; top: 0.6rem; right: 0.9rem; font-family: var(--font-mono); font-size: 0.56rem; letter-spacing: 0.16em; color: var(--gold-bright); }
+.spotlightArt {
+  width: 118px; height: 118px; flex: none; border-radius: 13px; overflow: hidden;
+  background: radial-gradient(80% 78% at 50% 42%, rgba(201, 168, 106, 0.14), rgba(10, 8, 19, 0.92) 74%);
+  box-shadow: inset 0 0 0 1px rgba(201, 168, 106, 0.3);
+}
+.spotlightBody { flex: 1; min-width: 0; }
+.spotlightName {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.35rem;
+  background: linear-gradient(92deg, #f6ecd2, var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.spotlightChips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.55rem; }
+.spotlightMeta { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.7rem; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); }
+.spotlightMeta b { color: var(--gold-bright); }
+
+/* ---- 殿堂グリッド ---- */
 .hallGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
   gap: 0.7rem;
 }
 .hallCard {
+  position: relative;
   border: 1px solid rgba(201, 168, 106, 0.3);
   border-radius: var(--radius-sm);
   padding: 0.7rem;
@@ -98,10 +165,14 @@
   flex-direction: column;
   gap: 0.4rem;
 }
-.hallArt { width: 100%; border-radius: 8px; overflow: hidden; }
-.hallName { font-weight: 700; font-size: 0.88rem; }
-.hallMeta { color: var(--faint); font-size: 0.7rem; font-family: var(--font-mono); display: flex; flex-wrap: wrap; gap: 0.35rem 0.7rem; }
-.hallDate { color: var(--gold-bright); }
+.crown { position: absolute; top: 0.55rem; left: 0.55rem; z-index: 2; font-size: 0.8rem; filter: drop-shadow(0 2px 6px rgba(201, 168, 106, 0.5)); }
+.hallArt { position: relative; width: 100%; border-radius: 8px; overflow: hidden; }
+/* PC: レアリティをアート右上にオーバーレイ。モバイルではアート下に配置(下の media query)。 */
+.hallRar { position: absolute; top: calc(0.7rem + 0.5rem); right: calc(0.7rem + 0.5rem); z-index: 2; }
+.hallName { font-family: var(--font-display); font-weight: 700; font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hallMetaRow { display: flex; align-items: center; gap: 0.4rem; }
+.hallOwner { color: var(--faint); font-size: 0.66rem; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hallDate { color: var(--gold-bright); font-size: 0.66rem; font-family: var(--font-mono); }
 .hallSample {
   color: var(--faint);
   font-size: 0.74rem;
@@ -111,11 +182,39 @@
   margin-bottom: 0.7rem;
 }
 
-/* ---- リーグ予告 ---- */
+/* タイプチップ */
+.typeChip {
+  display: inline-flex; align-items: center; font-family: var(--font-mono); font-size: 0.6rem;
+  letter-spacing: 0.06em; color: var(--gold-bright); border: 1px solid rgba(201, 168, 106, 0.4);
+  border-radius: 5px; padding: 0.1rem 0.45rem; white-space: nowrap;
+}
+
+/* レアリティバッジ(5段階) */
+.rar {
+  display: inline-flex; align-items: center; font-family: var(--font-display);
+  font-size: 0.5rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  border: 1px solid transparent; border-radius: 5px; padding: 0.1rem 0.4rem; white-space: nowrap;
+}
+.rarCOMMON { color: #c3ccd8; border-color: #8a92a0; background: rgba(130, 140, 160, 0.14); }
+.rarUNCOMMON { color: #9dffc4; border-color: var(--good); background: rgba(53, 208, 127, 0.15); }
+.rarRARE { color: #a9f6ff; border-color: var(--cyan); background: rgba(0, 234, 255, 0.16); }
+.rarEPIC { color: var(--magenta-soft); border-color: var(--magenta); background: rgba(255, 45, 196, 0.16); }
+.rarLEGENDARY { color: #0a0813; border-color: transparent; background: linear-gradient(92deg, var(--gold), #f7eccb); }
+
+/* ---- ④ リーグ予告 ---- */
+.ladder { margin-top: 1rem; border: 1px solid var(--border); border-radius: 13px; padding: 0.85rem 0.9rem; background: rgba(255, 255, 255, 0.015); }
+.ladderTitle { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.2em; color: var(--gold-bright); margin-bottom: 0.6rem; }
+.ladderRow { display: flex; align-items: center; gap: 0.6rem; padding: 0.2rem 0; }
+.ladderN { font-family: var(--font-mono); font-size: 0.56rem; color: var(--faint); width: 1rem; text-align: right; }
+.ladderDot { width: 8px; height: 8px; border-radius: 999px; flex: none; background: #3a3658; }
+.ladderDotG { background: var(--gold); }
+.ladderLine { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(201, 168, 106, 0.3), transparent); }
+
 .leagueGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.7rem;
+  margin-top: 0.9rem;
 }
 .leagueCard {
   border: 1px solid var(--border);
@@ -132,8 +231,8 @@
 }
 .leagueV { color: var(--muted); font-size: 0.8rem; line-height: 1.7; }
 
-.classRow { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.2rem; }
 .classChip {
+  display: inline-flex;
   font-family: var(--font-mono);
   font-size: 0.68rem;
   padding: 0.14rem 0.55rem;
@@ -156,4 +255,12 @@
   padding: 0.1rem 0.6rem;
   margin-left: 0.5rem;
   vertical-align: middle;
+}
+
+@media (max-width: 620px) {
+  .spotlight { flex-direction: column; align-items: flex-start; }
+  .spotlightArt { width: 96px; height: 96px; }
+  .hallGrid { grid-template-columns: 1fr 1fr; }
+  /* モバイルは小タイルで馬と被るため、レアリティをアートの外(下)に出す */
+  .hallRar { position: static; align-self: flex-start; margin-top: -0.1rem; }
 }
