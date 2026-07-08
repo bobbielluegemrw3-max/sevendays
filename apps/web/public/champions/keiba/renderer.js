@@ -192,6 +192,7 @@
       this.race = race;
       this.track = race.venue.track;
       if (env) this.env = env;
+      this._ensureGallop();
       this.pal = makePalette(this.env.time, this.env.season);
       this.t = -3; this.playing = false; this.speed = 1;
       this._goalFired = false; this._finFired = false; this._goalFlash = 0;
@@ -437,6 +438,9 @@
       const t = this._three, T = t.T;
       t.horses.forEach((o) => { t.scene.remove(o.root); });
       t.horses.clear();
+      // Seven Days metallic: 馬はNFTスプライトで描く(GLB馬は出さない)。
+      // 3Dはアリーナ(床・走路・レール・ゴール板)の描画に専念する。
+      if (this.env && this.env.metallic) return;
       // JRA公式8毛色。鹿毛ベーステクスチャをcanvasブレンドで色変換して再現する。
       // ops: [合成モード, 色] を順に適用。saturation=彩度抜き, color=色相置換, multiply=暗化, screen=明化。
       // mul: テクスチャが取得できない時の乗算フォールバック。hair: たてがみ/尻尾の色(実在の毛色に準拠)。
@@ -1162,7 +1166,30 @@
           if (p) { ctx.fillStyle = b.o.c; ctx.globalAlpha = clamp(b.o.life * 1.6, 0, 0.8); ctx.fillRect(p.x, p.y, Math.max(1.5, p.s * 0.1), Math.max(1.5, p.s * 0.1)); ctx.globalAlpha = 1; }
         }
         else if (b.kind === "horse") {
-          if (this._use3D()) {
+          if (this.env && this.env.metallic) {
+            // Seven Days: NFTスプライト経路(コマ未ロード中は描かない=フラッシュ防止)
+            if (this._gallop) {
+              this._drawSpriteHorse(ctx, cam, b.o, b.w);
+              const pj = cam.proj(b.w.x, 0, b.w.z);
+              if (pj) {
+                if ((this._flash[b.o.h.num] || 0) > this.t && pj.s > 3) {
+                  ctx.strokeStyle = "rgba(255,205,80,0.8)";
+                  ctx.lineWidth = Math.max(1.5, pj.s * 0.07);
+                  ctx.beginPath(); ctx.ellipse(pj.x, pj.y + 0.04 * pj.s, 1.95 * pj.s, 0.34 * pj.s, 0, 0, 7); ctx.stroke();
+                }
+                this._badges.push({ num: b.o.h.num, x: pj.x, y: pj.y, ppm: pj.s });
+                const mk = this.race.marks;
+                const marked = mk && (mk.tan === b.o.h.num || mk.ren === b.o.h.num || mk.san === b.o.h.num);
+                if (!marked) {
+                  this._chips.push({
+                    num: b.o.h.num, x: pj.x, y: pj.y - 3.3 * pj.s, ppm: pj.s,
+                    wc: b.o.h.wakuColor, wt: b.o.h.wakuText, waku: b.o.h.waku,
+                    stBg: STYLE_BG[b.o.h.style] || "#888888",
+                  });
+                }
+              }
+            }
+          } else if (this._use3D()) {
             const pj = cam.proj(b.w.x, 0, b.w.z);
             if (pj) {
               // 接地影は本物の3Dシャドウマップで描く。2Dの偽影楕円は廃止(足元の円形ノイズ除去)。
@@ -1541,6 +1568,75 @@
       }
     }
 
+    /**
+     * Seven Days: NFTギャロップ連続画(Manus納品12コマ)のプリロード。
+     * metallicモードの馬はGLBではなくこのスプライトで描く(=NFTそのものが走る)。
+     */
+    _ensureGallop() {
+      if (this._gallopReq || !(this.env && this.env.metallic)) return;
+      this._gallopReq = true;
+      const frames = new Array(12).fill(null);
+      let loaded = 0;
+      for (let i = 1; i <= 12; i++) {
+        const img = new Image();
+        const idx = i - 1;
+        img.onload = () => {
+          frames[idx] = img;
+          loaded += 1;
+          if (loaded === 12) this._gallop = frames;
+        };
+        img.onerror = () => { /* 1枚でも欠けたらGLB経路のまま */ };
+        img.src = "/champions/keiba/tex/gallop_" + String(i).padStart(2, "0") + ".webp";
+      }
+    }
+    /** coat(hex)の色相 − マスター(シアン≈190°)= ctx.filter hue-rotate角。 */
+    _hueDegFor(h) {
+      if (!this._hueDegs) this._hueDegs = {};
+      if (this._hueDegs[h.num] !== undefined) return this._hueDegs[h.num];
+      const hex = h.coat || "#7de3ff";
+      const r = parseInt(hex.slice(1, 3), 16) / 255,
+            g = parseInt(hex.slice(3, 5), 16) / 255,
+            b = parseInt(hex.slice(5, 7), 16) / 255;
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+      let hue = 0;
+      if (d > 1e-6) {
+        if (mx === r) hue = ((g - b) / d) % 6;
+        else if (mx === g) hue = (b - r) / d + 2;
+        else hue = (r - g) / d + 4;
+        hue *= 60; if (hue < 0) hue += 360;
+      }
+      const deg = Math.round(hue - 190);
+      this._hueDegs[h.num] = deg;
+      return deg;
+    }
+    /** NFT連続画ビルボード: 実レースエンジンの運動に載せて絵そのものを走らせる。 */
+    _drawSpriteHorse(ctx, cam, s, w) {
+      const frames = this._gallop;
+      if (!frames) return;
+      const p = cam.proj(w.x, 0, w.z);
+      if (!p || p.s < 0.8) return;
+      const ppm = p.s;
+      const w2 = this.track.laneWorld(Math.min(s.d, this.race.distance + 80) + 3, s.l);
+      const p2 = cam.proj(w2.x, 0, w2.z);
+      const dir = p2 && p2.x < p.x ? -1 : 1;
+      // 完歩≈6.8m。個体位相(_ph)でコマをずらし、脚並びの揃いすぎを防ぐ
+      const cyc = (s.d / 6.8 + (this._ph[s.h.num] || 0)) % 1;
+      const img = frames[Math.floor(((cyc + 1) % 1) * frames.length) % frames.length];
+      const H = 3.0 * ppm;   // 画像全高(鬣・尾込み)≈3m相当
+      const FEET = 0.92;     // 接地基準(納品仕様: 下端から8%)
+      // 接地影
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, 1.15 * ppm, 0.2 * ppm, 0, 0, 7);
+      ctx.fill();
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      if (dir < 0) ctx.scale(-1, 1);
+      const deg = this._hueDegFor(s.h);
+      if (deg && ctx.filter !== undefined) ctx.filter = "hue-rotate(" + deg + "deg)";
+      ctx.drawImage(img, -H / 2, -H * FEET, H, H);
+      ctx.restore();
+    }
     _drawGate(ctx, cam) {
       const tr = this.track, race = this.race;
       const N = race.horses.length;

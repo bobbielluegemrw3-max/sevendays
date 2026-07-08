@@ -119,10 +119,10 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
         const race = engine.generateRaceFromInput(input, { seed: seedRef.current });
         el.loadRace(race, { time: 'void', season: 'winter', metallic: true });
         el.setSpeed(2.5);
-        el.setCamera('auto');
+        // ビルボード(NFT連続画)は真横が最も美しい — サイドカメラ固定
+        el.setCamera('side');
         el.setMiniMap(false);
-        // 接写寄り: レース距離だと馬が小さくテクスチャが見えないため
-        el.setCamZoom?.(1.45);
+        el.setCamZoom?.(1.3);
         el.start();
       } catch (err) {
         console.error('ChampionHero race build failed:', err);
