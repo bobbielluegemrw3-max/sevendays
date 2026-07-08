@@ -918,28 +918,29 @@
       // どんな絵でも豆粒になる — 先頭集団の真横数mを並走し、2〜3頭が画面の
       // 半分を占めるNFT原寸感で見せる(カット切替なしの安定ショット)。
       if (this.env && this.env.metallic) {
-        const focus = clamp(packMid + 4, 6, race.distance + 40);
-        const pw = tr.laneWorld(focus, tr.width * 0.5);
-        // 外側(レール外)へ12m・高さ3.4mから、やや上向きに集団前方を見る。
-        // 高め+上向き=手前の地面(最速で流れる帯)を画面から減らし、静止した
-        // 背景パノラマの比率を上げて体感速度を抑える。
-        // 走路の内側から外向きに構える: 最終直線で馬が左→右(ゴールへ前進)に
-        // 見える向き。外側からだと右→左になり「後退感」が出る(2026-07-08)
-        // 24m: 近いレーンの馬が巨大化してサイズが暴れる(=揺れ・文字への
-        // 重なり)のを防ぐ距離。17mでは至近5mの馬が画面を食っていた
-        ex = pw.x + pw.nx * 24; ey = 3.8; ez = pw.z + pw.nz * 24;
-        const tgt = tr.laneWorld(focus + 2.5, tr.width * 0.45);
-        // 縦長(モバイル)は地面の帯が画面を支配し「逆流」が悪目立ちする —
-        // 視線を上げ、PCと同じ「地面ほぼ画面外」の構図に揃える
+        // 定点パンカメラ(2026-07-08): テレビ中継と同じく走路脇に静止し、
+        // 通過する馬群を振り向いて追う。カメラが移動しないので地面は本当に
+        // 静止し、馬が画面を横切って前進する(追走カメラの「地面逆流」を
+        // 構造ごと廃止 — オーナー指示)。通過し切ったら次の定点へカット。
+        let cut = false;
+        if (this._panA === undefined || packMid > this._panA + 26 || packMid < this._panA - 40) {
+          this._panA = packMid + 18;
+          cut = true;
+        }
+        const aw = tr.laneWorld(this._panA, tr.width * 0.5);
+        ex = aw.x + aw.nx * 14; ey = 3.2; ez = aw.z + aw.nz * 14;
+        const tgt = tr.laneWorld(packMid + 2, tr.width * 0.45);
         const portrait = h > w * 0.85;
-        tx = tgt.x; ty = portrait ? 3.1 : 2.1; tz = tgt.z;
-        f = Math.min(w * 0.92, h * 1.65) * (this._camZoom || 1);
-        if (!this._cam || this._camKind !== "sdchase") {
+        tx = tgt.x; ty = portrait ? 2.6 : 1.9; tz = tgt.z;
+        f = Math.min(w * 0.98, h * 1.7) * (this._camZoom || 1);
+        if (cut || !this._cam || this._camKind !== "sdchase") {
+          // カット=瞬時切替(位置を補間すると地面が大きく流れてしまう)
           this._cam = { ex, ey, ez, tx, ty, tz, f };
         } else {
           const k = 1 - Math.exp(-4.5 * dt);
           const c = this._cam;
-          c.ex = lerp(c.ex, ex, k); c.ey = lerp(c.ey, ey, k); c.ez = lerp(c.ez, ez, k);
+          // 位置は定点(補間不要)・視線と画角だけ滑らかにパン
+          c.ex = ex; c.ey = ey; c.ez = ez;
           c.tx = lerp(c.tx, tx, k); c.ty = lerp(c.ty, ty, k); c.tz = lerp(c.tz, tz, k);
           c.f = lerp(c.f, f, k);
         }
@@ -1639,7 +1640,10 @@
           const coat = new Image();
           coat.onload = () => {
             loaded += 1;
-            if (loaded === NEED) this._gallop = true; // 全タイプ準備完了ゲート
+            if (loaded === NEED) {
+              this._gallop = true; // 全タイプ準備完了ゲート
+              this.dispatchEvent(new CustomEvent("sdready"));
+            }
           };
           coat.onerror = () => { /* 1枚でも欠けたらGLB経路のまま */ };
           coat.src = "/champions/keiba/tex/gallop_" + arch + "_" + nn + "_coat.webp";

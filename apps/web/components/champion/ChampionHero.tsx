@@ -204,8 +204,8 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=20260709u')
-      .then(() => addScript('/champions/keiba/renderer.js?v=20260709u'))
+    addScript('/champions/keiba/engine.js?v=20260709w')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260709w'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;
@@ -216,6 +216,7 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
           el.style.inset = '0';
           el.style.width = '100%';
           el.style.height = '100%';
+          el.addEventListener('sdready', () => setState('running'));
           el.addEventListener('finished', () => {
             // ゴール演出(金のフラッシュ+FINISH)→ 次のシードで最終直線から再開
             setFinishFlash(true);
@@ -229,7 +230,9 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
           cvRef.current = el;
         }
         buildAndRun();
-        setState('running');
+        // sdready(スプライト準備完了)までLOADING表示を維持。万一イベントが
+        // 来なくても15秒で開放(フォールバック)
+        setTimeout(() => setState((v) => (v === 'loading' ? 'running' : v)), 15000);
       })
       .catch(() => { if (!cancelled) setState('failed'); });
     return () => { cancelled = true; };
