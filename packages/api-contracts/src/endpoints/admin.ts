@@ -339,4 +339,201 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
       return { policies };
     },
   });
+
+  /* ---- 運営ビュー(2026-07-09): 経済・ユーザー・アイテム・レース ---------- */
+
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/admin/economy/overview',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const platform = await ctx.client.query(
+        `select a.account_type::text as account_type, coalesce(b.balance, 0)::text as balance
+         from ledger_accounts a
+         left join ledger_account_balances b on b.account_id = a.id
+         where a.owner_type = 'PLATFORM'
+         order by a.account_type`,
+      );
+      const userTotals = await ctx.client.query(
+        `select a.account_type::text as account_type,
+                count(distinct a.owner_id)::int as holders,
+                coalesce(sum(b.balance), 0)::text as total
+         from ledger_accounts a
+         left join ledger_account_balances b on b.account_id = a.id
+         where a.owner_type = 'USER'
+         group by 1 order by 1`,
+      );
+      const users = await ctx.client.query(
+        `select count(*)::int as total,
+                count(*) filter (where status = 'ACTIVE')::int as active
+         from users`,
+      );
+      const horses = await ctx.client.query(
+        `select count(*)::int as total,
+                count(*) filter (where status = 'ACTIVE')::int as active
+         from horses`,
+      );
+      const recentTx = await ctx.client.query(
+        `select transaction_type::text as transaction_type, count(*)::int as count,
+                max(created_at)::text as last_at
+         from ledger_transactions
+         where created_at > now() - interval '7 days'
+         group by 1 order by 2 desc limit 20`,
+      );
+      return {
+        platform_accounts: platform.rows,
+        user_totals: userTotals.rows,
+        users: users.rows[0],
+        horses: horses.rows[0],
+        recent_transactions: recentTx.rows,
+      };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/users/search',
+    auth: 'admin',
+    input: z.object({
+      query: z.string().max(200).default(''),
+      limit: z.number().int().min(1).max(100).default(30),
+    }),
+    handler: async (ctx, input) => {
+      requireAdminRole(ctx);
+      const rows = await ctx.client.query(
+        `select u.id, u.email, u.status::text as status, u.created_at::text as created_at,
+                r.email as referrer_email,
+                coalesce(b.balance, 0)::text as balance,
+                (select count(*)::int from horses h where h.owner_user_id = u.id and h.status = 'ACTIVE') as active_horses,
+                (select count(*)::int from horse_burns hb where hb.owner_user_id_at_snapshot = u.id) as burns,
+                (select count(*)::int from user_items ui where ui.user_id = u.id and ui.status = 'AVAILABLE') as items_available,
+                (select count(*)::int from users c where c.direct_referrer_user_id = u.id) as direct_referrals
+         from users u
+         left join users r on r.id = u.direct_referrer_user_id
+         left join ledger_accounts a on a.owner_id = u.id and a.account_type = 'USER_AVAILABLE'
+         left join ledger_account_balances b on b.account_id = a.id
+         where $1 = '' or u.email ilike '%' || $1 || '%'
+         order by u.created_at desc
+         limit $2`,
+        [(input.query ?? '').trim(), input.limit ?? 30],
+      );
+      return { users: rows.rows };
+    },
+  });
+
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/admin/users/:id',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const user = await ctx.client.query(
+        `select u.id, u.email, u.status::text as status, u.created_at::text as created_at,
+                r.email as referrer_email,
+                coalesce(av.balance, 0)::text as balance_available,
+                coalesce(lk.balance, 0)::text as balance_locked
+         from users u
+         left join users r on r.id = u.direct_referrer_user_id
+         left join ledger_accounts aa on aa.owner_id = u.id and aa.account_type = 'USER_AVAILABLE'
+         left join ledger_account_balances av on av.account_id = aa.id
+         left join ledger_accounts la on la.owner_id = u.id and la.account_type = 'USER_LOCKED'
+         left join ledger_account_balances lk on lk.account_id = la.id
+         where u.id = $1`,
+        [ctx.params.id],
+      );
+      if (user.rows.length === 0) throw new ApiError('NOT_FOUND', 'User not found');
+      const horses = await ctx.client.query(
+        `select id, name, status::text as status, current_day, rarity::text as rarity,
+                horse_type::text as horse_type, created_at::text as created_at
+         from horses where owner_user_id = $1
+         order by created_at desc limit 50`,
+        [ctx.params.id],
+      );
+      const items = await ctx.client.query(
+        `select item_key, status, count(*)::int as count
+         from user_items where user_id = $1
+         group by 1, 2 order by 1, 2`,
+        [ctx.params.id],
+      );
+      const usages = await ctx.client.query(
+        `select item_key, effective_race_date::text as effective_race_date,
+                status, settled_outcome
+         from item_usages where user_id = $1
+         order by created_at desc limit 20`,
+        [ctx.params.id],
+      );
+      const children = await ctx.client.query(
+        `select id, email, created_at::text as created_at
+         from users where direct_referrer_user_id = $1
+         order by created_at desc limit 100`,
+        [ctx.params.id],
+      );
+      return {
+        user: user.rows[0],
+        horses: horses.rows,
+        items: items.rows,
+        item_usages: usages.rows,
+        direct_referrals: children.rows,
+      };
+    },
+  });
+
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/admin/items/overview',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const catalog = await ctx.client.query(
+        `select c.key, c.name_ja, c.band, c.price::text as price, c.active,
+                coalesce(p.cnt, 0)::int as purchased,
+                coalesce(p.revenue, '0') as revenue,
+                coalesce(d.cnt, 0)::int as dropped,
+                coalesce(g.cnt, 0)::int as gifted,
+                coalesce(u.cnt, 0)::int as used
+         from item_catalog c
+         left join (select item_key, count(*)::int cnt, sum(unit_price)::text revenue
+                    from user_items where source = 'PURCHASE' group by 1) p on p.item_key = c.key
+         left join (select item_key, count(*)::int cnt
+                    from user_items where source = 'BURN_DROP' group by 1) d on d.item_key = c.key
+         left join (select ui.item_key, count(*)::int cnt
+                    from user_transfers t join user_items ui on ui.id = t.user_item_id
+                    where t.asset_type = 'ITEM' group by 1) g on g.item_key = c.key
+         left join (select item_key, count(*)::int cnt
+                    from item_usages where status <> 'CANCELLED' group by 1) u on u.item_key = c.key
+         order by c.band, c.price::numeric`,
+      );
+      const settings = await ctx.client.query(
+        `select item_setting, count(*)::int as count
+         from races where item_setting is not null
+         group by 1 order by 1`,
+      );
+      return { catalog: catalog.rows, setting_distribution: settings.rows };
+    },
+  });
+
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/admin/races/overview',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const races = await ctx.client.query(
+        `select r.id, br.batch_date::text as batch_date, r.status::text as status,
+                r.participant_count, r.item_setting,
+                (select count(*)::int from horse_burns hb where hb.race_id = r.id) as burns,
+                (select count(*)::int from item_usages iu where iu.race_id = r.id) as item_usages,
+                r.completed_at::text as completed_at
+         from races r
+         join batch_runs br on br.id = r.batch_run_id
+         order by br.batch_date desc, r.created_at desc
+         limit 30`,
+      );
+      return {
+        races: races.rows,
+        daily_derby_live: process.env.DAILY_DERBY_LIVE === '1',
+      };
+    },
+  });
 }

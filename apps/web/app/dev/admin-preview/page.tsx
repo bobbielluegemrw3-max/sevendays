@@ -1,86 +1,58 @@
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import { AdminDashboardView } from '@/components/AdminDashboardView';
-import { AdminBatchesView } from '@/components/AdminBatchesView';
-import { AdminWithdrawalsView } from '@/components/AdminWithdrawalsView';
-import { AdminRecoveryView } from '@/components/AdminRecoveryView';
-import { AdminAuditLog } from '@/components/AdminAuditLog';
-import s from '../../admin.module.css';
+import { AdminEconomyView } from '@/components/AdminEconomyView';
+import { AdminItemsView } from '@/components/AdminItemsView';
+import { AdminRacesView } from '@/components/AdminRacesView';
 
-/** Dev-only stacked preview of all admin views with fixtures (404 in production). */
-const iso = (minsAgo: number) => new Date(Date.now() - minsAgo * 60000).toISOString();
+/* 視覚QA専用(仮データ)。本番挙動は /admin(要admin権限)。 */
 
-export default function AdminPreview() {
-  if (process.env.NODE_ENV === 'production') notFound();
-  const sect = (title: string) => (
-    <h2 style={{ margin: '3rem 0 1rem', color: 'var(--magenta-soft)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>
-      ── {title} ──
-    </h2>
-  );
+export default function AdminPreviewPage() {
+  if (process.env.NODE_ENV === 'production') return <p>dev only</p>;
   return (
-    <div>
-      {/* admin nav (same markup as layout) */}
-      <nav className={s.nav}>
-        <span className={s.brand}><span className={s.brandDot} />ADMIN</span>
-        <Link href="#" className={s.navLink}>ダッシュボード</Link>
-        <Link href="#" className={s.navLink}>バッチ</Link>
-        <Link href="#" className={s.navLink}>出金レビュー</Link>
-        <Link href="#" className={s.navLink}>リカバリ</Link>
-        <Link href="#" className={s.navLink}>監査ログ</Link>
-      </nav>
-
-      {sect('/admin 概要')}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
       <AdminDashboardView
         data={{
-          latest_batch: { id: 'b-1', batch_date: '2026-07-05', status: 'COMPLETED' },
+          latest_batch: { id: 'b1', batch_date: '2026-07-08', status: 'COMPLETED' },
           economy_status: 'NORMAL',
-          metrics: { total_active_horses: 1874, day0_mints: 210, p2p_assignments: 342, burn_count: 201, buyback_started: 45, revenue_usdt: '812.44' },
+          metrics: { burn_rate: 0.42, prize_pool_days: 12 },
         }}
       />
-
-      {sect('/admin/batches バッチ')}
-      <AdminBatchesView
-        batches={[
-          { id: 'b-1', batch_date: '2026-07-05', status: 'COMPLETED', completed_at: iso(900), failed_at: null, completed_steps: 37 },
-          { id: 'b-2', batch_date: '2026-07-04', status: 'PARTIAL_FAILED', completed_at: null, failed_at: iso(2300), completed_steps: 21 },
-          { id: 'b-3', batch_date: '2026-07-03', status: 'FAILED', completed_at: null, failed_at: iso(3800), completed_steps: 9 },
-        ]}
+      <AdminEconomyView
+        data={{
+          platform_accounts: [
+            { account_type: 'MLM_RESERVE', balance: '10234.55' },
+            { account_type: 'OPERATING', balance: '20991.02' },
+            { account_type: 'PRIZE_POOL', balance: '5410.00' },
+            { account_type: 'PLATFORM_ITEM_CLEARING', balance: '0' },
+          ],
+          user_totals: [{ account_type: 'USER_AVAILABLE', holders: 132, total: '48211.90' }],
+          users: { total: 140, active: 132 },
+          horses: { total: 260, active: 118 },
+          recent_transactions: [
+            { transaction_type: 'ITEM_PURCHASE', count: 34, last_at: '2026-07-08T19:31:00' },
+            { transaction_type: 'BURN_SETTLEMENT', count: 18, last_at: '2026-07-08T20:02:11' },
+          ],
+        }}
       />
-
-      {sect('/admin/withdrawals 出金レビュー')}
-      <AdminWithdrawalsView
-        withdrawals={[
-          {
-            id: 'w-1', user_id: 'u-aaaa', chain_id: 'polygon-pos',
-            to_address: '0x9f8e7d6c5b4a39281706f5e4d3c2b1a098765432',
-            requested_amount: '2500.00', status: 'ADMIN_REVIEW', requested_at: iso(120),
-            approvals: [{ admin_user_id: 'adm-1', role: 'FINANCE_ADMIN' }],
-          },
-        ]}
+      <AdminItemsView
+        data={{
+          catalog: [
+            { key: 'sugar_cube', name_ja: '角砂糖', band: 'BASIC', price: '1', active: true, purchased: 120, revenue: '120', dropped: 0, gifted: 4, used: 88 },
+            { key: 'golden_horseshoe', name_ja: '黄金の蹄鉄', band: 'PREMIUM', price: '30', active: true, purchased: 8, revenue: '240', dropped: 0, gifted: 1, used: 6 },
+            { key: 'phoenix_feather', name_ja: '不死鳥の羽根', band: 'BURN_DROP', price: '0', active: true, purchased: 0, revenue: '0', dropped: 12, gifted: 2, used: 5 },
+          ],
+          setting_distribution: [
+            { item_setting: 1, count: 3 }, { item_setting: 3, count: 9 }, { item_setting: 6, count: 2 },
+          ],
+        }}
       />
-
-      {sect('/admin/recovery リカバリ')}
-      <AdminRecoveryView
-        recoveries={[
-          {
-            id: 'r-1', batch_date: '2026-07-04', batch_status: 'PARTIAL_FAILED',
-            recovery_reason: 'Step 21 (BUYBACK_PAYMENTS) timeout — RPC unavailable',
-            approval_status: 'PENDING_SECOND', approved_by_1: 'adm-1', approved_by_2: null,
-            created_at: iso(300), completed_at: null,
-          },
-        ]}
-      />
-
-      {sect('/admin/audit 監査ログ')}
-      <AdminAuditLog
-        audit={Array.from({ length: 40 }, (_, i) => ({
-          actor_type: i % 3 === 0 ? 'ADMIN' : 'SYSTEM',
-          actor_id: i % 3 === 0 ? 'adm-1' : null,
-          action: ['WITHDRAWAL_APPROVED', 'BATCH_RETRY', 'RECOVERY_APPROVED', 'POLICY_LOADED'][i % 4]!,
-          reference_type: i % 2 === 0 ? 'withdrawal' : 'batch_run',
-          reference_id: `ref-${i.toString().padStart(3, '0')}`,
-          created_at: iso(i * 47),
-        }))}
+      <AdminRacesView
+        data={{
+          races: [
+            { id: '3f6a1c2e-0000-0000-0000-000000000001', batch_date: '2026-07-08', status: 'SETTLED', participant_count: 18, item_setting: 4, burns: 3, item_usages: 11, completed_at: '2026-07-08T20:05:00' },
+            { id: '3f6a1c2e-0000-0000-0000-000000000002', batch_date: '2026-07-07', status: 'SETTLED', participant_count: 12, item_setting: 2, burns: 2, item_usages: 6, completed_at: '2026-07-07T20:05:00' },
+          ],
+          daily_derby_live: false,
+        }}
       />
     </div>
   );

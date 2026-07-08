@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import s from '../app/admin.module.css';
 
 /* ============================================================================
@@ -27,6 +28,17 @@ function fmtVal(v: unknown): { text: string; isJson: boolean } {
   return { text: JSON.stringify(v), isJson: true };
 }
 
+const MENU = [
+  { href: '/admin/economy', icon: '💰', title: '経済・準備金', desc: 'プラットフォーム勘定残高 / ユーザー資産総額 / 直近の取引種別' },
+  { href: '/admin/users', icon: '👤', title: 'ユーザー', desc: 'メール検索 / 残高・馬・BURN・アイテム / 組織(直紹介)' },
+  { href: '/admin/items', icon: '🎒', title: 'アイテム', desc: 'カタログ別の販売数・売上 / ドロップ・ギフト / アイテム設定の分布' },
+  { href: '/admin/races', icon: '🏇', title: 'レース', desc: '直近レースの頭数・BURN数・アイテム設定 / Daily Derbyモード' },
+  { href: '/admin/batches', icon: '⚙️', title: 'バッチ運行', desc: '毎晩20:00 MYTの一斉精算 / ステップ状況 / 失敗リトライ' },
+  { href: '/admin/withdrawals', icon: '🏧', title: '出金レビュー', desc: '大口出金(1,000 USDT以上)の2名承認' },
+  { href: '/admin/recovery', icon: '🛟', title: 'リカバリ', desc: '障害時の復旧案件 / 承認 → 実行の2段階' },
+  { href: '/admin/audit', icon: '📜', title: '監査ログ', desc: '管理操作・システム操作の全記録(直近200件)' },
+] as const;
+
 export function AdminDashboardView({ data }: { data: AdminDashboard }) {
   const { latest_batch, economy_status, metrics } = data;
   const eco = ecoMeta(economy_status);
@@ -53,6 +65,23 @@ export function AdminDashboardView({ data }: { data: AdminDashboard }) {
             {latest_batch ? <span className={s.badge}>{latest_batch.status}</span> : null}
           </div>
           <div className={s.batchNote}>毎晩20:00 MYT の一斉精算</div>
+        </div>
+      </div>
+
+      {/* メニュー(ハブ型: 各運営ページへ) */}
+      <div>
+        <div className={s.secLabel}>MENU · 運営メニュー</div>
+        <div className={s.menuGrid}>
+          {MENU.map((m) => (
+            <Link key={m.href} href={m.href} className={s.menuCard}>
+              <span className={s.menuHead}>
+                <span className={s.menuIcon} aria-hidden="true">{m.icon}</span>
+                <span className={s.menuTitle}>{m.title}</span>
+              </span>
+              <span className={s.menuDesc}>{m.desc}</span>
+              <span className={s.menuArrow}>OPEN →</span>
+            </Link>
+          ))}
         </div>
       </div>
 
