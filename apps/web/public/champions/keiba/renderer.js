@@ -923,7 +923,9 @@
         // 外側(レール外)へ12m・高さ3.4mから、やや上向きに集団前方を見る。
         // 高め+上向き=手前の地面(最速で流れる帯)を画面から減らし、静止した
         // 背景パノラマの比率を上げて体感速度を抑える。
-        ex = pw.x - pw.nx * 12; ey = 3.4; ez = pw.z - pw.nz * 12;
+        // 走路の内側から外向きに構える: 最終直線で馬が左→右(ゴールへ前進)に
+        // 見える向き。外側からだと右→左になり「後退感」が出る(2026-07-08)
+        ex = pw.x + pw.nx * 17; ey = 3.6; ez = pw.z + pw.nz * 17;
         const tgt = tr.laneWorld(focus + 2.5, tr.width * 0.45);
         tx = tgt.x; ty = 2.1; tz = tgt.z;
         f = Math.min(w * 0.92, h * 1.65) * (this._camZoom || 1);
@@ -1789,7 +1791,16 @@
       const ppm = p.s;
       const w2 = this.track.laneWorld(Math.min(s.d, this.race.distance + 80) + 3, s.l);
       const p2 = cam.proj(w2.x, 0, w2.z);
-      const dir = p2 && p2.x < p.x ? -1 : 1;
+      // 向きの決定: 投影失敗時に右向き固定へ落ちると「地面と逆に走る」瞬間が
+      // 生まれる — 前回の向きを保持する(オーナー指摘 2026-07-08)
+      if (!this._dirPrev) this._dirPrev = {};
+      let dir;
+      if (p2) {
+        dir = p2.x < p.x ? -1 : 1;
+        this._dirPrev[s.h.num] = dir;
+      } else {
+        dir = this._dirPrev[s.h.num] || 1;
+      }
       // AI生成コマは1枚ごとに模様が揺れる(ボイリング)ため、切替を隣接コマの
       // クロスフェードで滑らかにする。コマ切替そのものが「本体が高速で描き
       // 直される」16倍速感の正体(オーナー観察 2026-07-08)。

@@ -46,6 +46,7 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
   // 足音(Raceページと同じ hoofbeats.mp3)。自動再生はブラウザが禁止のため
   // 既定OFF・ボタン操作(ユーザージェスチャー)でONにする
   const [soundOn, setSoundOn] = useState(false);
+  const [finishFlash, setFinishFlash] = useState(false);
   const hoofsRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     if (soundOn) {
@@ -190,8 +191,10 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
         el.setMiniMap(false);
         el.setCamZoom?.(1.0);
         el.start();
-        // ヒーローは常にレース中盤から再生(ゲート発進の「カタカタ→加速」を見せない)
-        el.seek?.(30);
+        // ループ構成: 「最終直線→ゴール」だけを見せる(発進のもたつきなし、
+        // 毎周ゴール演出で締まる)。残り38秒地点へシーク
+        const dur = (el as unknown as { race?: { duration?: number } }).race?.duration ?? 90;
+        el.seek?.(Math.max(0, dur - 38));
         // 視覚QA用: ?heroseek=<秒> でレース途中へ直行(スクリーンショット検証の決定論化)
         const qa = new URLSearchParams(window.location.search).get('heroseek');
         if (qa && Number.isFinite(Number(qa))) el.seek?.(Number(qa));
@@ -201,8 +204,8 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=20260709q')
-      .then(() => addScript('/champions/keiba/renderer.js?v=20260709q'))
+    addScript('/champions/keiba/engine.js?v=20260709s')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260709s'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;
@@ -214,9 +217,13 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
           el.style.width = '100%';
           el.style.height = '100%';
           el.addEventListener('finished', () => {
-            // ループ: 次のシードで走り直す(着順もシャッフルされる)
+            // ゴール演出(金のフラッシュ+FINISH)→ 次のシードで最終直線から再開
+            setFinishFlash(true);
             seedRef.current += 1;
-            setTimeout(() => buildAndRun(), 1600);
+            setTimeout(() => {
+              setFinishFlash(false);
+              buildAndRun();
+            }, 2600);
           });
           wrap.appendChild(el);
           cvRef.current = el;
@@ -244,6 +251,11 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
           </div>
         )}
       </div>
+      {finishFlash && (
+        <div className={s.heroFinish} aria-hidden="true">
+          <div className={s.heroFinishText}>FINISH</div>
+        </div>
+      )}
       <button
         type="button"
         className={s.heroSound}
