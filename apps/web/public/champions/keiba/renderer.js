@@ -1650,7 +1650,7 @@
       const key = h.num + ":" + (h.coat || "") + ":" + (h.arch || "v2");
       let baked = this._spriteCache.get(key);
       if (baked) return baked;
-      const S = 384;
+      const S = 512;
       // 着色はNFTアート(NftHorseArt)と同一: 真HSVの色相回転。マスター(シアン
       // ≈190°)から各馬の色相への差分だけ回す。彩度・明度=絵の質感は不変なので
       // 「NFTと同じ発色」になる。hue/color合成の即席着色は廃止(2026-07-08)。
@@ -1672,8 +1672,9 @@
         const c = document.createElement("canvas");
         c.width = S; c.height = S;
         const g = c.getContext("2d");
+        g.imageSmoothingQuality = "high";
         g.drawImage(img, 0, 0, S, S);
-        if (rotDeg > 0.5 && rotDeg < 359.5) {
+        if (true) {
           const id = g.getImageData(0, 0, S, S);
           const d = id.data;
           for (let px = 0; px < d.length; px += 4) {
@@ -1686,7 +1687,9 @@
             else if (mx === gg2) hh = (b - r) / diff + 2;
             else hh = (r - gg2) / diff + 4;
             hh /= 6; if (hh < 0) hh += 1;
-            const sat = mx > 1e-6 ? diff / mx : 0;
+            let sat = mx > 1e-6 ? diff / mx : 0;
+            // webp圧縮で眠くなった彩度を補正(NFT原画のくっきり感に寄せる)
+            sat = Math.min(1, sat * 1.12);
             const v = mx;
             hh = (hh + rotNorm) % 1;
             const k = Math.floor(hh * 6) % 6;
@@ -1741,9 +1744,8 @@
       ctx.ellipse(p.x, p.y, 1.6 * ppm, 0.26 * ppm, 0, 0, 7);
       ctx.fill();
       ctx.save();
-      // ギャロップの躍動: 1完歩周期で体が上下する(サスペンション期に浮く)
-      const bounce = Math.sin(((cyc + 1) % 1) * 6.28318) * 0.045 * H;
-      ctx.translate(p.x, p.y - bounce);
+      // 上下動はコマ側に解剖学的に焼き込み済み(v3納品)— 人工バウンスは重複するため廃止
+      ctx.translate(p.x, p.y);
       if (dir < 0) ctx.scale(-1, 1);
       ctx.drawImage(frames[f0], -H / 2, -H * FEET, H, H);
       ctx.restore();
