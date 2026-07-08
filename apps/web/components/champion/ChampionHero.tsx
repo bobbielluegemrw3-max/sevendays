@@ -75,10 +75,23 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
         document.body.appendChild(sc);
       });
 
-    // 6頭に絞る: このアートは後方へ長くたなびく鬣が特徴で、密集すると
-    // 前の馬のたなびきが後続に被さり「滲み」に見える(2026-07-08 検証)。
-    // 少頭数+間隔で1頭1頭がカード品質で読める。
-    const roster = (horses.length >= 6 ? horses : SAMPLE_CHAMPIONS).slice(0, 6);
+    // 6頭に絞る+ルック重複排除: 同じ(アーキタイプ×回転角)の馬が2頭並ぶと
+    // 「全く同じ馬」に見える(オーナー指摘 2026-07-08)。
+    const pool = horses.length >= 6 ? horses : SAMPLE_CHAMPIONS;
+    const seen = new Set<string>();
+    const roster: HeroHorse[] = [];
+    for (const h of pool) {
+      const look = deriveNftLook(h.dna_hash, h.name);
+      const k = `${look.arch}:${look.bodyDeg}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      roster.push(h);
+      if (roster.length === 6) break;
+    }
+    for (const h of pool) {
+      if (roster.length >= 6) break;
+      if (!roster.includes(h)) roster.push(h);
+    }
 
     const buildAndRun = () => {
       const engine = window.KeibaEngine;
@@ -161,8 +174,8 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=20260709g')
-      .then(() => addScript('/champions/keiba/renderer.js?v=20260709g'))
+    addScript('/champions/keiba/engine.js?v=20260709h')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260709h'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;

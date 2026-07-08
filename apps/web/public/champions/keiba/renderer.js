@@ -1710,6 +1710,14 @@
             else if (k === 5) { nr = v; ng = p0; nb = q0; }
             d[px] = Math.round(nr * 255); d[px + 1] = Math.round(ng * 255); d[px + 2] = Math.round(nb * 255);
           }
+          // 体の半透明を固化(2026-07-08): 原画は画風として体に半透明部分を含む。
+          // カードの暗背景では見えないが、レースでは背後の金レール等が透けて
+          // 「滲み」に見える。中間アルファを不透明側へ増幅し、淡いたなびき
+          // (α<40)だけソフトなまま残す。
+          for (let px = 3; px < d.length; px += 4) {
+            const a = d[px];
+            if (a >= 40 && a < 255) d[px] = Math.min(255, Math.round(a * 1.8));
+          }
           g.putImageData(id, 0, 0);
         }
         // 金装甲レイヤーは回転させず不透明で重ねる(NFTのaccents層と同一思想。
