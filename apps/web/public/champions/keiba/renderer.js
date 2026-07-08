@@ -1668,14 +1668,14 @@
       }
       const rotDeg = ((targetHue - 190) % 360 + 360) % 360;
       const rotNorm = rotDeg / 360;
-      baked = set.coats.map((img, i) => {
+      const bakeOne = (SZ) => set.coats.map((img, i) => {
         const c = document.createElement("canvas");
-        c.width = S; c.height = S;
+        c.width = SZ; c.height = SZ;
         const g = c.getContext("2d");
         g.imageSmoothingQuality = "high";
-        g.drawImage(img, 0, 0, S, S);
+        g.drawImage(img, 0, 0, SZ, SZ);
         if (true) {
-          const id = g.getImageData(0, 0, S, S);
+          const id = g.getImageData(0, 0, SZ, SZ);
           const d = id.data;
           for (let px = 0; px < d.length; px += 4) {
             if (d[px + 3] === 0) continue;
@@ -1708,16 +1708,18 @@
         // 金装甲レイヤーは回転させず不透明で重ねる(NFTのaccents層と同一思想。
         // 半透明重ねは他馬が透けるためやらない — オーナー指摘 2026-07-08)
         const gold = set.golds[i];
-        if (gold && gold.complete && gold.naturalWidth) g.drawImage(gold, 0, 0, S, S);
+        if (gold && gold.complete && gold.naturalWidth) g.drawImage(gold, 0, 0, SZ, SZ);
         return c;
       });
+      baked = { hi: bakeOne(S), lo: bakeOne(256) };
       this._spriteCache.set(key, baked);
       return baked;
     }
     /** NFT連続画ビルボード: 実レースエンジンの運動に載せて絵そのものを走らせる。 */
     _drawSpriteHorse(ctx, cam, s, w) {
-      const frames = this._spriteFramesFor(s.h);
-      if (!frames) return;
+      const mips = this._spriteFramesFor(s.h);
+      if (!mips) return;
+      const frames = mips.hi;
       const p = cam.proj(w.x, 0, w.z);
       if (!p || p.s < 0.8) return;
       const ppm = p.s;
@@ -1744,10 +1746,13 @@
       ctx.ellipse(p.x, p.y, 1.6 * ppm, 0.26 * ppm, 0, 0, 7);
       ctx.fill();
       ctx.save();
+      ctx.imageSmoothingQuality = "high";
       // 上下動はコマ側に解剖学的に焼き込み済み(v3納品)— 人工バウンスは重複するため廃止
       ctx.translate(p.x, p.y);
       if (dir < 0) ctx.scale(-1, 1);
-      ctx.drawImage(frames[f0], -H / 2, -H * FEET, H, H);
+      // 遠い馬は256px版から縮小(512から一気に縮めると滲む)
+      const srcSet = H < 300 ? mips.lo : mips.hi;
+      ctx.drawImage(srcSet[f0], -H / 2, -H * FEET, H, H);
       ctx.restore();
     }
     _drawGate(ctx, cam) {
