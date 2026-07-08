@@ -914,6 +914,29 @@
       let kind, ex, ey, ez, tx, ty, tz, f;
       const lead = this._lead ? this._lead.d : 0;
       const packMid = this._order ? (this._order[0].d + this._order[Math.min(5, this._order.length - 1)].d) / 2 : 0;
+      // Seven Days metallic: ヒーロー用の並走超接写カメラ。TV中継の引き画では
+      // どんな絵でも豆粒になる — 先頭集団の真横数mを並走し、2〜3頭が画面の
+      // 半分を占めるNFT原寸感で見せる(カット切替なしの安定ショット)。
+      if (this.env && this.env.metallic) {
+        const focus = clamp(packMid + 4, 6, race.distance + 40);
+        const pw = tr.laneWorld(focus, tr.width * 0.5);
+        // 外側(レール外)へ11m・地上2.2mから、集団のやや前方を見る
+        ex = pw.x - pw.nx * 11; ey = 2.2; ez = pw.z - pw.nz * 11;
+        const tgt = tr.laneWorld(focus + 2.5, tr.width * 0.45);
+        tx = tgt.x; ty = 1.5; tz = tgt.z;
+        f = Math.min(w * 1.05, h * 1.9) * (this._camZoom || 1);
+        if (!this._cam || this._camKind !== "sdchase") {
+          this._cam = { ex, ey, ez, tx, ty, tz, f };
+        } else {
+          const k = 1 - Math.exp(-4.5 * dt);
+          const c = this._cam;
+          c.ex = lerp(c.ex, ex, k); c.ey = lerp(c.ey, ey, k); c.ez = lerp(c.ez, ez, k);
+          c.tx = lerp(c.tx, tx, k); c.ty = lerp(c.ty, ty, k); c.tz = lerp(c.tz, tz, k);
+          c.f = lerp(c.f, f, k);
+        }
+        this._camKind = "sdchase";
+        return;
+      }
       const remaining = race.distance - lead;
       let mode = this.camMode;
       if (mode === "auto") {

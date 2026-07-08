@@ -119,13 +119,13 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       try {
         const race = engine.generateRaceFromInput(input, { seed: seedRef.current });
         el.loadRace(race, { time: 'void', season: 'winter', metallic: true });
-        // 1.6倍: 実時間だと間延び、速すぎると小走りに見える中庸
-        el.setSpeed(1.6);
+        // 接写では等速に近いほど重厚(速いと小走りに見える)
+        el.setSpeed(1.25);
         // 'side'はコース全体の固定引きカメラ(馬が光点になる)。追走カメラで
         // 馬に寄る。スプライトは常にカメラを向くのでどのカットでも成立する
         el.setCamera('auto');
         el.setMiniMap(false);
-        el.setCamZoom?.(1.5);
+        el.setCamZoom?.(1.0);
         el.start();
         // 視覚QA用: ?heroseek=<秒> でレース途中へ直行(スクリーンショット検証の決定論化)
         const qa = new URLSearchParams(window.location.search).get('heroseek');
