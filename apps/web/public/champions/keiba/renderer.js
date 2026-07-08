@@ -701,12 +701,14 @@
         }
         return t[key];
       };
-      const floorTex = V ? sdTile("_sdFloorTex", "/champions/keiba/tex/arena_floor_tile.webp", 500, 500) : null;
-      const trackTex = V ? sdTile("_sdTrackTex", "/champions/keiba/tex/track_surface_tile.webp", 1, 1) : null;
+      // 無地マット(2026-07-08): 模様があると近接カメラで路面の後方流れが
+      // 視認され「地面が逆方向」に見える(モバイル)。模様ゼロ=流れも不可視。
+      const floorTex = null;
+      const trackTex = null;
       const ground = new T.Mesh(
         new T.PlaneGeometry(6000, 6000),
         V
-          ? new T.MeshStandardMaterial({ color: 0xffffff, map: floorTex, roughness: 0.95, metalness: 0.02, envMapIntensity: 0.2 })
+          ? new T.MeshStandardMaterial({ color: 0x0a0812, roughness: 0.95, metalness: 0.02, envMapIntensity: 0.2 })
           : new T.MeshStandardMaterial({ color: 0x4f9255, map: mkTex(1400, 1400), roughness: 1, metalness: 0 }),
       );
       ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; ground.receiveShadow = true;
@@ -733,7 +735,7 @@
       const trackMesh = new T.Mesh(
         rg,
         V
-          ? new T.MeshStandardMaterial({ vertexColors: false, color: 0xffffff, map: trackTex, roughness: 0.92, metalness: 0.04, envMapIntensity: 0.25 })
+          ? new T.MeshStandardMaterial({ vertexColors: false, color: 0x14101c, roughness: 0.92, metalness: 0.04, envMapIntensity: 0.25 })
           : new T.MeshStandardMaterial({ vertexColors: true, map: mkTex(1, 1), roughness: 1, metalness: 0 }),
       );
       trackMesh.receiveShadow = true;
