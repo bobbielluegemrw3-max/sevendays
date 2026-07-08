@@ -1716,8 +1716,8 @@
           // (α<40)だけソフトなまま残す。
           for (let px = 3; px < d.length; px += 4) {
             const a = d[px];
-            if (a >= 90) d[px] = 255;                                   // 体=完全不透明
-            else if (a >= 25) d[px] = Math.min(255, Math.round(a * 2.2)); // 中間=強め固化
+            if (a >= 60) d[px] = 255;                                   // 体=完全不透明(液体クローム対策)
+            else if (a >= 25) d[px] = Math.min(255, Math.round(a * 2.5)); // 中間=強め固化
           }
           g.putImageData(id, 0, 0);
         }
@@ -1727,7 +1727,23 @@
         if (gold && gold.complete && gold.naturalWidth) g.drawImage(gold, 0, 0, SZ, SZ);
         return c;
       });
-      baked = { hi: bakeOne(S), lo: bakeOne(256) };
+      const hi = bakeOne(S);
+      const lo = bakeOne(256);
+      // 胴体の上下ジッター安定化(2026-07-08): AI生成コマは胴体高さが不規則に
+      // ぶれる(=走りの違和感)。不透明画素の重心を測り、平均へ7割寄せる補正を
+      // コマごとに持たせる(描画時に縦オフセット)。蹄の接地感を壊さない範囲。
+      const dyNorm = hi.map((c) => {
+        const g2 = c.getContext("2d");
+        const dd = g2.getImageData(0, 0, c.width, c.height).data;
+        let sum = 0, n = 0;
+        for (let px = 3; px < dd.length; px += 4) {
+          if (dd[px] >= 220) { sum += ((px - 3) / 4 / c.width) | 0; n++; }
+        }
+        return n ? sum / n / c.height : 0.5;
+      });
+      const meanCy = dyNorm.reduce((a, b) => a + b, 0) / dyNorm.length;
+      const dy = dyNorm.map((cy) => (meanCy - cy) * 0.7);
+      baked = { hi, lo, dy };
       this._spriteCache.set(key, baked);
       return baked;
     }
@@ -1767,7 +1783,8 @@
       // サブピクセル移動+毎フレームの微小スケール変化が再サンプリング揺らぎ
       // (=動くと滲む)の正体。静止画が綺麗で動画が滲む場合はここ。
       const Hq = Math.max(48, Math.round(H / 8) * 8);
-      ctx.translate(Math.round(p.x), Math.round(p.y));
+      const dyPix = mips.dy ? Math.round((mips.dy[f0] || 0) * Hq) : 0;
+      ctx.translate(Math.round(p.x), Math.round(p.y) + dyPix);
       if (dir < 0) ctx.scale(-1, 1);
       // 遠い馬は256px版から縮小(512から一気に縮めると滲む)
       const srcSet = Hq < 300 ? mips.lo : mips.hi;
