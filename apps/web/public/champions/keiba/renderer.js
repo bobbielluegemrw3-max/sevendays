@@ -929,7 +929,10 @@
         // 重なり)のを防ぐ距離。17mでは至近5mの馬が画面を食っていた
         ex = pw.x + pw.nx * 24; ey = 3.8; ez = pw.z + pw.nz * 24;
         const tgt = tr.laneWorld(focus + 2.5, tr.width * 0.45);
-        tx = tgt.x; ty = 2.1; tz = tgt.z;
+        // 縦長(モバイル)は地面の帯が画面を支配し「逆流」が悪目立ちする —
+        // 視線を上げ、PCと同じ「地面ほぼ画面外」の構図に揃える
+        const portrait = h > w * 0.85;
+        tx = tgt.x; ty = portrait ? 3.1 : 2.1; tz = tgt.z;
         f = Math.min(w * 0.92, h * 1.65) * (this._camZoom || 1);
         if (!this._cam || this._camKind !== "sdchase") {
           this._cam = { ex, ey, ez, tx, ty, tz, f };
@@ -1016,6 +1019,13 @@
       this._badges = [];
       this._chips = [];
       if (fctx) fctx.clearRect(0, 0, this.fxcv.width, this.fxcv.height);
+      // Seven Days: 3Dアリーナとスプライトが揃うまで完全ブランク(背面の
+      // アリーナ静止画だけ見せる)。素の状態だと元レンダラーの山・雲・
+      // パーティクル風景が一瞬描かれてしまう(オーナー指摘 2026-07-08)
+      if (this.env && this.env.metallic && (!this._use3D() || !this._gallop)) {
+        ctx.clearRect(0, 0, W, H);
+        return;
+      }
       if (!this.race) {
         ctx.fillStyle = "#0c1220"; ctx.fillRect(0, 0, W, H);
         this._clearThree();
