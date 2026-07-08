@@ -934,7 +934,9 @@
         // 縦長(モバイル)は地面の帯が画面を支配し「逆流」が悪目立ちする —
         // 視線を上げ、PCと同じ「地面ほぼ画面外」の構図に揃える
         const portrait = h > w * 0.85;
-        tx = tgt.x; ty = portrait ? 3.1 : 2.1; tz = tgt.z;
+        // 縦長: タイトルブロック(上部)の直下に馬の帯が来る高さまで視線を
+        // 上げる(値を上げるほど馬は画面の下へ)— 2026-07-09 オーナー指摘
+        tx = tgt.x; ty = portrait ? 5.4 : 2.1; tz = tgt.z;
         f = Math.min(w * 0.92, h * 1.65) * (this._camZoom || 1);
         if (!this._cam || this._camKind !== "sdchase") {
           this._cam = { ex, ey, ez, tx, ty, tz, f };
