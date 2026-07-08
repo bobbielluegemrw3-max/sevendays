@@ -1609,18 +1609,26 @@
     _ensureGallop() {
       if (this._gallopReq || !(this.env && this.env.metallic)) return;
       this._gallopReq = true;
-      const frames = new Array(12).fill(null);
+      // v2納品(2026-07-08): coat(色相回転する層) + gold(金装甲・回転しない層)
+      const coats = new Array(12).fill(null);
+      const golds = new Array(12).fill(null);
       let loaded = 0;
+      const done = () => {
+        loaded += 1;
+        if (loaded === 12) { this._gallop = coats; this._gallopGold = golds; }
+      };
       for (let i = 1; i <= 12; i++) {
-        const img = new Image();
         const idx = i - 1;
-        img.onload = () => {
-          frames[idx] = img;
-          loaded += 1;
-          if (loaded === 12) this._gallop = frames;
-        };
-        img.onerror = () => { /* 1枚でも欠けたらGLB経路のまま */ };
-        img.src = "/champions/keiba/tex/gallop_" + String(i).padStart(2, "0") + ".webp";
+        const nn = String(i).padStart(2, "0");
+        const coat = new Image();
+        coat.onload = () => done();
+        coat.onerror = () => { /* 1枚でも欠けたらGLB経路のまま */ };
+        coat.src = "/champions/keiba/tex/gallop_" + nn + "_coat.webp";
+        coats[idx] = coat;
+        const gold = new Image();
+        gold.onerror = () => { golds[idx] = null; };
+        gold.src = "/champions/keiba/tex/gallop_" + nn + "_gold.webp";
+        golds[idx] = gold;
       }
     }
     /**
@@ -1635,7 +1643,7 @@
       let baked = this._spriteCache.get(key);
       if (baked) return baked;
       const S = 384;
-      baked = this._gallop.map((img) => {
+      baked = this._gallop.map((img, i) => {
         const c = document.createElement("canvas");
         c.width = S; c.height = S;
         const g = c.getContext("2d");
@@ -1646,6 +1654,9 @@
         g.globalCompositeOperation = "destination-in";
         g.drawImage(img, 0, 0, S, S);
         g.globalCompositeOperation = "source-over";
+        // 金装甲レイヤーは色相回転させず重ねる(NFTのaccents層と同じ思想)
+        const gold = this._gallopGold && this._gallopGold[i];
+        if (gold && gold.complete && gold.naturalWidth) g.drawImage(gold, 0, 0, S, S);
         return c;
       });
       this._spriteCache.set(key, baked);
