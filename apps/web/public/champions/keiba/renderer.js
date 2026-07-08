@@ -1719,6 +1719,38 @@
             if (a >= 60) d[px] = 255;                                   // 体=完全不透明(液体クローム対策)
             else if (a >= 25) d[px] = Math.min(255, Math.round(a * 2.5)); // 中間=強め固化
           }
+          // 浮遊グリッチ線の除去(2026-07-08): 体・鬣・尻尾は一続きの連結成分、
+          // 後方に散るグリッチ線は本体から切り離れた孤立島。最大成分(=馬本体)
+          // 以外の小さな島を消す。NFTカードでは美しい線もレースではノイズになる
+          // (オーナー指摘)。カード表示(NftHorseArt)は不変。
+          {
+            const Wp = SZ, Hp = SZ, N = Wp * Hp;
+            const label = new Int32Array(N); // 0=未訪問
+            const stack = new Int32Array(N);
+            let nextLabel = 0, bestLabel = 0, bestSize = 0;
+            const sizes = [0];
+            for (let i0 = 0; i0 < N; i0++) {
+              if (label[i0] !== 0 || d[i0 * 4 + 3] < 25) continue;
+              nextLabel += 1;
+              let sp = 0, size = 0;
+              stack[sp++] = i0; label[i0] = nextLabel;
+              while (sp > 0) {
+                const i = stack[--sp];
+                size += 1;
+                const x = i % Wp, y = (i / Wp) | 0;
+                if (x > 0 && label[i - 1] === 0 && d[(i - 1) * 4 + 3] >= 25) { label[i - 1] = nextLabel; stack[sp++] = i - 1; }
+                if (x < Wp - 1 && label[i + 1] === 0 && d[(i + 1) * 4 + 3] >= 25) { label[i + 1] = nextLabel; stack[sp++] = i + 1; }
+                if (y > 0 && label[i - Wp] === 0 && d[(i - Wp) * 4 + 3] >= 25) { label[i - Wp] = nextLabel; stack[sp++] = i - Wp; }
+                if (y < Hp - 1 && label[i + Wp] === 0 && d[(i + Wp) * 4 + 3] >= 25) { label[i + Wp] = nextLabel; stack[sp++] = i + Wp; }
+              }
+              sizes.push(size);
+              if (size > bestSize) { bestSize = size; bestLabel = nextLabel; }
+            }
+            for (let i = 0; i < N; i++) {
+              const lb = label[i];
+              if (lb !== 0 && lb !== bestLabel) d[i * 4 + 3] = 0; // 孤立島は消す
+            }
+          }
           g.putImageData(id, 0, 0);
         }
         // 金装甲レイヤーは回転させず不透明で重ねる(NFTのaccents層と同一思想。
