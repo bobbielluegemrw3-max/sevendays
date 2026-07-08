@@ -451,7 +451,16 @@
                 const isFallbackCoat = coatMesh && !coatTex && mat.map; // テクスチャ取得不可時はmap有り材質を近似着色
                 if (!isBodyCoat && !isFallbackCoat && !hairMesh) return mat; // 目/小物等は共有のまま
                 const cl = mat.clone();
-                if (isBodyCoat) { cl.map = coatTex[coatIdx]; if (cl.color) cl.color.setRGB(1, 1, 1); }
+                if (isBodyCoat) {
+                cl.map = coatTex[coatIdx];
+                if (cl.color) cl.color.setRGB(1, 1, 1);
+                if (METALLIC) {
+                  // クローム質感: 反射を立てる(Seven Daysメタリック馬)
+                  if ("metalness" in cl) cl.metalness = 0.85;
+                  if ("roughness" in cl) cl.roughness = 0.28;
+                  if ("envMapIntensity" in cl) cl.envMapIntensity = 1.6;
+                }
+              }
                 else if (hairMesh) { cl.map = null; if (cl.color) cl.color.set(coat.hair); } // 緑のデータテクスチャを外し自然な毛色に
                 else if (cl.color) cl.color.setRGB(coat.mul[0], coat.mul[1], coat.mul[2]);
                 return cl;
@@ -1070,8 +1079,14 @@
               }
             }
           } else {
-            const lbl = this._drawHorse(ctx, cam, b.o, b.w);
-            if (lbl) labels.push(lbl);
+            // metallic(Seven Days)モード: 3Dロード中は2Dスプライトを出さない
+            // (読込完了と同時に3Dで登場させ、見た目の切替ショックを無くす)。
+            const threeLoading = this.env && this.env.metallic &&
+              this._three && (this._three.status === "init");
+            if (!threeLoading) {
+              const lbl = this._drawHorse(ctx, cam, b.o, b.w);
+              if (lbl) labels.push(lbl);
+            }
           }
         }
       });
