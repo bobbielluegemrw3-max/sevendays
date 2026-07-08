@@ -538,7 +538,8 @@ window.KeibaEngine = (function () {
       c4: clamp((D - track.straight) / D, 0.5, 0.96),
       fin: 1,
     };
-    const gapFromRank = (rank, p) => (rank - 1) * 2.05 * (0.85 + 0.55 * p) * smoothstep(0, 0.045, p);
+    const gapScale = input.gapScale || 1; // Seven Days: 疎な馬群用(たなびく鬣の重なり対策)
+    const gapFromRank = (rank, p) => (rank - 1) * 2.05 * gapScale * (0.85 + 0.55 * p) * smoothstep(0, 0.045, p);
     const gateSpread = (num) => 1.4 + ((num - 1) / Math.max(1, N - 1)) * (track.width - 4.5);
 
     const HZ_ = HZ;

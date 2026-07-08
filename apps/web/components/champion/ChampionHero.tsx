@@ -75,7 +75,10 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
         document.body.appendChild(sc);
       });
 
-    const roster = (horses.length >= 6 ? horses : SAMPLE_CHAMPIONS).slice(0, 12);
+    // 6頭に絞る: このアートは後方へ長くたなびく鬣が特徴で、密集すると
+    // 前の馬のたなびきが後続に被さり「滲み」に見える(2026-07-08 検証)。
+    // 少頭数+間隔で1頭1頭がカード品質で読める。
+    const roster = (horses.length >= 6 ? horses : SAMPLE_CHAMPIONS).slice(0, 6);
 
     const buildAndRun = () => {
       const engine = window.KeibaEngine;
@@ -97,6 +100,7 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
         surface: '芝',
         distance: 2000,
         pace: '平均',
+        gapScale: 2.2, // 縦の車間を広げ、たなびく鬣が後続に被らないように
         horses: roster.map((h, i) => {
           const N = roster.length;
           const seed = seedRef.current;
@@ -157,8 +161,8 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=20260709e')
-      .then(() => addScript('/champions/keiba/renderer.js?v=20260709e'))
+    addScript('/champions/keiba/engine.js?v=20260709g')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260709g'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;
