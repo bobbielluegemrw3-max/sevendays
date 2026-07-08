@@ -43,6 +43,24 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
   const cvRef = useRef<HTMLElement | null>(null);
   const seedRef = useRef(7);
   const [state, setState] = useState<'idle' | 'loading' | 'running' | 'failed'>('idle');
+  // 足音(Raceページと同じ hoofbeats.mp3)。自動再生はブラウザが禁止のため
+  // 既定OFF・ボタン操作(ユーザージェスチャー)でONにする
+  const [soundOn, setSoundOn] = useState(false);
+  const hoofsRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    if (soundOn) {
+      if (!hoofsRef.current) {
+        const audio = new Audio('/sounds/hoofbeats.mp3');
+        audio.loop = true;
+        audio.volume = 0.45;
+        hoofsRef.current = audio;
+      }
+      void hoofsRef.current.play().catch(() => setSoundOn(false));
+    } else {
+      hoofsRef.current?.pause();
+    }
+    return () => hoofsRef.current?.pause();
+  }, [soundOn]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -183,8 +201,8 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=20260709p')
-      .then(() => addScript('/champions/keiba/renderer.js?v=20260709p'))
+    addScript('/champions/keiba/engine.js?v=20260709q')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260709q'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;
@@ -226,6 +244,14 @@ export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; de
           </div>
         )}
       </div>
+      <button
+        type="button"
+        className={s.heroSound}
+        aria-label={soundOn ? 'サウンドをオフ' : 'サウンドをオン'}
+        onClick={() => setSoundOn((v) => !v)}
+      >
+        {soundOn ? '♪ SOUND ON' : '♪ SOUND OFF'}
+      </button>
       <div className={s.heroOverlay}>
         <div className={s.heroKicker}>WEEKLY COMPETITION</div>
         <div className={s.heroTitle}>CHAMPION LEAGUE</div>

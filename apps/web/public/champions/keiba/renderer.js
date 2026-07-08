@@ -1801,8 +1801,9 @@
       const cyc = (s.d / strideM + phase) % 1;
       const fpos = ((cyc + 1) % 1) * frames.length;
       const f0 = Math.floor(fpos) % frames.length;
-      // 画像内で馬体は約45%(鬣・余白込みの1024px正方)— 追走カメラで映える全高≈4.6m相当
-      const H = 4.6 * ppm;
+      // 画像内で馬体は約45%(鬣・余白込みの1024px正方)。セカンドゲームの看板と
+      // してのインパクト優先で全高≈5.8m相当(オーナー指示 2026-07-08)
+      const H = 5.8 * ppm;
       const FEET = 0.92;     // 接地基準(納品仕様: 下端から8%)
       // 接地影
       ctx.fillStyle = "rgba(0,0,0,0.5)";
