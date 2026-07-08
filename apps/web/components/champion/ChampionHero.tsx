@@ -38,7 +38,7 @@ function metallicCoat(dnaHash: string, name: string): string {
   return `#${to(r1!)}${to(g1!)}${to(b1!)}`;
 }
 
-export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
+export function ChampionHero({ horses, demo = false }: { horses: HeroHorse[]; demo?: boolean }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const cvRef = useRef<HTMLElement | null>(null);
   const seedRef = useRef(7);
@@ -75,23 +75,32 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
         document.body.appendChild(sc);
       });
 
-    // 6頭に絞る+ルック重複排除: 同じ(アーキタイプ×回転角)の馬が2頭並ぶと
-    // 「全く同じ馬」に見える(オーナー指摘 2026-07-08)。
+    // 6頭選抜: ①色相ファミリー(60°刻み6系統)から1頭ずつ=全馬が別系統の色
+    // ②同一ルック(アーキタイプ×回転角)の重複禁止(オーナー指摘 2026-07-08)。
+    // マスターはシアン(190°)なので実効色相 = (190 + bodyDeg) % 360。
     const pool = horses.length >= 6 ? horses : SAMPLE_CHAMPIONS;
-    const seen = new Set<string>();
+    const seenLook = new Set<string>();
+    const seenFamily = new Set<number>();
     const roster: HeroHorse[] = [];
-    for (const h of pool) {
-      const look = deriveNftLook(h.dna_hash, h.name);
-      const k = `${look.arch}:${look.bodyDeg}`;
-      if (seen.has(k)) continue;
-      seen.add(k);
-      roster.push(h);
-      if (roster.length === 6) break;
-    }
-    for (const h of pool) {
-      if (roster.length >= 6) break;
-      if (!roster.includes(h)) roster.push(h);
-    }
+    const pick = (requireNewFamily: boolean) => {
+      for (const h of pool) {
+        if (roster.length >= 6) return;
+        const look = deriveNftLook(h.dna_hash, h.name);
+        const lookKey = `${look.arch}:${look.bodyDeg}`;
+        if (seenLook.has(lookKey)) continue;
+        const family = Math.floor((((190 + look.bodyDeg) % 360) / 60)) % 6;
+        if (requireNewFamily && seenFamily.has(family)) continue;
+        seenLook.add(lookKey);
+        seenFamily.add(family);
+        roster.push(h);
+      }
+    };
+    pick(true);   // まず全色系統を揃える
+    pick(false);  // 足りなければルック違いで補充
+    // デモ走行(実チャンピオン不在)はdna任せだと色が偏る — 6系統を明示割当。
+    // 実効色相=(190+deg)%360 が 0/60/120/180/240/300 になる回転角。
+    const DEMO_DEGS = [170, 230, 290, 350, 50, 110];
+    const DEMO_ARCHS = ['v2', 'v3', 'v4', 'v2', 'v3', 'v4'] as const;
 
     const buildAndRun = () => {
       const engine = window.KeibaEngine;
@@ -132,8 +141,8 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
             coat: metallicCoat(h.dna_hash, h.name),
             // NFTルックそのもの: アーキタイプ+承認済み回転角(bodyDeg)。
             // スプライトはカードと同じ角度で回す=マケプレと同じ公式パレット
-            arch: deriveNftLook(h.dna_hash, h.name).arch,
-            coatDeg: deriveNftLook(h.dna_hash, h.name).bodyDeg,
+            arch: demo ? DEMO_ARCHS[i % 6] : deriveNftLook(h.dna_hash, h.name).arch,
+            coatDeg: demo ? DEMO_DEGS[i % 6] : deriveNftLook(h.dna_hash, h.name).bodyDeg,
           };
         }),
       };
@@ -174,8 +183,8 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=20260709h')
-      .then(() => addScript('/champions/keiba/renderer.js?v=20260709h'))
+    addScript('/champions/keiba/engine.js?v=20260709k')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260709k'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;
@@ -199,7 +208,7 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       })
       .catch(() => { if (!cancelled) setState('failed'); });
     return () => { cancelled = true; };
-  }, [state, horses]);
+  }, [state, horses, demo]);
 
   return (
     <div className={s.hero}>

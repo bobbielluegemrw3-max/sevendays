@@ -1716,7 +1716,8 @@
           // (α<40)だけソフトなまま残す。
           for (let px = 3; px < d.length; px += 4) {
             const a = d[px];
-            if (a >= 40 && a < 255) d[px] = Math.min(255, Math.round(a * 1.8));
+            if (a >= 90) d[px] = 255;                                   // 体=完全不透明
+            else if (a >= 25) d[px] = Math.min(255, Math.round(a * 2.2)); // 中間=強め固化
           }
           g.putImageData(id, 0, 0);
         }

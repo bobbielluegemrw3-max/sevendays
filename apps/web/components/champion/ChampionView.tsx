@@ -83,7 +83,7 @@ export function ChampionView({
   return (
     <>
       {/* ① ヒーロー(ループアニメ・不変) */}
-      <ChampionHero horses={heroHorses} />
+      <ChampionHero horses={heroHorses} demo={isSample} />
 
       {/* 下段: 2カラム(左=報酬+殿堂 / 右=リーグ) */}
       <div className={s.lower}>
