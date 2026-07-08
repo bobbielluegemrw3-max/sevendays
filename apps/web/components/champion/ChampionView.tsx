@@ -141,7 +141,7 @@ export function ChampionView({
                 <div className={s.spotlight}>
                   <span className={s.spotlightTag}>★ LATEST CHAMPION</span>
                   <div className={s.spotlightArt}>
-                    <NftHorseArt look={deriveNftLook(spotlight.dna_hash, spotlight.name)} />
+                    <NftHorseArt look={deriveNftLook(spotlight.dna_hash, spotlight.name)} className={s.artCanvas} />
                   </div>
                   <div className={s.spotlightBody}>
                     <div className={s.spotlightName}>{spotlight.name}</div>
@@ -163,7 +163,7 @@ export function ChampionView({
                 <div key={c.horse_id} className={s.hallCard}>
                   <span className={s.crown} aria-hidden="true">👑</span>
                   <div className={s.hallArt}>
-                    <NftHorseArt look={deriveNftLook(c.dna_hash, c.name)} />
+                    <NftHorseArt look={deriveNftLook(c.dna_hash, c.name)} className={s.artCanvas} />
                   </div>
                   <span className={`${s.rar} ${s.hallRar} ${s[`rar${rarClass(c.rarity)}`]}`}>{c.rarity}</span>
                   <div className={s.hallName}>{c.name}</div>

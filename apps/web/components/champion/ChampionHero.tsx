@@ -95,21 +95,36 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
         surface: '芝',
         distance: 2000,
         pace: '平均',
-        horses: roster.map((h, i) => ({
-          num: i + 1,
-          name: h.name,
-          jockey: '',
-          finishRank: ((i + seedRef.current) % roster.length) + 1,
-          stability: 0.75,
-          coat: metallicCoat(h.dna_hash, h.name),
-        })),
+        horses: roster.map((h, i) => {
+          const N = roster.length;
+          const seed = seedRef.current;
+          // 4つの通過順位(全て順列になる回転)+脚質 — エンジンの必須入力。
+          const rot = (off: number) => ((i + off) % N) + 1;
+          return {
+            num: i + 1,
+            name: h.name,
+            jockey: '',
+            style: ['逃げ', '先行', '差し', '追込'][i % 4],
+            startRank: rot(seed),
+            c3Rank: rot(seed + 2),
+            c4Rank: rot(seed + 4),
+            finishRank: rot(seed * 3 + 5),
+            stability: 0.75,
+            coat: metallicCoat(h.dna_hash, h.name),
+          };
+        }),
       };
-      const race = engine.generateRaceFromInput(input, { seed: seedRef.current });
-      el.loadRace(race, { time: 'void', season: 'winter', metallic: true });
-      el.setSpeed(2.5);
-      el.setCamera('auto');
-      el.setMiniMap(false);
-      el.start();
+      try {
+        const race = engine.generateRaceFromInput(input, { seed: seedRef.current });
+        el.loadRace(race, { time: 'void', season: 'winter', metallic: true });
+        el.setSpeed(2.5);
+        el.setCamera('auto');
+        el.setMiniMap(false);
+        el.start();
+      } catch (err) {
+        console.error('ChampionHero race build failed:', err);
+        setState('failed');
+      }
     };
 
     addScript('/champions/keiba/engine.js?v=1')
