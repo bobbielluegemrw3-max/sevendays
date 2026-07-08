@@ -1747,12 +1747,15 @@
       ctx.fill();
       ctx.save();
       ctx.imageSmoothingQuality = "high";
-      // 上下動はコマ側に解剖学的に焼き込み済み(v3納品)— 人工バウンスは重複するため廃止
-      ctx.translate(p.x, p.y);
+      // 動きの滲み対策(2026-07-08): 位置は整数px・サイズは8px刻みに量子化。
+      // サブピクセル移動+毎フレームの微小スケール変化が再サンプリング揺らぎ
+      // (=動くと滲む)の正体。静止画が綺麗で動画が滲む場合はここ。
+      const Hq = Math.max(48, Math.round(H / 8) * 8);
+      ctx.translate(Math.round(p.x), Math.round(p.y));
       if (dir < 0) ctx.scale(-1, 1);
       // 遠い馬は256px版から縮小(512から一気に縮めると滲む)
-      const srcSet = H < 300 ? mips.lo : mips.hi;
-      ctx.drawImage(srcSet[f0], -H / 2, -H * FEET, H, H);
+      const srcSet = Hq < 300 ? mips.lo : mips.hi;
+      ctx.drawImage(srcSet[f0], Math.round(-Hq / 2), Math.round(-Hq * FEET), Hq, Hq);
       ctx.restore();
     }
     _drawGate(ctx, cam) {
