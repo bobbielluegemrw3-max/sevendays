@@ -165,9 +165,9 @@ export function ChampionView({
                   <div className={s.hallArt}>
                     <NftHorseArt look={deriveNftLook(c.dna_hash, c.name)} className={s.artCanvas} />
                   </div>
-                  <span className={`${s.rar} ${s.hallRar} ${s[`rar${rarClass(c.rarity)}`]}`}>{c.rarity}</span>
                   <div className={s.hallName}>{c.name}</div>
                   <div className={s.hallMetaRow}>
+                    <span className={`${s.rar} ${s[`rar${rarClass(c.rarity)}`]}`}>{c.rarity}</span>
                     <span className={s.typeChip}>{c.horse_type}</span>
                     <span className={s.hallOwner}>{c.owner}</span>
                   </div>

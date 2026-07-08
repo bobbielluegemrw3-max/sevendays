@@ -497,6 +497,15 @@
     _syncThreeEnv() {
       if (!this._use3D()) return;
       const t = this._three, dusk = this.env.time === "dusk";
+      if (this.env.time === "void") {
+        // Seven Days CHAMPION: 漆黒のアリーナに金のリムライト
+        t.hemi.color.set(0xf2e4bf);
+        if (t.hemi.groundColor) t.hemi.groundColor.set(0x0b0814);
+        t.hemi.intensity = 0.55;
+        t.sun.color.set(0xf2e4bf);
+        t.sun.intensity = 1.4;
+        return;
+      }
       t.hemi.color.set(dusk ? 0xd8b9a0 : 0xeaf2ff);
       t.hemi.intensity = dusk ? 0.7 : 0.9;
       t.sun.color.set(dusk ? 0xffb070 : 0xfff4e0);
@@ -580,17 +589,19 @@
         if (T.SRGBColorSpace) tx.colorSpace = T.SRGBColorSpace;
         return tx;
       };
-      // 地面(内馬場/外周)+ 芝ディテール。明るめのきれいな緑に。
+      // 地面(内馬場/外周)+ 芝ディテール。VOID(Seven Days)は漆黒の地面。
+      const V = this.env && this.env.time === "void";
       const ground = new T.Mesh(
         new T.PlaneGeometry(6000, 6000),
-        new T.MeshStandardMaterial({ color: 0x4f9255, map: mkTex(1400, 1400), roughness: 1, metalness: 0 }),
+        new T.MeshStandardMaterial({ color: V ? 0x0b0814 : 0x4f9255, map: mkTex(1400, 1400), roughness: 1, metalness: 0 }),
       );
       ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; ground.receiveShadow = true;
       g.add(ground);
       // 馬場リボン(オーバルに沿うストリップ・刈り跡の縞=頂点カラー × 芝ディテール=map)
       const segs = 260, pos = [], col = [], idx = [], uv = [];
       // 明るめの縞(map=グレースケールで暗くなるぶんを見越して持ち上げ)
-      const ca = new T.Color(0x7fce86), cb = new T.Color(0x74c07c);
+      const ca = V ? new T.Color(0x1c1530) : new T.Color(0x7fce86),
+            cb = V ? new T.Color(0x171128) : new T.Color(0x74c07c);
       for (let i = 0; i <= segs; i++) {
         const s = (i / segs) * tr.lap, p = tr.pointAtS(s % tr.lap);
         pos.push(p.x + p.nx * (tr.width / 2), 0.02, p.z + p.nz * (tr.width / 2),
@@ -609,7 +620,9 @@
       trackMesh.receiveShadow = true;
       g.add(trackMesh);
       // ラチ(内・外)
-      const railMat = new T.MeshStandardMaterial({ color: 0xf3f5f8, roughness: 0.6 });
+      const railMat = V
+        ? new T.MeshStandardMaterial({ color: 0xc9a86a, roughness: 0.25, metalness: 0.85, emissive: 0x5a4520, emissiveIntensity: 0.55 })
+        : new T.MeshStandardMaterial({ color: 0xf3f5f8, roughness: 0.6 });
       [0.3, tr.width - 0.3].forEach((lane) => {
         const pts = [];
         for (let i = 0; i <= 220; i++) {
@@ -626,7 +639,7 @@
       fg.setAttribute("position", new T.Float32BufferAttribute(
         [a1.x, 0.035, a1.z, a2.x, 0.035, a2.z, a3.x, 0.035, a3.z, a4.x, 0.035, a4.z], 3));
       fg.setIndex([0, 1, 2, 0, 2, 3]); fg.computeVertexNormals();
-      g.add(new T.Mesh(fg, new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 })));
+      g.add(new T.Mesh(fg, new T.MeshStandardMaterial({ color: V ? 0xf2e4bf : 0xffffff, roughness: V ? 0.4 : 0.8 })));
       // 接地影は本物のシャドウマップで表現(フェイクディスクは廃止)
       t.scene.add(g); t.turf = g; t.shadows = null;
     }

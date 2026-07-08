@@ -169,8 +169,7 @@
 .hallArt { position: relative; width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; }
 /* NftHorseArt は素の768pxキャンバスを返す — 呼び出し側がサイズを与える契約 */
 .artCanvas { width: 100%; height: 100%; display: block; }
-/* PC: レアリティをアート右上にオーバーレイ。モバイルではアート下に配置(下の media query)。 */
-.hallRar { position: absolute; top: calc(0.7rem + 0.5rem); right: calc(0.7rem + 0.5rem); z-index: 2; }
+/* レアリティはアートに被せず名前下のメタ行に置く(2026-07-08 オーナー指摘) */
 .hallName { font-family: var(--font-display); font-weight: 700; font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hallMetaRow { display: flex; align-items: center; gap: 0.4rem; }
 .hallOwner { color: var(--faint); font-size: 0.66rem; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -264,5 +263,4 @@
   .spotlightArt { width: 96px; height: 96px; }
   .hallGrid { grid-template-columns: 1fr 1fr; }
   /* モバイルは小タイルで馬と被るため、レアリティをアートの外(下)に出す */
-  .hallRar { position: static; align-self: flex-start; margin-top: -0.1rem; }
 }
