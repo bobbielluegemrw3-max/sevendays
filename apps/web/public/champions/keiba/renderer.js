@@ -1609,27 +1609,33 @@
     _ensureGallop() {
       if (this._gallopReq || !(this.env && this.env.metallic)) return;
       this._gallopReq = true;
-      // v2納品(2026-07-08): coat(色相回転する層) + gold(金装甲・回転しない層)
-      const coats = new Array(12).fill(null);
-      const golds = new Array(12).fill(null);
+      // 3タイプ納品(2026-07-08): NFTアーキタイプ v2/v3/v4 × 12コマ ×
+      // coat(色相回転する層)+gold(金装甲・回転しない層)
+      const ARCHS = ["v2", "v3", "v4"];
+      this._gallopSets = {};
       let loaded = 0;
-      const done = () => {
-        loaded += 1;
-        if (loaded === 12) { this._gallop = coats; this._gallopGold = golds; }
-      };
-      for (let i = 1; i <= 12; i++) {
-        const idx = i - 1;
-        const nn = String(i).padStart(2, "0");
-        const coat = new Image();
-        coat.onload = () => done();
-        coat.onerror = () => { /* 1枚でも欠けたらGLB経路のまま */ };
-        coat.src = "/champions/keiba/tex/gallop_" + nn + "_coat.webp";
-        coats[idx] = coat;
-        const gold = new Image();
-        gold.onerror = () => { golds[idx] = null; };
-        gold.src = "/champions/keiba/tex/gallop_" + nn + "_gold.webp";
-        golds[idx] = gold;
-      }
+      const NEED = ARCHS.length * 12;
+      ARCHS.forEach((arch) => {
+        const coats = new Array(12).fill(null);
+        const golds = new Array(12).fill(null);
+        this._gallopSets[arch] = { coats, golds };
+        for (let i = 1; i <= 12; i++) {
+          const idx = i - 1;
+          const nn = String(i).padStart(2, "0");
+          const coat = new Image();
+          coat.onload = () => {
+            loaded += 1;
+            if (loaded === NEED) this._gallop = true; // 全タイプ準備完了ゲート
+          };
+          coat.onerror = () => { /* 1枚でも欠けたらGLB経路のまま */ };
+          coat.src = "/champions/keiba/tex/gallop_" + arch + "_" + nn + "_coat.webp";
+          coats[idx] = coat;
+          const gold = new Image();
+          gold.onerror = () => { golds[idx] = null; };
+          gold.src = "/champions/keiba/tex/gallop_" + arch + "_" + nn + "_gold.webp";
+          golds[idx] = gold;
+        }
+      });
     }
     /**
      * 馬ごとの色付き連続画を事前ベイク(384px)。'hue'合成で色相だけ差し替え
@@ -1637,9 +1643,11 @@
      * ctx.filterのhue-rotateは環境依存で効かないことがあるため使わない。
      */
     _spriteFramesFor(h) {
-      if (!this._gallop) return null;
+      if (!this._gallop || !this._gallopSets) return null;
+      const set = this._gallopSets[h.arch] || this._gallopSets.v2;
+      if (!set) return null;
       if (!this._spriteCache) this._spriteCache = new Map();
-      const key = h.num + ":" + (h.coat || "");
+      const key = h.num + ":" + (h.coat || "") + ":" + (h.arch || "v2");
       let baked = this._spriteCache.get(key);
       if (baked) return baked;
       const S = 384;
@@ -1660,7 +1668,7 @@
       }
       const rotDeg = ((targetHue - 190) % 360 + 360) % 360;
       const rotNorm = rotDeg / 360;
-      baked = this._gallop.map((img, i) => {
+      baked = set.coats.map((img, i) => {
         const c = document.createElement("canvas");
         c.width = S; c.height = S;
         const g = c.getContext("2d");
@@ -1696,7 +1704,7 @@
         }
         // 金装甲レイヤーは回転させず不透明で重ねる(NFTのaccents層と同一思想。
         // 半透明重ねは他馬が透けるためやらない — オーナー指摘 2026-07-08)
-        const gold = this._gallopGold && this._gallopGold[i];
+        const gold = set.golds[i];
         if (gold && gold.complete && gold.naturalWidth) g.drawImage(gold, 0, 0, S, S);
         return c;
       });

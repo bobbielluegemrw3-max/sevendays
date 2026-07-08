@@ -588,7 +588,7 @@ window.KeibaEngine = (function () {
         name: h.name, jockey: h.jockey || "",
         style, styleDetail: h.styleDetail || det[0],
         strength: (N - h.finishRank) / N, stability: h.stability != null ? h.stability : 0.7,
-        silks: h.silks || SILKS[(h.num - 1) % SILKS.length], coat: h.coat || COATS[(h.num - 1) % COATS.length],
+        silks: h.silks || SILKS[(h.num - 1) % SILKS.length], coat: h.coat || COATS[(h.num - 1) % COATS.length], arch: h.arch || null,
         weight: h.weight || 480, age: h.age || 4, sex: h.sex || "牡",
         frames, finishTime, agari: t600 !== null ? finishTime - t600 : null,
       };
