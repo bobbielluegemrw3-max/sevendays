@@ -130,12 +130,12 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
           time: 'void',
           season: 'winter',
           metallic: true,
-          strideM: num('stride', 6),
-          goldAlpha: num('gold', 1),
-          tintAlpha: num('tint', 0.42),
+          strideM: num('stride', 7),
+          goldAlpha: num('gold', 0.55),
+          tintAlpha: num('tint', 0.7),
         });
-        // 接写は0.35倍速: 体感速度は手前の地面ストリークが支配するため
-        el.setSpeed(num('spd', 0.35));
+        // 0.7倍: 脚の回転(実速同期)が競馬らしく見える下限あたり
+        el.setSpeed(num('spd', 0.7));
         // 'side'はコース全体の固定引きカメラ(馬が光点になる)。追走カメラで
         // 馬に寄る。スプライトは常にカメラを向くのでどのカットでも成立する
         el.setCamera('auto');
@@ -153,8 +153,8 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=20260708g')
-      .then(() => addScript('/champions/keiba/renderer.js?v=20260708g'))
+    addScript('/champions/keiba/engine.js?v=20260708h')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260708h'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;

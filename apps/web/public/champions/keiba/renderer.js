@@ -1639,8 +1639,8 @@
     _spriteFramesFor(h) {
       if (!this._gallop) return null;
       if (!this._spriteCache) this._spriteCache = new Map();
-      const tintA = this.env && Number.isFinite(this.env.tintAlpha) ? this.env.tintAlpha : 0.42;
-      const goldA = this.env && Number.isFinite(this.env.goldAlpha) ? this.env.goldAlpha : 1;
+      const tintA = this.env && Number.isFinite(this.env.tintAlpha) ? this.env.tintAlpha : 0.7;
+      const goldA = this.env && Number.isFinite(this.env.goldAlpha) ? this.env.goldAlpha : 0.55;
       const key = h.num + ":" + (h.coat || "") + ":" + tintA + ":" + goldA;
       let baked = this._spriteCache.get(key);
       if (baked) return baked;
@@ -1688,7 +1688,7 @@
       // AI生成コマは1枚ごとに模様が揺れる(ボイリング)ため、切替を隣接コマの
       // クロスフェードで滑らかにする。コマ切替そのものが「本体が高速で描き
       // 直される」16倍速感の正体(オーナー観察 2026-07-08)。
-      const strideM = this.env && Number.isFinite(this.env.strideM) && this.env.strideM > 0 ? this.env.strideM : 6;
+      const strideM = this.env && Number.isFinite(this.env.strideM) && this.env.strideM > 0 ? this.env.strideM : 7;
       // ⚠ _ph は2D脚アニメ用に毎フレーム加算されるカウンタ(これを混ぜると
       // コマが毎描画2〜3枚跳んで全身が高速ストロボする — 実測で確認済み)。
       // 位相ずらしは馬番から決める固定値を使う。
@@ -1705,7 +1705,9 @@
       ctx.ellipse(p.x, p.y, 1.6 * ppm, 0.26 * ppm, 0, 0, 7);
       ctx.fill();
       ctx.save();
-      ctx.translate(p.x, p.y);
+      // ギャロップの躍動: 1完歩周期で体が上下する(サスペンション期に浮く)
+      const bounce = Math.sin(((cyc + 1) % 1) * 6.28318) * 0.045 * H;
+      ctx.translate(p.x, p.y - bounce);
       if (dir < 0) ctx.scale(-1, 1);
       ctx.drawImage(frames[f0], -H / 2, -H * FEET, H, H);
       ctx.restore();
