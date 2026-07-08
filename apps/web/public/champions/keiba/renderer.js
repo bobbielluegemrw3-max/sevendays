@@ -1648,9 +1648,16 @@
         c.width = S; c.height = S;
         const g = c.getContext("2d");
         g.drawImage(img, 0, 0, S, S);
+        // 鬣などの有彩色部分の色相を差し替え
         g.globalCompositeOperation = "hue";
         g.fillStyle = h.coat || "#7de3ff";
         g.fillRect(0, 0, S, S);
+        // 無彩色の黒クローム馬体にも各馬の色を注入(彩度を与える。alpha控えめで
+        // クロームの陰影は残す)— これが無いと個体色が鬣だけになり全馬同じに見える
+        g.globalCompositeOperation = "color";
+        g.globalAlpha = 0.42;
+        g.fillRect(0, 0, S, S);
+        g.globalAlpha = 1;
         g.globalCompositeOperation = "destination-in";
         g.drawImage(img, 0, 0, S, S);
         g.globalCompositeOperation = "source-over";
@@ -1678,8 +1685,6 @@
       const cyc = (s.d / 6 + (this._ph[s.h.num] || 0)) % 1;
       const fpos = ((cyc + 1) % 1) * frames.length;
       const f0 = Math.floor(fpos) % frames.length;
-      const f1 = (f0 + 1) % frames.length;
-      const mix = fpos - Math.floor(fpos);
       // 画像内で馬体は約45%(鬣・余白込みの1024px正方)— 追走カメラで映える全高≈4.6m相当
       const H = 4.6 * ppm;
       const FEET = 0.92;     // 接地基準(納品仕様: 下端から8%)
@@ -1692,9 +1697,6 @@
       ctx.translate(p.x, p.y);
       if (dir < 0) ctx.scale(-1, 1);
       ctx.drawImage(frames[f0], -H / 2, -H * FEET, H, H);
-      ctx.globalAlpha = mix;
-      ctx.drawImage(frames[f1], -H / 2, -H * FEET, H, H);
-      ctx.globalAlpha = 1;
       ctx.restore();
     }
     _drawGate(ctx, cam) {
