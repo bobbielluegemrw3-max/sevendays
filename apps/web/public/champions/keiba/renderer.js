@@ -920,11 +920,13 @@
       if (this.env && this.env.metallic) {
         const focus = clamp(packMid + 4, 6, race.distance + 40);
         const pw = tr.laneWorld(focus, tr.width * 0.5);
-        // 外側(レール外)へ11m・地上2.2mから、集団のやや前方を見る
-        ex = pw.x - pw.nx * 11; ey = 2.2; ez = pw.z - pw.nz * 11;
+        // 外側(レール外)へ12m・高さ3.4mから、やや上向きに集団前方を見る。
+        // 高め+上向き=手前の地面(最速で流れる帯)を画面から減らし、静止した
+        // 背景パノラマの比率を上げて体感速度を抑える。
+        ex = pw.x - pw.nx * 12; ey = 3.4; ez = pw.z - pw.nz * 12;
         const tgt = tr.laneWorld(focus + 2.5, tr.width * 0.45);
-        tx = tgt.x; ty = 1.5; tz = tgt.z;
-        f = Math.min(w * 1.05, h * 1.9) * (this._camZoom || 1);
+        tx = tgt.x; ty = 2.1; tz = tgt.z;
+        f = Math.min(w * 0.92, h * 1.65) * (this._camZoom || 1);
         if (!this._cam || this._camKind !== "sdchase") {
           this._cam = { ex, ey, ez, tx, ty, tz, f };
         } else {
@@ -1661,7 +1663,7 @@
       const dir = p2 && p2.x < p.x ? -1 : 1;
       // コマ送りは映像優先: 完歩16m相当のスローモーション(実寸の脚回転だと
       // 接写では4倍速の小走りに見える — オーナー指摘 2026-07-08)
-      const cyc = (s.d / 8 + (this._ph[s.h.num] || 0)) % 1;
+      const cyc = (s.d / 6 + (this._ph[s.h.num] || 0)) % 1;
       const img = frames[Math.floor(((cyc + 1) % 1) * frames.length) % frames.length];
       // 画像内で馬体は約45%(鬣・余白込みの1024px正方)— 追走カメラで映える全高≈4.6m相当
       const H = 4.6 * ppm;
