@@ -118,9 +118,24 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       };
       try {
         const race = engine.generateRaceFromInput(input, { seed: seedRef.current });
-        el.loadRace(race, { time: 'void', season: 'winter', metallic: true });
+        // 調整つまみ(URLパラメータ・省略時は既定値):
+        //   ?spd=0.35(再生倍率) &stride=6(コマ送り完歩m・小さいほど脚が速い)
+        //   &gold=1(金装甲の濃さ0-1) &tint=0.42(馬体への個体色の濃さ0-1)
+        const q = new URLSearchParams(window.location.search);
+        const num = (k: string, d: number) => {
+          const v = Number(q.get(k));
+          return Number.isFinite(v) && q.get(k) !== null && q.get(k) !== '' ? v : d;
+        };
+        el.loadRace(race, {
+          time: 'void',
+          season: 'winter',
+          metallic: true,
+          strideM: num('stride', 6),
+          goldAlpha: num('gold', 1),
+          tintAlpha: num('tint', 0.42),
+        });
         // 接写は0.35倍速: 体感速度は手前の地面ストリークが支配するため
-        el.setSpeed(0.35);
+        el.setSpeed(num('spd', 0.35));
         // 'side'はコース全体の固定引きカメラ(馬が光点になる)。追走カメラで
         // 馬に寄る。スプライトは常にカメラを向くのでどのカットでも成立する
         el.setCamera('auto');
@@ -138,8 +153,8 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=20260708f')
-      .then(() => addScript('/champions/keiba/renderer.js?v=20260708f'))
+    addScript('/champions/keiba/engine.js?v=20260708g')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260708g'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;

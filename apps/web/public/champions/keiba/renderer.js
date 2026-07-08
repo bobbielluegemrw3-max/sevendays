@@ -1639,7 +1639,9 @@
     _spriteFramesFor(h) {
       if (!this._gallop) return null;
       if (!this._spriteCache) this._spriteCache = new Map();
-      const key = h.num + ":" + (h.coat || "");
+      const tintA = this.env && Number.isFinite(this.env.tintAlpha) ? this.env.tintAlpha : 0.42;
+      const goldA = this.env && Number.isFinite(this.env.goldAlpha) ? this.env.goldAlpha : 1;
+      const key = h.num + ":" + (h.coat || "") + ":" + tintA + ":" + goldA;
       let baked = this._spriteCache.get(key);
       if (baked) return baked;
       const S = 384;
@@ -1655,7 +1657,7 @@
         // 無彩色の黒クローム馬体にも各馬の色を注入(彩度を与える。alpha控えめで
         // クロームの陰影は残す)— これが無いと個体色が鬣だけになり全馬同じに見える
         g.globalCompositeOperation = "color";
-        g.globalAlpha = 0.42;
+        g.globalAlpha = tintA;
         g.fillRect(0, 0, S, S);
         g.globalAlpha = 1;
         g.globalCompositeOperation = "destination-in";
@@ -1663,7 +1665,11 @@
         g.globalCompositeOperation = "source-over";
         // 金装甲レイヤーは色相回転させず重ねる(NFTのaccents層と同じ思想)
         const gold = this._gallopGold && this._gallopGold[i];
-        if (gold && gold.complete && gold.naturalWidth) g.drawImage(gold, 0, 0, S, S);
+        if (gold && gold.complete && gold.naturalWidth && goldA > 0) {
+          g.globalAlpha = goldA;
+          g.drawImage(gold, 0, 0, S, S);
+          g.globalAlpha = 1;
+        }
         return c;
       });
       this._spriteCache.set(key, baked);
@@ -1682,7 +1688,12 @@
       // AI生成コマは1枚ごとに模様が揺れる(ボイリング)ため、切替を隣接コマの
       // クロスフェードで滑らかにする。コマ切替そのものが「本体が高速で描き
       // 直される」16倍速感の正体(オーナー観察 2026-07-08)。
-      const cyc = (s.d / 6 + (this._ph[s.h.num] || 0)) % 1;
+      const strideM = this.env && Number.isFinite(this.env.strideM) && this.env.strideM > 0 ? this.env.strideM : 6;
+      // ⚠ _ph は2D脚アニメ用に毎フレーム加算されるカウンタ(これを混ぜると
+      // コマが毎描画2〜3枚跳んで全身が高速ストロボする — 実測で確認済み)。
+      // 位相ずらしは馬番から決める固定値を使う。
+      const phase = ((s.h.num * 0.618) % 1);
+      const cyc = (s.d / strideM + phase) % 1;
       const fpos = ((cyc + 1) % 1) * frames.length;
       const f0 = Math.floor(fpos) % frames.length;
       // 画像内で馬体は約45%(鬣・余白込みの1024px正方)— 追走カメラで映える全高≈4.6m相当
