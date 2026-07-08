@@ -157,6 +157,13 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
   return (
     <div className={s.hero}>
       <div ref={wrapRef} className={s.heroCanvas}>
+        {/* Manus納品のアリーナ背景(GLキャンバスは透過なので背面に敷く) */}
+        <img
+          className={s.heroBackdrop}
+          src="/champions/keiba/tex/arena_backdrop.webp"
+          alt=""
+          aria-hidden="true"
+        />
         {state !== 'running' && (
           <div className={s.heroLoading}>
             {state === 'failed' ? 'CHAMPION LEAGUE' : 'LOADING CHAMPIONS…'}

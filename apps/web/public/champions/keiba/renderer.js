@@ -296,9 +296,21 @@
           const g = await loader.loadAsync("https://threejs.org/examples/models/gltf/Horse.glb");
           models = [toModel(g)];
         }
+        // Seven Days メタリックマスター(Manus納品 2026-07-08)。404でも3Dは
+        // 継続し、従来のcanvas色替えにフォールバックする。
+        const sdLoad = (src) => new Promise((res) => {
+          const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src;
+        });
+        const [sdMetal, sdEmis, sdOrm, sdTack] = await Promise.all([
+          sdLoad("/champions/keiba/tex/horse_coat_metal.webp"),
+          sdLoad("/champions/keiba/tex/horse_coat_emissive.webp"),
+          sdLoad("/champions/keiba/tex/horse_coat_orm.webp"),
+          sdLoad("/champions/keiba/tex/tack_black_gold.webp"),
+        ]);
         this._three = {
           status: "ready", T, SK: SKmod, renderer, scene, camera, hemi, sun,
           models, horses: new Map(),
+          sd: { metal: sdMetal, emis: sdEmis, orm: sdOrm, tack: sdTack },
         };
         renderer.setSize(this.cv.width, this.cv.height, false);
         this._yawFix = 0; // 進行方向(接線)に正対(向き反転バグ修正)
@@ -362,6 +374,45 @@
       }
       if (!baseMap || !baseMap.image) { t._coatTex = null; t._coatBaseMap = null; return null; }
       t._coatBaseMap = baseMap; // 馬体コート材質の識別用(目/たてがみ等を除外する)
+      if (this.env && this.env.metallic && t.sd && t.sd.metal) {
+        // Seven Days: Manusマスター(シアン基準)を 'hue' ブレンドで各馬の色相へ。
+        // 明度・彩度(=ブラッシュメタルの質感)は保たれ、色相だけが変わる。
+        const key = JSON.stringify(COATS.map((c) => c.hex || c.jp));
+        if (t._coatKey === key && t._coatTex) return t._coatTex;
+        const mk = (srcImg) => COATS.map((coat) => {
+          const c = document.createElement("canvas");
+          c.width = srcImg.width; c.height = srcImg.height;
+          const g = c.getContext("2d");
+          g.drawImage(srcImg, 0, 0);
+          g.globalCompositeOperation = "hue";
+          g.fillStyle = coat.hex || coat.hair || "#7de3ff";
+          g.fillRect(0, 0, c.width, c.height);
+          g.globalCompositeOperation = "source-over";
+          const tex = new T.CanvasTexture(c);
+          tex.colorSpace = baseMap.colorSpace; tex.flipY = baseMap.flipY;
+          tex.wrapS = baseMap.wrapS; tex.wrapT = baseMap.wrapT;
+          tex.anisotropy = baseMap.anisotropy || 1;
+          tex.needsUpdate = true;
+          return tex;
+        });
+        t._coatTex = mk(t.sd.metal);
+        t._emisTex = t.sd.emis ? mk(t.sd.emis) : null;
+        if (t.sd.orm && !t._ormTex) {
+          const tex = new T.Texture(t.sd.orm); // linear(質感データ)
+          tex.flipY = baseMap.flipY; tex.wrapS = baseMap.wrapS; tex.wrapT = baseMap.wrapT;
+          tex.needsUpdate = true;
+          t._ormTex = tex;
+        }
+        if (t.sd.tack && !t._tackTex) {
+          const tex = new T.Texture(t.sd.tack);
+          tex.colorSpace = baseMap.colorSpace; tex.flipY = baseMap.flipY;
+          tex.wrapS = baseMap.wrapS; tex.wrapT = baseMap.wrapT;
+          tex.needsUpdate = true;
+          t._tackTex = tex;
+        }
+        t._coatKey = key;
+        return t._coatTex;
+      }
       const img = baseMap.image;
       const w = img.width || 1024, h = img.height || 1024;
       const out = COATS.map((coat) => {
@@ -412,6 +463,7 @@
         };
         METALLIC = this.race.horses.map((h) => ({
           jp: "metal",
+          hex: h.coat,
           ops: [["saturation", "#808080"], ["color", h.coat], ["screen", "#3a3a44"]],
           mul: hexMul(h.coat),
           hair: h.coat,
@@ -455,10 +507,22 @@
                 cl.map = coatTex[coatIdx];
                 if (cl.color) cl.color.setRGB(1, 1, 1);
                 if (METALLIC) {
-                  // クローム質感: 反射を立てる(Seven Daysメタリック馬)
-                  if ("metalness" in cl) cl.metalness = 0.85;
-                  if ("roughness" in cl) cl.roughness = 0.28;
-                  if ("envMapIntensity" in cl) cl.envMapIntensity = 1.6;
+                  // Seven Days メタリック: Manusマスターの発光/質感マップを適用
+                  if (t._emisTex && t._emisTex[coatIdx]) {
+                    cl.emissiveMap = t._emisTex[coatIdx];
+                    if (cl.emissive) cl.emissive.setRGB(1, 1, 1);
+                    cl.emissiveIntensity = 1.1;
+                  }
+                  if (t._ormTex) {
+                    cl.roughnessMap = t._ormTex;
+                    cl.metalnessMap = t._ormTex;
+                    if ("metalness" in cl) cl.metalness = 1.0;
+                    if ("roughness" in cl) cl.roughness = 1.0;
+                  } else {
+                    if ("metalness" in cl) cl.metalness = 0.85;
+                    if ("roughness" in cl) cl.roughness = 0.28;
+                  }
+                  if ("envMapIntensity" in cl) cl.envMapIntensity = 1.5;
                 }
               }
                 else if (hairMesh) { cl.map = null; if (cl.color) cl.color.set(coat.hair); } // 緑のデータテクスチャを外し自然な毛色に
@@ -466,8 +530,23 @@
                 return cl;
               });
               n.material = Array.isArray(n.material) ? mats : mats[0];
+            } else if (METALLIC && t._tackTex && mats.length && mats.some((mat) => mat && /M_Tack/i.test(mat.name || ""))) {
+              // 装具(鞍・頭絡等)を黒レザー×ゴールドのチャンピオン仕様に
+              mats = mats.map((mat) => {
+                if (!mat || !/M_Tack/i.test(mat.name || "")) return mat;
+                const cl = mat.clone();
+                cl.map = t._tackTex;
+                if (cl.color) cl.color.setRGB(1, 1, 1);
+                if ("metalness" in cl) cl.metalness = 0.4;
+                if ("roughness" in cl) cl.roughness = 0.55;
+                if ("envMapIntensity" in cl) cl.envMapIntensity = 1.0;
+                return cl;
+              });
+              n.material = Array.isArray(n.material) ? mats : mats[0];
             }
-            mats.forEach((mat) => {
+            // 実馬モードのみ全材質をつや消し化(プラスチック光沢対策)。
+            // メタリックモードではクローム反射が主役なので保持する。
+            if (!METALLIC) mats.forEach((mat) => {
               if ("roughness" in mat) { mat.roughness = 1.0; mat.metalness = 0.0; mat.envMapIntensity = 0.0; mat.needsUpdate = true; }
             });
           }
@@ -598,11 +677,26 @@
         if (T.SRGBColorSpace) tx.colorSpace = T.SRGBColorSpace;
         return tx;
       };
-      // 地面(内馬場/外周)+ 芝ディテール。VOID(Seven Days)は漆黒の地面。
+      // 地面(内馬場/外周)+ 芝ディテール。VOID(Seven Days)はManusのアリーナ床。
       const V = this.env && this.env.time === "void";
+      const sdTile = (key, src, rx, ry) => {
+        if (!t[key]) {
+          const tex = new T.TextureLoader().load(src);
+          tex.wrapS = tex.wrapT = T.RepeatWrapping;
+          tex.repeat.set(rx, ry);
+          tex.anisotropy = 8;
+          if (T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+          t[key] = tex;
+        }
+        return t[key];
+      };
+      const floorTex = V ? sdTile("_sdFloorTex", "/champions/keiba/tex/arena_floor_tile.webp", 500, 500) : null;
+      const trackTex = V ? sdTile("_sdTrackTex", "/champions/keiba/tex/track_surface_tile.webp", 1, 1) : null;
       const ground = new T.Mesh(
         new T.PlaneGeometry(6000, 6000),
-        new T.MeshStandardMaterial({ color: V ? 0x0b0814 : 0x4f9255, map: mkTex(1400, 1400), roughness: 1, metalness: 0 }),
+        V
+          ? new T.MeshStandardMaterial({ color: 0xffffff, map: floorTex, roughness: 0.85, metalness: 0.1 })
+          : new T.MeshStandardMaterial({ color: 0x4f9255, map: mkTex(1400, 1400), roughness: 1, metalness: 0 }),
       );
       ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; ground.receiveShadow = true;
       g.add(ground);
@@ -625,7 +719,12 @@
       rg.setAttribute("color", new T.Float32BufferAttribute(col, 3));
       rg.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
       rg.setIndex(idx); rg.computeVertexNormals();
-      const trackMesh = new T.Mesh(rg, new T.MeshStandardMaterial({ vertexColors: true, map: mkTex(1, 1), roughness: 1, metalness: 0 }));
+      const trackMesh = new T.Mesh(
+        rg,
+        V
+          ? new T.MeshStandardMaterial({ vertexColors: false, color: 0xffffff, map: trackTex, roughness: 0.55, metalness: 0.15 })
+          : new T.MeshStandardMaterial({ vertexColors: true, map: mkTex(1, 1), roughness: 1, metalness: 0 }),
+      );
       trackMesh.receiveShadow = true;
       g.add(trackMesh);
       // ラチ(内・外)

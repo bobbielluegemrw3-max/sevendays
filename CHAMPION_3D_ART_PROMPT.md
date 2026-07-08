@@ -2,6 +2,7 @@
 
 > 作成: 2026-07-08 / 対象: /champion ヒーローの3Dループアニメ(Decision 080)
 > 素材フォルダ: リポジトリ直下 `champion-3d-handoff/`(このMDと一緒にManusへ渡す)
+> **納品済み・組み込み済み(2026-07-08)**: A系4種+B系3種を`apps/web/public/champions/keiba/tex/`(WebP)に配置。原本ZIP=リポジトリ直下`race3d_assets_full.zip`(未コミット・消さないこと)
 > 世界観: あなた(Manus)が制作したメタリック馬NFT・アイテムアイコンと同一。黒×金のチャンピオンアリーナ
 
 ## 背景(なぜテクスチャ発注か)
