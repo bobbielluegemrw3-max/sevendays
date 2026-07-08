@@ -18,7 +18,7 @@
 .heroSound {
   position: absolute;
   right: 0.9rem;
-  top: 0.8rem;
+  bottom: 0.8rem;
   z-index: 3;
   padding: 0.32rem 0.7rem;
   border: 1px solid rgba(201, 168, 106, 0.45);
@@ -319,7 +319,7 @@
 @media (max-width: 620px) {
   /* モバイル: タイトルを上部へ — 中段の走路・馬と被らない(オーナー指示) */
   .heroOverlay {
-    top: 2.9rem;
+    top: 0.9rem;
     bottom: auto;
     background: linear-gradient(0deg, transparent, rgba(5, 4, 9, 0.82) 62%);
   }
