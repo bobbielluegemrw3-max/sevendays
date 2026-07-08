@@ -1222,11 +1222,8 @@
               this._drawSpriteHorse(octx, cam, b.o, b.w);
               const pj = cam.proj(b.w.x, 0, b.w.z);
               if (pj) {
-                if ((this._flash[b.o.h.num] || 0) > this.t && pj.s > 3) {
-                  octx.strokeStyle = "rgba(255,205,80,0.8)";
-                  octx.lineWidth = Math.max(1.5, pj.s * 0.07);
-                  octx.beginPath(); octx.ellipse(pj.x, pj.y + 0.04 * pj.s, 1.95 * pj.s, 0.34 * pj.s, 0, 0, 7); octx.stroke();
-                }
+                // 追い抜きの金リングは2D馬用の演出 — 無地の路面では浮いて
+                // 見えるためスプライト経路では使わない(2026-07-08)
                 this._badges.push({ num: b.o.h.num, x: pj.x, y: pj.y, ppm: pj.s });
                 const mk = this.race.marks;
                 const marked = mk && (mk.tan === b.o.h.num || mk.ren === b.o.h.num || mk.san === b.o.h.num);
