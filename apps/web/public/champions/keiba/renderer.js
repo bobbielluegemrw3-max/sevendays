@@ -1033,7 +1033,12 @@
 
       // 3Dモードでは芝・コースは3Dジオメトリ(_buildTurf3D)が描く。空/雲/山/観客席は非表示でクリーンに。
       const is3D = this._use3D();
-      if (is3D) {
+      const MET = this.env && this.env.metallic;
+      if (is3D && MET) {
+        // Seven Days: 2D層は透明のまま — 背面のManusアリーナパノラマ(サイバー
+        // パンク遠景)を見せ、地面は3Dのアリーナ床が描く。
+        ctx.clearRect(0, 0, W, H);
+      } else if (is3D) {
         const bg = ctx.createLinearGradient(0, 0, 0, H);
         bg.addColorStop(0, "#1b2a32"); bg.addColorStop(0.55, "#22352f"); bg.addColorStop(1, "#1b2c28");
         ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
@@ -1153,6 +1158,7 @@
       bills.forEach((b) => {
         // 3D時は地上物(スタンド/木/ハロン棒/ゴール柱/広告/ビジョン/ゲート/粒子)は描かない。馬だけ補助描画。
         if (is3D && b.kind !== "horse") return;
+        if (MET && (b.kind === "stand" || b.kind === "tree" || b.kind === "ad" || b.kind === "vision")) return; // Seven Days: 実競馬場の書き割りは出さない
         if ((b.kind === "stand" || b.kind === "tree") && b.z < 25) return; // カメラ至近は描かない
         if (b.kind === "stand") this._drawStand(ctx, cam, b.o);
         else if (b.kind === "tree") this._drawTree(ctx, cam, b.o);
