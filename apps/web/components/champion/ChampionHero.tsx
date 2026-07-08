@@ -119,8 +119,9 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       try {
         const race = engine.generateRaceFromInput(input, { seed: seedRef.current });
         el.loadRace(race, { time: 'void', season: 'winter', metallic: true });
-        // 接写では等速が最も重厚(速いと小走りに見える)
-        el.setSpeed(1.0);
+        // 接写は0.5倍速: 地面の流れ(実速17m/s)が体感速度を跳ね上げるため、
+        // シミュレーション自体を落として重厚に見せる
+        el.setSpeed(0.5);
         // 'side'はコース全体の固定引きカメラ(馬が光点になる)。追走カメラで
         // 馬に寄る。スプライトは常にカメラを向くのでどのカットでも成立する
         el.setCamera('auto');
@@ -136,8 +137,8 @@ export function ChampionHero({ horses }: { horses: HeroHorse[] }) {
       }
     };
 
-    addScript('/champions/keiba/engine.js?v=1')
-      .then(() => addScript('/champions/keiba/renderer.js?v=1'))
+    addScript('/champions/keiba/engine.js?v=20260708b')
+      .then(() => addScript('/champions/keiba/renderer.js?v=20260708b'))
       .then(() => {
         if (cancelled) return;
         const wrap = wrapRef.current;
