@@ -1182,7 +1182,7 @@
                 const marked = mk && (mk.tan === b.o.h.num || mk.ren === b.o.h.num || mk.san === b.o.h.num);
                 if (!marked) {
                   this._chips.push({
-                    num: b.o.h.num, x: pj.x, y: pj.y - 3.3 * pj.s, ppm: pj.s,
+                    num: b.o.h.num, x: pj.x, y: pj.y - 4.6 * pj.s, ppm: pj.s,
                     wc: b.o.h.wakuColor, wt: b.o.h.wakuText, waku: b.o.h.waku,
                     stBg: STYLE_BG[b.o.h.style] || "#888888",
                   });
@@ -1589,29 +1589,37 @@
         img.src = "/champions/keiba/tex/gallop_" + String(i).padStart(2, "0") + ".webp";
       }
     }
-    /** coat(hex)の色相 − マスター(シアン≈190°)= ctx.filter hue-rotate角。 */
-    _hueDegFor(h) {
-      if (!this._hueDegs) this._hueDegs = {};
-      if (this._hueDegs[h.num] !== undefined) return this._hueDegs[h.num];
-      const hex = h.coat || "#7de3ff";
-      const r = parseInt(hex.slice(1, 3), 16) / 255,
-            g = parseInt(hex.slice(3, 5), 16) / 255,
-            b = parseInt(hex.slice(5, 7), 16) / 255;
-      const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
-      let hue = 0;
-      if (d > 1e-6) {
-        if (mx === r) hue = ((g - b) / d) % 6;
-        else if (mx === g) hue = (b - r) / d + 2;
-        else hue = (r - g) / d + 4;
-        hue *= 60; if (hue < 0) hue += 360;
-      }
-      const deg = Math.round(hue - 190);
-      this._hueDegs[h.num] = deg;
-      return deg;
+    /**
+     * 馬ごとの色付き連続画を事前ベイク(384px)。'hue'合成で色相だけ差し替え
+     * (質感=明度/彩度は保持)、destination-inで透過を復元する。
+     * ctx.filterのhue-rotateは環境依存で効かないことがあるため使わない。
+     */
+    _spriteFramesFor(h) {
+      if (!this._gallop) return null;
+      if (!this._spriteCache) this._spriteCache = new Map();
+      const key = h.num + ":" + (h.coat || "");
+      let baked = this._spriteCache.get(key);
+      if (baked) return baked;
+      const S = 384;
+      baked = this._gallop.map((img) => {
+        const c = document.createElement("canvas");
+        c.width = S; c.height = S;
+        const g = c.getContext("2d");
+        g.drawImage(img, 0, 0, S, S);
+        g.globalCompositeOperation = "hue";
+        g.fillStyle = h.coat || "#7de3ff";
+        g.fillRect(0, 0, S, S);
+        g.globalCompositeOperation = "destination-in";
+        g.drawImage(img, 0, 0, S, S);
+        g.globalCompositeOperation = "source-over";
+        return c;
+      });
+      this._spriteCache.set(key, baked);
+      return baked;
     }
     /** NFT連続画ビルボード: 実レースエンジンの運動に載せて絵そのものを走らせる。 */
     _drawSpriteHorse(ctx, cam, s, w) {
-      const frames = this._gallop;
+      const frames = this._spriteFramesFor(s.h);
       if (!frames) return;
       const p = cam.proj(w.x, 0, w.z);
       if (!p || p.s < 0.8) return;
@@ -1619,21 +1627,20 @@
       const w2 = this.track.laneWorld(Math.min(s.d, this.race.distance + 80) + 3, s.l);
       const p2 = cam.proj(w2.x, 0, w2.z);
       const dir = p2 && p2.x < p.x ? -1 : 1;
-      // 完歩≈6.8m。個体位相(_ph)でコマをずらし、脚並びの揃いすぎを防ぐ
-      const cyc = (s.d / 6.8 + (this._ph[s.h.num] || 0)) % 1;
+      // 完歩≈7.4m。個体位相(_ph)でコマをずらし、脚並びの揃いすぎを防ぐ
+      const cyc = (s.d / 7.4 + (this._ph[s.h.num] || 0)) % 1;
       const img = frames[Math.floor(((cyc + 1) % 1) * frames.length) % frames.length];
-      const H = 3.0 * ppm;   // 画像全高(鬣・尾込み)≈3m相当
+      // 画像内で馬体は約45%(鬣・余白込みの1024px正方)— 実寸で映えるよう全高≈5.4m相当
+      const H = 5.4 * ppm;
       const FEET = 0.92;     // 接地基準(納品仕様: 下端から8%)
       // 接地影
       ctx.fillStyle = "rgba(0,0,0,0.5)";
       ctx.beginPath();
-      ctx.ellipse(p.x, p.y, 1.15 * ppm, 0.2 * ppm, 0, 0, 7);
+      ctx.ellipse(p.x, p.y, 1.6 * ppm, 0.26 * ppm, 0, 0, 7);
       ctx.fill();
       ctx.save();
       ctx.translate(p.x, p.y);
       if (dir < 0) ctx.scale(-1, 1);
-      const deg = this._hueDegFor(s.h);
-      if (deg && ctx.filter !== undefined) ctx.filter = "hue-rotate(" + deg + "deg)";
       ctx.drawImage(img, -H / 2, -H * FEET, H, H);
       ctx.restore();
     }
