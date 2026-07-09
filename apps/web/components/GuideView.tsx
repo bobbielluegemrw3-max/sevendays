@@ -20,7 +20,6 @@ const SECTIONS = [
   { id: 'items', no: '07', title: 'アイテム' },
   { id: 'wallet', no: '08', title: '入金・出金' },
   { id: 'contact', no: '09', title: 'お問い合わせ' },
-  { id: 'ceo', no: '10', title: 'CEOからのメッセージ' },
 ] as const;
 
 const dna = (seed: string): string => '0x' + seed.repeat(32).slice(0, 64);
@@ -340,15 +339,6 @@ export function GuideView() {
         <p className={s.p}>
           <Link href="/contact">→ お問い合わせフォームを開く</Link>
         </p>
-      </section>
-
-      {/* ⑩ CEOメッセージ(オーナー原稿待ちのプレースホルダ) */}
-      <section id="ceo" className={`${s.sec} ${s.secGold}`}>
-        <SecHead no="10" title="CEOからのメッセージ" icon="user" />
-        <div className={s.ceo}>
-          <div className={s.ceoT}>COMING SOON</div>
-          <div className={s.ceoD}>CEOからのメッセージは近日公開予定です。</div>
-        </div>
       </section>
 
       <a href="#guide-top" className={s.backTop}>↑ ページ上部へ戻る</a>
