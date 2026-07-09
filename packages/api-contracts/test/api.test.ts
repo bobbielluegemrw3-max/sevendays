@@ -1364,4 +1364,43 @@ Seven Days Derby サポート', 0.9)
     const reject = await call('POST', `/api/v1/admin/cs/${second.rows[0]!.id}/reject`, asAdmin);
     expect(reject.status).toBe(200);
   });
+
+  it('composes direct mail, shows the thread, and broadcasts (dry-run)', async () => {
+    const admin = await newUser();
+    await client.query(
+      `insert into admin_role_grants (user_id, role) values ($1, 'SUPER_ADMIN')`,
+      [admin],
+    );
+    const asAdmin: AuthContext = { kind: 'admin', userId: admin, roles: ['SUPER_ADMIN'] };
+
+    // 個別送信 → スレッドに載る
+    const compose = await call('POST', '/api/v1/admin/cs/compose', asAdmin, {
+      body: { email: 'owner2@example.com', subject: 'ご案内', body: '本文です' },
+    });
+    expect(compose.status).toBe(200);
+    const thread = await call('POST', '/api/v1/admin/cs/thread', asAdmin, {
+      body: { email: 'owner2@example.com' },
+    });
+    expect(thread.status).toBe(200);
+    const tbody = thread.body as { messages: { direction: string }[] };
+    expect(tbody.messages.some((m) => m.direction === 'SENT')).toBe(true);
+
+    // 一斉送信(TEST=自分宛てのみ・ドライラン)
+    const bc = await call('POST', '/api/v1/admin/cs/broadcast', asAdmin, {
+      body: { subject: 'お知らせ', body: '一斉本文', mode: 'TEST' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(bc.status).toBe(200);
+    const bcBody = bc.body as { total: number; sent: number };
+    expect(bcBody.total).toBe(1);
+    expect(bcBody.sent).toBe(1);
+
+    // 送信履歴に個別と一斉が載る
+    const sent = await call('GET', '/api/v1/admin/cs/sent', asAdmin);
+    expect(sent.status).toBe(200);
+    const sbody = sent.body as { sent: { kind: string }[]; broadcasts: { mode: string }[] };
+    expect(sbody.sent.some((r) => r.kind === 'DIRECT')).toBe(true);
+    expect(sbody.sent.some((r) => r.kind === 'BROADCAST')).toBe(true);
+    expect(sbody.broadcasts.some((b) => b.mode === 'TEST')).toBe(true);
+  });
 });
