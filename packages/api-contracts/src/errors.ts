@@ -58,6 +58,8 @@ export const API_ERROR_STATUS: Record<string, number> = {
   GIFT_SELF: 400,
   GIFT_LIMIT: 429,
   MARKET_ACTION_LIMIT: 409,
+  // admin user ops (2026-07-09)
+  GRANT_NOT_PENDING: 409,
   MARKET_DAY_RANGE: 400,
 };
 

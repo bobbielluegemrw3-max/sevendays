@@ -100,6 +100,21 @@ function extractWalletAddress(payload: JWTPayload): string | null {
 }
 
 async function resolveContextFor(client: SqlClient, userId: string): Promise<AuthContext> {
+  // アカウント状態ゲート(2026-07-09): SUSPENDED/BANNED/DELETED は有効なJWTでも
+  // 認証済みとして扱わない(=全ユーザーAPIが401)。管理者凍結の実効化。
+  const status = await client.query<{ status: string }>(
+    `select status::text as status from users where id = $1`,
+    [userId],
+  );
+  if (status.rows[0] && status.rows[0].status !== 'ACTIVE') {
+    return { kind: 'anonymous' };
+  }
+  // presence: 認証済みアクセスの最終時刻(60秒スロットルで書込みを抑制)
+  await client.query(
+    `update users set last_seen_at = now()
+     where id = $1 and (last_seen_at is null or last_seen_at < now() - interval '60 seconds')`,
+    [userId],
+  );
   const grants = await client.query<{ role: string }>(
     `select role::text as role from admin_role_grants where user_id = $1 and revoked_at is null`,
     [userId],

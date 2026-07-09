@@ -11,13 +11,15 @@ export interface AdminEconomy {
 }
 
 const ACCOUNT_JA: Record<string, string> = {
-  MLM_RESERVE: 'サポートボーナス準備金',
-  OPERATING: '運営',
-  PRIZE_POOL: 'チャンピオン報酬プール',
-  PLATFORM_ITEM_CLEARING: 'アイテム精算',
-  BUYBACK_ESCROW: '買戻エスクロー',
-  DEPOSIT_CLEARING: '入金精算',
-  WITHDRAWAL_CLEARING: '出金精算',
+  PLATFORM_MINT_REVENUE: 'ミント売上',
+  PLATFORM_BUYBACK_RESERVE: '買戻準備金(チャンピオン報酬)',
+  PLATFORM_MLM_RESERVE: 'サポートボーナス準備金',
+  PLATFORM_OPERATING_RESERVE: '運営準備金',
+  PLATFORM_EMERGENCY_RESERVE: '緊急準備金',
+  PLATFORM_SETTLEMENT_CLEARING: '精算クリアリング',
+  PLATFORM_DEPOSIT_CLEARING: '入金クリアリング',
+  PLATFORM_WITHDRAWAL_CLEARING: '出金クリアリング',
+  PLATFORM_ITEM_CLEARING: 'アイテム精算クリアリング',
 };
 
 function money(v: string): string {

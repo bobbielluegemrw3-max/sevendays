@@ -1194,3 +1194,106 @@ describe('support member detail + search (owner request 2026-07-08)', () => {
     expect((miss.body as { user_id: string | null }).user_id).toBeNull();
   });
 });
+
+describe('admin user operations (items, freeze, dual-approved USDT grants)', () => {
+  it('runs the full flow: grant item -> freeze -> fund grant with dual approval', async () => {
+    const target = await newUser();
+    const admin1 = await newUser();
+    const admin2 = await newUser();
+    await client.query(
+      `insert into admin_role_grants (user_id, role) values ($1, 'SUPER_ADMIN'), ($2, 'FINANCE_ADMIN')`,
+      [admin1, admin2],
+    );
+    const asAdmin1: AuthContext = { kind: 'admin', userId: admin1, roles: ['SUPER_ADMIN'] };
+    const asAdmin2: AuthContext = { kind: 'admin', userId: admin2, roles: ['FINANCE_ADMIN'] };
+
+    // ---- item grant (unit_price=0, source GIFT, audited)
+    const itemKey = (
+      await client.query<{ key: string }>(`select key from item_catalog where active limit 1`)
+    ).rows[0]!.key;
+    const granted = await call('POST', `/api/v1/admin/users/${target}/grant-item`, asAdmin1, {
+      body: { item_key: itemKey, quantity: 2 },
+    });
+    expect(granted.status).toBe(200);
+    const items = await client.query<{ unit_price: string; source: string }>(
+      `select unit_price::text as unit_price, source from user_items where user_id = $1`,
+      [target],
+    );
+    expect(items.rows).toHaveLength(2);
+    expect(items.rows.every((r) => Number(r.unit_price) === 0 && r.source === 'GIFT')).toBe(true);
+
+    // ---- freeze: self-change forbidden, others allowed
+    const self = await call('POST', `/api/v1/admin/users/${admin1}/status`, asAdmin1, {
+      body: { status: 'SUSPENDED' },
+    });
+    expect(self.status).toBe(403);
+    const frozen = await call('POST', `/api/v1/admin/users/${target}/status`, asAdmin1, {
+      body: { status: 'SUSPENDED' },
+    });
+    expect(frozen.status).toBe(200);
+    const st = await client.query<{ status: string }>(
+      `select status::text as status from users where id = $1`,
+      [target],
+    );
+    expect(st.rows[0]!.status).toBe('SUSPENDED');
+    await call('POST', `/api/v1/admin/users/${target}/status`, asAdmin1, {
+      body: { status: 'ACTIVE' },
+    });
+
+    // 運営準備金に原資を用意(残高不足の付与はDBトリガーが
+    // NEGATIVE_BALANCE_FORBIDDEN で拒否する — それ自体が仕様)
+    const clearing = await getPlatformAccountId(client, 'PLATFORM_DEPOSIT_CLEARING');
+    const operating = await getPlatformAccountId(client, 'PLATFORM_OPERATING_RESERVE');
+    await postTransaction(client, {
+      type: 'RESERVE_ALLOCATION',
+      idempotencyKey: randomUUID(),
+      entries: [
+        { accountId: clearing, direction: 'DEBIT', amount: Money.of(100) },
+        { accountId: operating, direction: 'CREDIT', amount: Money.of(100) },
+      ],
+    });
+
+    // ---- USDT grant: request (PENDING) -> requester cannot approve -> 2nd admin approves
+    const requested = await call('POST', `/api/v1/admin/users/${target}/fund-grant`, asAdmin1, {
+      body: { amount: 25, reason: 'compensation test' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(requested.status).toBe(200);
+    const grantId = (requested.body as { id: string }).id;
+
+    const selfApprove = await call('POST', `/api/v1/admin/fund-grants/${grantId}/approve`, asAdmin1);
+    expect(selfApprove.status).toBe(403);
+
+    const approve = await call('POST', `/api/v1/admin/fund-grants/${grantId}/approve`, asAdmin2);
+    expect(approve.status).toBe(200);
+
+    const balance = await client.query<{ balance: string }>(
+      `select b.balance::text as balance
+       from ledger_accounts a join ledger_account_balances b on b.account_id = a.id
+       where a.owner_id = $1 and a.account_type = 'USER_AVAILABLE'`,
+      [target],
+    );
+    expect(Number(balance.rows[0]!.balance)).toBe(25);
+
+    const again = await call('POST', `/api/v1/admin/fund-grants/${grantId}/approve`, asAdmin2);
+    expect(again.status).toBe(409);
+
+    // ---- dossier includes the new sections
+    const detail = await call('GET', `/api/v1/admin/users/${target}`, asAdmin1);
+    expect(detail.status).toBe(200);
+    const body = detail.body as {
+      user: { last_sign_in_at: string | null };
+      org_size: number;
+      upline: unknown[];
+      deposits: unknown[];
+      withdrawals: unknown[];
+      purchases: unknown[];
+      buybacks: unknown[];
+      sales: unknown[];
+      fund_grants: { status: string }[];
+    };
+    expect(body.org_size).toBe(0);
+    expect(Array.isArray(body.deposits)).toBe(true);
+    expect(body.fund_grants[0]!.status).toBe('APPROVED');
+  });
+});

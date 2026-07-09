@@ -11,6 +11,8 @@ import {
   runBatch,
   buildProductionHandlers,
 } from '@sevendays/settlement-engine';
+import { ensureUserAccounts, getPlatformAccountId, postAdminAdjustment } from '@sevendays/ledger';
+import { Money } from '@sevendays/shared';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry, HandlerContext } from '../router.js';
 
@@ -428,8 +430,10 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
     auth: 'admin',
     handler: async (ctx) => {
       requireAdminRole(ctx);
-      const user = await ctx.client.query(
+      const user = await ctx.client.query<{ last_seen_at: string | null }>(
         `select u.id, u.email, u.status::text as status, u.created_at::text as created_at,
+                u.last_seen_at::text as last_seen_at,
+                (u.last_seen_at is not null and u.last_seen_at > now() - interval '5 minutes') as online,
                 r.email as referrer_email,
                 coalesce(av.balance, 0)::text as balance_available,
                 coalesce(lk.balance, 0)::text as balance_locked
@@ -443,6 +447,17 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
         [ctx.params.id],
       );
       if (user.rows.length === 0) throw new ApiError('NOT_FOUND', 'User not found');
+      // 最終ログイン(Supabase auth)。PGlite等 auth スキーマ不在では null。
+      let lastSignInAt: string | null = null;
+      try {
+        const r = await ctx.client.query<{ last_sign_in_at: string | null }>(
+          `select last_sign_in_at::text as last_sign_in_at from auth.users where id = $1`,
+          [ctx.params.id],
+        );
+        lastSignInAt = r.rows[0]?.last_sign_in_at ?? null;
+      } catch {
+        lastSignInAt = null;
+      }
       const horses = await ctx.client.query(
         `select id, name, status::text as status, current_day, rarity::text as rarity,
                 horse_type::text as horse_type, created_at::text as created_at
@@ -469,13 +484,250 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
          order by created_at desc limit 100`,
         [ctx.params.id],
       );
+      // USDT入出金履歴
+      const deposits = await ctx.client.query(
+        `select amount::text as amount, status::text as status, tx_hash,
+                detected_at::text as detected_at, confirmed_at::text as confirmed_at
+         from blockchain_deposits where user_id = $1
+         order by detected_at desc limit 15`,
+        [ctx.params.id],
+      );
+      const withdrawals = await ctx.client.query(
+        `select requested_amount::text as requested_amount, net_amount::text as net_amount,
+                status::text as status, to_address, tx_hash,
+                requested_at::text as requested_at
+         from blockchain_withdrawals where user_id = $1
+         order by requested_at desc limit 15`,
+        [ctx.params.id],
+      );
+      // 馬購入履歴(購入セッション)
+      const purchases = await ctx.client.query(
+        `select status::text as status, locked_amount::text as locked_amount,
+                assigned_price::text as assigned_price, refund_amount::text as refund_amount,
+                created_at::text as created_at, settled_at::text as settled_at
+         from purchase_sessions where user_id = $1
+         order by created_at desc limit 15`,
+        [ctx.params.id],
+      );
+      // 利確履歴(Day7走破の買戻し200 USDT × 7分割)
+      const buybacks = await ctx.client.query(
+        `select b.id, h.name as horse_name, b.status::text as status,
+                b.total_amount::text as total_amount, b.day7_clear_date::text as day7_clear_date,
+                (select count(*)::int from buyback_schedule_payments p
+                  where p.buyback_schedule_id = b.id and p.status = 'PAID') as paid_count,
+                (select coalesce(sum(p.amount), 0)::text from buyback_schedule_payments p
+                  where p.buyback_schedule_id = b.id and p.status = 'PAID') as paid_amount
+         from buyback_schedules b
+         join horses h on h.id = b.horse_id
+         where b.user_id = $1
+         order by b.created_at desc limit 15`,
+        [ctx.params.id],
+      );
+      // 売却履歴(マーケット出品が他オーナーへ割当てられたもの)
+      const sales = await ctx.client.query(
+        `select l.listing_price::text as listing_price, l.status::text as status,
+                l.current_day, l.listed_at::text as listed_at, h.name as horse_name
+         from market_listings l
+         join horses h on h.id = l.horse_id
+         where l.seller_user_id = $1
+         order by l.listed_at desc limit 15`,
+        [ctx.params.id],
+      );
+      // MLM: 上位チェーン(MAP位置)と組織規模(7段まで)
+      const upline = await ctx.client.query(
+        `with recursive up as (
+           select u.id, u.email, u.direct_referrer_user_id, 0 as depth
+           from users u where u.id = $1
+           union all
+           select p.id, p.email, p.direct_referrer_user_id, up.depth + 1
+           from users p join up on p.id = up.direct_referrer_user_id
+           where up.depth < 12
+         )
+         select email, depth from up where depth > 0 order by depth`,
+        [ctx.params.id],
+      );
+      const orgSize = await ctx.client.query<{ size: number }>(
+        `with recursive org as (
+           select id, 0 as depth from users where id = $1
+           union all
+           select c.id, org.depth + 1 from users c
+           join org on c.direct_referrer_user_id = org.id
+           where org.depth < 7
+         )
+         select (count(*) - 1)::int as size from org`,
+        [ctx.params.id],
+      );
+      const grants = await ctx.client.query(
+        `select g.id, g.amount::text as amount, g.reason, g.status,
+                ru.email as requested_by_email, g.created_at::text as created_at
+         from admin_fund_grants g join users ru on ru.id = g.requested_by
+         where g.user_id = $1
+         order by g.created_at desc limit 10`,
+        [ctx.params.id],
+      );
       return {
-        user: user.rows[0],
+        user: { ...user.rows[0]!, last_sign_in_at: lastSignInAt },
         horses: horses.rows,
         items: items.rows,
         item_usages: usages.rows,
         direct_referrals: children.rows,
+        deposits: deposits.rows,
+        withdrawals: withdrawals.rows,
+        purchases: purchases.rows,
+        buybacks: buybacks.rows,
+        sales: sales.rows,
+        upline: upline.rows,
+        org_size: orgSize.rows[0]?.size ?? 0,
+        fund_grants: grants.rows,
       };
+    },
+  });
+
+  /* ---- 管理者アクション(2026-07-09) ------------------------------------- */
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/users/:id/grant-item',
+    auth: 'admin',
+    input: z.object({
+      item_key: z.string().min(1).max(64),
+      quantity: z.number().int().min(1).max(10),
+    }),
+    handler: async (ctx, input) => {
+      requireAdminRole(ctx);
+      const target = await ctx.client.query(`select id from users where id = $1`, [ctx.params.id]);
+      if (target.rows.length === 0) throw new ApiError('NOT_FOUND', 'User not found');
+      const item = await ctx.client.query<{ key: string }>(
+        `select key from item_catalog where key = $1 and active`,
+        [input.item_key],
+      );
+      if (item.rows.length === 0) throw new ApiError('NOT_FOUND', 'Item not found or inactive');
+      const qty = input.quantity ?? 1;
+      // unit_price=0: 管理付与は精算原資を持たない(BURN時のSupport原資 0)。
+      // 効果はitem_keyで決まるためゲームプレイ上は購入品と同等。
+      for (let i = 0; i < qty; i++) {
+        await ctx.client.query(
+          `insert into user_items (user_id, item_key, unit_price, source)
+           values ($1, $2, 0, 'GIFT')`,
+          [ctx.params.id, input.item_key],
+        );
+      }
+      await audit(ctx, `ADMIN_ITEM_GRANT:${input.item_key}x${qty}`, 'user', ctx.params.id!);
+      return { granted: qty, item_key: input.item_key };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/users/:id/status',
+    auth: 'admin',
+    input: z.object({ status: z.enum(['ACTIVE', 'SUSPENDED']) }),
+    handler: async (ctx, input) => {
+      requireAdminRole(ctx);
+      if (ctx.params.id === ctx.userId) {
+        throw new ApiError('FORBIDDEN', 'Cannot change your own account status');
+      }
+      const updated = await ctx.client.query<{ id: string }>(
+        `update users set status = $2::user_status where id = $1 returning id`,
+        [ctx.params.id, input.status],
+      );
+      if (updated.rows.length === 0) throw new ApiError('NOT_FOUND', 'User not found');
+      await audit(ctx, `ADMIN_USER_STATUS:${input.status}`, 'user', ctx.params.id!);
+      return { id: ctx.params.id, status: input.status };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/users/:id/fund-grant',
+    auth: 'admin',
+    idempotencyKeyRequired: true,
+    input: z.object({
+      amount: z.number().positive().max(100000),
+      reason: z.string().min(1).max(500),
+    }),
+    handler: async (ctx, input) => {
+      requireAdminRole(ctx);
+      const target = await ctx.client.query(`select id from users where id = $1`, [ctx.params.id]);
+      if (target.rows.length === 0) throw new ApiError('NOT_FOUND', 'User not found');
+      // 憲法: Admin adjustments require dual approval — まず申請(PENDING)を作る。
+      const row = await ctx.client.query<{ id: string }>(
+        `insert into admin_fund_grants (user_id, amount, reason, requested_by, idempotency_key)
+         values ($1, $2, $3, $4, $5)
+         on conflict (idempotency_key) do update set idempotency_key = excluded.idempotency_key
+         returning id`,
+        [ctx.params.id, input.amount, input.reason, ctx.userId, ctx.idempotencyKey],
+      );
+      await audit(ctx, 'ADMIN_FUND_GRANT_REQUESTED', 'admin_fund_grant', row.rows[0]!.id);
+      return { id: row.rows[0]!.id, status: 'PENDING' };
+    },
+  });
+
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/admin/fund-grants',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const rows = await ctx.client.query(
+        `select g.id, g.amount::text as amount, g.reason, g.status,
+                g.created_at::text as created_at, g.approved_at::text as approved_at,
+                u.email as user_email, ru.email as requested_by_email, g.requested_by
+         from admin_fund_grants g
+         join users u on u.id = g.user_id
+         join users ru on ru.id = g.requested_by
+         order by (g.status = 'PENDING') desc, g.created_at desc
+         limit 50`,
+      );
+      return { grants: rows.rows };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/fund-grants/:id/approve',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const grant = await ctx.client.query<{
+        id: string; user_id: string; amount: string; reason: string;
+        requested_by: string; status: string; idempotency_key: string;
+      }>(
+        `select id, user_id, amount::text as amount, reason, requested_by, status, idempotency_key
+         from admin_fund_grants where id = $1`,
+        [ctx.params.id],
+      );
+      const g = grant.rows[0];
+      if (!g) throw new ApiError('NOT_FOUND', 'Grant not found');
+      if (g.status !== 'PENDING') throw new ApiError('GRANT_NOT_PENDING', `Grant is ${g.status}`);
+      if (g.requested_by === ctx.userId) {
+        throw new ApiError('FORBIDDEN', 'Dual approval requires a different admin');
+      }
+      const user = await ensureUserAccounts(ctx.client, g.user_id);
+      const operating = await getPlatformAccountId(ctx.client, 'PLATFORM_OPERATING_RESERVE');
+      const amount = Money.of(g.amount);
+      // postAdminAdjustment が二重承認(FINANCE_ADMIN+SUPER_ADMIN の合算)と
+      // 監査ログをアトミックに強制する。
+      const posted = await postAdminAdjustment(ctx.client, {
+        type: 'ADMIN_ADJUSTMENT',
+        idempotencyKey: `admin-fund-grant:${g.id}`,
+        referenceType: 'admin_fund_grant',
+        referenceId: g.id,
+        reason: g.reason,
+        approvedBy1: g.requested_by,
+        approvedBy2: ctx.userId,
+        entries: [
+          { accountId: operating, direction: 'DEBIT', amount },
+          { accountId: user.available, direction: 'CREDIT', amount },
+        ],
+      });
+      await ctx.client.query(
+        `update admin_fund_grants
+         set status = 'APPROVED', approved_by = $2, approved_at = now(), ledger_transaction_id = $3
+         where id = $1`,
+        [g.id, ctx.userId, posted.transactionId],
+      );
+      return { id: g.id, status: 'APPROVED', ledger_transaction_id: posted.transactionId };
     },
   });
 
