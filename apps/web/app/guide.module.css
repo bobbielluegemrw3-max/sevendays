@@ -1,85 +1,174 @@
-/* /guide(使い方)— 初心者向けガイド。1c部品言語+図解プリミティブ。 */
+/* /guide(使い方)— 初心者向けガイド(リデザイン)。1c部品言語+図解プリミティブ。
+   絵文字を全廃し GuideIcon(SVG)+ NftHorseArt を使用。色/フォントは globals.css トークン。
+   注: CSS Modules。JSX から渡す class は全て module class。 */
 
-.wrap { display: flex; flex-direction: column; gap: 26px; max-width: 860px; margin: 0 auto; }
+.wrap { display: flex; flex-direction: column; gap: 24px; max-width: 860px; margin: 0 auto; }
 .h1 { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: var(--text); }
 .lead { font-size: 13.5px; color: var(--muted); line-height: 1.9; }
+.lead b { color: var(--text); }
+
+/* ヒーロー(馬アート) */
+.hero { position: relative; border: 1px solid rgba(201, 168, 106, 0.35); border-radius: 18px; overflow: hidden;
+  background: radial-gradient(560px 240px at 12% -10%, rgba(201, 168, 106, 0.16), transparent 66%), linear-gradient(160deg, #120d07, #060510 70%);
+  padding: 26px 22px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.hero::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(200px 200px at 88% 120%, rgba(0, 234, 255, 0.12), transparent 70%); }
+.heroGrid { position: absolute; inset: 0; pointer-events: none; opacity: 0.5;
+  background-image: linear-gradient(rgba(201,168,106,0.10) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,106,0.10) 1px, transparent 1px);
+  background-size: 26px 26px; -webkit-mask-image: linear-gradient(180deg, #000, transparent 78%); mask-image: linear-gradient(180deg, #000, transparent 78%); }
+.heroArt { position: relative; width: 164px; height: 132px; flex: none; filter: drop-shadow(0 10px 26px rgba(201, 168, 106, 0.3)); animation: guideFloat 5.5s ease-in-out infinite; }
+@keyframes guideFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.heroBody { position: relative; flex: 1; min-width: 220px; }
+.heroKicker { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.34em; color: var(--gold, #c9a86a); margin-bottom: 7px; }
+.heroTitle { font-family: var(--font-display); font-weight: 800; font-size: 24px; line-height: 1.15;
+  background: linear-gradient(92deg, #f6ecd2, var(--gold, #c9a86a)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.heroP { color: var(--muted); font-size: 12.5px; line-height: 1.85; margin-top: 8px; max-width: 460px; }
+@media (max-width: 640px) { .hero { flex-direction: column; text-align: center; } .heroArt { width: 140px; height: 108px; } .heroP { margin-left: auto; margin-right: auto; } }
+@media (prefers-reduced-motion: reduce) { .heroArt { animation: none; } }
 
 /* 目次 */
 .toc { display: flex; flex-wrap: wrap; gap: 8px; }
 .tocChip { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
   color: var(--cyan); border: 1px solid rgba(0, 234, 255, 0.35); border-radius: 999px; padding: 7px 13px;
-  text-decoration: none; white-space: nowrap; }
-.tocChip:hover { background: rgba(0, 234, 255, 0.1); }
+  text-decoration: none; white-space: nowrap; transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease; }
+.tocChip:hover { background: rgba(0, 234, 255, 0.12); transform: translateY(-2px); box-shadow: 0 6px 16px -8px rgba(0, 234, 255, 0.6); }
 
-/* セクション */
-.sec { border: 1px solid var(--border); border-radius: 18px; padding: 22px 20px;
+/* セクション — アクセントごとにリズム(--acc でバッジ/上部ルール/ゴースト番号を着色) */
+.sec { position: relative; overflow: hidden; --acc: 0, 234, 255; border: 1px solid var(--border); border-radius: 18px; padding: 24px 22px;
   background: linear-gradient(160deg, rgba(20, 18, 34, 0.5), transparent 75%); scroll-margin-top: 80px; }
-.secNo { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em; color: var(--gold, #c9a86a); }
-.secT { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--text); margin-top: 4px; }
+.sec::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, rgba(var(--acc), 0.8), transparent 55%); }
+.secCyan { --acc: 0, 234, 255; }
+.secGold { --acc: 201, 168, 106; }
+.secMagenta { --acc: 255, 45, 196; }
+.ghost { position: absolute; top: 6px; right: 18px; font-family: var(--font-display); font-weight: 800; font-size: 68px;
+  line-height: 1; color: rgba(var(--acc), 0.09); pointer-events: none; user-select: none; }
+.secHead { display: flex; align-items: center; gap: 12px; position: relative; }
+.secBadge { flex: none; width: 44px; height: 44px; border-radius: 13px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(var(--acc), 0.5); background: rgba(var(--acc), 0.12); color: rgb(var(--acc)); box-shadow: 0 0 18px -6px rgba(var(--acc), 0.6); }
+.secNo { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em; color: rgb(var(--acc)); }
+.secT { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--text); margin-top: 2px; }
 .p { font-size: 13.5px; color: #c3ccd8; line-height: 2; margin-top: 12px; }
 .p b { color: var(--text); }
 .p a { color: var(--cyan); }
-.warn { border: 1px solid rgba(230, 178, 74, 0.35); border-radius: 12px; padding: 12px 14px; margin-top: 14px;
-  background: rgba(230, 178, 74, 0.06); font-size: 12.5px; color: #d9c48f; line-height: 1.9; }
-.warn b { color: var(--warn); }
-.tip { border: 1px solid rgba(0, 234, 255, 0.25); border-radius: 12px; padding: 12px 14px; margin-top: 14px;
-  background: rgba(0, 234, 255, 0.05); font-size: 12.5px; color: #a9d8e0; line-height: 1.9; }
 
-/* 図解: 横フロー(縦積みにリフロー) */
+/* 注記(左にアイコン) */
+.warn { position: relative; border: 1px solid rgba(230, 178, 74, 0.35); border-radius: 12px; padding: 12px 14px 12px 42px;
+  margin-top: 14px; background: rgba(230, 178, 74, 0.06); font-size: 12.5px; color: #d9c48f; line-height: 1.9; }
+.warn b { color: var(--warn); }
+.tip { position: relative; border: 1px solid rgba(0, 234, 255, 0.25); border-radius: 12px; padding: 12px 14px 12px 42px;
+  margin-top: 14px; background: rgba(0, 234, 255, 0.05); font-size: 12.5px; color: #a9d8e0; line-height: 1.9; }
+.noteIcon { position: absolute; left: 13px; top: 12px; color: var(--warn); }
+.tip .noteIcon { color: var(--cyan); }
+
+/* アイコン(GuideIcon) */
+.ic { width: 22px; height: 22px; display: block; stroke: currentColor; stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.icLg { width: 28px; height: 28px; }
+
+/* 図解: 横フロー(モバイルで縦積み) */
 .flow { display: flex; align-items: stretch; gap: 0; margin-top: 16px; flex-wrap: nowrap; }
-.fbox { flex: 1; min-width: 0; border: 1px solid rgba(0, 234, 255, 0.3); border-radius: 12px; padding: 12px 10px;
-  background: rgba(0, 234, 255, 0.05); text-align: center; }
+.fbox { position: relative; flex: 1; min-width: 0; border: 1px solid rgba(0, 234, 255, 0.3); border-radius: 12px; padding: 14px 10px;
+  background: rgba(0, 234, 255, 0.05); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+.fbox:hover { transform: translateY(-3px); border-color: rgba(0, 234, 255, 0.55); box-shadow: 0 12px 26px -14px rgba(0, 234, 255, 0.7); }
+.fboxGold:hover { border-color: rgba(201, 168, 106, 0.7); box-shadow: 0 12px 26px -14px rgba(201, 168, 106, 0.7); }
+.fboxGood:hover { border-color: rgba(53, 208, 127, 0.7); box-shadow: 0 12px 26px -14px rgba(53, 208, 127, 0.7); }
 .fboxGold { border-color: rgba(201, 168, 106, 0.45); background: rgba(201, 168, 106, 0.07); }
-.fboxBad { border-color: rgba(255, 92, 92, 0.4); background: rgba(255, 92, 92, 0.06); }
 .fboxGood { border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.06); }
-.fIcon { font-size: 20px; }
-.fT { font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--text); margin-top: 5px; }
-.fD { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
-.farrow { flex: none; display: flex; align-items: center; padding: 0 6px; color: var(--gold, #c9a86a);
-  font-family: var(--font-display); font-weight: 800; font-size: 15px; }
+.fboxWide { margin-top: 10px; flex-direction: row; text-align: left; gap: 12px; align-items: center; }
+.fIconWrap { flex: none; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(0, 234, 255, 0.3); background: rgba(0, 234, 255, 0.06); color: var(--cyan); }
+.fboxGold .fIconWrap { border-color: rgba(201, 168, 106, 0.45); background: rgba(201, 168, 106, 0.1); color: var(--gold-bright, #f0d9a8); }
+.fboxGood .fIconWrap { border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.1); color: var(--good); }
+.fArt { width: 52px; height: 44px; flex: none; border-radius: 9px; overflow: hidden;
+  background: radial-gradient(80% 78% at 50% 42%, rgba(201, 168, 106, 0.12), rgba(10, 8, 19, 0.9) 74%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.fT { font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--text); }
+.fD { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); line-height: 1.6; }
+.farrow { flex: none; display: flex; align-items: center; padding: 0 4px; color: var(--gold, #c9a86a); animation: guideNudge 2.4s ease-in-out infinite; }
+.farrow .ic { width: 18px; height: 18px; }
+@keyframes guideNudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
+@media (prefers-reduced-motion: reduce) { .farrow { animation: none; } }
 @media (max-width: 640px) {
   .flow { flex-direction: column; }
-  .farrow { justify-content: center; padding: 4px 0; transform: rotate(90deg); }
+  .farrow { align-self: center; width: 24px; height: 24px; min-height: 24px; padding: 0; justify-content: center; transform: rotate(90deg); animation: none; }
+  .farrow .ic { width: 22px; height: 22px; }
 }
 
-/* 図解: 7日ラダー */
-.ladder { display: flex; gap: 5px; margin-top: 16px; }
-.rung { flex: 1; border-radius: 9px; padding: 9px 4px; text-align: center; border: 1px solid var(--border); }
+/* 登録: 3択 + 統合 */
+.triad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+@media (max-width: 640px) { .triad { grid-template-columns: 1fr; } }
+.mergeInto { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; color: var(--gold, #c9a86a); }
+.mergeLabel { font-family: var(--font-mono); font-size: 10px; }
+
+/* 図解: 7日ラダー(Day7に馬アート) */
+.ladder { display: flex; gap: 5px; margin-top: 18px; align-items: flex-end; }
+.rung { flex: 1; border-radius: 9px; padding: 9px 4px; text-align: center; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02); }
 .rungDay { font-family: var(--font-mono); font-size: 9px; color: var(--muted); }
 .rungV { font-family: var(--font-display); font-weight: 700; font-size: 10.5px; color: var(--text); margin-top: 3px; }
-.rungChampion { border-color: rgba(201, 168, 106, 0.6); background: linear-gradient(160deg, rgba(201, 168, 106, 0.14), transparent); }
+.rungChampion { flex: 1.5; border-color: rgba(201, 168, 106, 0.6); background: linear-gradient(160deg, rgba(201, 168, 106, 0.16), transparent); padding-top: 6px; }
 .rungChampion .rungV { color: var(--gold-bright, #f0d9a8); }
-@media (max-width: 640px) { .rungV { font-size: 8.5px; } }
-
-/* 図解: 組織ツリー */
-.tree { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 16px; }
-.treeRow { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-.node { border: 1px solid rgba(0, 234, 255, 0.35); border-radius: 999px; padding: 6px 14px;
-  font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--text);
-  background: rgba(0, 234, 255, 0.06); }
-.nodeYou { border-color: rgba(201, 168, 106, 0.6); background: rgba(201, 168, 106, 0.12); color: var(--gold-bright, #f0d9a8); }
-.treeLine { font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+.champHorse { display: block; width: 100%; height: 60px; margin-bottom: 2px; }
+@media (max-width: 640px) { .rungV { font-size: 8px; } .champHorse { height: 44px; } }
 
 /* 図解: 1日のタイムライン */
 .timeline { display: flex; border-radius: 12px; overflow: hidden; margin-top: 16px; border: 1px solid var(--border); }
-.tseg { flex: 1; padding: 11px 8px; text-align: center; min-width: 0; }
+.tseg { flex: 1; padding: 12px 8px; text-align: center; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .tsegNight { background: rgba(255, 45, 196, 0.08); }
 .tsegDay { background: rgba(0, 234, 255, 0.05); }
 .tsegLock { background: rgba(230, 178, 74, 0.08); }
+.tsegIcon { color: var(--muted); }
+.tsegNight .tsegIcon { color: var(--magenta-soft); }
+.tsegLock .tsegIcon { color: var(--warn); }
+.tsegDay .tsegIcon { color: var(--cyan); }
 .tsegT { font-family: var(--font-mono); font-size: 9px; color: var(--muted); }
-.tsegV { font-family: var(--font-display); font-weight: 700; font-size: 11px; color: var(--text); margin-top: 3px; }
+.tsegV { font-family: var(--font-display); font-weight: 700; font-size: 11px; color: var(--text); }
 @media (max-width: 640px) { .timeline { flex-direction: column; } }
 
-/* 価格テーブル(ミニ) */
-.priceRow { display: flex; gap: 4px; margin-top: 14px; }
-.priceCell { flex: 1; text-align: center; border: 1px solid var(--border); border-radius: 8px; padding: 7px 2px; }
+/* 図解: 組織ツリー(SVG) */
+.treeWrap { margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: rgba(0, 234, 255, 0.02); }
+.treeSvg { width: 100%; height: auto; display: block; }
+
+/* 図解: 価格チャート(100→177.16 の上昇を棒グラフで) */
+.priceChart { display: flex; align-items: flex-end; gap: 5px; margin-top: 16px; height: 132px;
+  border: 1px solid var(--border); border-radius: 12px; padding: 12px 12px 10px;
+  background: linear-gradient(180deg, rgba(201, 168, 106, 0.05), transparent 60%); }
+.priceCell { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; }
+.priceBar { width: 100%; max-width: 34px; border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(180deg, rgba(0, 234, 255, 0.55), rgba(0, 234, 255, 0.12)); border: 1px solid rgba(0, 234, 255, 0.4); border-bottom: none; }
+.pcTop .priceBar { background: linear-gradient(180deg, var(--gold-bright, #f0d9a8), rgba(201, 168, 106, 0.2)); border-color: rgba(201, 168, 106, 0.6); box-shadow: 0 0 18px -4px rgba(201, 168, 106, 0.7); }
 .priceD { font-family: var(--font-mono); font-size: 8.5px; color: var(--muted); }
-.priceV { font-family: var(--font-display); font-weight: 700; font-size: 10.5px; color: var(--text); margin-top: 2px; }
+.priceV { font-family: var(--font-display); font-weight: 700; font-size: 10px; color: var(--text); order: -1; }
+.pcTop .priceV { color: var(--gold-bright, #f0d9a8); }
+@media (max-width: 640px) { .priceChart { height: 110px; } .priceV { font-size: 8px; } }
 
 /* CEOメッセージ プレースホルダ */
-.ceo { border: 1px dashed rgba(201, 168, 106, 0.4); border-radius: 18px; padding: 30px 20px; text-align: center; }
+.ceo { border: 1px dashed rgba(201, 168, 106, 0.4); border-radius: 18px; padding: 26px 20px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--gold-bright, #f0d9a8); }
 .ceoT { font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--gold-bright, #f0d9a8); }
-.ceoD { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 8px; }
+.ceoD { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+/* CEOメッセージ */
+.ceoCard { border: 1px solid rgba(201, 168, 106, 0.4); border-radius: 18px; padding: 20px;
+  background: radial-gradient(500px 240px at 12% 0%, rgba(201, 168, 106, 0.1), transparent 68%), #0f0c17; }
+.ceoTop { display: flex; align-items: center; gap: 14px; }
+.ape { width: 86px; height: 86px; flex: none; border-radius: 16px; overflow: hidden; box-shadow: 0 0 24px rgba(201, 168, 106, 0.25); }
+.ceoName { font-family: var(--font-display); font-weight: 800; font-size: 20px;
+  background: linear-gradient(92deg, #f6ecd2, var(--gold, #c9a86a)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ceoRole { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--muted); margin-top: 3px; }
+.ceoMsg { margin-top: 16px; }
+.ceoMsg p { font-size: 13px; color: #c3ccd8; line-height: 1.95; margin: 0 0 12px; }
+.ceoMsg p b { color: var(--gold-bright, #f0d9a8); }
+.ceoSign { font-family: var(--font-mono); color: var(--muted); font-size: 12px; margin-top: 16px !important; }
+.ceoSign span { font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--gold-bright, #f0d9a8); }
 
 .backTop { font-family: var(--font-mono); font-size: 10px; color: var(--faint); text-decoration: none; display: inline-block; margin-top: 14px; }
 .backTop:hover { color: var(--cyan); }
+
+/* NftHorseArt は素の768pxキャンバスを返す — ラッパーに合わせて必ず縮める
+   (殿堂ページで確立した教訓: 呼び出し側がサイズ責任を持つ) */
+.fArt canvas, .heroArt canvas, .champHorse canvas { width: 100%; height: 100%; display: block; object-fit: contain; }
+
+/* CEOメッセージ プレースホルダ(オーナー原稿待ち) */
+.ceo { border: 1px dashed rgba(201, 168, 106, 0.4); border-radius: 18px; padding: 30px 20px; text-align: center; }
+.ceoT { font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--gold-bright, #f0d9a8); }
+.ceoD { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 8px; }
