@@ -264,3 +264,12 @@ code { background: var(--bg); border: 1px solid var(--border); border-radius: 5p
 .section-head a { font-size: 0.8rem; font-family: var(--font-display); letter-spacing: 0.1em; }
 
 :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
+
+/* 管理者にだけ表示されるADMINリンク(マゼンタ=admin識別色) */
+.topnav-admin {
+  color: var(--magenta-soft, #ff7ad9) !important;
+  border: 1px solid rgba(255, 45, 196, 0.35);
+  border-radius: 8px;
+  padding: 2px 9px;
+}
+.topnav-admin:hover { background: rgba(255, 45, 196, 0.12); }

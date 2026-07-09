@@ -29,7 +29,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         [ctx.userId],
       );
       if (!r.rows[0]) throw new ApiError('NOT_FOUND', 'User not found');
-      return r.rows[0];
+      // 管理者ナビの出し分け用(2026-07-09)。権限そのものは各adminエンドポイントが検証する
+      return { ...r.rows[0], is_admin: ctx.auth.kind === 'admin' };
     },
   });
 

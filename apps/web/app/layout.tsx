@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { getAccessToken } from '@/lib/server-api';
+import { getAccessToken, serverApi } from '@/lib/server-api';
 import { TopNav } from '@/components/TopNav';
 
 export const metadata: Metadata = {
@@ -10,6 +10,13 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const authed = (await getAccessToken()) !== null;
+  // ADMINリンクは管理者ロール保持者にのみ表示(ページ自体の保護は/adminレイアウトと
+  // 各adminエンドポイントの権限検証が担う — これは導線の出し分けだけ)
+  let isAdmin = false;
+  if (authed) {
+    const me = await serverApi<{ is_admin?: boolean }>('/api/v1/me');
+    isAdmin = me.status === 200 && me.body.is_admin === true;
+  }
   return (
     <html lang="ja">
       <head>
@@ -24,7 +31,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         {/* Anonymous pages (landing / login) carry their own header. */}
-        {authed ? <TopNav /> : null}
+        {authed ? <TopNav isAdmin={isAdmin} /> : null}
         <main>{children}</main>
       </body>
     </html>

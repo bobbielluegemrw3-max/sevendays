@@ -8,7 +8,7 @@ import { DerbyCountdown } from '@/components/DerbyCountdown';
  * both sides of the login. On narrow screens the link row drops below the
  * brand and scrolls horizontally instead of wrapping.
  */
-export function TopNav() {
+export function TopNav({ isAdmin = false }: { isAdmin?: boolean }) {
   return (
     <nav className="topnav">
       <Link href="/dashboard" className="brand" aria-label="Seven Days Derby">
@@ -29,6 +29,9 @@ export function TopNav() {
         <Link href="/support">TEAM</Link>
         <Link href="/notifications">通知</Link>
         <Link href="/account">アカウント</Link>
+        {isAdmin && (
+          <Link href="/admin" className="topnav-admin">ADMIN</Link>
+        )}
       </div>
       <span className="spacer" />
       <DerbyCountdown />
