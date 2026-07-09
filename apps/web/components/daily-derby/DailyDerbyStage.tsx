@@ -58,6 +58,15 @@ export interface DailyDerbyStageProps {
   debugVerdict?: 'burn' | 'survive' | 'day7' | undefined;
 }
 
+/** 心拍音の開始窓(開始前の残り秒)。アイデア原文どおり19:58〜(=2分前)。 */
+const HEARTBEAT_FROM = 120;
+
+function audioContextCtor(): typeof AudioContext | undefined {
+  return typeof AudioContext !== 'undefined'
+    ? AudioContext
+    : (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+}
+
 export function DailyDerbyStage({
   secondsToStart,
   counts = FIXTURE_COUNTS,
@@ -176,6 +185,14 @@ export function DailyDerbyStage({
     const prime = () => {
       if (primed.current) return;
       primed.current = true;
+      // WebAudio(心拍)もこのジェスチャーでロック解除しておく
+      const Ctor = audioContextCtor();
+      if (Ctor) {
+        if (!heartCtxRef.current) heartCtxRef.current = new Ctor();
+        if (heartCtxRef.current.state === 'suspended') {
+          void heartCtxRef.current.resume().catch(() => undefined);
+        }
+      }
       for (const key of Object.keys(soundCatalog)) {
         const audio = getAudio(key);
         if (!audio) continue;
@@ -239,16 +256,12 @@ export function DailyDerbyStage({
     }
   }, [elapsed, failed, soundOn, getAudio]);
 
-  /* 心拍(DERBY_DRAMA 第1幕): 残り60秒からWebAudioの合成心音。0に近づくほど速く。 */
+  /* 心拍(DERBY_DRAMA 第1幕): 残り2分からWebAudioの合成心音。0に近づくほど速く。 */
   const heartCtxRef = useRef<AudioContext | null>(null);
   useEffect(() => {
-    const inWindow = soundOn && !failed && secondsToStart > 0 && secondsToStart <= 60;
+    const inWindow = soundOn && !failed && secondsToStart > 0 && secondsToStart <= HEARTBEAT_FROM;
     if (!inWindow) return;
-    type AudioCtor = typeof AudioContext;
-    const Ctor: AudioCtor | undefined =
-      typeof AudioContext !== 'undefined'
-        ? AudioContext
-        : (window as unknown as { webkitAudioContext?: AudioCtor }).webkitAudioContext;
+    const Ctor = audioContextCtor();
     if (!Ctor) return;
     if (!heartCtxRef.current) heartCtxRef.current = new Ctor();
     const ctx = heartCtxRef.current;
@@ -259,24 +272,25 @@ export function DailyDerbyStage({
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(52, when);
-      osc.frequency.exponentialRampToValueAtTime(38, when + 0.09);
+      // 純サブベース(38-52Hz)は小型スピーカーで再生不能 — 110Hz起点で落とす
+      osc.frequency.setValueAtTime(112, when);
+      osc.frequency.exponentialRampToValueAtTime(44, when + 0.1);
       gain.gain.setValueAtTime(0.0001, when);
-      gain.gain.exponentialRampToValueAtTime(gainPeak, when + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.14);
+      gain.gain.exponentialRampToValueAtTime(gainPeak, when + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.16);
       osc.connect(gain).connect(ctx.destination);
       osc.start(when);
-      osc.stop(when + 0.16);
+      osc.stop(when + 0.18);
     };
     const beat = () => {
       if (stopped) return;
       const remain = Math.max(0, secondsToStartRef.current);
-      if (remain <= 0 || remain > 60) return;
+      if (remain <= 0 || remain > HEARTBEAT_FROM) return;
       const t = ctx.currentTime;
-      const intensity = 0.05 + 0.06 * (1 - remain / 60);
+      const intensity = 0.16 + 0.24 * (1 - remain / HEARTBEAT_FROM);
       thump(t, intensity);
-      thump(t + 0.22, intensity * 0.7);
-      const interval = 350 + 750 * (remain / 60); // 1.1s -> 0.35s
+      thump(t + 0.24, intensity * 0.65);
+      const interval = 350 + 750 * (remain / HEARTBEAT_FROM); // 1.1s -> 0.35s
       timer = setTimeout(beat, interval);
     };
     beat();
@@ -285,7 +299,7 @@ export function DailyDerbyStage({
       if (timer) clearTimeout(timer);
     };
     // secondsToStart は毎秒変わるため ref 経由で読む(エフェクトは窓の出入りのみ)
-  }, [soundOn, failed, secondsToStart > 0 && secondsToStart <= 60]);
+  }, [soundOn, failed, secondsToStart > 0 && secondsToStart <= HEARTBEAT_FROM]);
   const secondsToStartRef = useRef(secondsToStart);
   secondsToStartRef.current = secondsToStart;
 
