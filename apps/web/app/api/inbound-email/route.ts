@@ -96,28 +96,52 @@ export async function POST(request: Request): Promise<Response> {
   }
   const senderEmail = senderRaw.toLowerCase();
 
-  // email.received はメタデータのみ → 本文をResend APIで取得
-  if (eventType === 'email.received' && !body && emailId && process.env.RESEND_API_KEY) {
-    try {
-      const res = await fetch(`https://api.resend.com/inbound/emails/${emailId}`, {
-        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
-      });
-      if (res.ok) {
-        const full = (await res.json()) as Record<string, unknown>;
-        body = asText(full.text) || asText(full.html);
-        if (toEmails.length === 0) toEmails = extractEmails(full.to ?? full.recipients ?? []);
-        if (!messageId) messageId = asText(full.message_id);
+  // email.received はメタデータのみ → 本文をResend APIで取得。
+  // 失敗理由はレスポンスに載せる(Resendの配信ログで直接見えるように)。
+  // 5xxを返すとResend(Svix)が自動リトライするため、一過性の失敗にも強い。
+  let hydrateError = '';
+  if (eventType === 'email.received' && !body && emailId) {
+    if (!process.env.RESEND_API_KEY) {
+      hydrateError = 'RESEND_API_KEY is not set on the server';
+    } else {
+      // 新旧両方のAPIパスを試す(betimail実績: /inbound/emails/{id})
+      for (const url of [
+        `https://api.resend.com/inbound/emails/${emailId}`,
+        `https://api.resend.com/emails/inbound/${emailId}`,
+      ]) {
+        try {
+          const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+          });
+          if (!res.ok) {
+            hydrateError = `${url} -> HTTP ${res.status}`;
+            continue;
+          }
+          const full = (await res.json()) as Record<string, unknown>;
+          body = asText(full.text) || asText(full.html);
+          if (toEmails.length === 0) toEmails = extractEmails(full.to ?? full.recipients ?? []);
+          if (!messageId) messageId = asText(full.message_id);
+          if (body) { hydrateError = ''; break; }
+          hydrateError = `${url} -> 200 but empty text/html`;
+        } catch (error) {
+          hydrateError = `${url} -> ${String(error).slice(0, 120)}`;
+        }
       }
-    } catch {
-      // 取得失敗時は本文なしとして下で弾く
     }
   }
 
   if (toEmails.length > 0 && !isAllowedRecipient(toEmails)) {
     return Response.json({ status: 'ignored', reason: 'recipient_not_allowed' });
   }
-  if (!senderEmail || !body) {
-    return Response.json({ status: 'ignored', reason: 'missing_sender_or_body' });
+  if (!senderEmail) {
+    return Response.json({ status: 'ignored', reason: 'missing_sender' });
+  }
+  if (!body) {
+    // 500でResendに再試行させる+失敗理由をダッシュボードで見えるようにする
+    return Response.json(
+      { status: 'error', reason: 'body_hydration_failed', detail: hydrateError },
+      { status: 500 },
+    );
   }
 
   return withSqlClient(async (client) => {
