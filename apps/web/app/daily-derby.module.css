@@ -566,62 +566,39 @@
   .tickerTrack, .beam, .liveDot, .cdClockAlert, .tSpinner { animation-duration: 0.01s; animation-iteration-count: 1; }
 }
 
-/* ==== DERBY_DRAMA(2026-07-09): 馬場発表・今夜のあなた・中間経過・審判 ==== */
 
-/* 馬場発表スタンプ */
-.baba { margin-top: 18px; text-align: center; }
-.babaK { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.3em; color: var(--gold, #c9a86a); }
-.babaRow { display: flex; justify-content: center; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
-.babaStamp { display: flex; flex-direction: column; align-items: center; gap: 3px; border: 2px solid rgba(201, 168, 106, 0.6);
-  border-radius: 12px; padding: 10px 18px; min-width: 92px; opacity: 0; transform: scale(2.4) rotate(-6deg); }
-.babaStampIn { animation: babaSlam 0.28s cubic-bezier(0.2, 1.6, 0.4, 1) forwards; }
-@keyframes babaSlam { 0% { opacity: 0; transform: scale(2.4) rotate(-6deg); } 100% { opacity: 1; transform: scale(1) rotate(-2deg); } }
-.babaStampK { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em; color: var(--muted); }
-.babaStampV { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--gold-bright, #f0d9a8); }
-.babaFes { margin-top: 12px; font-family: var(--font-display); font-weight: 800; font-size: 17px; letter-spacing: 0.12em;
-  color: #ffd97a; text-shadow: 0 0 18px rgba(240, 200, 110, 0.8); animation: babaFesIn 0.5s ease-out; }
-@keyframes babaFesIn { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
+/* ==== DERBY_DRAMA(2026-07-10 縮小版): 出走馬カード・条件フラッシュ・BURN審判 ==== */
 
-/* 今夜のあなた(カウントダウン下) */
-.tonight { margin-top: 22px; border: 1px solid rgba(201, 168, 106, 0.35); border-radius: 14px; padding: 14px 16px;
-  background: linear-gradient(150deg, rgba(201, 168, 106, 0.07), transparent 70%); max-width: 520px; margin-left: auto; margin-right: auto; }
-.tonightK { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.24em; color: var(--gold, #c9a86a); }
-.tonightChips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 9px; }
+/* 本日のレースに参加するあなたの馬(カウントダウン下・サイバーパンク) */
+.tonight { margin: 22px auto 0; max-width: 560px; padding: 15px 18px 16px; position: relative;
+  border: 1px solid rgba(0, 234, 255, 0.4);
+  background: linear-gradient(165deg, rgba(0, 234, 255, 0.08), rgba(255, 45, 196, 0.05) 60%, transparent);
+  clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px); }
+.tonight::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0, 234, 255, 0.03) 3px 4px); }
+.tonightK { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.28em;
+  color: var(--cyan); text-shadow: 0 0 14px rgba(0, 234, 255, 0.75); }
+.tonightChips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
 .tonightChip { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--text);
   border: 1px solid rgba(0, 234, 255, 0.35); border-radius: 999px; padding: 5px 13px; background: rgba(0, 234, 255, 0.06); }
 .tonightChip b { color: var(--gold-bright, #f0d9a8); margin-left: 4px; }
-.tonightNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); margin-top: 9px; line-height: 1.7; }
+.tonightNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); margin-top: 10px; line-height: 1.7; }
 
-/* 中間経過 */
-.midRace { margin-top: 12px; display: flex; flex-direction: column; gap: 5px; }
-.midLine { font-family: var(--font-mono); font-size: 12px; color: #a9d8e0; animation: midIn 0.35s ease-out; }
-.midLine b { color: var(--cyan); }
-@keyframes midIn { 0% { opacity: 0; transform: translateX(-10px); } 100% { opacity: 1; transform: translateX(0); } }
+/* レース条件フラッシュ(タイトル直後に一瞬だけテキスト表示) */
+.condFlash { margin-top: 16px; text-align: center; font-family: var(--font-mono); font-size: 13px;
+  letter-spacing: 0.18em; color: var(--gold-bright, #f0d9a8); text-shadow: 0 0 14px rgba(240, 200, 110, 0.55);
+  animation: condFlash 5s ease-in-out forwards; }
+@keyframes condFlash { 0% { opacity: 0; transform: translateY(4px); } 10% { opacity: 1; transform: translateY(0); }
+  78% { opacity: 1; } 100% { opacity: 0; } }
 
-/* 審判オーバーレイ(静寂→爆発) */
+/* BURN審判オーバーレイ(グリッチ消滅 → 墓碑 → ドロップ開封) */
 .verdictOverlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
   background: rgba(2, 2, 8, 0.9); animation: verdictDim 0.25s ease-out; }
 @keyframes verdictDim { 0% { opacity: 0; } 100% { opacity: 1; } }
-.verdictSilence { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.5em; color: var(--muted);
-  animation: silencePulse 0.8s ease-in-out; }
-@keyframes silencePulse { 0% { opacity: 0; } 40% { opacity: 1; } 100% { opacity: 0.7; } }
 .verdictCard { width: min(760px, 94vw); text-align: center; animation: verdictIn 0.3s cubic-bezier(0.2, 1.4, 0.4, 1); }
 @keyframes verdictIn { 0% { opacity: 0; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } }
 .verdictKicker { font-family: var(--font-display); font-weight: 800; font-size: 15px; letter-spacing: 0.4em; color: var(--good); }
 .verdictKickerBurn { color: var(--bad); }
-.verdictRun { position: relative; height: 250px; margin-top: 10px; overflow: hidden; }
-.verdictCanvas { width: 100%; height: 100%; display: block; }
-.verdictLoading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--faint); }
-.verdictFlash { position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(ellipse at 78% 60%, rgba(240, 200, 110, 0.3), transparent 55%);
-  animation: verdictFlash 2.6s ease-out forwards; }
-@keyframes verdictFlash { 0%, 55% { opacity: 0; } 70% { opacity: 1; } 100% { opacity: 0.4; } }
-.verdictName { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--text); margin-top: 6px; }
-.verdictLabel { font-family: var(--font-display); font-weight: 800; font-size: 26px; color: #9dffc4; margin-top: 4px;
-  text-shadow: 0 0 22px rgba(53, 208, 127, 0.6); }
-.verdictGold { color: var(--gold-bright, #f0d9a8); text-shadow: 0 0 26px rgba(240, 200, 110, 0.8); }
-
-/* BURN: グリッチ消滅 → 墓碑 → ドロップ */
 .burnGlitch { margin-top: 22px; }
 .burnName { font-family: var(--font-display); font-weight: 800; font-size: 30px; color: var(--bad);
   display: inline-block; animation: burnGlitch 1.4s steps(12) forwards; text-shadow: 0 0 24px rgba(255, 92, 92, 0.7); }

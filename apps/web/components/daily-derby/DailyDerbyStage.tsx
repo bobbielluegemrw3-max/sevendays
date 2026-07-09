@@ -52,19 +52,10 @@ export interface DailyDerbyStageProps {
   myHorseNames?: readonly string[];
   /** 審判演出つきの自分の馬(dna/Day込み)。指定時は myHorseNames を上書き。 */
   myHorses?: readonly MyDerbyHorse[];
-  /** 当夜のレース条件(Decision 082)。馬場発表スタンプ演出に使う。 */
+  /** 当夜のレース条件(Decision 082)。タイトル直後に一瞬テキスト表示する。 */
   conditions?: DerbyConditionsView | null;
-  /** 視覚QA専用: マウント時に審判演出を強制表示(プレビューのみ使用)。 */
-  debugVerdict?: 'burn' | 'survive' | 'day7' | undefined;
-}
-
-/** 心拍音の開始窓(開始前の残り秒)。アイデア原文どおり19:58〜(=2分前)。 */
-const HEARTBEAT_FROM = 120;
-
-function audioContextCtor(): typeof AudioContext | undefined {
-  return typeof AudioContext !== 'undefined'
-    ? AudioContext
-    : (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  /** 視覚QA専用: マウント時にBURN審判を強制表示(プレビューのみ使用)。 */
+  debugVerdict?: 'burn' | undefined;
 }
 
 export function DailyDerbyStage({
@@ -96,9 +87,8 @@ export function DailyDerbyStage({
     const horse = myHorses[0];
     setVerdict({
       name: horse?.name ?? 'Test Horse',
-      kind: debugVerdict,
       horse,
-      dropKey: debugVerdict === 'burn' ? 'spirit_roar' : null,
+      dropKey: 'spirit_roar',
     });
     // QA表示は自動では消さない(スクリーンショットのため)。myHorsesは意図的に依存から除外。
   }, [debugVerdict]);
@@ -152,29 +142,19 @@ export function DailyDerbyStage({
     [soundOn, failed, getAudio],
   );
 
-  /* 自分該当行(DERBY_DRAMA 第3幕):
-     最初の審判対象行(BURN/生存/DAY7)は「0.8秒の完全静寂 → 審判オーバーレイ」。
-     以降の該当行は従来どおりのチャイム。 */
+  /* 自分該当行(DERBY_DRAMA — BURNのみ審判演出):
+     最初のBURN行はグリッチ墓碑→ドロップ開封のオーバーレイ。
+     それ以外の該当行(生存/DAY7含む)は従来どおりのチャイム。 */
   const playOwnLine = useCallback(
     (info: { name: string; tone: string }) => {
-      const isVerdictTone = info.tone === 'burn' || info.tone === 'survive' || info.tone === 'day7';
-      if (isVerdictTone && !verdictDone.current) {
+      if (info.tone === 'burn' && !verdictDone.current) {
         verdictDone.current = true;
-        // 完全静寂: ループ音を止める(0.8秒後の審判音で破る)
-        for (const key of ['hoofs', 'crowd']) {
-          const audio = audioRefs.current.get(key);
-          if (audio && !audio.paused) audio.pause();
-        }
         const horse = myHorses.find((h) => h.name === info.name);
-        const kind = info.tone === 'burn' ? 'burn' : info.tone === 'day7' ? 'day7' : 'survive';
-        const dropKey = kind === 'burn'
-          ? fixtureDropKey(info.name, new Date().toISOString().slice(0, 10))
-          : null;
-        setVerdict({ name: info.name, kind, horse, dropKey });
-        setTimeout(() => playOneShot(kind === 'burn' ? 'ownBurn' : 'ownGood'), 800);
-        if (kind === 'burn' && dropKey) setTimeout(() => playOneShot('ownGood'), 2600);
-        // 審判の幕引き(ループ音は窓同期エフェクトが自動復帰させる)
-        setTimeout(() => setVerdict(null), kind === 'burn' && dropKey ? 6200 : 4600);
+        const dropKey = fixtureDropKey(info.name, new Date().toISOString().slice(0, 10));
+        setVerdict({ name: info.name, horse, dropKey });
+        playOneShot('ownBurn');
+        if (dropKey) setTimeout(() => playOneShot('ownGood'), 1800);
+        setTimeout(() => setVerdict(null), dropKey ? 5400 : 3800);
         return;
       }
       if (performance.now() - lastOwnSoundAt.current < 400) return; // 連発抑制
@@ -190,14 +170,6 @@ export function DailyDerbyStage({
     const prime = () => {
       if (primed.current) return;
       primed.current = true;
-      // WebAudio(心拍)もこのジェスチャーでロック解除しておく
-      const Ctor = audioContextCtor();
-      if (Ctor) {
-        if (!heartCtxRef.current) heartCtxRef.current = new Ctor();
-        if (heartCtxRef.current.state === 'suspended') {
-          void heartCtxRef.current.resume().catch(() => undefined);
-        }
-      }
       for (const key of Object.keys(soundCatalog)) {
         const audio = getAudio(key);
         if (!audio) continue;
@@ -261,69 +233,6 @@ export function DailyDerbyStage({
     }
   }, [elapsed, failed, soundOn, getAudio]);
 
-  /* 心拍(DERBY_DRAMA 第1幕): 残り2分からWebAudioの合成心音。0に近づくほど速く。 */
-  const heartCtxRef = useRef<AudioContext | null>(null);
-  useEffect(() => {
-    const inWindow = soundOn && !failed && secondsToStart > 0 && secondsToStart <= HEARTBEAT_FROM;
-    if (!inWindow) return;
-    const Ctor = audioContextCtor();
-    if (!Ctor) return;
-    if (!heartCtxRef.current) heartCtxRef.current = new Ctor();
-    const ctx = heartCtxRef.current;
-    if (ctx.state === 'suspended') void ctx.resume().catch(() => undefined);
-    let stopped = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const thump = (when: number, gainPeak: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      // 純サブベース(38-52Hz)は小型スピーカーで再生不能 — 110Hz起点で落とす
-      osc.frequency.setValueAtTime(112, when);
-      osc.frequency.exponentialRampToValueAtTime(44, when + 0.1);
-      gain.gain.setValueAtTime(0.0001, when);
-      gain.gain.exponentialRampToValueAtTime(gainPeak, when + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.16);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(when);
-      osc.stop(when + 0.18);
-    };
-    const beat = () => {
-      if (stopped) return;
-      const remain = Math.max(0, secondsToStartRef.current);
-      if (remain <= 0 || remain > HEARTBEAT_FROM) return;
-      const t = ctx.currentTime;
-      const intensity = 0.16 + 0.24 * (1 - remain / HEARTBEAT_FROM);
-      thump(t, intensity);
-      thump(t + 0.24, intensity * 0.65);
-      const interval = 350 + 750 * (remain / HEARTBEAT_FROM); // 1.1s -> 0.35s
-      timer = setTimeout(beat, interval);
-    };
-    beat();
-    return () => {
-      stopped = true;
-      if (timer) clearTimeout(timer);
-    };
-    // secondsToStart は毎秒変わるため ref 経由で読む(エフェクトは窓の出入りのみ)
-  }, [soundOn, failed, secondsToStart > 0 && secondsToStart <= HEARTBEAT_FROM]);
-  const secondsToStartRef = useRef(secondsToStart);
-  secondsToStartRef.current = secondsToStart;
-
-  /* 馬場発表(DERBY_DRAMA 第1幕): スタンプ音(タイトル直後の3連打+祭りチャイム)。 */
-  const stampPlayed = useRef(0);
-  useEffect(() => {
-    if (failed || !conditions || elapsed < TITLE_UNTIL + 0.5 || elapsed > TITLE_UNTIL + 6) return;
-    const local = elapsed - (TITLE_UNTIL + 0.5);
-    const due = Math.min(3, Math.floor(local / 1.1) + 1);
-    while (stampPlayed.current < due) {
-      stampPlayed.current += 1;
-      playOneShot('gate');
-    }
-    if (conditions.night_name && local >= 3.6 && stampPlayed.current < 4) {
-      stampPlayed.current = 4;
-      playOneShot('ownGood');
-    }
-  }, [elapsed, failed, conditions, playOneShot]);
-
   /* サウンドOFF即時反映+アンマウント時の停止。 */
   useEffect(() => {
     if (!soundOn) for (const audio of audioRefs.current.values()) audio.pause();
@@ -361,7 +270,6 @@ export function DailyDerbyStage({
             elapsed={elapsed}
             counts={counts}
             myHorseNames={effectiveNames}
-            myHorses={myHorses}
             conditions={conditions}
             onMine={playOwnLine}
           />
@@ -417,7 +325,7 @@ function PreShowCountdown({
       <div className={s.cdNote}>20:00 (GMT+8)</div>
       {myHorses.length > 0 && (
         <div className={s.tonight}>
-          <div className={s.tonightK}>今夜のあなた</div>
+          <div className={s.tonightK}>本日のレースに参加するあなたの馬</div>
           <div className={s.tonightChips}>
             {myHorses.slice(0, 4).map((h) => (
               <span key={h.name} className={s.tonightChip}>
@@ -450,14 +358,12 @@ function LiveShow({
   elapsed,
   counts,
   myHorseNames,
-  myHorses,
   conditions,
   onMine,
 }: {
   elapsed: number;
   counts: DerbyCounts;
   myHorseNames: readonly string[];
-  myHorses: readonly MyDerbyHorse[];
   conditions: DerbyConditionsView | null;
   onMine: (info: { name: string; tone: string }) => void;
 }) {
@@ -487,66 +393,11 @@ function LiveShow({
       {elapsed >= TITLE_UNTIL && (
         <Terminal steps={[...OPENING_STEPS, RACE_STEP]} elapsed={elapsed} counts={counts} />
       )}
-      {conditions && elapsed >= TITLE_UNTIL + 0.5 && (
-        <BabaHappyo conditions={conditions} local={elapsed - (TITLE_UNTIL + 0.5)} />
-      )}
-      {myHorses.length > 0 && elapsed >= RACE_RUN.startAt && elapsed < RACE_RUN.endAt + 1 && (
-        <MidRace elapsed={elapsed} horse={myHorses[0]!} />
-      )}
-    </div>
-  );
-}
-
-/* --------------------------- 馬場発表(Decision 082 × DERBY_DRAMA 第1幕) */
-
-function BabaHappyo({ conditions, local }: { conditions: DerbyConditionsView; local: number }) {
-  const stamps: Array<{ k: string; v: string; at: number; cls?: string }> = [
-    { k: '天候', v: conditions.weather_ja, at: 0 },
-    { k: '馬場', v: conditions.track_ja, at: 1.1 },
-    { k: 'コース', v: conditions.surface_ja, at: 2.2 },
-  ];
-  return (
-    <div className={s.baba}>
-      <div className={s.babaK}>— 本日の馬場発表 —</div>
-      <div className={s.babaRow}>
-        {stamps.map((st) => (
-          <div key={st.k} className={`${s.babaStamp} ${local >= st.at ? s.babaStampIn : ''}`}>
-            <span className={s.babaStampK}>{st.k}</span>
-            <span className={s.babaStampV}>{st.v}</span>
-          </div>
-        ))}
-      </div>
-      {conditions.night_name && local >= 3.6 && (
-        <div className={s.babaFes}>{conditions.night_name}</div>
-      )}
-    </div>
-  );
-}
-
-/* ------------------------- 中間経過(自分の馬・DERBY_DRAMA 第2幕の近似) */
-
-function MidRace({ elapsed, horse }: { elapsed: number; horse: MyDerbyHorse }) {
-  // 馬名から決定論的な順位の推移を作る(演出 — 実順位はレース後に確定)
-  let h = 2166136261;
-  for (let i = 0; i < horse.name.length; i++) {
-    h ^= horse.name.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  const r = (n: number) => ((h >>> (n * 5)) % 9);
-  const checks: Array<{ at: number; label: string; rank: number }> = [
-    { at: RACE_RUN.startAt + 3, label: '第2コーナー', rank: 6 + r(0) },
-    { at: RACE_RUN.startAt + 7, label: '第3コーナー', rank: 3 + r(1) },
-    { at: RACE_RUN.startAt + 11, label: '第4コーナー', rank: 1 + (r(2) % 6) },
-  ];
-  const visible = checks.filter((c) => elapsed >= c.at);
-  if (visible.length === 0) return null;
-  return (
-    <div className={s.midRace}>
-      {visible.map((c) => (
-        <div key={c.label} className={s.midLine}>
-          🏇 {c.label} — <b>{horse.name}</b> 現在 {c.rank}位
+      {conditions && elapsed >= TITLE_UNTIL + 0.5 && elapsed < TITLE_UNTIL + 5.5 && (
+        <div className={s.condFlash}>
+          天候 {conditions.weather_ja} / 馬場 {conditions.track_ja} / コース {conditions.surface_ja}
         </div>
-      ))}
+      )}
     </div>
   );
 }
