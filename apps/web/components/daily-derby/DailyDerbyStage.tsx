@@ -86,7 +86,12 @@ export function DailyDerbyStage({
   const [verdict, setVerdict] = useState<VerdictInfo | null>(null);
   const verdictDone = useRef(false);
   useEffect(() => {
-    if (!debugVerdict) return;
+    if (!debugVerdict) {
+      // ボタンで閉じた/ジャンプした: 強制表示を解除し、通常再生の審判は再度出せる
+      setVerdict(null);
+      verdictDone.current = false;
+      return;
+    }
     verdictDone.current = true;
     const horse = myHorses[0];
     setVerdict({

@@ -21,6 +21,7 @@ import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
 const JUMPS: ReadonlyArray<{ label: string; seconds: number }> = [
   { label: '通常待機', seconds: PRE_SHOW_SECONDS + 40 },
   { label: '3分前', seconds: PRE_SHOW_SECONDS },
+  { label: '残り2分(心拍)', seconds: 118 },
   { label: '残り35秒', seconds: 35 },
   { label: '20:00 (LIVE)', seconds: 3 },
   { label: 'レース実走(足音)', seconds: -18 },
@@ -43,6 +44,13 @@ const SCENARIOS: ReadonlyArray<{ key: keyof typeof FIXTURE_RESULTS; label: strin
   { key: 'survived', label: '生存のみ' },
   { key: 'burned', label: 'Burn+バフ' },
   { key: 'day7', label: 'Day7クリア' },
+];
+
+/** 審判(第3幕)を即座に表示するボタン群。fixtureMyHorses の該当馬を先頭にする。 */
+const VERDICT_BUTTONS: ReadonlyArray<{ kind: 'survive' | 'burn' | 'day7'; label: string; horseIdx: number }> = [
+  { kind: 'survive', label: '審判: 生存', horseIdx: 1 },
+  { kind: 'burn', label: '審判: BURN', horseIdx: 0 },
+  { kind: 'day7', label: '審判: DAY7', horseIdx: 2 },
 ];
 
 export function DerbyPreview() {
@@ -100,10 +108,37 @@ export function DerbyPreview() {
             style={{ padding: '0.35rem 0.7rem', fontSize: '0.68rem' }}
             onClick={() => {
               setFailed(false);
+              setDebugVerdict(undefined);
+              setMyHorsesOverride(null);
               setSecondsToStart(jump.seconds);
             }}
           >
             {jump.label}
+          </button>
+        ))}
+        {VERDICT_BUTTONS.map((vb) => (
+          <button
+            key={vb.kind}
+            type="button"
+            className="secondary"
+            style={{
+              padding: '0.35rem 0.7rem',
+              fontSize: '0.68rem',
+              borderColor: debugVerdict === vb.kind ? 'var(--gold, #c9a86a)' : undefined,
+            }}
+            onClick={() => {
+              if (debugVerdict === vb.kind) {
+                // 同じボタンをもう一度押すと閉じる
+                setDebugVerdict(undefined);
+                setMyHorsesOverride(null);
+                return;
+              }
+              setFailed(false);
+              setMyHorsesOverride(fixtureMyHorses().slice(vb.horseIdx, vb.horseIdx + 1));
+              setDebugVerdict(vb.kind);
+            }}
+          >
+            {debugVerdict === vb.kind ? `${vb.label} ✕` : vb.label}
           </button>
         ))}
         <button
@@ -163,6 +198,9 @@ export function DerbyPreview() {
 
       <p className="faint" style={{ fontSize: '0.78rem', marginTop: '0.8rem' }}>
         20:00 通過でファンファーレ、レース実走中は蹄音が鳴ります(ステージ右上でミュート可)。
+        心拍音は残り2分から(どこかを1回クリックした後に有効)。通し再生では自分の審判は
+        20:00通過の約31秒後(BURNログ濁流中)に自動発火します。「審判:」ボタンでいつでも
+        単体表示できます(もう一度押すと閉じる)。
       </p>
     </div>
   );
