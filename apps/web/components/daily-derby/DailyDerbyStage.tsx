@@ -23,7 +23,7 @@ import {
 } from '@/lib/daily-derby';
 import type { DerbyConditionsView, MyDerbyHorse } from '@/lib/daily-derby';
 import { SegmentClock } from '@/components/daily-derby/SegmentClock';
-import { DerbyVerdict, fixtureDropKey, type VerdictInfo } from '@/components/daily-derby/DerbyVerdict';
+import { DerbyVerdict, fixtureDropKey, fixtureUsedItemKey, type VerdictInfo } from '@/components/daily-derby/DerbyVerdict';
 import { DailyDerbyPersonalResult } from '@/components/daily-derby/DailyDerbyPersonalResult';
 import { DailyDerbyFailureState } from '@/components/daily-derby/DailyDerbyFailureState';
 import s from '../../app/daily-derby.module.css';
@@ -97,6 +97,7 @@ export function DailyDerbyStage({
       kind: debugVerdict,
       horse,
       dropKey: debugVerdict === 'burn' ? 'spirit_roar' : null,
+      usedItemKey: debugVerdict === 'burn' ? 'rain_hood' : null,
     });
     // QA表示は自動では消さない(スクリーンショットのため)。myHorsesは意図的に依存から除外。
   }, [debugVerdict]);
@@ -159,10 +160,10 @@ export function DailyDerbyStage({
         verdictDone.current = true;
         const horse = myHorses.find((h) => h.name === info.name);
         const kind = info.tone === 'burn' ? 'burn' : info.tone === 'day7' ? 'day7' : 'survive';
-        const dropKey = kind === 'burn'
-          ? fixtureDropKey(info.name, new Date().toISOString().slice(0, 10))
-          : null;
-        setVerdict({ name: info.name, kind, horse, dropKey });
+        const today = new Date().toISOString().slice(0, 10);
+        const dropKey = kind === 'burn' ? fixtureDropKey(info.name, today) : null;
+        const usedItemKey = kind === 'burn' ? fixtureUsedItemKey(info.name, today) : null;
+        setVerdict({ name: info.name, kind, horse, dropKey, usedItemKey });
         playOneShot(kind === 'burn' ? 'ownBurn' : 'ownGood');
         if (dropKey) setTimeout(() => playOneShot('ownGood'), 1600);
         setTimeout(() => setVerdict(null), dropKey ? 5400 : 3800);

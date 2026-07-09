@@ -85,7 +85,12 @@ kickerとエフェクトクラスがkindで変わる: BURN=`verdictKickerBurn`+`
     </div>
     <div class="verdictName">Royal Meteor</div>
     <div class="verdictSub">DAY4 — BURN</div><!-- 生存: DAY3 → DAY4 / DAY7: DAY7 走破 -->
-    <!-- BURNでドロップがある時だけ、1.5秒後に追加(馬は消さない — 関係を1画面で見せる): -->
+    <!-- BURNでその夜アイテムを使っていた時だけ(即時表示・くすんだ赤=喪失): -->
+    <div class="usedRow">
+      <img class="usedIcon" src="/items/rain_hood.webp" alt="雨天フード" />
+      <span class="usedText">使用アイテム(消費) — 雨天フード</span>
+    </div>
+    <!-- BURNでドロップがある時だけ、1.5秒後に追加(金=獲得。馬は消さない): -->
     <div class="dropRow">
       <img class="dropIcon" src="/items/spirit_roar.webp" alt="咆哮の魂" />
       <span class="dropText">BURNドロップ獲得 — 咆哮の魂(オールラウンド)</span>
@@ -93,6 +98,7 @@ kickerとエフェクトクラスがkindで変わる: BURN=`verdictKickerBurn`+`
   </div>
 </div>
 ```
+喪失(usedRow=くすんだ赤)と獲得(dropRow=金)の対比は視覚的に明確に保つこと。
 
 ## 4. 現在のCSS(全文 — これを差し替える)
 
@@ -145,7 +151,12 @@ kickerとエフェクトクラスがkindで変わる: BURN=`verdictKickerBurn`+`
 }
 .verdictName { font-family: var(--font-display); font-weight: 800; font-size: 21px; color: var(--text); margin-top: 12px; }
 .verdictSub { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); margin-top: 5px; letter-spacing: 0.14em; }
-.dropRow { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px;
+.usedRow { display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 14px;
+  animation: verdictDim 0.6s ease-out; }
+.usedIcon { width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(255,92,92,0.35);
+  filter: saturate(0.55) brightness(0.8); }
+.usedText { font-family: var(--font-mono); font-size: 11.5px; color: #d9a3a3; }
+.dropRow { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px;
   animation: dropIn 0.5s cubic-bezier(0.2,1.5,0.4,1); }
 @keyframes dropIn { 0% { opacity:0; transform:scale(0.6) translateY(14px); } 100% { opacity:1; transform:scale(1) translateY(0); } }
 .dropIcon { width: 54px; height: 54px; border-radius: 12px; border: 1px solid rgba(240,200,110,0.6);

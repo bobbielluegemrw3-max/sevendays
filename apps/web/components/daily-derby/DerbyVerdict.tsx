@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ITEM_BY_KEY_V2, BURN_DROP_KEYS_V2, AFFINITY_JA } from '@sevendays/domain';
+import { ITEM_BY_KEY_V2, ITEM_CATALOG_V2, BURN_DROP_KEYS_V2, AFFINITY_JA } from '@sevendays/domain';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import type { MyDerbyHorse } from '@/lib/daily-derby';
@@ -22,6 +22,8 @@ export interface VerdictInfo {
   horse: MyDerbyHorse | undefined;
   /** BURN時のドロップ(該当なしは null)。 */
   dropKey: string | null;
+  /** その夜この馬に使っていたアイテム(BURNで共に消費。なしは null)。 */
+  usedItemKey: string | null;
 }
 
 /** dna未取得時のフォールバック(馬名から擬似dna — プレビュー/旧APIレスポンス用)。 */
@@ -40,6 +42,7 @@ export function DerbyVerdict({ verdict }: { verdict: VerdictInfo }) {
 
   const day = verdict.horse?.currentDay;
   const drop = verdict.dropKey ? ITEM_BY_KEY_V2.get(verdict.dropKey) : null;
+  const used = verdict.usedItemKey ? ITEM_BY_KEY_V2.get(verdict.usedItemKey) : null;
   const kicker =
     verdict.kind === 'burn' ? 'BURNED' : verdict.kind === 'day7' ? 'DAY7 CLEARED' : 'SURVIVED';
   const sub =
@@ -62,6 +65,12 @@ export function DerbyVerdict({ verdict }: { verdict: VerdictInfo }) {
         </div>
         <div className={s.verdictName}>{verdict.name}</div>
         <div className={s.verdictSub}>{sub}</div>
+        {verdict.kind === 'burn' && used && (
+          <div className={s.usedRow}>
+            <img className={s.usedIcon} src={`/items/${used.key}.webp`} alt={used.nameJa} />
+            <span className={s.usedText}>使用アイテム(消費) — {used.nameJa}</span>
+          </div>
+        )}
         {showDrop && drop && (
           <div className={s.dropRow}>
             <img className={s.dropIcon} src={`/items/${drop.key}.webp`} alt={drop.nameJa} />
@@ -77,13 +86,23 @@ export function DerbyVerdict({ verdict }: { verdict: VerdictInfo }) {
 
 /** 決定論的なドロップ判定(演出用・20%)。実データ結線時はAPI値に置換する。 */
 export function fixtureDropKey(name: string, dateISO: string): string | null {
+  const u = hash01(`${name}:${dateISO}`);
+  if (u >= 0.2) return null;
+  return BURN_DROP_KEYS_V2[Math.floor((u / 0.2) * BURN_DROP_KEYS_V2.length) % BURN_DROP_KEYS_V2.length]!;
+}
+
+/** 決定論的な使用アイテム(演出用・55%)。実データ結線時はその夜の実使用アイテムに置換する。 */
+export function fixtureUsedItemKey(name: string, dateISO: string): string | null {
+  const u = hash01(`used:${name}:${dateISO}`);
+  if (u >= 0.55) return null;
+  return ITEM_CATALOG_V2[Math.floor((u / 0.55) * ITEM_CATALOG_V2.length) % ITEM_CATALOG_V2.length]!.key;
+}
+
+function hash01(src: string): number {
   let h = 2166136261;
-  const src = `${name}:${dateISO}`;
   for (let i = 0; i < src.length; i++) {
     h ^= src.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
-  const u = ((h >>> 0) % 1000) / 1000;
-  if (u >= 0.2) return null;
-  return BURN_DROP_KEYS_V2[Math.floor((u / 0.2) * BURN_DROP_KEYS_V2.length) % BURN_DROP_KEYS_V2.length]!;
+  return ((h >>> 0) % 1000) / 1000;
 }
