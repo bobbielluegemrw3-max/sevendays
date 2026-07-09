@@ -54,9 +54,16 @@ export interface DailyDerbyStageProps {
   myHorses?: readonly MyDerbyHorse[];
   /** 当夜のレース条件(Decision 082)。タイトル直後に一瞬テキスト表示する。 */
   conditions?: DerbyConditionsView | null;
-  /** 視覚QA専用: マウント時にBURN審判を強制表示(プレビューのみ使用)。 */
-  debugVerdict?: 'burn' | undefined;
+  /** 視覚QA専用: マウント時に審判を強制表示(プレビューのみ使用)。 */
+  debugVerdict?: 'burn' | 'survive' | 'day7' | undefined;
 }
+
+/* レース条件の値ごとの色(全部同色だと読み分けられない — オーナー指摘 2026-07-10)。 */
+const CONDITION_COLORS: Record<string, string> = {
+  SUNNY: '#ffd97a', CLOUDY: '#aab4c8', RAIN: '#6fc3ff', STORM: '#c78cff',
+  FAST: '#00eaff', GOOD: '#35d07f', SOFT: '#e6b24a', HEAVY: '#ff5c5c',
+  TURF: '#58d68d', DIRT: '#d8a05a',
+};
 
 export function DailyDerbyStage({
   secondsToStart,
@@ -87,8 +94,9 @@ export function DailyDerbyStage({
     const horse = myHorses[0];
     setVerdict({
       name: horse?.name ?? 'Test Horse',
+      kind: debugVerdict,
       horse,
-      dropKey: 'spirit_roar',
+      dropKey: debugVerdict === 'burn' ? 'spirit_roar' : null,
     });
     // QA表示は自動では消さない(スクリーンショットのため)。myHorsesは意図的に依存から除外。
   }, [debugVerdict]);
@@ -142,18 +150,21 @@ export function DailyDerbyStage({
     [soundOn, failed, getAudio],
   );
 
-  /* 自分該当行(DERBY_DRAMA — BURNのみ審判演出):
-     最初のBURN行はグリッチ墓碑→ドロップ開封のオーバーレイ。
-     それ以外の該当行(生存/DAY7含む)は従来どおりのチャイム。 */
+  /* 自分該当行(DERBY_DRAMA): 最初の審判対象行(BURN/生存/DAY7)は
+     自分の馬の実NFTアートを見せるオーバーレイ。以降の該当行はチャイムのみ。 */
   const playOwnLine = useCallback(
     (info: { name: string; tone: string }) => {
-      if (info.tone === 'burn' && !verdictDone.current) {
+      const isVerdictTone = info.tone === 'burn' || info.tone === 'survive' || info.tone === 'day7';
+      if (isVerdictTone && !verdictDone.current) {
         verdictDone.current = true;
         const horse = myHorses.find((h) => h.name === info.name);
-        const dropKey = fixtureDropKey(info.name, new Date().toISOString().slice(0, 10));
-        setVerdict({ name: info.name, horse, dropKey });
-        playOneShot('ownBurn');
-        if (dropKey) setTimeout(() => playOneShot('ownGood'), 1800);
+        const kind = info.tone === 'burn' ? 'burn' : info.tone === 'day7' ? 'day7' : 'survive';
+        const dropKey = kind === 'burn'
+          ? fixtureDropKey(info.name, new Date().toISOString().slice(0, 10))
+          : null;
+        setVerdict({ name: info.name, kind, horse, dropKey });
+        playOneShot(kind === 'burn' ? 'ownBurn' : 'ownGood');
+        if (dropKey) setTimeout(() => playOneShot('ownGood'), 1600);
         setTimeout(() => setVerdict(null), dropKey ? 5400 : 3800);
         return;
       }
@@ -395,7 +406,12 @@ function LiveShow({
       )}
       {conditions && elapsed >= TITLE_UNTIL + 0.5 && elapsed < TITLE_UNTIL + 5.5 && (
         <div className={s.condFlash}>
-          天候 {conditions.weather_ja} / 馬場 {conditions.track_ja} / コース {conditions.surface_ja}
+          <span className={s.condK}>天候</span>
+          <b style={{ color: CONDITION_COLORS[conditions.weather] }}>{conditions.weather_ja}</b>
+          <span className={s.condK}>/ 馬場</span>
+          <b style={{ color: CONDITION_COLORS[conditions.track] }}>{conditions.track_ja}</b>
+          <span className={s.condK}>/ コース</span>
+          <b style={{ color: CONDITION_COLORS[conditions.surface] }}>{conditions.surface_ja}</b>
         </div>
       )}
     </div>

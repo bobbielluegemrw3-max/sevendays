@@ -52,7 +52,8 @@ export function DerbyPreview() {
   const [paused, setPaused] = useState(false);
   const [scenario, setScenario] = useState<keyof typeof FIXTURE_RESULTS>('sold');
   const [failed, setFailed] = useState(false);
-  const [debugVerdict, setDebugVerdict] = useState<'burn' | undefined>(undefined);
+  const [myHorsesOverride, setMyHorsesOverride] = useState<ReturnType<typeof fixtureMyHorses> | null>(null);
+  const [debugVerdict, setDebugVerdict] = useState<'burn' | 'survive' | 'day7' | undefined>(undefined);
   const speedRef = useRef(speed);
   const pausedRef = useRef(paused);
   speedRef.current = speed;
@@ -68,8 +69,13 @@ export function DerbyPreview() {
     const sc = q.get('scenario');
     if (sc && sc in FIXTURE_RESULTS) setScenario(sc);
     if (q.get('failed') === '1') setFailed(true);
-    // 視覚QA: ?verdict=burn でBURN審判を強制表示
-    if (q.get('verdict') === 'burn') setDebugVerdict('burn');
+    // 視覚QA: ?verdict=burn|survive|day7 で審判を強制表示
+    const dv = q.get('verdict');
+    if (dv === 'burn' || dv === 'survive' || dv === 'day7') {
+      const idx = dv === 'survive' ? 1 : dv === 'day7' ? 2 : 0;
+      setMyHorsesOverride(fixtureMyHorses().slice(idx, idx + 1));
+      setDebugVerdict(dv);
+    }
   }, []);
 
   useEffect(() => {
@@ -97,31 +103,42 @@ export function DerbyPreview() {
             onClick={() => {
               setFailed(false);
               setDebugVerdict(undefined);
+              setMyHorsesOverride(null);
               setSecondsToStart(jump.seconds);
             }}
           >
             {jump.label}
           </button>
         ))}
-        <button
-          type="button"
-          className="secondary"
-          style={{
-            padding: '0.35rem 0.7rem',
-            fontSize: '0.68rem',
-            borderColor: debugVerdict === 'burn' ? 'var(--gold, #c9a86a)' : undefined,
-          }}
-          onClick={() => {
-            if (debugVerdict === 'burn') {
-              setDebugVerdict(undefined);
-              return;
-            }
-            setFailed(false);
-            setDebugVerdict('burn');
-          }}
-        >
-          {debugVerdict === 'burn' ? '審判: BURN ✕' : '審判: BURN'}
-        </button>
+        {([
+          { kind: 'survive', label: '審判: 生存', idx: 1 },
+          { kind: 'burn', label: '審判: BURN', idx: 0 },
+          { kind: 'day7', label: '審判: DAY7', idx: 2 },
+        ] as const).map((vb) => (
+          <button
+            key={vb.kind}
+            type="button"
+            className="secondary"
+            style={{
+              padding: '0.35rem 0.7rem',
+              fontSize: '0.68rem',
+              borderColor: debugVerdict === vb.kind ? 'var(--gold, #c9a86a)' : undefined,
+            }}
+            onClick={() => {
+              if (debugVerdict === vb.kind) {
+                // 同じボタンをもう一度押すと閉じる
+                setDebugVerdict(undefined);
+                setMyHorsesOverride(null);
+                return;
+              }
+              setFailed(false);
+              setMyHorsesOverride(fixtureMyHorses().slice(vb.idx, vb.idx + 1));
+              setDebugVerdict(vb.kind);
+            }}
+          >
+            {debugVerdict === vb.kind ? `${vb.label} ✕` : vb.label}
+          </button>
+        ))}
         <button
           type="button"
           className="secondary"
@@ -172,15 +189,15 @@ export function DerbyPreview() {
         tickerEvents={FIXTURE_TICKER}
         personal={FIXTURE_RESULTS[scenario] ?? null}
         failed={failed}
-        myHorses={fixtureMyHorses()}
+        myHorses={myHorsesOverride ?? fixtureMyHorses()}
         debugVerdict={debugVerdict}
         conditions={fixtureConditions(new Date().toISOString().slice(0, 10))}
       />
 
       <p className="faint" style={{ fontSize: '0.78rem', marginTop: '0.8rem' }}>
         20:00 通過でファンファーレ、レース実走中は蹄音が鳴ります(ステージ右上でミュート可)。
-        通し再生では自分のBURN審判は20:00通過の約31秒後(BURNログ濁流中)に自動発火します。
-        「審判: BURN」ボタンでいつでも単体表示できます(もう一度押すと閉じる)。
+        通し再生では自分の審判(実NFT馬の表示)は20:00通過の約31秒後(ログ濁流中)に自動発火します。
+        「審判:」ボタンでいつでも単体表示できます(もう一度押すと閉じる)。
       </p>
     </div>
   );

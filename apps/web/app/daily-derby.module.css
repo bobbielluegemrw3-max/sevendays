@@ -567,9 +567,10 @@
 }
 
 
-/* ==== DERBY_DRAMA(2026-07-10 縮小版): 出走馬カード・条件フラッシュ・BURN審判 ==== */
+/* ==== DERBY_DRAMA(2026-07-10): 出走馬カード・条件フラッシュ・審判(実NFT馬) ==== */
 
-/* 本日のレースに参加するあなたの馬(カウントダウン下・サイバーパンク) */
+/* 本日のレースに参加するあなたの馬(カウントダウン下・サイバーパンク)
+   馬名は枠で囲まない(オーナー指摘: 安物っぽい) — プレーンテキスト+金DAY */
 .tonight { margin: 22px auto 0; max-width: 560px; padding: 15px 18px 16px; position: relative;
   border: 1px solid rgba(0, 234, 255, 0.4);
   background: linear-gradient(165deg, rgba(0, 234, 255, 0.08), rgba(255, 45, 196, 0.05) 60%, transparent);
@@ -578,44 +579,49 @@
   background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0, 234, 255, 0.03) 3px 4px); }
 .tonightK { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.28em;
   color: var(--cyan); text-shadow: 0 0 14px rgba(0, 234, 255, 0.75); }
-.tonightChips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
-.tonightChip { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--text);
-  border: 1px solid rgba(0, 234, 255, 0.35); border-radius: 999px; padding: 5px 13px; background: rgba(0, 234, 255, 0.06); }
-.tonightChip b { color: var(--gold-bright, #f0d9a8); margin-left: 4px; }
-.tonightNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); margin-top: 10px; line-height: 1.7; }
+.tonightChips { display: flex; gap: 6px 22px; flex-wrap: wrap; justify-content: center; margin-top: 11px; }
+.tonightChip { font-family: var(--font-display); font-size: 13.5px; font-weight: 700; color: var(--text);
+  letter-spacing: 0.04em; }
+.tonightChip b { color: var(--gold-bright, #f0d9a8); margin-left: 6px; font-size: 12px; }
+.tonightNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); margin-top: 11px; line-height: 1.7; }
 
-/* レース条件フラッシュ(タイトル直後に一瞬だけテキスト表示) */
-.condFlash { margin-top: 16px; text-align: center; font-family: var(--font-mono); font-size: 13px;
-  letter-spacing: 0.18em; color: var(--gold-bright, #f0d9a8); text-shadow: 0 0 14px rgba(240, 200, 110, 0.55);
-  animation: condFlash 5s ease-in-out forwards; }
+/* レース条件フラッシュ(タイトル直後に一瞬。値は条件ごとに色分け) */
+.condFlash { margin-top: 16px; text-align: center; font-family: var(--font-mono); font-size: 13.5px;
+  letter-spacing: 0.14em; animation: condFlash 5s ease-in-out forwards; }
+.condFlash b { font-weight: 700; margin: 0 10px 0 7px; font-size: 15px;
+  text-shadow: 0 0 12px currentColor; }
+.condK { color: var(--muted); font-size: 11px; }
 @keyframes condFlash { 0% { opacity: 0; transform: translateY(4px); } 10% { opacity: 1; transform: translateY(0); }
   78% { opacity: 1; } 100% { opacity: 0; } }
 
-/* BURN審判オーバーレイ(グリッチ消滅 → 墓碑 → ドロップ開封) */
+/* 審判オーバーレイ: 自分の馬の実NFTアートを主役に(文言は事実のみ) */
 .verdictOverlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
-  background: rgba(2, 2, 8, 0.9); animation: verdictDim 0.25s ease-out; }
+  background: rgba(2, 2, 8, 0.92); animation: verdictDim 0.25s ease-out; }
 @keyframes verdictDim { 0% { opacity: 0; } 100% { opacity: 1; } }
-.verdictCard { width: min(760px, 94vw); text-align: center; animation: verdictIn 0.3s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.verdictCard { width: min(560px, 94vw); text-align: center; animation: verdictIn 0.3s cubic-bezier(0.2, 1.4, 0.4, 1); }
 @keyframes verdictIn { 0% { opacity: 0; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } }
 .verdictKicker { font-family: var(--font-display); font-weight: 800; font-size: 15px; letter-spacing: 0.4em; color: var(--good); }
 .verdictKickerBurn { color: var(--bad); }
-.burnGlitch { margin-top: 22px; }
-.burnName { font-family: var(--font-display); font-weight: 800; font-size: 30px; color: var(--bad);
-  display: inline-block; animation: burnGlitch 1.4s steps(12) forwards; text-shadow: 0 0 24px rgba(255, 92, 92, 0.7); }
-@keyframes burnGlitch {
-  0% { opacity: 1; filter: none; transform: none; }
-  30% { filter: blur(0.5px); transform: translateX(2px) skewX(2deg); }
-  50% { filter: blur(1px); transform: translateX(-3px) skewX(-3deg); opacity: 0.85; }
-  70% { filter: blur(2px); transform: translateX(4px); opacity: 0.6; }
-  100% { opacity: 0.22; filter: blur(4px); transform: translateY(-8px); }
+.verdictKickerGold { color: var(--gold-bright, #f0d9a8); }
+.vHorse { width: min(280px, 62vw); margin: 14px auto 0; border-radius: 20px; position: relative; }
+.vHorseArt { width: 100%; height: auto; display: block; border-radius: 20px; }
+.vHorseSurvive .vHorseArt { animation: vGlowGood 2.4s ease-out forwards; }
+@keyframes vGlowGood { 0% { filter: brightness(0.7); } 35% { filter: brightness(1.15) drop-shadow(0 0 34px rgba(53, 208, 127, 0.65)); }
+  100% { filter: brightness(1.02) drop-shadow(0 0 20px rgba(53, 208, 127, 0.4)); } }
+.vHorseDay7 .vHorseArt { animation: vGlowGold 2.6s ease-out forwards; }
+@keyframes vGlowGold { 0% { filter: brightness(0.7); } 35% { filter: brightness(1.2) drop-shadow(0 0 40px rgba(240, 200, 110, 0.8)); }
+  100% { filter: brightness(1.05) drop-shadow(0 0 24px rgba(240, 200, 110, 0.55)); } }
+.vHorseBurn .vHorseArt { animation: vBurn 2.6s ease-in forwards; }
+@keyframes vBurn {
+  0% { filter: brightness(1); }
+  30% { filter: brightness(1.25) saturate(1.3) drop-shadow(0 0 36px rgba(255, 92, 92, 0.85)); }
+  100% { filter: brightness(0.42) saturate(0.35) drop-shadow(0 0 16px rgba(255, 92, 92, 0.45)); }
 }
-.burnEpitaph { font-family: var(--font-mono); font-size: 12.5px; color: #d9a3a3; margin-top: 18px; letter-spacing: 0.1em; }
-.burnHint { font-family: var(--font-mono); font-size: 11px; color: var(--gold, #c9a86a); margin-top: 12px;
-  animation: hintPulse 1.2s ease-in-out infinite; }
-@keyframes hintPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-.dropReveal { margin-top: 8px; animation: dropIn 0.6s cubic-bezier(0.2, 1.5, 0.4, 1); }
-@keyframes dropIn { 0% { opacity: 0; transform: scale(0.4) translateY(30px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
-.dropArt { width: 148px; height: 148px; border-radius: 18px; border: 1px solid rgba(240, 200, 110, 0.6);
-  box-shadow: 0 0 46px -8px rgba(240, 200, 110, 0.8); }
-.dropName { font-family: var(--font-display); font-weight: 800; font-size: 19px; color: var(--gold-bright, #f0d9a8); margin-top: 10px; }
-.dropNote { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 5px; }
+.verdictName { font-family: var(--font-display); font-weight: 800; font-size: 21px; color: var(--text); margin-top: 12px; }
+.verdictSub { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); margin-top: 5px; letter-spacing: 0.14em; }
+.dropRow { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px;
+  animation: dropIn 0.5s cubic-bezier(0.2, 1.5, 0.4, 1); }
+@keyframes dropIn { 0% { opacity: 0; transform: scale(0.6) translateY(14px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+.dropIcon { width: 54px; height: 54px; border-radius: 12px; border: 1px solid rgba(240, 200, 110, 0.6);
+  box-shadow: 0 0 24px -4px rgba(240, 200, 110, 0.7); }
+.dropText { font-family: var(--font-mono); font-size: 12px; color: var(--gold-bright, #f0d9a8); }
