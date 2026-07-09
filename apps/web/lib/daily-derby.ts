@@ -18,7 +18,14 @@
  * (馬名+匿名ID U-xxxx のみ、ADR-007)。
  */
 
-import { PRICE_TABLE_V1 } from '@sevendays/domain';
+import {
+  PRICE_TABLE_V1,
+  SURFACE_JA,
+  TRACK_JA,
+  WEATHER_JA,
+  raceNightNameV2,
+  type RaceConditions,
+} from '@sevendays/domain';
 
 /** 開始3分前からデジタルカウントダウンを全面表示する。 */
 export const PRE_SHOW_SECONDS = 180;
@@ -316,6 +323,73 @@ export const FIXTURE_TICKER: readonly string[] = [
   'REVENGE BUFF GENERATED',
   'SOLD — Phantom Frost 121.00 USDT',
 ] as const;
+
+/* ---- レース条件(Decision 082)+ 審判演出のための自分の馬(DERBY_DRAMA) ---- */
+
+export interface DerbyConditionsView {
+  weather: string;
+  track: string;
+  surface: string;
+  weather_ja: string;
+  track_ja: string;
+  surface_ja: string;
+  night_name: string | null;
+}
+
+export interface MyDerbyHorse {
+  name: string;
+  dnaHash?: string;
+  currentDay?: number;
+}
+
+export function conditionsView(c: {
+  weather: string; track: string; surface: string; night_name?: string | null;
+}): DerbyConditionsView {
+  const rc = c as unknown as RaceConditions;
+  return {
+    weather: c.weather,
+    track: c.track,
+    surface: c.surface,
+    weather_ja: WEATHER_JA[rc.weather] ?? c.weather,
+    track_ja: TRACK_JA[rc.track] ?? c.track,
+    surface_ja: SURFACE_JA[rc.surface] ?? c.surface,
+    night_name: c.night_name !== undefined ? c.night_name : raceNightNameV2(rc),
+  };
+}
+
+/** プレビュー用: 日付から決定論的に条件を作る(毎晩変わる)。 */
+export function fixtureConditions(dateISO: string): DerbyConditionsView {
+  let h = 2166136261;
+  for (let i = 0; i < dateISO.length; i++) {
+    h ^= dateISO.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const u = (n: number) => (((h >>> (n * 7)) & 1023) % 1000) / 1000;
+  const pick = <T,>(uu: number, table: [T, number][]): T => {
+    let cum = 0;
+    for (const [v, p] of table) {
+      cum += p;
+      if (uu < cum) return v;
+    }
+    return table[table.length - 1]![0];
+  };
+  const weather = pick(u(0), [['SUNNY', 0.4], ['CLOUDY', 0.3], ['RAIN', 0.2], ['STORM', 0.1]]);
+  const track = pick(u(1), [['GOOD', 0.4], ['FAST', 0.25], ['SOFT', 0.25], ['HEAVY', 0.1]]);
+  const surface = pick(u(2), [['TURF', 0.6], ['DIRT', 0.4]]);
+  return conditionsView({ weather, track, surface });
+}
+
+/** プレビュー用: 審判演出つきの自分の馬(dna・Day込み)。 */
+export function fixtureMyHorses(): MyDerbyHorse[] {
+  const names = fixtureMyHorseNames();
+  const days = [4, 3, 6, 2];
+  const seeds = ['a1', '7e', 'f2', '4c'];
+  return names.map((name, i) => ({
+    name,
+    dnaHash: dna(seeds[i % seeds.length]!),
+    currentDay: days[i % days.length]!,
+  }));
+}
 
 /** プレビュー用ダミー dna_hash(NftHorseArt のルック導出に使う)。 */
 const dna = (seed: string): string => `0x${seed.repeat(32).slice(0, 64)}`;

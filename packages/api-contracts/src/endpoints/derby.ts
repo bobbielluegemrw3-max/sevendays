@@ -268,8 +268,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       }
 
       // For the YOU-highlight in the log flood (owner plan A).
-      const myHorses = await ctx.client.query<{ name: string }>(
-        `select name from horses where owner_user_id = $1 and status = 'ACTIVE' limit 50`,
+      const myHorses = await ctx.client.query<{ name: string; dna_hash: string; current_day: number }>(
+        `select name, dna_hash, current_day from horses where owner_user_id = $1 and status = 'ACTIVE' limit 50`,
         [ctx.userId],
       );
 
@@ -278,7 +278,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         next_derby_at: nextDerbyAt(now),
         phase,
         live_started_at: batchRow?.created_at ?? null,
-        conditions: raceRow?.status === 'FINALIZED' && raceRow.surface
+        conditions: raceRow?.surface
           ? {
               weather: raceRow.weather,
               track: raceRow.track_condition,
@@ -294,6 +294,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         ticker,
         personal,
         my_horse_names: myHorses.rows.map((r) => r.name),
+        my_horses: myHorses.rows,
       };
     },
   });

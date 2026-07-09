@@ -6,7 +6,8 @@ import {
   FIXTURE_TICKER,
   PRE_SHOW_SECONDS,
   SHOW_TOTAL,
-  fixtureMyHorseNames,
+  fixtureConditions,
+  fixtureMyHorses,
 } from '@/lib/daily-derby';
 import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
 
@@ -50,6 +51,8 @@ export function DerbyPreview() {
   const [paused, setPaused] = useState(false);
   const [scenario, setScenario] = useState<keyof typeof FIXTURE_RESULTS>('sold');
   const [failed, setFailed] = useState(false);
+  const [myHorsesOverride, setMyHorsesOverride] = useState<ReturnType<typeof fixtureMyHorses> | null>(null);
+  const [debugVerdict, setDebugVerdict] = useState<'burn' | 'survive' | 'day7' | undefined>(undefined);
   const speedRef = useRef(speed);
   const pausedRef = useRef(paused);
   speedRef.current = speed;
@@ -65,6 +68,12 @@ export function DerbyPreview() {
     const sc = q.get('scenario');
     if (sc && sc in FIXTURE_RESULTS) setScenario(sc);
     if (q.get('failed') === '1') setFailed(true);
+    // 視覚QA: ?mine=survive|day7 で最初の審判対象を生存系にする(既定はBURNが先)
+    const dv = q.get('verdict');
+    if (dv === 'burn' || dv === 'survive' || dv === 'day7') setDebugVerdict(dv);
+    const mine = q.get('mine');
+    if (mine === 'survive') setMyHorsesOverride(fixtureMyHorses().slice(1, 2));
+    if (mine === 'day7') setMyHorsesOverride(fixtureMyHorses().slice(2, 3));
   }, []);
 
   useEffect(() => {
@@ -147,7 +156,9 @@ export function DerbyPreview() {
         tickerEvents={FIXTURE_TICKER}
         personal={FIXTURE_RESULTS[scenario] ?? null}
         failed={failed}
-        myHorseNames={fixtureMyHorseNames()}
+        myHorses={myHorsesOverride ?? fixtureMyHorses()}
+        debugVerdict={debugVerdict}
+        conditions={fixtureConditions(new Date().toISOString().slice(0, 10))}
       />
 
       <p className="faint" style={{ fontSize: '0.78rem', marginTop: '0.8rem' }}>

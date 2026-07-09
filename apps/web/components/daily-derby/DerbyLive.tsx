@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/client-api';
-import { FIXTURE_COUNTS, PRE_SHOW_SECONDS, SHOW_TOTAL, type DerbyCounts, type PersonalResult } from '@/lib/daily-derby';
+import {
+  FIXTURE_COUNTS,
+  PRE_SHOW_SECONDS,
+  SHOW_TOTAL,
+  conditionsView,
+  type DerbyCounts,
+  type PersonalResult,
+} from '@/lib/daily-derby';
 import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
 
 /**
@@ -25,6 +32,7 @@ interface DerbyStatus {
   ticker: string[];
   personal: PersonalResult | null;
   my_horse_names: string[];
+  my_horses?: { name: string; dna_hash: string; current_day: number }[];
 }
 
 export function DerbyLive() {
@@ -103,6 +111,12 @@ export function DerbyLive() {
       personal={status.personal}
       failed={status.phase === 'FAILED_SAFE_MODE'}
       myHorseNames={status.my_horse_names}
+      myHorses={(status.my_horses ?? []).map((h) => ({
+        name: h.name,
+        dnaHash: h.dna_hash,
+        currentDay: h.current_day,
+      }))}
+      conditions={status.conditions ? conditionsView(status.conditions) : null}
     />
   );
 }

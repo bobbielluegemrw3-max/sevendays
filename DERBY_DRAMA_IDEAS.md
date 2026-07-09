@@ -1,6 +1,7 @@
 # Daily Derby 演出強化アイデア — 「1分間を3幕のドラマに」
 
-> 記録: 2026-07-09 / オーナー承認済みのアイデア集(実装は未着手)
+> 記録: 2026-07-09 / オーナー承認済みのアイデア集
+> **実装状況: 本命3幕+推奨着手順1〜5は実装済み(2026-07-09)。次点群のみ未着手。**
 > 対象: 毎晩20:00のレース演出(`DailyDerbyStage` / ターミナルログ+8音サウンドスケープ)
 > 原則: 報酬そのものより「結果直前の不確実性」が脳汁の源。「溜め」と「個人のドラマ」を作る。
 
@@ -37,16 +38,24 @@
   興奮装置は「自分の資産のドラマ」と「仲間との同時体験」だけで作る。
 
 ## 推奨着手順(効果×コスト)
-1. **静寂→爆発**(自分の結果直前0.8秒の全音停止)— 実装約30分・効果大
-2. **レース条件の「馬場発表」スタンプ演出**
-3. **生存時の実NFT馬ゴールカット**(チャンピオンヒーロー技術の流用 — 素材・技術とも既存)
-4. **BURN→ドロップのガチャ開封**
-5. 第1幕(心拍カウントダウン+今夜のあなたカード)
-6. 次点群(観戦人数・シェアカード・音の階層化)
+1. ✅ **静寂→爆発**(自分の結果直前0.8秒の全音停止)— 実装済み
+2. ✅ **レース条件の「馬場発表」スタンプ演出**(天候/馬場/コースの3連スタンプ+祭り名バナー)
+3. ✅ **生存時の実NFT馬ゴールカット**(`lib/gallop-cut.ts` にベイク処理を移植)
+4. ✅ **BURN→ドロップのガチャ開封**(グリッチ消滅→墓碑→ドロップ開封)
+5. ✅ 第1幕(心拍カウントダウン WebAudio 合成+今夜のあなたカード)+中間経過3回
+6. ⬜ 次点群(観戦人数・シェアカード・音の階層化・応援ボタン)— 未着手
 
-## 実装メモ(着手時の参照)
-- 現行演出: `apps/web/components/daily-derby/DailyDerbyStage.tsx`(音声8種は `/sounds/`)
-- スプライト流用元: `apps/web/public/champions/keiba/{renderer,engine}.js` +
-  `tex/gallop_v{2,3,4}_XX_{coat,gold}.webp`(教訓は `CHAMPION_HERO_POSTMORTEM.md`)
-- 本物データ結線は `DAILY_DERBY_LIVE=1`(現在プロトタイプ表示・Decision記録参照)
+## 実装の実際(2026-07-09 完了)
+- 審判演出: `apps/web/components/daily-derby/DerbyVerdict.tsx`
+  (SurviveVerdict=実NFTゴールカット canvas / BurnVerdict=グリッチ→墓碑→ガチャ)
+- スプライトベイク移植: `apps/web/lib/gallop-cut.ts`(HSV回転・アルファ固化・
+  連結成分ノイズ除去・金装甲。出典 `CHAMPION_HERO_POSTMORTEM.md`)
+  - **教訓追加**: rAFタイムスタンプは `performance.now()` より過去になり得る →
+    負のtがJSの負数モジュロで `frames[-1]=undefined` を踏み描画ループが死ぬ。
+    `Math.max(0, (now - t0) / 1000)` のclampが必須
+- 統合: `DailyDerbyStage.tsx`(心拍・今夜のあなた・馬場発表 BabaHappyo・中間経過
+  MidRace・静寂→審判シーケンス)+ `daily-derby.module.css`
+- 実データ: `/api/v1/daily-derby/status` が `conditions` + `my_horses[{name,dna_hash,current_day}]` を返す
+- QA: `/dev/derby-preview?verdict=burn|survive|day7`(`&mine=survive|day7` で自馬fixture切替)
+- BURNドロップは現在fixture判定(20%決定論)— 実データ結線時にAPI値へ置換(`fixtureDropKey` 参照)
 - レース条件の開示値: `races.weather/track_condition/surface`(シード決定・レース後検証可能)・祭り名は`raceNightNameV2`
