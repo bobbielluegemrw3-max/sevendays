@@ -387,7 +387,7 @@ export function AdminSupportView() {
             className={s.csDraft}
             rows={12}
             value={bcBody}
-            placeholder={'本文\n\n(宛名は書かず、全員に共通の文面にしてください)'}
+            placeholder={'English text first...\n\n----------------------------------------\n\n日本語は区切り線の下に...\n\nSeven Days Derby Support\nSeven Days Derby サポート'}
             onChange={(e) => setBcBody(e.target.value)}
           />
           <div className={s.controls} style={{ marginTop: 8 }}>
