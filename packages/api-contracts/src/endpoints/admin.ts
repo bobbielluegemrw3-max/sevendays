@@ -781,12 +781,13 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
                     from item_usages where status <> 'CANCELLED' group by 1) u on u.item_key = c.key
          order by c.band, c.price::numeric`,
       );
-      const settings = await ctx.client.query(
-        `select item_setting, count(*)::int as count
-         from races where item_setting is not null
-         group by 1 order by 1`,
+      const conditions = await ctx.client.query(
+        `select weather::text as weather, track_condition::text as track,
+                surface::text as surface, count(*)::int as count
+         from races where surface is not null
+         group by 1, 2, 3 order by 4 desc`,
       );
-      return { catalog: catalog.rows, setting_distribution: settings.rows };
+      return { catalog: catalog.rows, condition_distribution: conditions.rows };
     },
   });
 
@@ -798,7 +799,8 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
       requireAdminRole(ctx);
       const races = await ctx.client.query(
         `select r.id, br.batch_date::text as batch_date, r.status::text as status,
-                r.participant_count, r.item_setting,
+                r.participant_count, r.weather::text as weather,
+                r.track_condition::text as track_condition, r.surface::text as surface,
                 (select count(*)::int from horse_burns hb where hb.race_id = r.id) as burns,
                 (select count(*)::int from item_usages iu where iu.race_id = r.id) as item_usages,
                 r.completed_at::text as completed_at

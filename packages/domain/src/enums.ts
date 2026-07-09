@@ -55,6 +55,10 @@ export type Weather = (typeof WEATHERS)[number];
 export const TRACK_CONDITIONS = ['FAST', 'GOOD', 'SOFT', 'HEAVY'] as const;
 export type TrackCondition = (typeof TRACK_CONDITIONS)[number];
 
+/** Course surface (Decision 082): affects ITEM effectiveness only. */
+export const SURFACES = ['TURF', 'DIRT'] as const;
+export type Surface = (typeof SURFACES)[number];
+
 export const PURCHASE_SESSION_STATUSES = [
   'PENDING_ASSIGNMENT',
   'ASSIGNED',

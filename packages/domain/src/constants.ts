@@ -282,6 +282,12 @@ export const TRACK_PROBABILITY_V1 = {
 
 export type TrackConditionName = keyof typeof TRACK_PROBABILITY_V1;
 
+/** Surface distribution (Decision 082) — items only, no score modifier. */
+export const SURFACE_PROBABILITY_V1 = {
+  TURF: '0.60',
+  DIRT: '0.40',
+} as const;
+
 export const WEATHER_MODIFIER_V1: Readonly<
   Record<keyof typeof WEATHER_PROBABILITY_V1, Record<HorseType, number>>
 > = {

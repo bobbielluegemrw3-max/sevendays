@@ -1,6 +1,8 @@
 /** Item System UI 共有型(Decision 078/079)。APIレスポンス形。 */
 
 export interface CatalogItem {
+  affinity?: string;
+  affinity_ja?: string;
   key: string;
   name_ja: string;
   name_en: string;
@@ -48,13 +50,19 @@ export interface ItemTransaction {
 }
 
 /**
- * 公開された1日ぶんの設定結果(リデザインで追加)。
- * setting は 1..6。date は ISO(YYYY-MM-DD)。レース後に確定・公開される。
- * 供給元は GET /api/v1/items/settings?month=YYYY-MM などを想定。
+ * 公開された1日ぶんのレース条件(Decision 082)。
+ * 天候×馬場×コース。レース後に確定・公開される。
+ * 供給元は GET /api/v1/items/conditions。
  */
-export interface DailySetting {
+export interface DailyConditions {
   date: string;
-  setting: number;
+  weather: string;
+  track: string;
+  surface: string;
+  weather_ja: string;
+  track_ja: string;
+  surface_ja: string;
+  night_name: string | null;
 }
 
 export const BAND_LABEL: Record<CatalogItem['band'], string> = {

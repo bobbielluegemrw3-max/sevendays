@@ -40,16 +40,17 @@ export default function AdminPreviewPage() {
             { key: 'golden_horseshoe', name_ja: '黄金の蹄鉄', band: 'PREMIUM', price: '30', active: true, purchased: 8, revenue: '240', dropped: 0, gifted: 1, used: 6 },
             { key: 'phoenix_feather', name_ja: '不死鳥の羽根', band: 'BURN_DROP', price: '0', active: true, purchased: 0, revenue: '0', dropped: 12, gifted: 2, used: 5 },
           ],
-          setting_distribution: [
-            { item_setting: 1, count: 3 }, { item_setting: 3, count: 9 }, { item_setting: 6, count: 2 },
+          condition_distribution: [
+            { weather: 'SUNNY', track: 'GOOD', surface: 'TURF', count: 9 },
+            { weather: 'RAIN', track: 'HEAVY', surface: 'DIRT', count: 2 },
           ],
         }}
       />
       <AdminRacesView
         data={{
           races: [
-            { id: '3f6a1c2e-0000-0000-0000-000000000001', batch_date: '2026-07-08', status: 'SETTLED', participant_count: 18, item_setting: 4, burns: 3, item_usages: 11, completed_at: '2026-07-08T20:05:00' },
-            { id: '3f6a1c2e-0000-0000-0000-000000000002', batch_date: '2026-07-07', status: 'SETTLED', participant_count: 12, item_setting: 2, burns: 2, item_usages: 6, completed_at: '2026-07-07T20:05:00' },
+            { id: '3f6a1c2e-0000-0000-0000-000000000001', batch_date: '2026-07-08', status: 'SETTLED', participant_count: 18, weather: 'SUNNY', track_condition: 'GOOD', surface: 'TURF', burns: 3, item_usages: 11, completed_at: '2026-07-08T20:05:00' },
+            { id: '3f6a1c2e-0000-0000-0000-000000000002', batch_date: '2026-07-07', status: 'SETTLED', participant_count: 12, weather: 'RAIN', track_condition: 'HEAVY', surface: 'DIRT', burns: 2, item_usages: 6, completed_at: '2026-07-07T20:05:00' },
           ],
           daily_derby_live: false,
         }}

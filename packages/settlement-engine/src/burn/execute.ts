@@ -1,8 +1,8 @@
 import { Money, insertNotification, sha256Parts } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
 import {
-  BURN_DROP_KEYS_V1,
-  ITEM_BY_KEY_V1,
+  BURN_DROP_KEYS_V2,
+  ITEM_BY_KEY_V2,
   renderNotification,
   type EconomyStatus,
 } from '@sevendays/domain';
@@ -169,7 +169,7 @@ export async function finalizeAndBurn(
     const ownerId = ownerByHorse.get(horseId)!;
     const burnEventId = uuidFromParts(input.raceId, horseId, 'burn_event');
     const u = unitFromParts(input.raceSeed, burnEventId, 'item_drop', input.raceEngineVersion);
-    const dropKey = BURN_DROP_KEYS_V1[Math.min(BURN_DROP_KEYS_V1.length - 1, Math.floor(u * BURN_DROP_KEYS_V1.length))]!;
+    const dropKey = BURN_DROP_KEYS_V2[Math.min(BURN_DROP_KEYS_V2.length - 1, Math.floor(u * BURN_DROP_KEYS_V2.length))]!;
     const dropped = await client.query<{ id: string }>(
       `insert into user_items (user_id, item_key, unit_price, source, source_burn_event_id)
        values ($1, $2, 0, 'BURN_DROP', $3)
@@ -180,7 +180,7 @@ export async function finalizeAndBurn(
     if (dropped.rows.length > 0) {
       itemDrops += 1;
       const rendered = renderNotification('ITEM_DROPPED', {
-        item_name: ITEM_BY_KEY_V1.get(dropKey)?.nameJa ?? dropKey,
+        item_name: ITEM_BY_KEY_V2.get(dropKey)?.nameJa ?? dropKey,
       });
       await insertNotification(client, {
         userId: ownerId,

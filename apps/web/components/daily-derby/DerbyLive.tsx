@@ -20,7 +20,7 @@ interface DerbyStatus {
   next_derby_at: string;
   phase: 'WAITING' | 'LIVE' | 'COMPLETED' | 'FAILED_SAFE_MODE';
   live_started_at: string | null;
-  item_setting: number | null;
+  conditions: { weather: string; track: string; surface: string; night_name: string | null } | null;
   counts: DerbyCounts | null;
   ticker: string[];
   personal: PersonalResult | null;

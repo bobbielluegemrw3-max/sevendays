@@ -1087,9 +1087,9 @@ describe('item system (Decisions 078/079)', () => {
     expect(received?.counterparty).toMatch(/\*\*\*/);
   });
 
-  it('settings endpoint returns revealed history + today (redesign)', async () => {
+  it('conditions endpoint returns revealed history + today (Decision 082)', async () => {
     const user = await fundedUser();
-    const r = await call('GET', '/api/v1/items/settings', asUser(user));
+    const r = await call('GET', '/api/v1/items/conditions', asUser(user));
     expect(r.status).toBe(200);
     const body = r.body as { history: unknown[]; today: string };
     expect(Array.isArray(body.history)).toBe(true);

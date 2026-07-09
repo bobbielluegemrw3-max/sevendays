@@ -1008,12 +1008,15 @@ describe('manual marketplace listings (Decision 076)', () => {
 });
 
 describe('item system (Decision 078/079)', () => {
-  it('seeds the 35-item catalog and the item clearing account', async () => {
+  it('seeds the catalog (35 active after the v2 swap) and the item clearing account', async () => {
     const client = await createTestDb();
-    const items = await client.query<{ n: number }>(`select count(*)::int as n from item_catalog`);
-    expect(items.rows[0]!.n).toBe(35);
+    // v2(Decision 082): 44行 = v1の35 + v2新規9。activeな品揃えは常に35。
+    const active = await client.query<{ n: number }>(
+      `select count(*)::int as n from item_catalog where active`,
+    );
+    expect(active.rows[0]!.n).toBe(35);
     const sellable = await client.query<{ n: number }>(
-      `select count(*)::int as n from item_catalog where sellable`,
+      `select count(*)::int as n from item_catalog where sellable and active`,
     );
     expect(sellable.rows[0]!.n).toBe(30);
     const acct = await client.query(

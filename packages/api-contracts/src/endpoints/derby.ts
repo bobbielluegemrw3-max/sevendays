@@ -1,3 +1,4 @@
+import { raceNightNameV2 } from '@sevendays/domain';
 import { batchDateFor } from '@sevendays/shared';
 import type { ApiRegistry } from '../router.js';
 
@@ -96,10 +97,12 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         ? await ctx.client.query<{
             id: string;
             participant_count: number | null;
-            item_setting: number | null;
+            weather: string | null; track_condition: string | null; surface: string | null;
             status: string;
           }>(
-            `select id, participant_count, item_setting, status::text as status
+            `select id, participant_count, weather::text as weather,
+                    track_condition::text as track_condition, surface::text as surface,
+                    status::text as status
              from races where batch_run_id = $1 limit 1`,
             [batchRow.id],
           )
@@ -275,7 +278,18 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         next_derby_at: nextDerbyAt(now),
         phase,
         live_started_at: batchRow?.created_at ?? null,
-        item_setting: raceRow?.status === 'FINALIZED' ? raceRow.item_setting : null,
+        conditions: raceRow?.status === 'FINALIZED' && raceRow.surface
+          ? {
+              weather: raceRow.weather,
+              track: raceRow.track_condition,
+              surface: raceRow.surface,
+              night_name: raceNightNameV2({
+                weather: raceRow.weather as never,
+                track: raceRow.track_condition as never,
+                surface: raceRow.surface as never,
+              }),
+            }
+          : null,
         counts,
         ticker,
         personal,

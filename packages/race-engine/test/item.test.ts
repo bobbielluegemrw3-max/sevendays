@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { deriveItemSetting, resolveItemEffect } from '../src/item.js';
+import { resolveItemEffect } from '../src/item.js';
+import { deriveSurface } from '../src/environment.js';
 import { computeScore, ScoreRangeError, type ScoreInput } from '../src/score.js';
+import type { RaceConditions } from '@sevendays/domain';
 
 const VERSION = 'race_engine_v1.1';
 
@@ -23,29 +25,24 @@ function scoreInput(over: Partial<ScoreInput> = {}): ScoreInput {
   };
 }
 
-describe('deriveItemSetting (設定1〜6, seed commit-reveal)', () => {
+describe('deriveSurface (芝/ダート, seed commit-reveal — Decision 082)', () => {
   it('is deterministic for the same seed and version', () => {
-    const a = deriveItemSetting('seed-a', VERSION);
-    expect(deriveItemSetting('seed-a', VERSION)).toBe(a);
-    expect(a).toBeGreaterThanOrEqual(1);
-    expect(a).toBeLessThanOrEqual(6);
+    const a = deriveSurface('seed-a', VERSION);
+    expect(deriveSurface('seed-a', VERSION)).toBe(a);
+    expect(['TURF', 'DIRT']).toContain(a);
   });
 
-  it('matches the published distribution (10/15/25/25/15/10) over many seeds', () => {
-    const counts = [0, 0, 0, 0, 0, 0];
+  it('matches the published distribution (60/40) over many seeds', () => {
+    let turf = 0;
     const n = 20000;
     for (let i = 0; i < n; i += 1) {
-      const setting = deriveItemSetting(`dist-seed-${i}`, VERSION);
-      counts[setting - 1] = (counts[setting - 1] ?? 0) + 1;
+      if (deriveSurface(`dist-seed-${i}`, VERSION) === 'TURF') turf += 1;
     }
-    const expected = [0.10, 0.15, 0.25, 0.25, 0.15, 0.10];
-    counts.forEach((c, i) => {
-      expect(Math.abs(c / n - expected[i]!)).toBeLessThan(0.012);
-    });
+    expect(Math.abs(turf / n - 0.6)).toBeLessThan(0.012);
   });
 });
 
-describe('resolveItemEffect', () => {
+describe('resolveItemEffect (conditions v2)', () => {
   const ctx = {
     horseType: 'SPRINTER' as const,
     currentDay: 3,
@@ -54,17 +51,30 @@ describe('resolveItemEffect', () => {
     prevFatigue: 10,
     weather: 'CLOUDY' as const,
   };
+  const ordinary: RaceConditions = { weather: 'CLOUDY', track: 'GOOD', surface: 'TURF' };
 
   it('null item resolves to zeros', () => {
-    expect(resolveItemEffect(null, ctx, 3)).toEqual({
+    expect(resolveItemEffect(null, ctx, ordinary)).toEqual({
       itemPoints: 0, randomShift: 0, conditionDelta: 0, fatigueDelta: 0,
     });
   });
 
-  it('applies the setting coefficient to the public rule', () => {
-    // speed_feed on SPRINTER doing SPEED = 1.5 raw; setting 6 -> x1.5 = 2.25
-    expect(resolveItemEffect('speed_feed', ctx, 6).itemPoints).toBe(2.25);
-    expect(resolveItemEffect('speed_feed', ctx, 1).itemPoints).toBe(0.75);
+  it('applies the affinity coefficient to the public rule', () => {
+    // speed_feed (ALL) on SPRINTER doing SPEED = 1.5 raw; ALL -> x1.0 whatever the night
+    expect(resolveItemEffect('speed_feed', ctx, ordinary).itemPoints).toBe(1.5);
+    expect(
+      resolveItemEffect('speed_feed', ctx, { weather: 'STORM', track: 'HEAVY', surface: 'DIRT' })
+        .itemPoints,
+    ).toBe(1.5);
+    // dirt_shoes (DIRT affinity, raw 0.75): dirt -> x1.5, turf -> x0.67
+    expect(
+      resolveItemEffect('dirt_shoes', ctx, { ...ordinary, surface: 'DIRT' }).itemPoints,
+    ).toBeCloseTo(1.13, 10);
+    expect(resolveItemEffect('dirt_shoes', ctx, ordinary).itemPoints).toBeCloseTo(0.5, 10);
+    // storm_emperor_cloak (STORM_EPIC, raw 1.5): storm -> x1.5 = 2.25
+    expect(
+      resolveItemEffect('storm_emperor_cloak', ctx, { ...ordinary, weather: 'STORM' }).itemPoints,
+    ).toBe(2.25);
   });
 });
 

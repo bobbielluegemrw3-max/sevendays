@@ -1,17 +1,19 @@
 import { notFound } from 'next/navigation';
 import { ItemsView } from '@/components/ItemsView';
-import { ITEM_CATALOG_V1 } from '@sevendays/domain';
+import { AFFINITY_JA, ITEM_CATALOG_V2 } from '@sevendays/domain';
 import type { CatalogItem } from '@/lib/items';
 
 /** Dev-only visual preview of /items with fixture inventory. 404 in prod. */
 export default function ItemsPreview() {
   if (process.env.NODE_ENV === 'production') notFound();
-  const catalog: CatalogItem[] = ITEM_CATALOG_V1.map((i) => ({
+  const catalog: CatalogItem[] = ITEM_CATALOG_V2.map((i) => ({
     key: i.key,
     name_ja: i.nameJa,
     name_en: i.nameEn,
     band: i.band,
     price: i.price,
+    affinity: i.affinity,
+    affinity_ja: AFFINITY_JA[i.affinity],
     sellable: i.sellable,
     giftable: i.giftable,
     usable_day_min: i.usableDayMin ?? null,
@@ -23,32 +25,29 @@ export default function ItemsPreview() {
     <ItemsView
       preview
       catalog={catalog}
-      today={day(7)}
-      settingHistory={[1, 2, 3, 4, 5, 6].flatMap((w) =>
-        [3, 4, 2, 5, 3, 4, 6].map((v, i) => ({ date: day(Math.min(30, (w - 1) * 5 + i + 1)), setting: v })),
-      ).slice(0, 30).filter((v, idx, arr) => arr.findIndex((x) => x.date === v.date) === idx)}
-      transactions={[
-        { id: 't1', kind: 'PURCHASED', item_key: 'lucky_charm', quantity: 2, counterparty: null, horse_name: null, created_at: `${day(7)}T10:00:00Z` },
-        { id: 't2', kind: 'RECEIVED', item_key: 'memento_horseshoe', quantity: 1, counterparty: null, horse_name: null, created_at: `${day(6)}T12:05:00Z` },
-        { id: 't3', kind: 'SENT', item_key: 'sugar_cube', quantity: 3, counterparty: 'ab***', horse_name: null, created_at: `${day(6)}T09:00:00Z` },
-        { id: 't4', kind: 'USED', item_key: 'champion_saddle', quantity: 1, counterparty: null, horse_name: 'Crimson Tiger', created_at: `${day(5)}T11:30:00Z` },
+      today={day(8)}
+      conditionHistory={[
+        { date: day(5), weather: 'SUNNY', track: 'GOOD', surface: 'TURF', weather_ja: '晴れ', track_ja: '良', surface_ja: '芝', night_name: null },
+        { date: day(6), weather: 'RAIN', track: 'HEAVY', surface: 'DIRT', weather_ja: '雨', track_ja: '不良', surface_ja: 'ダート', night_name: '豪雨のダート決戦' },
+        { date: day(7), weather: 'CLOUDY', track: 'SOFT', surface: 'TURF', weather_ja: '曇り', track_ja: '稍重', surface_ja: '芝', night_name: null },
+        { date: day(8), weather: 'STORM', track: 'HEAVY', surface: 'TURF', weather_ja: '嵐', track_ja: '不良', surface_ja: '芝', night_name: '嵐の荒天決戦' },
       ]}
       inventory={{
         available: [
-          { item_key: 'lucky_charm', n: 2 },
-          { item_key: 'sugar_cube', n: 5 },
+          { item_key: 'sugar_cube', n: 3 },
+          { item_key: 'storm_cloak', n: 1 },
+          { item_key: 'mudlord_crown', n: 1 },
           { item_key: 'memento_horseshoe', n: 1 },
         ],
         pending: [
-          {
-            usage_id: 'u1',
-            horse_id: 'h1',
-            horse_name: 'Crimson Tiger',
-            item_key: 'champion_saddle',
-            effective_race_date: '2026-07-07',
-          },
+          { usage_id: 'u1', item_key: 'turf_master_saddle', horse_id: 'h1', horse_name: 'Golden Wind', effective_race_date: day(8) },
         ],
       }}
+      transactions={[
+        { id: 't1', kind: 'PURCHASED', item_key: 'storm_cloak', quantity: 1, counterparty: null, horse_name: null, created_at: `${day(6)}T12:00:00` },
+        { id: 't2', kind: 'RECEIVED', item_key: 'sugar_cube', quantity: 2, counterparty: 'friend@example.com', horse_name: null, created_at: `${day(7)}T09:30:00` },
+        { id: 't3', kind: 'USED', item_key: 'turf_master_saddle', quantity: 1, counterparty: null, horse_name: 'Golden Wind', created_at: `${day(8)}T10:10:00` },
+      ]}
     />
   );
 }

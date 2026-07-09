@@ -9,7 +9,7 @@ import {
   getPlatformAccountId,
   itemPurchase,
 } from '@sevendays/ledger';
-import { deriveItemSetting, deriveWeather, resolveItemEffect } from '@sevendays/race-engine';
+import { deriveSurface, deriveTrackCondition, deriveWeather, resolveItemEffect } from '@sevendays/race-engine';
 import {
   createParticipantSnapshots,
   finalizeAndBurn,
@@ -133,9 +133,9 @@ async function buyAndApply(
 describe('item system through the batch (Decision 078)', () => {
   it('freezes the item into the snapshot, scores it, settles by outcome, drops on burn', async () => {
     const setup = await buildRace(10); // NORMAL: 1 burn
-    // carrot_bundle: unconditional +0.5 raw — works with no training.
+    // rain_hood: unconditional +0.75 raw — works with no training (v2 condition gear).
     for (const [i, horseId] of setup.horses.entries()) {
-      await buyAndApply(setup.owners[i]!, horseId, 'carrot_bundle', '1', setup.batchDate);
+      await buyAndApply(setup.owners[i]!, horseId, 'rain_hood', '1', setup.batchDate);
     }
 
     const clearing = await getPlatformAccountId(client, 'PLATFORM_ITEM_CLEARING');
@@ -151,13 +151,17 @@ describe('item system through the batch (Decision 078)', () => {
     });
     expect(created).toBe(10);
 
-    // setting revealed on the race row; frozen JSON matches the pure rule
-    const race = await client.query<{ item_setting: number }>(
-      `select item_setting from races where id = $1`,
+    // conditions revealed on the race row; frozen JSON matches the pure rule
+    const race = await client.query<{ surface: string }>(
+      `select surface::text as surface from races where id = $1`,
       [setup.raceId],
     );
-    const setting = race.rows[0]!.item_setting;
-    expect(setting).toBe(deriveItemSetting(setup.raceSeed, VERSION));
+    const conditions = {
+      weather: deriveWeather(setup.raceSeed, VERSION),
+      track: deriveTrackCondition(setup.raceSeed, VERSION),
+      surface: deriveSurface(setup.raceSeed, VERSION),
+    } as const;
+    expect(race.rows[0]!.surface).toBe(conditions.surface);
 
     const snap = await client.query<{ item_snapshot_json: Record<string, unknown> }>(
       `select item_snapshot_json from race_participant_snapshots
@@ -166,20 +170,20 @@ describe('item system through the batch (Decision 078)', () => {
     );
     const frozen = snap.rows[0]!.item_snapshot_json;
     const expected = resolveItemEffect(
-      'carrot_bundle',
+      'rain_hood',
       {
         horseType: 'SPRINTER',
         currentDay: 0,
         training: null,
         prevCondition: 50,
         prevFatigue: 0,
-        weather: deriveWeather(setup.raceSeed, VERSION),
+        weather: conditions.weather,
       },
-      setting,
+      conditions,
     );
     expect(frozen).toMatchObject({
-      item_key: 'carrot_bundle',
-      item_setting: setting,
+      item_key: 'rain_hood',
+      conditions: { ...conditions },
       item_points: expected.itemPoints,
     });
 

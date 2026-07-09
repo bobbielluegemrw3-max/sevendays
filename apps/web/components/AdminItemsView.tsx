@@ -7,7 +7,7 @@ export interface AdminItems {
     key: string; name_ja: string; band: string; price: string; active: boolean;
     purchased: number; revenue: string; dropped: number; gifted: number; used: number;
   }[];
-  setting_distribution: { item_setting: number; count: number }[];
+  condition_distribution: { weather: string; track: string; surface: string; count: number }[];
 }
 
 const BAND_JA: Record<string, string> = {
@@ -28,7 +28,7 @@ export function AdminItemsView({ data }: { data: AdminItems }) {
   const bands = [...new Set(data.catalog.map((c) => c.band))];
   const totalRevenue = data.catalog.reduce((a, c) => a + Number(c.revenue), 0);
   const totalPurchased = data.catalog.reduce((a, c) => a + c.purchased, 0);
-  const totalSettings = data.setting_distribution.reduce((a, r) => a + r.count, 0);
+  const totalConditions = data.condition_distribution.reduce((a, r) => a + r.count, 0);
 
   return (
     <div className={s.wrap}>
@@ -54,17 +54,17 @@ export function AdminItemsView({ data }: { data: AdminItems }) {
       </div>
 
       <div>
-        <div className={s.secLabel}>ITEM SETTING · アイテム設定の出現分布(設定1〜6)</div>
-        {totalSettings > 0 ? (
+        <div className={s.secLabel}>RACE CONDITIONS · 公開されたレース条件の分布</div>
+        {totalConditions > 0 ? (
           <div className={s.cBadges}>
-            {data.setting_distribution.map((r) => (
-              <span key={r.item_setting} className={`${s.pill} ${s.pillCyan}`}>
-                設定{r.item_setting}: {r.count}レース({Math.round((r.count / totalSettings) * 100)}%)
+            {data.condition_distribution.map((r) => (
+              <span key={`${r.weather}:${r.track}:${r.surface}`} className={`${s.pill} ${s.pillCyan}`}>
+                {r.weather}/{r.track}/{r.surface}: {r.count}レース({Math.round((r.count / totalConditions) * 100)}%)
               </span>
             ))}
           </div>
         ) : (
-          <div className={s.empty}>アイテム設定が公開されたレースはまだありません。</div>
+          <div className={s.empty}>条件が公開されたレースはまだありません。</div>
         )}
       </div>
 

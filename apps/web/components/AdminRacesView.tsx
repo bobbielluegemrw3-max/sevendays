@@ -6,7 +6,8 @@ import s from '../app/admin.module.css';
 export interface AdminRaces {
   races: {
     id: string; batch_date: string; status: string; participant_count: number;
-    item_setting: number | null; burns: number; item_usages: number;
+    weather: string | null; track_condition: string | null; surface: string | null;
+    burns: number; item_usages: number;
     completed_at: string | null;
   }[];
   daily_derby_live: boolean;
@@ -48,8 +49,8 @@ export function AdminRacesView({ data }: { data: AdminRaces }) {
                 <span className={s.steps}>
                   出走 <b>{r.participant_count}</b> · BURN <b>{r.burns}</b> · アイテム使用 <b>{r.item_usages}</b>
                 </span>
-                {r.item_setting != null && (
-                  <span className={`${s.pill} ${s.pillCyan}`}>設定{r.item_setting}</span>
+                {r.surface != null && (
+                  <span className={`${s.pill} ${s.pillCyan}`}>{r.weather}/{r.track_condition}/{r.surface}</span>
                 )}
                 <span className={`${s.cMono} ${s.cSpace}`}>{r.id}</span>
               </div>

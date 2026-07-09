@@ -2,8 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { Money, addDays, batchDateFor, insertNotification } from '@sevendays/shared';
 import {
-  ITEM_BY_KEY_V1,
-  ITEM_CATALOG_V1,
+  AFFINITY_JA,
+  ITEM_BY_KEY_V2,
+  ITEM_CATALOG_V2,
+  SURFACE_JA,
+  TRACK_JA,
+  WEATHER_JA,
+  raceNightNameV2,
   renderNotification,
 } from '@sevendays/domain';
 import { getBalance, ensureUserAccounts, itemPurchase } from '@sevendays/ledger';
@@ -63,11 +68,13 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
       );
       const activeByKey = new Map(active.rows.map((r) => [r.key, r.active]));
       return {
-        items: ITEM_CATALOG_V1.filter((i) => activeByKey.get(i.key) !== false).map((i) => ({
+        items: ITEM_CATALOG_V2.filter((i) => activeByKey.get(i.key) !== false).map((i) => ({
           key: i.key,
           name_ja: i.nameJa,
           name_en: i.nameEn,
           band: i.band,
+          affinity: i.affinity,
+          affinity_ja: AFFINITY_JA[i.affinity],
           price: i.price,
           sellable: i.sellable,
           giftable: i.giftable,
@@ -328,22 +335,43 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
     },
   });
 
-  // Revealed daily settings (public after each race) + today's batch date.
+  // Revealed race conditions (public after each race) + today's batch date.
+  // Decision 082: 設定1〜6は廃止 — 天候×馬場×コースがアイテム係数を決める。
   registry.register({
     method: 'GET',
-    path: '/api/v1/items/settings',
+    path: '/api/v1/items/conditions',
     auth: 'user',
     handler: async (ctx) => {
-      const rows = await ctx.client.query<{ date: string; setting: number }>(
-        `select b.batch_date::text as date, r.item_setting as setting
+      const rows = await ctx.client.query<{
+        date: string; weather: string; track: string; surface: string;
+      }>(
+        `select b.batch_date::text as date, r.weather::text as weather,
+                r.track_condition::text as track, r.surface::text as surface
          from races r
          join batch_runs b on b.id = r.batch_run_id
-         where r.item_setting is not null and r.status = 'FINALIZED'
+         where r.surface is not null and r.status = 'FINALIZED'
          order by b.batch_date desc
          limit 62`,
         [],
       );
-      return { history: rows.rows.reverse(), today: batchDateFor(new Date()) };
+      const history = rows.rows.reverse().map((r) => {
+        const c = {
+          weather: r.weather as never,
+          track: r.track as never,
+          surface: r.surface as never,
+        };
+        return {
+          date: r.date,
+          weather: r.weather,
+          track: r.track,
+          surface: r.surface,
+          weather_ja: WEATHER_JA[c.weather],
+          track_ja: TRACK_JA[c.track],
+          surface_ja: SURFACE_JA[c.surface],
+          night_name: raceNightNameV2(c),
+        };
+      });
+      return { history, today: batchDateFor(new Date()) };
     },
   });
 
@@ -417,7 +445,7 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
         }
         const rendered = renderNotification('ITEM_GIFT_RECEIVED', {
           sender: maskedSender,
-          item_name: ITEM_BY_KEY_V1.get(input.item_key)?.nameJa ?? input.item_key,
+          item_name: ITEM_BY_KEY_V2.get(input.item_key)?.nameJa ?? input.item_key,
         });
         await insertNotification(ctx.client, {
           userId: recipientId,

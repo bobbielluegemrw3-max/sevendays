@@ -2,7 +2,7 @@ import { sha256Parts } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
 import {
   ABILITY_WEIGHTS_V1,
-  ITEM_POLICY_VERSION_V1,
+  ITEM_POLICY_VERSION_V2,
   type AbilityName,
   type HorseType,
   type Rarity,
@@ -10,7 +10,7 @@ import {
 } from '@sevendays/domain';
 import {
   computeDailyState,
-  deriveItemSetting,
+  deriveSurface,
   deriveTrackCondition,
   deriveWeather,
   resolveItemEffect,
@@ -69,12 +69,14 @@ export async function createParticipantSnapshots(
 ): Promise<number> {
   const weather = deriveWeather(input.raceSeed, input.raceEngineVersion);
   const track = deriveTrackCondition(input.raceSeed, input.raceEngineVersion);
-  // Item setting (設定1〜6, Decision 078) — seed commit-reveal like weather.
-  const itemSetting = deriveItemSetting(input.raceSeed, input.raceEngineVersion);
-  await client.query(`update races set item_setting = $2 where id = $1`, [
-    input.raceId,
-    itemSetting,
-  ]);
+  // Race conditions v2 (Decision 082): item effectiveness follows tonight's
+  // weather x track x surface — seed commit-reveal, all three on races.
+  const surface = deriveSurface(input.raceSeed, input.raceEngineVersion);
+  const conditions = { weather, track, surface } as const;
+  await client.query(
+    `update races set weather = $2, track_condition = $3, surface = $4 where id = $1`,
+    [input.raceId, weather, track, surface],
+  );
 
   // Market Lock (Decision 076): a manually listed horse does not race —
   // excluded from the snapshot, so current_day and value stay frozen while
@@ -121,13 +123,13 @@ export async function createParticipantSnapshots(
         prevFatigue: Number(horse.fatigue),
         weather,
       },
-      itemSetting,
+      conditions,
     );
     const itemSnapshot = usageRow
       ? {
           item_key: usageRow.item_key,
-          item_policy_version: ITEM_POLICY_VERSION_V1,
-          item_setting: itemSetting,
+          item_policy_version: ITEM_POLICY_VERSION_V2,
+          conditions: { weather, track, surface },
           item_points: itemEffect.itemPoints,
           item_random_shift: itemEffect.randomShift,
           condition_delta: itemEffect.conditionDelta,
