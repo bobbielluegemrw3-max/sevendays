@@ -1,0 +1,85 @@
+/* /guide(使い方)— 初心者向けガイド。1c部品言語+図解プリミティブ。 */
+
+.wrap { display: flex; flex-direction: column; gap: 26px; max-width: 860px; margin: 0 auto; }
+.h1 { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: var(--text); }
+.lead { font-size: 13.5px; color: var(--muted); line-height: 1.9; }
+
+/* 目次 */
+.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.tocChip { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+  color: var(--cyan); border: 1px solid rgba(0, 234, 255, 0.35); border-radius: 999px; padding: 7px 13px;
+  text-decoration: none; white-space: nowrap; }
+.tocChip:hover { background: rgba(0, 234, 255, 0.1); }
+
+/* セクション */
+.sec { border: 1px solid var(--border); border-radius: 18px; padding: 22px 20px;
+  background: linear-gradient(160deg, rgba(20, 18, 34, 0.5), transparent 75%); scroll-margin-top: 80px; }
+.secNo { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em; color: var(--gold, #c9a86a); }
+.secT { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--text); margin-top: 4px; }
+.p { font-size: 13.5px; color: #c3ccd8; line-height: 2; margin-top: 12px; }
+.p b { color: var(--text); }
+.p a { color: var(--cyan); }
+.warn { border: 1px solid rgba(230, 178, 74, 0.35); border-radius: 12px; padding: 12px 14px; margin-top: 14px;
+  background: rgba(230, 178, 74, 0.06); font-size: 12.5px; color: #d9c48f; line-height: 1.9; }
+.warn b { color: var(--warn); }
+.tip { border: 1px solid rgba(0, 234, 255, 0.25); border-radius: 12px; padding: 12px 14px; margin-top: 14px;
+  background: rgba(0, 234, 255, 0.05); font-size: 12.5px; color: #a9d8e0; line-height: 1.9; }
+
+/* 図解: 横フロー(縦積みにリフロー) */
+.flow { display: flex; align-items: stretch; gap: 0; margin-top: 16px; flex-wrap: nowrap; }
+.fbox { flex: 1; min-width: 0; border: 1px solid rgba(0, 234, 255, 0.3); border-radius: 12px; padding: 12px 10px;
+  background: rgba(0, 234, 255, 0.05); text-align: center; }
+.fboxGold { border-color: rgba(201, 168, 106, 0.45); background: rgba(201, 168, 106, 0.07); }
+.fboxBad { border-color: rgba(255, 92, 92, 0.4); background: rgba(255, 92, 92, 0.06); }
+.fboxGood { border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.06); }
+.fIcon { font-size: 20px; }
+.fT { font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--text); margin-top: 5px; }
+.fD { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
+.farrow { flex: none; display: flex; align-items: center; padding: 0 6px; color: var(--gold, #c9a86a);
+  font-family: var(--font-display); font-weight: 800; font-size: 15px; }
+@media (max-width: 640px) {
+  .flow { flex-direction: column; }
+  .farrow { justify-content: center; padding: 4px 0; transform: rotate(90deg); }
+}
+
+/* 図解: 7日ラダー */
+.ladder { display: flex; gap: 5px; margin-top: 16px; }
+.rung { flex: 1; border-radius: 9px; padding: 9px 4px; text-align: center; border: 1px solid var(--border); }
+.rungDay { font-family: var(--font-mono); font-size: 9px; color: var(--muted); }
+.rungV { font-family: var(--font-display); font-weight: 700; font-size: 10.5px; color: var(--text); margin-top: 3px; }
+.rungChampion { border-color: rgba(201, 168, 106, 0.6); background: linear-gradient(160deg, rgba(201, 168, 106, 0.14), transparent); }
+.rungChampion .rungV { color: var(--gold-bright, #f0d9a8); }
+@media (max-width: 640px) { .rungV { font-size: 8.5px; } }
+
+/* 図解: 組織ツリー */
+.tree { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 16px; }
+.treeRow { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.node { border: 1px solid rgba(0, 234, 255, 0.35); border-radius: 999px; padding: 6px 14px;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--text);
+  background: rgba(0, 234, 255, 0.06); }
+.nodeYou { border-color: rgba(201, 168, 106, 0.6); background: rgba(201, 168, 106, 0.12); color: var(--gold-bright, #f0d9a8); }
+.treeLine { font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+
+/* 図解: 1日のタイムライン */
+.timeline { display: flex; border-radius: 12px; overflow: hidden; margin-top: 16px; border: 1px solid var(--border); }
+.tseg { flex: 1; padding: 11px 8px; text-align: center; min-width: 0; }
+.tsegNight { background: rgba(255, 45, 196, 0.08); }
+.tsegDay { background: rgba(0, 234, 255, 0.05); }
+.tsegLock { background: rgba(230, 178, 74, 0.08); }
+.tsegT { font-family: var(--font-mono); font-size: 9px; color: var(--muted); }
+.tsegV { font-family: var(--font-display); font-weight: 700; font-size: 11px; color: var(--text); margin-top: 3px; }
+@media (max-width: 640px) { .timeline { flex-direction: column; } }
+
+/* 価格テーブル(ミニ) */
+.priceRow { display: flex; gap: 4px; margin-top: 14px; }
+.priceCell { flex: 1; text-align: center; border: 1px solid var(--border); border-radius: 8px; padding: 7px 2px; }
+.priceD { font-family: var(--font-mono); font-size: 8.5px; color: var(--muted); }
+.priceV { font-family: var(--font-display); font-weight: 700; font-size: 10.5px; color: var(--text); margin-top: 2px; }
+
+/* CEOメッセージ プレースホルダ */
+.ceo { border: 1px dashed rgba(201, 168, 106, 0.4); border-radius: 18px; padding: 30px 20px; text-align: center; }
+.ceoT { font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--gold-bright, #f0d9a8); }
+.ceoD { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+.backTop { font-family: var(--font-mono); font-size: 10px; color: var(--faint); text-decoration: none; display: inline-block; margin-top: 14px; }
+.backTop:hover { color: var(--cyan); }
