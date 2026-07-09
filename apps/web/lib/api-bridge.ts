@@ -208,8 +208,21 @@ export async function buildAuthContext(
   if (!email.endsWith('@user.sevendays')) {
     void sendCsEmail({
       toEmail: email,
-      subject: 'Seven Days Derby へようこそ',
+      subject: 'Welcome to Seven Days Derby / ようこそ Seven Days Derby へ',
       body: [
+        'Dear Owner,',
+        '',
+        'Thank you for joining Seven Days Derby.',
+        'Your horse and its seven-day story start here.',
+        '',
+        '- Races run every night at 20:00 (MYT)',
+        '- A horse that survives Day 7 becomes a Champion: 200 USDT in rewards and a memorial NFT',
+        '- Races carry the risk of BURN (the NFT is destroyed) - please read the rules page first',
+        '',
+        'Questions? Just reply to this email.',
+        '',
+        '----------------------------------------',
+        '',
         'オーナー様',
         '',
         'Seven Days Derby へのご登録ありがとうございます。',
@@ -221,6 +234,7 @@ export async function buildAuthContext(
         '',
         'ご不明な点は、このメールにそのまま返信してください。',
         '',
+        'Seven Days Derby Support',
         'Seven Days Derby サポート',
       ].join(String.fromCharCode(10)),
     }).catch(() => undefined);
