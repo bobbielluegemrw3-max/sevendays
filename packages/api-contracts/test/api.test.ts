@@ -1295,5 +1295,13 @@ describe('admin user operations (items, freeze, dual-approved USDT grants)', () 
     expect(body.org_size).toBe(0);
     expect(Array.isArray(body.deposits)).toBe(true);
     expect(body.fund_grants[0]!.status).toBe('APPROVED');
+    const extra = detail.body as {
+      item_acquisitions: { source: string }[];
+      item_transfers: unknown[];
+    };
+    // grant-item で付与した2個が取得履歴に載る
+    expect(extra.item_acquisitions).toHaveLength(2);
+    expect(extra.item_acquisitions.every((a) => a.source === 'GIFT')).toBe(true);
+    expect(Array.isArray(extra.item_transfers)).toBe(true);
   });
 });

@@ -30,6 +30,8 @@ interface Dossier {
   sales: { listing_price: string; status: string; current_day: number; listed_at: string; horse_name: string }[];
   upline: { email: string; depth: number }[];
   org_size: number;
+  item_acquisitions: { item_key: string; source: string; unit_price: string; status: string; acquired_at: string }[];
+  item_transfers: { created_at: string; item_key: string; sender_email: string; recipient_email: string; is_sender: boolean }[];
   fund_grants: { id: string; amount: string; reason: string; status: string; requested_by_email: string; created_at: string }[];
 }
 
@@ -328,6 +330,55 @@ export function AdminUsersView() {
                           ))}
                         </div>
                       ) : <div className={s.empty}>馬なし</div>}
+
+                      <div className={s.secLabel}>アイテム取得履歴({dossier.item_acquisitions.length})</div>
+                      {dossier.item_acquisitions.length > 0 ? (
+                        <div className={s.list}>
+                          {dossier.item_acquisitions.map((a, i) => (
+                            <div key={i} className={s.row}>
+                              <span className={s.cDate}>{ts(a.acquired_at)}</span>
+                              <span className={s.cMain}>{a.item_key}</span>
+                              <span className={`${s.pill} ${a.source === 'PURCHASE' ? s.pillGood : a.source === 'BURN_DROP' ? s.pillWarn : s.pillCyan}`}>
+                                {a.source === 'PURCHASE' ? '購入' : a.source === 'BURN_DROP' ? 'BURNドロップ' : 'ギフト/付与'}
+                              </span>
+                              {Number(a.unit_price) > 0 && <span className={s.cAmount}>{money(a.unit_price)}<small>USDT</small></span>}
+                              <span className={`${s.pill} ${s.pillMuted}`}>{a.status}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <div className={s.empty}>アイテム取得なし</div>}
+
+                      <div className={s.secLabel}>アイテム使用履歴({dossier.item_usages.length})</div>
+                      {dossier.item_usages.length > 0 ? (
+                        <div className={s.list}>
+                          {dossier.item_usages.map((uu, i) => (
+                            <div key={i} className={s.row}>
+                              <span className={s.cDate}>{uu.effective_race_date}</span>
+                              <span className={s.cMain}>{uu.item_key}</span>
+                              <span className={`${s.pill} ${s.pillCyan}`}>{uu.status}</span>
+                              {uu.settled_outcome && (
+                                <span className={`${s.pill} ${uu.settled_outcome === 'SURVIVED' ? s.pillGood : s.pillBad}`}>
+                                  {uu.settled_outcome === 'SURVIVED' ? '生存' : 'BURN'}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : <div className={s.empty}>アイテム使用なし</div>}
+
+                      <div className={s.secLabel}>アイテム送付履歴({dossier.item_transfers.length})</div>
+                      {dossier.item_transfers.length > 0 ? (
+                        <div className={s.list}>
+                          {dossier.item_transfers.map((t, i) => (
+                            <div key={i} className={s.row}>
+                              <span className={s.cDate}>{ts(t.created_at)}</span>
+                              <span className={`${s.pill} ${t.is_sender ? s.pillWarn : s.pillGood}`}>{t.is_sender ? '送付' : '受領'}</span>
+                              <span className={s.cMain}>{t.item_key}</span>
+                              <span className={s.cText}>{t.is_sender ? `→ ${t.recipient_email}` : `← ${t.sender_email}`}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <div className={s.empty}>送付・受領なし</div>}
 
                       <div className={s.secLabel}>アイテム所持({dossier.items.reduce((a, b) => a + b.count, 0)})</div>
                       {dossier.items.length > 0 ? (

@@ -565,6 +565,29 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
          order by g.created_at desc limit 10`,
         [ctx.params.id],
       );
+      // アイテム取得履歴(購入/BURNドロップ/ギフト受領/管理付与)
+      const itemAcquisitions = await ctx.client.query(
+        `select item_key, source, unit_price::text as unit_price, status,
+                acquired_at::text as acquired_at
+         from user_items where user_id = $1
+         order by acquired_at desc limit 20`,
+        [ctx.params.id],
+      );
+      // アイテム送付履歴(送った/受け取った)
+      const itemTransfers = await ctx.client.query(
+        `select t.created_at::text as created_at,
+                ui.item_key,
+                su.email as sender_email,
+                rue.email as recipient_email,
+                (t.sender_user_id = $1) as is_sender
+         from user_transfers t
+         join user_items ui on ui.id = t.user_item_id
+         join users su on su.id = t.sender_user_id
+         join users rue on rue.id = t.recipient_user_id
+         where t.asset_type = 'ITEM' and (t.sender_user_id = $1 or t.recipient_user_id = $1)
+         order by t.created_at desc limit 20`,
+        [ctx.params.id],
+      );
       return {
         user: { ...user.rows[0]!, last_sign_in_at: lastSignInAt },
         horses: horses.rows,
@@ -579,6 +602,8 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
         upline: upline.rows,
         org_size: orgSize.rows[0]?.size ?? 0,
         fund_grants: grants.rows,
+        item_acquisitions: itemAcquisitions.rows,
+        item_transfers: itemTransfers.rows,
       };
     },
   });
