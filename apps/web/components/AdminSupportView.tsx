@@ -129,6 +129,20 @@ export function AdminSupportView() {
     await loadSent();
   }
 
+  async function regenerate(id: string) {
+    setBusyId(id);
+    setError(null);
+    const result = await apiFetch<{ ai_draft: string }>(`/api/v1/admin/cs/${id}/draft`, { method: 'POST' });
+    setBusyId(null);
+    if (result.status !== 200) {
+      setError(errorMessage(result.body) ?? 'AI下書きの生成に失敗しました');
+      return;
+    }
+    const draft = (result.body as { ai_draft: string }).ai_draft;
+    setDrafts((d) => ({ ...d, [id]: draft }));
+    await load();
+  }
+
   async function act(id: string, action: 'approve' | 'reject') {
     setBusyId(id);
     setError(null);
@@ -215,6 +229,14 @@ export function AdminSupportView() {
                     onClick={() => void act(msg.id, 'approve')}
                   >
                     {busyId === msg.id ? '送信中…' : '承認して送信'}
+                  </button>
+                  <button
+                    type="button"
+                    className={s.pagerBtn}
+                    disabled={busyId === msg.id}
+                    onClick={() => void regenerate(msg.id)}
+                  >
+                    {busyId === msg.id ? '生成中…' : 'AI下書きを再生成'}
                   </button>
                   <button
                     type="button"

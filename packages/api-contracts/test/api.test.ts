@@ -1395,6 +1395,26 @@ Seven Days Derby サポート', 0.9)
     expect(bcBody.total).toBe(1);
     expect(bcBody.sent).toBe(1);
 
+    // サイト内お問い合わせフォーム → 同じキューに入る
+    const formUser = await newUser();
+    const contact = await call('POST', '/api/v1/contact', asUser(formUser), {
+      body: { subject: 'フォームからの質問', body: 'アイテムの使い方を教えてください' },
+    });
+    expect(contact.status).toBe(200);
+    const queued = await client.query<{ status: string; ai_draft: string | null }>(
+      `select status, ai_draft from cs_messages
+       where user_id = $1 and direction = 'RECEIVED'`,
+      [formUser],
+    );
+    expect(queued.rows[0]!.status).toBe('PENDING');
+    // AI下書きの(再)生成 — テスト環境はDEEPSEEK_API_KEY無しでも200(要確認печ扱い)
+    const msgRow = await client.query<{ id: string }>(
+      `select id from cs_messages where user_id = $1 and direction = 'RECEIVED'`,
+      [formUser],
+    );
+    const draft = await call('POST', `/api/v1/admin/cs/${msgRow.rows[0]!.id}/draft`, asAdmin);
+    expect(draft.status).toBe(200);
+
     // 送信履歴に個別と一斉が載る
     const sent = await call('GET', '/api/v1/admin/cs/sent', asAdmin);
     expect(sent.status).toBe(200);

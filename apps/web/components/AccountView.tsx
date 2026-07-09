@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { AccountLinking } from '@/components/AccountLinking';
 import s from '../app/account.module.css';
 
@@ -45,6 +46,18 @@ export function AccountView({ me, wallets }: { me: Me; wallets: Wallet[] }) {
         </div>
         <div className={s.linkBody}>
           <AccountLinking userId={me.id} wallets={wallets.map((w) => w.wallet_address)} />
+        </div>
+      </section>
+
+      {/* サポート導線(2026-07-09) */}
+      <section className={s.linking}>
+        <div className={s.linkLabel}>サポート · SUPPORT</div>
+        <div className={s.linkLead}>
+          ゲームのルール・アカウント・入出金など、お困りのことがあればお気軽にご連絡ください。
+          ご登録のメールアドレスへ返信します。
+        </div>
+        <div className={s.linkBody}>
+          <Link href="/contact" className={s.supportBtn}>お問い合わせフォームへ →</Link>
         </div>
       </section>
     </div>

@@ -29,6 +29,7 @@ export function TopNav({ isAdmin = false }: { isAdmin?: boolean }) {
         <Link href="/support">TEAM</Link>
         <Link href="/notifications">通知</Link>
         <Link href="/account">アカウント</Link>
+        <Link href="/contact">お問い合わせ</Link>
         {isAdmin && (
           <Link href="/admin" className="topnav-admin">ADMIN</Link>
         )}

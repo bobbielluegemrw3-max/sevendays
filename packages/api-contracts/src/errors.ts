@@ -62,6 +62,7 @@ export const API_ERROR_STATUS: Record<string, number> = {
   GRANT_NOT_PENDING: 409,
   // AIカスタマーサービス (2026-07-09)
   CS_SEND_FAILED: 502,
+  CONTACT_LIMIT: 429,
   MARKET_DAY_RANGE: 400,
 };
 

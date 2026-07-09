@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry, HandlerContext } from '../router.js';
 import { sendCsEmail, CsMailError } from '../cs/mail.js';
+import { generateCsReply } from '../cs/ai.js';
 
 /** AIカスタマーサービス(2026-07-09): 承認キューの閲覧・承認送信・却下。 */
 
@@ -300,6 +301,103 @@ export function registerCsEndpoints(registry: ApiRegistry): void {
       );
       await audit(ctx, `CS_BROADCAST:${input.mode}:${sentCount}/${recipients.length}`, broadcastId);
       return { id: broadcastId, status: 'DONE', total: recipients.length, sent: sentCount, failed: failedCount };
+    },
+  });
+
+  /* ---- サイト内お問い合わせ(2026-07-09): フォーム→同じ承認キューへ ------- */
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/contact',
+    auth: 'user',
+    input: z.object({
+      subject: z.string().min(1).max(200),
+      body: z.string().min(1).max(10000),
+    }),
+    handler: async (ctx, input) => {
+      // 連投ガード: 24時間で10件まで
+      const recent = await ctx.client.query<{ count: number }>(
+        `select count(*)::int as count from cs_messages
+         where user_id = $1 and direction = 'RECEIVED'
+           and created_at > now() - interval '24 hours'`,
+        [ctx.userId],
+      );
+      if ((recent.rows[0]?.count ?? 0) >= 10) {
+        throw new ApiError('CONTACT_LIMIT', 'お問い合わせは24時間に10件までです');
+      }
+      const me = await ctx.client.query<{ email: string }>(
+        `select email from users where id = $1`,
+        [ctx.userId],
+      );
+      const email = me.rows[0]?.email ?? '';
+      const row = await ctx.client.query<{ id: string }>(
+        `insert into cs_messages (direction, user_id, email, subject, body, status)
+         values ('RECEIVED', $1, $2, $3, $4, 'PENDING')
+         returning id`,
+        [ctx.userId, email, input.subject, input.body],
+      );
+      return { id: row.rows[0]!.id, status: 'PENDING' };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/cs/:id/draft',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const msg = await ctx.client.query<{
+        id: string; email: string; name: string | null; subject: string | null;
+        body: string; status: string; user_id: string | null;
+      }>(
+        `select id, email, name, subject, body, status, user_id
+         from cs_messages where id = $1 and direction = 'RECEIVED'`,
+        [ctx.params.id],
+      );
+      const m = msg.rows[0];
+      if (!m) throw new ApiError('NOT_FOUND', 'Message not found');
+      // 送信者文脈(Webhook経路と同じ・公開可能情報のみ)
+      const account: {
+        registered: boolean; activeHorses?: number; horseNames?: string[]; createdAt?: string;
+      } = { registered: m.user_id !== null };
+      if (m.user_id) {
+        const u = await ctx.client.query<{ created_at: string }>(
+          `select created_at::text as created_at from users where id = $1`,
+          [m.user_id],
+        );
+        if (u.rows[0]) account.createdAt = u.rows[0].created_at;
+        const horses = await ctx.client.query<{ name: string }>(
+          `select name from horses where owner_user_id = $1 and status = 'ACTIVE' limit 10`,
+          [m.user_id],
+        );
+        account.activeHorses = horses.rows.length;
+        account.horseNames = horses.rows.map((h) => h.name);
+      }
+      const historyRows = await ctx.client.query<{
+        direction: 'RECEIVED' | 'SENT'; subject: string | null; body: string;
+      }>(
+        `select direction, subject, body from cs_messages
+         where email = $1 and id <> $2 order by created_at desc limit 6`,
+        [m.email, m.id],
+      );
+      const ai = await generateCsReply({
+        senderName: m.name ?? '',
+        senderEmail: m.email,
+        subject: m.subject ?? '',
+        body: m.body,
+        account,
+        history: historyRows.rows.reverse(),
+      });
+      await ctx.client.query(
+        `update cs_messages set ai_draft = $2, ai_confidence = $3, ai_reason = $4 where id = $1`,
+        [m.id, ai.reply || null, ai.confidence, ai.needsHuman ? ai.reason || '要確認' : null],
+      );
+      return {
+        id: m.id,
+        ai_draft: ai.reply,
+        ai_confidence: ai.confidence,
+        ai_reason: ai.needsHuman ? ai.reason : null,
+      };
     },
   });
 }
