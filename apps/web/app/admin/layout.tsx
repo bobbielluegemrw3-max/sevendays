@@ -26,6 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link href="/admin/users" className={s.navLink}>ユーザー</Link>
         <Link href="/admin/items" className={s.navLink}>アイテム</Link>
         <Link href="/admin/races" className={s.navLink}>レース</Link>
+        <Link href="/admin/support" className={s.navLink}>サポート</Link>
         <Link href="/admin/batches" className={s.navLink}>バッチ</Link>
         <Link href="/admin/withdrawals" className={s.navLink}>出金レビュー</Link>
         <Link href="/admin/recovery" className={s.navLink}>リカバリ</Link>

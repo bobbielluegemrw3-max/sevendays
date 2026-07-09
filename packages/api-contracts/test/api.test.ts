@@ -1305,3 +1305,63 @@ describe('admin user operations (items, freeze, dual-approved USDT grants)', () 
     expect(Array.isArray(extra.item_transfers)).toBe(true);
   });
 });
+
+describe('AI customer service queue (approval-first)', () => {
+  it('lists, approves with edit (dry-run send), and rejects', async () => {
+    const admin = await newUser();
+    await client.query(
+      `insert into admin_role_grants (user_id, role) values ($1, 'SUPER_ADMIN')`,
+      [admin],
+    );
+    const asAdmin: AuthContext = { kind: 'admin', userId: admin, roles: ['SUPER_ADMIN'] };
+
+    const inserted = await client.query<{ id: string }>(
+      `insert into cs_messages (direction, email, name, subject, body, ai_draft, ai_confidence)
+       values ('RECEIVED', 'owner@example.com', 'Owner', 'BURNとは?', '馬が消えるとはどういうことですか',
+               'オーナー様
+
+ご質問ありがとうございます…
+
+Seven Days Derby サポート', 0.9)
+       returning id`,
+    );
+    const msgId = inserted.rows[0]!.id;
+
+    const queue = await call('GET', '/api/v1/admin/cs/queue', asAdmin);
+    expect(queue.status).toBe(200);
+    const listed = (queue.body as { messages: { id: string; status: string }[] }).messages;
+    expect(listed.some((m) => m.id === msgId && m.status === 'PENDING')).toBe(true);
+
+    // 承認(編集あり) — RESEND_API_KEY未設定のテスト環境ではドライラン送信
+    const approve = await call('POST', `/api/v1/admin/cs/${msgId}/approve`, asAdmin, {
+      body: { body: '編集済みの返信本文です。 Seven Days Derby サポート' },
+    });
+    expect(approve.status).toBe(200);
+    expect((approve.body as { dry_run: boolean }).dry_run).toBe(true);
+
+    const after = await client.query<{ status: string }>(
+      `select status from cs_messages where id = $1`,
+      [msgId],
+    );
+    expect(after.rows[0]!.status).toBe('SENT');
+    const sentRow = await client.query(
+      `select 1 from cs_messages where direction = 'SENT' and reply_to_cs_id = $1`,
+      [msgId],
+    );
+    expect(sentRow.rows).toHaveLength(1);
+
+    // 二重承認は 409
+    const again = await call('POST', `/api/v1/admin/cs/${msgId}/approve`, asAdmin, {
+      body: {},
+    });
+    expect(again.status).toBe(409);
+
+    // 却下パス
+    const second = await client.query<{ id: string }>(
+      `insert into cs_messages (direction, email, body, ai_draft)
+       values ('RECEIVED', 'other@example.com', '本文', '下書き') returning id`,
+    );
+    const reject = await call('POST', `/api/v1/admin/cs/${second.rows[0]!.id}/reject`, asAdmin);
+    expect(reject.status).toBe(200);
+  });
+});

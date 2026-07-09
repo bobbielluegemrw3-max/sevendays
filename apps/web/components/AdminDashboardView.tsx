@@ -33,6 +33,7 @@ const MENU = [
   { href: '/admin/users', icon: '👤', title: 'ユーザー', desc: 'メール検索 / 残高・馬・BURN・アイテム / 組織(直紹介)' },
   { href: '/admin/items', icon: '🎒', title: 'アイテム', desc: 'カタログ別の販売数・売上 / ドロップ・ギフト / アイテム設定の分布' },
   { href: '/admin/races', icon: '🏇', title: 'レース', desc: '直近レースの頭数・BURN数・アイテム設定 / Daily Derbyモード' },
+  { href: '/admin/support', icon: '💬', title: 'サポート(AIメール)', desc: '受信メールのAI下書きを承認して送信 / 全件承認制' },
   { href: '/admin/batches', icon: '⚙️', title: 'バッチ運行', desc: '毎晩20:00 MYTの一斉精算 / ステップ状況 / 失敗リトライ' },
   { href: '/admin/withdrawals', icon: '🏧', title: '出金レビュー', desc: '大口出金(1,000 USDT以上)の2名承認' },
   { href: '/admin/recovery', icon: '🛟', title: 'リカバリ', desc: '障害時の復旧案件 / 承認 → 実行の2段階' },

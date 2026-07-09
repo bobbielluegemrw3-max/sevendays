@@ -60,6 +60,8 @@ export const API_ERROR_STATUS: Record<string, number> = {
   MARKET_ACTION_LIMIT: 409,
   // admin user ops (2026-07-09)
   GRANT_NOT_PENDING: 409,
+  // AIカスタマーサービス (2026-07-09)
+  CS_SEND_FAILED: 502,
   MARKET_DAY_RANGE: 400,
 };
 

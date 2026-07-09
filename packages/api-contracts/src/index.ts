@@ -6,6 +6,7 @@ import { registerMarketEndpoints } from './endpoints/market.js';
 import { registerItemEndpoints } from './endpoints/items.js';
 import { registerDerbyEndpoints } from './endpoints/derby.js';
 import { registerInternalEndpoints } from './endpoints/internal.js';
+import { registerCsEndpoints } from './endpoints/cs.js';
 
 export * from './errors.js';
 export * from './forbidden.js';
@@ -21,6 +22,12 @@ export function buildApiRegistry(): ApiRegistry {
   registerItemEndpoints(registry);
   registerDerbyEndpoints(registry);
   registerAdminEndpoints(registry);
+  registerCsEndpoints(registry);
   registerInternalEndpoints(registry);
   return registry;
 }
+
+// AIカスタマーサービス(webhookルートから利用)
+export { generateCsReply, type CsAiContext, type CsAiResult } from './cs/ai.js';
+export { sendCsEmail, CsMailError } from './cs/mail.js';
+export { CS_KNOWLEDGE } from './cs/knowledge.js';

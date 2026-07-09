@@ -10,6 +10,7 @@ import {
   type ApiResponse,
   type AuthContext,
 } from '@sevendays/api-contracts';
+import { sendCsEmail } from '@sevendays/api-contracts';
 import type { SqlClient } from '@sevendays/shared';
 
 /**
@@ -200,6 +201,29 @@ export async function buildAuthContext(
       `insert into user_wallets (user_id, wallet_address) values ($1, $2) on conflict do nothing`,
       [userId, walletAddress],
     );
+  }
+
+  // ウェルカムメール(2026-07-09): 初回プロビジョニング時のみ・実メールのみ。
+  // 送信失敗でサインアップを絶対に落とさない(fire-and-forget)。
+  if (!email.endsWith('@user.sevendays')) {
+    void sendCsEmail({
+      toEmail: email,
+      subject: 'Seven Days Derby へようこそ',
+      body: [
+        'オーナー様',
+        '',
+        'Seven Days Derby へのご登録ありがとうございます。',
+        'あなたの馬と7日間の物語が、ここから始まります。',
+        '',
+        '・毎晩 20:00(MYT)にレースが開催されます',
+        '・Day7 を走破した馬はチャンピオンとして 200 USDT の報酬と記念NFTを獲得します',
+        '・レースには NFT が消滅する「BURN」のリスクがあります — ルールページを必ずご確認ください',
+        '',
+        'ご不明な点は、このメールにそのまま返信してください。',
+        '',
+        'Seven Days Derby サポート',
+      ].join(String.fromCharCode(10)),
+    }).catch(() => undefined);
   }
 
   return resolveContextFor(client, userId);
