@@ -30,6 +30,7 @@ import {
   fixtureUsedItemKey,
   type VerdictInfo,
 } from '@/components/daily-derby/DerbyVerdict';
+import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { NightResultsList, nightResultsCount } from '@/components/daily-derby/NightResultsList';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook } from '@/lib/nft-visual';
@@ -65,6 +66,8 @@ export interface DailyDerbyStageProps {
   conditions?: DerbyConditionsView | null;
   /** 視覚QA専用: マウント時に審判を強制表示(プレビューのみ使用)。 */
   debugVerdict?: 'burn' | 'survive' | 'day7' | 'match_sell' | 'match_buy' | undefined;
+  /** 出走馬カードの案切替(検討用 2026-07-10): 0=現行チップ / 1=出走カード / 2=パドック。 */
+  tonightVariant?: 0 | 1 | 2;
 }
 
 /* レース条件の値ごとの色(全部同色だと読み分けられない — オーナー指摘 2026-07-10)。 */
@@ -115,6 +118,7 @@ export function DailyDerbyStage({
   myHorses = [],
   conditions = null,
   debugVerdict,
+  tonightVariant = 1,
   myHorseNames = [],
 }: DailyDerbyStageProps) {
   const elapsed = -secondsToStart;
@@ -406,7 +410,7 @@ export function DailyDerbyStage({
         ) : secondsToStart > PRE_SHOW_SECONDS ? (
           <Waiting secondsToStart={secondsToStart} />
         ) : secondsToStart > 0 ? (
-          <PreShowCountdown secondsToStart={secondsToStart} myHorses={myHorses} />
+          <PreShowCountdown secondsToStart={secondsToStart} myHorses={myHorses} variant={tonightVariant} />
         ) : elapsed < SHOW_TOTAL ? (
           <LiveShow
             elapsed={elapsed}
@@ -455,12 +459,70 @@ function Waiting({ secondsToStart }: { secondsToStart: number }) {
 
 /* ------------------------------------------- COUNTDOWN(3分前・7セグ表示) */
 
+/** dna未取得時のフォールバック(馬名から擬似dna)。 */
+function dnaOf(h: MyDerbyHorse): string {
+  return h.dnaHash
+    ?? `0x${Array.from(h.name).map((ch) => ch.charCodeAt(0).toString(16)).join('').padEnd(64, 'a').slice(0, 64)}`;
+}
+
+/** 案1: 出走カード — 実NFTアート+DAY進行7点+今夜の価値(実価格テーブルのみ)。 */
+function TonightEntryCards({ myHorses }: { myHorses: readonly MyDerbyHorse[] }) {
+  return (
+    <div className={s.tn1Grid}>
+      {myHorses.slice(0, 8).map((h) => {
+        const day = h.currentDay ?? 0;
+        const now = PRICE_TABLE_V1[day] ?? '100.00';
+        const next = day >= 6 ? '200.00' : PRICE_TABLE_V1[day + 1] ?? '—';
+        return (
+          <div key={h.name} className={s.tn1Card}>
+            <NftHorseArt look={deriveNftLook(dnaOf(h), h.name)} className={s.tn1Art} />
+            <div className={s.tn1Body}>
+              <div className={s.tn1Name}>{h.name}</div>
+              <div className={s.tn1Dots}>
+                {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                  <span key={i} className={`${s.tn1Dot} ${i <= day ? s.tn1DotOn : ''} ${i === 7 ? s.tn1DotGoal : ''}`} />
+                ))}
+                <span className={s.tn1DayTag}>DAY{day}</span>
+              </div>
+              <div className={s.tn1Price}>
+                {now} → <b className={day >= 6 ? s.tn1NextGold : ''}>{next}</b> USDT
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {myHorses.length > 8 && <div className={s.tn1More}>ほか {myHorses.length - 8} 頭が出走</div>}
+    </div>
+  );
+}
+
+/** 案2: パドック風の出走表 — 枠番+実NFTアートの横並び。 */
+function TonightPaddock({ myHorses }: { myHorses: readonly MyDerbyHorse[] }) {
+  return (
+    <div className={s.tn2Row}>
+      {myHorses.slice(0, 12).map((h, i) => (
+        <div key={h.name} className={s.tn2Slot}>
+          <div className={s.tn2Waku}>{i + 1}</div>
+          <div className={s.tn2ArtWrap}>
+            <NftHorseArt look={deriveNftLook(dnaOf(h), h.name)} className={s.tn2Art} />
+          </div>
+          <div className={s.tn2Name}>{h.name}</div>
+          <div className={s.tn2Day}>DAY{h.currentDay ?? 0}</div>
+        </div>
+      ))}
+      {myHorses.length > 12 && <div className={s.tn2More}>+{myHorses.length - 12}頭</div>}
+    </div>
+  );
+}
+
 function PreShowCountdown({
   secondsToStart,
   myHorses,
+  variant = 0,
 }: {
   secondsToStart: number;
   myHorses: readonly MyDerbyHorse[];
+  variant?: 0 | 1 | 2;
 }) {
   const total = Math.max(0, Math.ceil(secondsToStart));
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -478,22 +540,25 @@ function PreShowCountdown({
       {myHorses.length > 0 && (
         <div className={s.tonight}>
           <div className={s.tonightK}>本日のレースに参加するあなたの馬</div>
-          <div className={s.tonightChips}>
-            {myHorses.slice(0, 4).map((h) => (
-              <span key={h.name} className={s.tonightChip}>
-                {h.name}
-                {h.currentDay !== undefined && <b> DAY{h.currentDay}</b>}
-              </span>
-            ))}
-            {myHorses.length > 4 && (
-              <span className={s.tonightChip}>
-                ほか<b>{myHorses.length - 4}頭</b>が出走
-              </span>
-            )}
-          </div>
-          <div className={s.tonightNote}>
-            生き残れば馬の価値は上がり、DAY7走破で 200 USDT。すべては今夜の1走に。
-          </div>
+          {variant === 1 ? (
+            <TonightEntryCards myHorses={myHorses} />
+          ) : variant === 2 ? (
+            <TonightPaddock myHorses={myHorses} />
+          ) : (
+            <div className={s.tonightChips}>
+              {myHorses.slice(0, 4).map((h) => (
+                <span key={h.name} className={s.tonightChip}>
+                  {h.name}
+                  {h.currentDay !== undefined && <b> DAY{h.currentDay}</b>}
+                </span>
+              ))}
+              {myHorses.length > 4 && (
+                <span className={s.tonightChip}>
+                  ほか<b>{myHorses.length - 4}頭</b>が出走
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

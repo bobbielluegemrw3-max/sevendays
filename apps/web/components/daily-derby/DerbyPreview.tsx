@@ -45,6 +45,7 @@ export function DerbyPreview() {
   const [paused, setPaused] = useState(false);
   const [failed, setFailed] = useState(false);
   const [quiet, setQuiet] = useState(false);
+  const [tonightVariant, setTonightVariant] = useState<0 | 1 | 2>(1);
   const [myHorsesOverride, setMyHorsesOverride] = useState<ReturnType<typeof fixtureMyHorses> | null>(null);
   const [debugVerdict, setDebugVerdict] = useState<
     'burn' | 'survive' | 'day7' | 'match_sell' | 'match_buy' | undefined
@@ -63,6 +64,20 @@ export function DerbyPreview() {
     if (q.get('paused') === '1') setPaused(true);
     if (q.get('failed') === '1') setFailed(true);
     if (q.get('quiet') === '1') setQuiet(true);
+    const tn = q.get('tonight');
+    if (tn === '0' || tn === '1' || tn === '2') setTonightVariant(Number(tn) as 0 | 1 | 2);
+    // 視覚QA: ?herd=100 で大量所有(100頭等)の見え方を確認
+    const herd = Number(q.get('herd'));
+    if (Number.isFinite(herd) && herd > 4) {
+      const base = fixtureMyHorses();
+      setMyHorsesOverride(
+        Array.from({ length: Math.min(herd, 200) }, (_, i) => ({
+          name: `${base[i % 4]!.name} ${i + 1}`,
+          dnaHash: base[i % 4]!.dnaHash!,
+          currentDay: i % 7,
+        })),
+      );
+    }
     // 視覚QA: ?verdict=burn|survive|day7|match_sell|match_buy で審判を強制表示
     const dv = q.get('verdict');
     if (dv === 'burn' || dv === 'survive' || dv === 'day7' || dv === 'match_sell' || dv === 'match_buy') {
@@ -158,6 +173,21 @@ export function DerbyPreview() {
         >
           {quiet ? '静かな夜(点呼) ✕' : '静かな夜(点呼)'}
         </button>
+        {([[0, '出走馬: 現行'], [1, '出走馬: 案1カード'], [2, '出走馬: 案2パドック']] as const).map(([v, label]) => (
+          <button
+            key={v}
+            type="button"
+            className="secondary"
+            style={{
+              padding: '0.35rem 0.7rem',
+              fontSize: '0.68rem',
+              borderColor: tonightVariant === v ? 'var(--gold, #c9a86a)' : undefined,
+            }}
+            onClick={() => setTonightVariant(v)}
+          >
+            {label}
+          </button>
+        ))}
         <span style={{ flexBasis: '100%' }} />
         <label style={{ flexDirection: 'row', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem' }}>
           倍速
@@ -187,6 +217,7 @@ export function DerbyPreview() {
         nightResults={fixtureNightResults()}
         failed={failed}
         myHorses={myHorsesOverride ?? fixtureMyHorses()}
+        tonightVariant={tonightVariant}
         debugVerdict={debugVerdict}
         conditions={fixtureConditions(new Date().toISOString().slice(0, 10))}
       />

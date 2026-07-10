@@ -571,12 +571,15 @@
 
 /* 本日のレースに参加するあなたの馬(カウントダウン下・サイバーパンク)
    馬名は枠で囲まない(オーナー指摘: 安物っぽい) — プレーンテキスト+金DAY */
-.tonight { margin: 22px auto 0; max-width: 560px; padding: 15px 18px 16px; position: relative;
-  border: 1px solid rgba(0, 234, 255, 0.4);
-  background: linear-gradient(165deg, rgba(0, 234, 255, 0.08), rgba(255, 45, 196, 0.05) 60%, transparent);
-  clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px); }
-.tonight::before { content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0, 234, 255, 0.03) 3px 4px); }
+.tonight { margin: 26px auto 0; max-width: 620px; padding: 16px 18px; position: relative;
+  border: 1px solid rgba(0, 234, 255, 0.26); border-radius: 14px;
+  background: linear-gradient(165deg, rgba(0, 234, 255, 0.06), rgba(255, 45, 196, 0.04) 65%, transparent); }
+.tonight::before, .tonight::after { content: ''; position: absolute; width: 28px; height: 28px; pointer-events: none; }
+.tonight::before { top: -2px; left: -2px; border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan);
+  border-top-left-radius: 14px; filter: drop-shadow(0 0 7px rgba(0, 234, 255, 0.8)); }
+.tonight::after { bottom: -2px; right: -2px; border-bottom: 2px solid var(--magenta, #ff2dc4);
+  border-right: 2px solid var(--magenta, #ff2dc4); border-bottom-right-radius: 14px;
+  filter: drop-shadow(0 0 7px rgba(255, 45, 196, 0.7)); }
 .tonightK { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.28em;
   color: var(--cyan); text-shadow: 0 0 14px rgba(0, 234, 255, 0.75); }
 .tonightChips { display: flex; gap: 6px 22px; flex-wrap: wrap; justify-content: center; margin-top: 11px; }
@@ -769,3 +772,43 @@
 /* MY LANE: 大量所有時の省略表示(最新7件+件数) */
 .mylaneMore { font-family: var(--font-mono); font-size: 9px; color: var(--faint); letter-spacing: 0.06em;
   padding-bottom: 2px; }
+
+/* ==== 出走馬カード検討(2026-07-10): 案1=出走カード / 案2=パドック ==== */
+
+/* 案1: 実NFTアート+DAY進行7点+今夜の価値 */
+.tn1Grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 9px; margin-top: 11px; }
+.tn1Card { display: flex; align-items: center; gap: 11px; border: 1px solid rgba(0, 234, 255, 0.22);
+  border-radius: 12px; padding: 8px 11px; background: rgba(255, 255, 255, 0.02); text-align: left; }
+.tn1Art { width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0; overflow: hidden;
+  background: radial-gradient(80% 78% at 50% 42%, rgba(0, 234, 255, 0.1), rgba(10, 8, 19, 0.92) 74%); }
+.tn1Body { flex: 1; min-width: 0; }
+.tn1Name { font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tn1Dots { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
+.tn1Dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); }
+.tn1DotOn { background: var(--gold, #c9a86a); box-shadow: 0 0 8px rgba(201, 168, 106, 0.7); }
+.tn1DotGoal { border: 1px solid rgba(242, 228, 191, 0.6); }
+.tn1DayTag { font-family: var(--font-mono); font-size: 9px; color: var(--gold-bright, #f2e4bf); margin-left: 4px; }
+.tn1Price { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 5px; }
+.tn1Price b { color: var(--good); font-size: 12px; }
+.tn1NextGold { color: var(--gold-bright, #f2e4bf) !important; text-shadow: 0 0 10px rgba(242, 228, 191, 0.6); }
+.tn1Champ { font-family: var(--font-display); font-weight: 800; font-size: 10.5px; margin-top: 5px;
+  background: linear-gradient(92deg, #f6ecd2, var(--gold-bright, #f2e4bf));
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tn1More { font-family: var(--font-mono); font-size: 10px; color: var(--faint); align-self: center; }
+
+/* 案2: パドック風の枠番+アート横並び */
+.tn2Row { display: flex; gap: 10px; margin-top: 12px; overflow-x: auto; padding-bottom: 6px;
+  justify-content: safe center; }
+.tn2Slot { flex: 0 0 auto; width: 96px; text-align: center; position: relative; }
+.tn2Waku { position: absolute; top: -6px; left: 4px; z-index: 2; width: 20px; height: 20px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800;
+  font-size: 11px; color: #04141a; background: linear-gradient(100deg, var(--cyan), #5ff5ff); }
+.tn2ArtWrap { width: 88px; height: 88px; margin: 0 auto; border-radius: 12px; overflow: hidden;
+  border: 1px solid rgba(0, 234, 255, 0.25);
+  background: radial-gradient(80% 78% at 50% 42%, rgba(0, 234, 255, 0.1), rgba(10, 8, 19, 0.92) 74%); }
+.tn2Art { width: 100%; height: 100%; display: block; }
+.tn2Name { font-family: var(--font-display); font-weight: 700; font-size: 10px; color: var(--text); margin-top: 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tn2Day { font-family: var(--font-mono); font-size: 9px; color: var(--gold-bright, #f2e4bf); margin-top: 2px; }
+.tn2More { flex: 0 0 auto; align-self: center; font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
