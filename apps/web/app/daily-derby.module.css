@@ -603,7 +603,7 @@
 
 /* 審判オーバーレイ(ZIP4 正典): 特大・カード枠なし・kind別インセットグロー */
 .verdictOverlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
-  background: rgba(4, 3, 9, 0.72); backdrop-filter: blur(3px); animation: verdictDim 0.3s ease-out; }
+  background: rgba(4, 3, 9, 0.88); backdrop-filter: blur(7px); animation: verdictDim 0.3s ease-out; }
 @keyframes verdictDim { 0% { opacity: 0; } 100% { opacity: 1; } }
 .verdictCard { width: min(760px, 94%); padding: 8px 12px; text-align: center;
   animation: verdictIn 0.5s cubic-bezier(0.2, 1.4, 0.4, 1); }

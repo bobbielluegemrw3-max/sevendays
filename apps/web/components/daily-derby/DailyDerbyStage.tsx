@@ -84,6 +84,10 @@ const CHAPTER_SECONDS = 1.4;
 /* ⑦点呼モード: 出走がこの頭数未満の「静かな夜」は濁流を1頭ずつの点呼に切替。 */
 const QUIET_NIGHT_HORSES = 500;
 
+/* 実走スプリントの実尺(正典 daily-derby-show.html は約9.5秒で駆け抜ける)。
+   ゲート音(RACE_RUN.startAt=17秒)と同時に一斉スタート→9.5秒でゴール。 */
+const RACE_SPRINT_SECONDS = 9.5;
+
 /* ④動く数字: 実バッチ値へ向かう ease-out 補間(表示専用・途中参加でも正値)。 */
 const easeOut = (x: number): number => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
 
@@ -524,8 +528,8 @@ function LiveShow({
       {raceOn && (
         <DerbyRaceViz
           fullBleed
-          progress={(elapsed - TITLE_UNTIL) / (RACE_RUN.endAt - TITLE_UNTIL)}
-          spanSeconds={RACE_RUN.endAt - TITLE_UNTIL}
+          progress={(elapsed - RACE_RUN.startAt) / RACE_SPRINT_SECONDS}
+          spanSeconds={RACE_SPRINT_SECONDS}
           myName={myHorses[0]?.name}
         />
       )}
@@ -569,8 +573,31 @@ const TONE_CLASS: Record<LogTone, string> = {
   end: s.lgEnd!,
 };
 
-/* ④動く数字: ターンごとの実バッチ値カウントアップ(表示専用の補間)。 */
-function Counters({ elapsed, counts }: { elapsed: number; counts: DerbyCounts }) {
+/* ショーの時計(propは1秒/100ms刻み)をrAFで60fpsに補間する共通フック。
+   prop更新が1.6秒止まったら凍結(QA一時停止)。正典のなめらかな動きの土台。 */
+function useShowClock(propElapsed: number): number {
+  const propRef = useRef({ e: propElapsed, at: 0 });
+  propRef.current = {
+    e: propElapsed,
+    at: typeof performance !== 'undefined' ? performance.now() : 0,
+  };
+  const [elapsed, setElapsed] = useState(propElapsed);
+  useEffect(() => {
+    let raf = 0;
+    const loop = (now: number) => {
+      const stale = now - propRef.current.at > 1600;
+      setElapsed(propRef.current.e + (stale ? 0 : (now - propRef.current.at) / 1000));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return elapsed;
+}
+
+/* ④動く数字: ターンごとの実バッチ値カウントアップ(表示専用の補間・60fps)。 */
+function Counters({ elapsed: propElapsed, counts }: { elapsed: number; counts: DerbyCounts }) {
+  const elapsed = useShowClock(propElapsed);
   const p2pAt = MARKET_OPEN.startAt;
   const rewardsAt = LOG_SECTIONS.find((sec) => sec.key === 'MLM')!.startAt;
   if (elapsed < p2pAt) {
@@ -636,7 +663,7 @@ function Rollcall({ elapsed, myHorses }: { elapsed: number; myHorses: readonly M
 }
 
 function LogPhase({
-  elapsed,
+  elapsed: propElapsed,
   counts,
   myHorseNames,
   myHorses,
@@ -652,6 +679,8 @@ function LogPhase({
   quiet: boolean;
   onMine: (info: { name: string; tone: string }) => void;
 }) {
+  // 正典のなめらかなログの流れ: ショー時計(1秒刻み)を60fpsに補間して描画する
+  const elapsed = useShowClock(propElapsed);
   const myNames = useMemo(() => new Set(myHorseNames), [myHorseNames]);
   const lines = logWindow(elapsed, 44, myNames);
   // 自分該当行が新しく現れたらチャイム/審判キューへ(1行につき1回)
