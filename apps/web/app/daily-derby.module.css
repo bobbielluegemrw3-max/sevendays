@@ -587,7 +587,7 @@
 
 /* レース条件フラッシュ(タイトル直後に一瞬。値は条件ごとに色分け) */
 .condFlash { margin-top: 16px; text-align: center; font-family: var(--font-mono); font-size: 13.5px;
-  letter-spacing: 0.14em; animation: condFlash 5s ease-in-out forwards; }
+  letter-spacing: 0.14em; animation: condFlash 3s ease-in-out forwards; }
 .condFlash b { font-weight: 700; margin: 0 10px 0 7px; font-size: 15px;
   text-shadow: 0 0 12px currentColor; }
 .condK { color: var(--muted); font-size: 11px; }
