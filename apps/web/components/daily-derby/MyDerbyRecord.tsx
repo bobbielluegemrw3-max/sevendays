@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/client-api';
 import { NightResultsList, nightResultsCount } from '@/components/daily-derby/NightResultsList';
-import type { DerbyNightResults } from '@/lib/daily-derby';
+import { conditionsView, type DerbyConditionsView, type DerbyNightResults } from '@/lib/daily-derby';
 import s from '../../app/races.module.css';
 
 /**
@@ -17,7 +17,33 @@ import s from '../../app/races.module.css';
  * DerbyNightResults & { date, dates } を返す。カレンダーの月送りは client 状態のみ(追加API不要)。
  */
 
-type MyResults = DerbyNightResults & { date: string | null; dates: string[] };
+type MyResults = DerbyNightResults & {
+  date: string | null;
+  dates: string[];
+  conditions: { weather: string; track: string; surface: string; night_name: string | null } | null;
+};
+
+/* その日のレース条件の値色(ショーの CONDITION_COLORS と同じ意味色)。 */
+const COND_COLORS: Record<string, string> = {
+  SUNNY: '#ffd97a', CLOUDY: '#aab4c8', RAIN: '#6fc3ff', STORM: '#c78cff',
+  FAST: '#00eaff', GOOD: '#35d07f', SOFT: '#e6b24a', HEAVY: '#ff5c5c',
+  TURF: '#58d68d', DIRT: '#d8a05a',
+};
+
+/* その日の天候・馬場・コース(オーナー指示 2026-07-10: レース確定日は必ず表示)。 */
+function DayConditions({ c }: { c: DerbyConditionsView }) {
+  return (
+    <div className={s.digestCond}>
+      <span className={s.digestCondK}>天候</span>
+      <b style={{ color: COND_COLORS[c.weather] }}>{c.weather_ja}</b>
+      <span className={s.digestCondK}>/ 馬場</span>
+      <b style={{ color: COND_COLORS[c.track] }}>{c.track_ja}</b>
+      <span className={s.digestCondK}>/ コース</span>
+      <b style={{ color: COND_COLORS[c.surface] }}>{c.surface_ja}</b>
+      {c.night_name && <span className={s.digestFes}>{c.night_name}</span>}
+    </div>
+  );
+}
 
 const DOW = ['日', '月', '火', '水', '木', '金', '土'] as const;
 
@@ -52,6 +78,7 @@ function NightDigest({ iso, data }: { iso: string; data: MyResults }) {
         <span className={s.digestDate}>{fmtJa(iso)}</span>
         <span className={s.digestDow}>{dowOf(iso)}曜</span>
       </div>
+      {data.conditions && <DayConditions c={conditionsView(data.conditions)} />}
       {empty ? (
         <div className={s.digestEmpty}>この夜は、あなたの出走・売買はありませんでした。</div>
       ) : (

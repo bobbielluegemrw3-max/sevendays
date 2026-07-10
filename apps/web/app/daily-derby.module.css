@@ -765,3 +765,7 @@
   gap: 10px; font-family: var(--font-display); font-size: 12px; letter-spacing: 0.14em; color: var(--muted); }
 .raceCanvasFull { width: 100%; height: 100%; display: block; }
 @media (max-width: 760px) { .showScene { min-height: 460px; } }
+
+/* MY LANE: 大量所有時の省略表示(最新7件+件数) */
+.mylaneMore { font-family: var(--font-mono); font-size: 9px; color: var(--faint); letter-spacing: 0.06em;
+  padding-bottom: 2px; }

@@ -85,6 +85,12 @@ const CHAPTER_SECONDS = 1.4;
 /* ⑦点呼モード: 出走がこの頭数未満の「静かな夜」は濁流を1頭ずつの点呼に切替。 */
 const QUIET_NIGHT_HORSES = 500;
 
+/* 大量所有(100頭等)対策: 審判オーバーレイの待ち行列上限。超過分はオーバーレイを
+   省略してMY LANEと最後の全結果サマリーにだけ記録する(ショー尺101秒に収める)。 */
+const VERDICT_QUEUE_MAX = 6;
+/* MY LANEに同時表示する最新件数(超過は「ほか n 件」)。 */
+const MY_LANE_VISIBLE = 7;
+
 /* 一番最初のバージョンの起動ターミナル最終ステップ(絵文字なし)。 */
 const RACE_STEP: ShowStep = {
   key: 'RACE',
@@ -270,7 +276,7 @@ export function DailyDerbyStage({
         const kind =
           info.tone === 'burn' ? 'burn' : info.tone === 'day7' ? 'day7' : info.tone === 'match' ? 'match' : 'survive';
         const today = new Date().toISOString().slice(0, 10);
-        verdictQueue.current.push({
+        const ev: VerdictInfo = {
           name: info.name,
           kind,
           horse,
@@ -278,7 +284,13 @@ export function DailyDerbyStage({
           usedItemKey: kind === 'burn' ? fixtureUsedItemKey(info.name, today) : null,
           matchSide: kind === 'match' ? 'sell' : undefined,
           counterpart: kind === 'match' ? fixtureMaskedEmail(info.name, today) : undefined,
-        });
+        };
+        // 大量所有対策: 待ち行列が上限なら審判は省略し、MY LANEに直接記帳
+        if (verdictQueue.current.length >= VERDICT_QUEUE_MAX) {
+          setMyLane((prev) => [...prev, ev]);
+          return;
+        }
+        verdictQueue.current.push(ev);
         if (verdictShowing.current) setVerdictQueued(verdictQueue.current.length);
         else showNextVerdict();
         return;
@@ -473,6 +485,11 @@ function PreShowCountdown({
                 {h.currentDay !== undefined && <b> DAY{h.currentDay}</b>}
               </span>
             ))}
+            {myHorses.length > 4 && (
+              <span className={s.tonightChip}>
+                ほか<b>{myHorses.length - 4}頭</b>が出走
+              </span>
+            )}
           </div>
           <div className={s.tonightNote}>
             生き残れば馬の価値は上がり、DAY7走破で 200 USDT。すべては今夜の1走に。
@@ -770,7 +787,11 @@ function LogPhase({
             {myLane.length === 0 ? (
               <div className={s.mylaneEmpty}>あなたの馬の結果がここに順番に刻まれます。</div>
             ) : (
-              myLane.map((ev, i) => {
+              <>
+              {myLane.length > MY_LANE_VISIBLE && (
+                <div className={s.mylaneMore}>ほか {myLane.length - MY_LANE_VISIBLE} 件(最後の全結果に全件)</div>
+              )}
+              {myLane.slice(-MY_LANE_VISIBLE).map((ev, i) => {
                 const cls =
                   ev.kind === 'burn' ? s.myEvBurn
                   : ev.kind === 'day7' ? s.myEvDay7
@@ -788,7 +809,8 @@ function LogPhase({
                     <div className={s.myEvS}>{sub}</div>
                   </div>
                 );
-              })
+              })}
+              </>
             )}
           </div>
         </div>

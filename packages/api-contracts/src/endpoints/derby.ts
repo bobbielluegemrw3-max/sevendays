@@ -270,7 +270,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
 
       // For the YOU-highlight in the log flood (owner plan A).
       const myHorses = await ctx.client.query<{ name: string; dna_hash: string; current_day: number }>(
-        `select name, dna_hash, current_day from horses where owner_user_id = $1 and status = 'ACTIVE' limit 50`,
+        `select name, dna_hash, current_day from horses where owner_user_id = $1 and status = 'ACTIVE' limit 200`,
         [ctx.userId],
       );
 
@@ -320,14 +320,21 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       );
       const dates = datesQ.rows.map((r) => r.batch_date);
       const requested = ctx.params.date === 'latest' ? dates[0] : ctx.params.date;
-      const empty = { dates, burned: [], survived: [], sold: [], bought: [] };
+      const empty = { dates, conditions: null, burned: [], survived: [], sold: [], bought: [] };
       if (!requested) return { date: null, ...empty };
       if (!/^\d{4}-\d{2}-\d{2}$/.test(requested)) {
         throw new ApiError('VALIDATION_FAILED', 'date must be YYYY-MM-DD or latest');
       }
 
-      const race = await ctx.client.query<{ id: string; batch_run_id: string }>(
-        `select r.id, r.batch_run_id
+      const race = await ctx.client.query<{
+        id: string;
+        batch_run_id: string;
+        weather: string | null;
+        track_condition: string | null;
+        surface: string | null;
+      }>(
+        `select r.id, r.batch_run_id, r.weather::text as weather,
+                r.track_condition::text as track_condition, r.surface::text as surface
          from races r join batch_runs b on b.id = r.batch_run_id
          where b.batch_date = $1 and r.status = 'FINALIZED'
          limit 1`,
@@ -335,6 +342,19 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       );
       const raceRow = race.rows[0] ?? null;
       if (!raceRow) return { date: requested, ...empty };
+      // その日のレース条件(オーナー指示 2026-07-10: 記録カレンダーに必ず表示)
+      const dayConditions = raceRow.surface
+        ? {
+            weather: raceRow.weather,
+            track: raceRow.track_condition,
+            surface: raceRow.surface,
+            night_name: raceNightNameV2({
+              weather: raceRow.weather as never,
+              track: raceRow.track_condition as never,
+              surface: raceRow.surface as never,
+            }),
+          }
+        : null;
 
       const mask = (email: string | null): string =>
         !email
@@ -419,6 +439,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       return {
         date: requested,
         dates,
+        conditions: dayConditions,
         burned: burned.rows.map((r) => ({
           name: r.name,
           dna_hash: r.dna_hash,
