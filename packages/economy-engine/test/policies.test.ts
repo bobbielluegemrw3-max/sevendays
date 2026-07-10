@@ -26,8 +26,10 @@ describe('policy loader', () => {
   it('loads the seeded active policy of every table', async () => {
     for (const table of POLICY_TABLES) {
       const record = await loadActivePolicy(client, table);
-      // liquidity policy was superseded by v1.1 (Decision 069).
-      const expected = table === 'liquidity_policies' ? /v1\.1$/ : /v1\.0$/;
+      // liquidity policy was superseded by v1.1 (Decision 069);
+      // race engine by v1.1 (ADR-012 burn-rate jitter, 2026-07-10).
+      const expected =
+        table === 'liquidity_policies' || table === 'race_engine_versions' ? /v1\.1$/ : /v1\.0$/;
       expect(record.version, table).toMatch(expected);
       expect(record.activatedAt).not.toBeNull();
     }

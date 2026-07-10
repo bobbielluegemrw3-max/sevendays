@@ -1,5 +1,5 @@
 import { floorTimesRate } from '@sevendays/shared';
-import { BURN_TARGET_RATE_V1, type EconomyStatus } from '@sevendays/domain';
+import { BURN_TARGET_RATE_V1, nightlyBurnRateV2, type EconomyStatus } from '@sevendays/domain';
 import type { RankedParticipant } from './ranking.js';
 
 /**
@@ -11,6 +11,21 @@ import type { RankedParticipant } from './ranking.js';
 
 export function burnTargetCount(eligibleCount: number, economyStatus: EconomyStatus): number {
   return floorTimesRate(eligibleCount, BURN_TARGET_RATE_V1[economyStatus]);
+}
+
+/**
+ * ADR-012(承認 2026-07-10): 夜間ジッター版。率はステータス基準率+シード由来の
+ * 対称ジッター(平均=基準率を厳守・器8.0〜13.5%固定)。floor則は憲法どおり不変。
+ * 返り値に採用した率も含める(races.burn_rate への記録と台帳公開用)。
+ */
+export function burnTargetCountV2(
+  eligibleCount: number,
+  economyStatus: EconomyStatus,
+  raceSeed: string,
+  amplitude?: string,
+): { count: number; rate: string } {
+  const rate = nightlyBurnRateV2(raceSeed, economyStatus, amplitude);
+  return { count: floorTimesRate(eligibleCount, rate), rate };
 }
 
 /** The horseUuids to burn: bottom `count` ranks of the finalized ranking. */

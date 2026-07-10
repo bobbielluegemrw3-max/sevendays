@@ -2,12 +2,14 @@ import { Money, insertNotification, sha256Parts } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
 import {
   BURN_DROP_KEYS_V2,
+  BURN_TARGET_RATE_V1,
   ITEM_BY_KEY_V2,
   renderNotification,
   type EconomyStatus,
 } from '@sevendays/domain';
 import {
   burnTargetCount,
+  burnTargetCountV2,
   rankParticipants,
   rollBuffRarity,
   selectBurnTargets,
@@ -45,6 +47,8 @@ export interface FinalizeAndBurnInput {
 export interface FinalizeAndBurnResult {
   participantCount: number;
   burnTargetCount: number;
+  /** 採用したBURN率(v1.1+はジッター後の実効率・台帳公開用)。 */
+  burnRate: string;
   burnedHorseIds: string[];
   buffsGenerated: number;
   buffsRefreshed: number;
@@ -89,8 +93,14 @@ export async function finalizeAndBurn(
   );
 
   // 3. Burn count and targets (floor rule — never exceeded).
+  //    v1.1以降(ADR-012): 率は基準率+シード由来の対称ジッター(平均保存)。
+  //    v1.0(過去レースのリプレイ)は固定率のまま — 互換維持。
   const eligible = ranking.length;
-  const count = burnTargetCount(eligible, input.economyStatus);
+  const useJitter = input.raceEngineVersion !== 'race_engine_v1.0';
+  const burn = useJitter
+    ? burnTargetCountV2(eligible, input.economyStatus, input.raceSeed)
+    : { count: burnTargetCount(eligible, input.economyStatus), rate: BURN_TARGET_RATE_V1[input.economyStatus] };
+  const count = burn.count;
   const burnTargets = new Set(selectBurnTargets(ranking, count));
 
   // 4. Persist race results with final burn flags (immutable after insert).
@@ -269,13 +279,16 @@ export async function finalizeAndBurn(
   }
 
   await client.query(
-    `update races set status = 'FINALIZED', completed_at = coalesce(completed_at, now()) where id = $1`,
-    [input.raceId],
+    `update races set status = 'FINALIZED', completed_at = coalesce(completed_at, now()),
+            burn_rate = $2::numeric
+      where id = $1`,
+    [input.raceId, burn.rate],
   );
 
   return {
     participantCount: eligible,
     burnTargetCount: count,
+    burnRate: burn.rate,
     burnedHorseIds,
     buffsGenerated,
     buffsRefreshed,

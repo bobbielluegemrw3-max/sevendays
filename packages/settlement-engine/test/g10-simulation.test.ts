@@ -224,10 +224,11 @@ describe(`G10 economic simulation (${USERS} users, ${DAYS} days, ${DAILY_BUYERS}
         );
       }
 
-      // Burn rate cap (G3 direction): never above ceil of the max rate.
+      // Burn rate cap (G3 direction): never above the ADR-012 jitter envelope
+      // ceiling (13.5%) — the published hard maximum for any night/status.
       for (const report of reports) {
         if (report.participants > 0) {
-          expect(report.burned).toBeLessThanOrEqual(Math.floor(report.participants * 0.112));
+          expect(report.burned).toBeLessThanOrEqual(Math.floor(report.participants * 0.135));
         }
       }
 
