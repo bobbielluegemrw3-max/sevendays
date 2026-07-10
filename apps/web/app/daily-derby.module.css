@@ -594,6 +594,13 @@
 @keyframes condFlash { 0% { opacity: 0; transform: translateY(4px); } 10% { opacity: 1; transform: translateY(0); }
   78% { opacity: 1; } 100% { opacity: 0; } }
 
+/* ショー最後 = その夜の自分の全結果サマリー(下の記録と同じ行部品を使う) */
+.nightSum { width: min(680px, 100%); margin: 0 auto; text-align: left; }
+.nightSumHead { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.nightSumK { font-family: var(--font-display); font-weight: 800; font-size: 13px; letter-spacing: 0.18em;
+  color: var(--gold-bright, #f0d9a8); white-space: nowrap; }
+.nightSumNote { font-family: var(--font-mono); font-size: 10px; color: var(--faint); margin-top: 12px; text-align: center; }
+
 /* 審判オーバーレイ: 自分の馬の実NFTアートを主役に(文言は事実のみ) */
 .verdictOverlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
   background: rgba(2, 2, 8, 0.92); animation: verdictDim 0.25s ease-out; }

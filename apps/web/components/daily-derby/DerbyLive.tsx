@@ -8,7 +8,7 @@ import {
   SHOW_TOTAL,
   conditionsView,
   type DerbyCounts,
-  type PersonalResult,
+  type DerbyNightResults,
 } from '@/lib/daily-derby';
 import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
 
@@ -30,13 +30,15 @@ interface DerbyStatus {
   conditions: { weather: string; track: string; surface: string; night_name: string | null } | null;
   counts: DerbyCounts | null;
   ticker: string[];
-  personal: PersonalResult | null;
+  personal: unknown;
   my_horse_names: string[];
   my_horses?: { name: string; dna_hash: string; current_day: number }[];
 }
 
 export function DerbyLive() {
   const [status, setStatus] = useState<DerbyStatus | null>(null);
+  // ショー最後の全結果サマリー(バッチ完了後に1回取得。記録APIと同一データ)。
+  const [nightResults, setNightResults] = useState<DerbyNightResults | null>(null);
   // サーバー時刻 − ローカル時刻(ms)。ローカル時計のズレを補正する。
   const offsetRef = useRef(0);
   const [, forceTick] = useState(0);
@@ -57,6 +59,18 @@ export function DerbyLive() {
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [poll]);
+
+  // バッチ完了後に当夜の全結果を取得(最新の確定日 = 今夜)。
+  useEffect(() => {
+    if (status?.phase !== 'COMPLETED' || nightResults) return;
+    let cancelled = false;
+    void apiFetch<DerbyNightResults>('/api/v1/daily-derby/my-results/latest').then((r) => {
+      if (!cancelled && r.status === 200) setNightResults(r.body as DerbyNightResults);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [status?.phase, nightResults]);
 
   // 表示は1秒刻み、ポーリングはショー窓の内外で間隔を変える。
   useEffect(() => {
@@ -108,7 +122,7 @@ export function DerbyLive() {
       secondsToStart={secondsToStart}
       counts={status.counts ?? FIXTURE_COUNTS}
       tickerEvents={status.ticker}
-      personal={status.personal}
+      nightResults={nightResults}
       failed={status.phase === 'FAILED_SAFE_MODE'}
       myHorseNames={status.my_horse_names}
       myHorses={(status.my_horses ?? []).map((h) => ({

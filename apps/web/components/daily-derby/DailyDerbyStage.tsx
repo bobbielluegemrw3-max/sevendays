@@ -17,8 +17,8 @@ import {
   matchingCount,
   turnLabel,
   type DerbyCounts,
+  type DerbyNightResults,
   type LogTone,
-  type PersonalResult,
   type ShowStep,
 } from '@/lib/daily-derby';
 import type { DerbyConditionsView, MyDerbyHorse } from '@/lib/daily-derby';
@@ -30,7 +30,7 @@ import {
   fixtureUsedItemKey,
   type VerdictInfo,
 } from '@/components/daily-derby/DerbyVerdict';
-import { DailyDerbyPersonalResult } from '@/components/daily-derby/DailyDerbyPersonalResult';
+import { NightResultsList, nightResultsCount } from '@/components/daily-derby/NightResultsList';
 import { DailyDerbyFailureState } from '@/components/daily-derby/DailyDerbyFailureState';
 import s from '../../app/daily-derby.module.css';
 
@@ -43,14 +43,15 @@ import s from '../../app/daily-derby.module.css';
  * 警告色)→ 20:00 ファンファーレ+タイトル+オープニング → レース実走(蹄音)
  * → 結果ログ濁流(BURN赤/生存緑/価値/DAY7金)→ P2Pターン(出品/入札/
  * マッチング/Day0発行)→ リワード(MLM/Revenge Buff)→ TODAY RACE END →
- * 個人結果。失敗時は静穏なセーフモード表示のみ。
+ * その夜の自分の全結果サマリー。失敗時は静穏なセーフモード表示のみ。
  */
 export interface DailyDerbyStageProps {
   /** 20:00 までの残り秒。開始後は負値(-経過秒)。 */
   secondsToStart: number;
   counts?: DerbyCounts;
   tickerEvents?: readonly string[];
-  personal?: PersonalResult | null;
+  /** ショー最後に出す当夜の自分の全結果(下の記録と同一データ)。 */
+  nightResults?: DerbyNightResults | null;
   failed?: boolean;
   fanfareSrc?: string;
   hoofbeatsSrc?: string;
@@ -75,7 +76,7 @@ export function DailyDerbyStage({
   secondsToStart,
   counts = FIXTURE_COUNTS,
   tickerEvents = [],
-  personal = null,
+  nightResults = null,
   failed = false,
   fanfareSrc = '/sounds/fanfare.mp3',
   hoofbeatsSrc = '/sounds/hoofbeats.mp3',
@@ -347,7 +348,7 @@ export function DailyDerbyStage({
             onMine={playOwnLine}
           />
         ) : (
-          <PersonalOrDone personal={personal} />
+          <PersonalOrDone night={nightResults} />
         )}
       </div>
 
@@ -606,8 +607,23 @@ function LogPhase({
 
 /* -------------------------------------------------- result / done / ticker */
 
-function PersonalOrDone({ personal }: { personal: PersonalResult | null }) {
-  if (personal) return <DailyDerbyPersonalResult result={personal} />;
+/* ショーの最後 = その夜の自分の全結果(オーナー指示 2026-07-11:
+   審判で1頭ずつ流れた結果を、代表1件ではなく全件のサマリーで締める。
+   同じデータが /races「あなたのレース記録」に残り続ける)。 */
+function PersonalOrDone({ night }: { night: DerbyNightResults | null }) {
+  if (night && nightResultsCount(night) > 0) {
+    return (
+      <div className={s.nightSum}>
+        <div className={s.nightSumHead}>
+          <div className={s.liveRule} />
+          <div className={s.nightSumK}>YOUR RESULTS — 本日のあなたの全結果</div>
+          <div className={s.liveRule} />
+        </div>
+        <NightResultsList results={night} />
+        <div className={s.nightSumNote}>この結果はレースページの「あなたのレース記録」でいつでも見返せます。</div>
+      </div>
+    );
+  }
   return (
     <div className={s.doneBanner}>
       <div className={s.liveRule} />

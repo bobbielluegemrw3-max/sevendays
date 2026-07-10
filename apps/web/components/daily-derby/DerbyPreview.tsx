@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
-  FIXTURE_RESULTS,
   FIXTURE_TICKER,
   PRE_SHOW_SECONDS,
   SHOW_TOTAL,
   fixtureConditions,
   fixtureMyHorses,
+  fixtureNightResults,
 } from '@/lib/daily-derby';
 import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
 
@@ -15,7 +15,7 @@ import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
  * /dev/derby-preview 用のシミュレーションドライバー。
  * 実時計の代わりにシミュレート時計(倍速可・ジャンプ可)で
  * 3分前 → 残り30秒 → 20:00 ファンファーレ → LIVE演出 → マケプレ →
- * 個人結果 → 完了/失敗 の全状態を再生する。本番では 404。
+ * 全結果サマリー → 完了/失敗 の全状態を再生する。本番では 404。
  */
 
 const JUMPS: ReadonlyArray<{ label: string; seconds: number }> = [
@@ -35,22 +35,13 @@ const JUMPS: ReadonlyArray<{ label: string; seconds: number }> = [
   { label: '新規発行', seconds: -85.5 },
   { label: 'MLM/アイテム', seconds: -90.5 },
   { label: 'RACE END', seconds: -97.5 },
-  { label: '個人結果', seconds: -(SHOW_TOTAL + 1) },
+  { label: '全結果サマリー', seconds: -(SHOW_TOTAL + 1) },
 ];
-
-const SCENARIOS: ReadonlyArray<{ key: keyof typeof FIXTURE_RESULTS; label: string }> = [
-  { key: 'sold', label: '売却+新馬' },
-  { key: 'survived', label: '生存のみ' },
-  { key: 'burned', label: 'Burn+バフ' },
-  { key: 'day7', label: 'Day7クリア' },
-];
-
 
 export function DerbyPreview() {
   const [secondsToStart, setSecondsToStart] = useState(PRE_SHOW_SECONDS + 12);
   const [speed, setSpeed] = useState(1);
   const [paused, setPaused] = useState(false);
-  const [scenario, setScenario] = useState<keyof typeof FIXTURE_RESULTS>('sold');
   const [failed, setFailed] = useState(false);
   const [myHorsesOverride, setMyHorsesOverride] = useState<ReturnType<typeof fixtureMyHorses> | null>(null);
   const [debugVerdict, setDebugVerdict] = useState<
@@ -68,8 +59,6 @@ export function DerbyPreview() {
     const t = q.get('t');
     if (t !== null && Number.isFinite(Number(t))) setSecondsToStart(Number(t));
     if (q.get('paused') === '1') setPaused(true);
-    const sc = q.get('scenario');
-    if (sc && sc in FIXTURE_RESULTS) setScenario(sc);
     if (q.get('failed') === '1') setFailed(true);
     // 視覚QA: ?verdict=burn|survive|day7|match_sell|match_buy で審判を強制表示
     const dv = q.get('verdict');
@@ -163,18 +152,6 @@ export function DerbyPreview() {
             <option value={10}>×10</option>
           </select>
         </label>
-        <label style={{ flexDirection: 'row', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem' }}>
-          個人結果
-          <select
-            value={scenario}
-            onChange={(e) => setScenario(e.target.value)}
-            style={{ padding: '0.25rem 0.5rem' }}
-          >
-            {SCENARIOS.map((sc) => (
-              <option key={sc.key} value={sc.key}>{sc.label}</option>
-            ))}
-          </select>
-        </label>
         <button
           type="button"
           className="secondary"
@@ -191,7 +168,7 @@ export function DerbyPreview() {
       <DailyDerbyStage
         secondsToStart={secondsToStart}
         tickerEvents={FIXTURE_TICKER}
-        personal={FIXTURE_RESULTS[scenario] ?? null}
+        nightResults={fixtureNightResults()}
         failed={failed}
         myHorses={myHorsesOverride ?? fixtureMyHorses()}
         debugVerdict={debugVerdict}

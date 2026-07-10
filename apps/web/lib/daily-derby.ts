@@ -290,13 +290,16 @@ export function fixtureMyHorseNames(): string[] {
   ];
 }
 
-/* ---- 個人結果(ADR-006 §6) --------------------------------------------- */
+/* ---- 個人結果 = その夜の全結果(オーナー指示 2026-07-11: 代表1件を廃止し、
+        審判で1頭ずつ流れた結果をショーの最後に全件サマリーで出す。
+        /api/v1/daily-derby/my-results/:date と同じ形 — 下の記録にも残り続ける)。 */
 
-export type PersonalResult =
-  | { kind: 'SOLD'; horseName: string; fromDay: number; soldPrice: string; newHorseName: string; newHorseDay: number; dnaHash?: string; newDnaHash?: string }
-  | { kind: 'SURVIVED'; horseName: string; fromDay: number; dnaHash?: string }
-  | { kind: 'BURNED'; horseName: string; buffRarity: 'N' | 'R' | 'SR'; dnaHash?: string }
-  | { kind: 'DAY7'; horseName: string; buybackTotal: string; dnaHash?: string };
+export interface DerbyNightResults {
+  burned: { name: string; dna_hash: string; day: number | null; used_item_key: string | null; drop_item_key: string | null }[];
+  survived: { name: string; dna_hash: string; from_day: number; to_day: number; day7: boolean }[];
+  sold: { name: string; dna_hash: string; price: string; day: number | null; counterpart: string }[];
+  bought: { name: string; dna_hash: string; price: string; day: number | null; is_mint: boolean; counterpart: string | null }[];
+}
 
 /* ---- フィクスチャ(プレビュー/モック結線用。実結線時にAPI値へ差替) ------- */
 
@@ -394,9 +397,22 @@ export function fixtureMyHorses(): MyDerbyHorse[] {
 /** プレビュー用ダミー dna_hash(NftHorseArt のルック導出に使う)。 */
 const dna = (seed: string): string => `0x${seed.repeat(32).slice(0, 64)}`;
 
-export const FIXTURE_RESULTS: Record<string, PersonalResult> = {
-  sold: { kind: 'SOLD', horseName: 'Royal Thunder', fromDay: 5, soldPrice: '177.16', newHorseName: 'Golden Storm', newHorseDay: 2, dnaHash: dna('a1'), newDnaHash: dna('4c') },
-  survived: { kind: 'SURVIVED', horseName: 'Emerald Storm', fromDay: 3, dnaHash: dna('7e') },
-  burned: { kind: 'BURNED', horseName: 'Royal Thunder', buffRarity: 'R', dnaHash: dna('a1') },
-  day7: { kind: 'DAY7', horseName: 'Golden Wind', buybackTotal: '200.00', dnaHash: dna('f2') },
-};
+/** プレビュー用: ショー最後の全結果サマリー(fixtureMyHorses と同じ4頭+新規発行1頭)。 */
+export function fixtureNightResults(): DerbyNightResults {
+  const [burnH, svH, day7H, matchH] = fixtureMyHorses();
+  return {
+    burned: [
+      { name: burnH!.name, dna_hash: burnH!.dnaHash!, day: burnH!.currentDay!, used_item_key: 'rain_hood', drop_item_key: 'spirit_roar' },
+    ],
+    survived: [
+      { name: day7H!.name, dna_hash: day7H!.dnaHash!, from_day: 6, to_day: 7, day7: true },
+      { name: svH!.name, dna_hash: svH!.dnaHash!, from_day: svH!.currentDay!, to_day: svH!.currentDay! + 1, day7: false },
+    ],
+    sold: [
+      { name: matchH!.name, dna_hash: matchH!.dnaHash!, price: '133.10', day: matchH!.currentDay!, counterpart: 'k*****i@gmail.com' },
+    ],
+    bought: [
+      { name: 'Golden Storm', dna_hash: dna('4c'), price: '100.00', day: 0, is_mint: true, counterpart: null },
+    ],
+  };
+}
