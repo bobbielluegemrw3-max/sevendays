@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { Countdown } from '@/components/Countdown';
+import { MyDerbyRecord } from '@/components/daily-derby/MyDerbyRecord';
 import s from '../app/races.module.css';
 
 /* ============================================================================
- * /races(レース一覧)再設計 — ダッシュボード Option 1c と同じ部品言語。
- * 純粋な表示コンポーネント。props は { races: Race[] } のみ。データ取得層 page.tsx
- * は依頼側で結線。表示する数値は Race の値のみ(架空の統計は入れない)。
+ * /races(レース一覧)。上段=あなたのレース記録(審判演出の記録版・日付遡り可、
+ * オーナー指示 2026-07-10 — 旧「今夜」カード連発+カウントダウンは廃止)。
+ * 下段=確定レースの全体アーカイブ(commit-reveal 検証ページへのリンク)。
+ * 精算済みレースの status は FINALIZED(COMPLETED ではない)。
  * ========================================================================== */
 
 export interface Race {
@@ -17,58 +18,31 @@ function fmtDate(iso: string): { md: string; year: string } {
   const [y, m, d] = iso.split('-');
   return { md: `${Number(m)}月${Number(d)}日`, year: y ?? '' };
 }
-function statusBadge(status: string): { cls: string; label: string } {
-  if (status === 'COMPLETED') return { cls: s.stCompleted!, label: 'COMPLETED · 確定' };
-  if (status === 'OPEN' || status === 'PENDING' || status === 'SCHEDULED') return { cls: s.stOpen!, label: '今夜 · TONIGHT' };
-  return { cls: s.stOther!, label: status };
-}
 
 export function RacesView({ races }: { races: Race[] }) {
-  const upcoming = races.filter((r) => r.status !== 'COMPLETED');
-  const completed = races.filter((r) => r.status === 'COMPLETED');
+  const completed = races.filter((r) => r.status === 'FINALIZED' || r.status === 'COMPLETED');
 
   return (
     <div className={s.wrap}>
       <div className={s.h1}>レース</div>
 
-      {/* 今夜/予定のレース */}
-      {upcoming.map((r) => {
-        const d = fmtDate(r.batch_date);
-        return (
-          <section key={r.id} className={s.tonight}>
-            <div className={s.tonightTop}>
-              <span className={s.tonightLabel}>今夜のレース · TONIGHT</span>
-              <span className={s.tonightLive}><span className={s.dot}>●</span> 20:00 MYT 発走</span>
-            </div>
-            <div className={s.tonightBody}>
-              <div>
-                <Countdown className={s.timer} />
-                <div className={s.tonightSub}>確定まで · {d.md} のレース</div>
-              </div>
-              <div className={s.tonightNote}>
-                <div>下位 <b>10.7%</b> が Burn</div>
-                <div>生存で価値上昇 · Day7でチャンピオン報酬</div>
-              </div>
-            </div>
-          </section>
-        );
-      })}
+      {/* あなたのレース記録(日付で遡れる審判アーカイブ) */}
+      <MyDerbyRecord />
 
-      {/* 完了したレース */}
+      {/* 確定したレース(全体・検証ページへ) */}
       <div>
-        <div className={s.secLabel}>完了したレース · COMPLETED</div>
+        <div className={s.secLabel}>確定したレース · FINALIZED</div>
         {completed.length > 0 ? (
           <div className={s.list}>
             {completed.map((r) => {
               const d = fmtDate(r.batch_date);
-              const b = statusBadge(r.status);
               return (
                 <Link key={r.id} href={`/races/${r.id}`} className={s.raceRow}>
                   <div className={s.raceDate}>
                     <div className={s.raceMd}>{d.md}</div>
                     <div className={s.raceYear}>{d.year}</div>
                   </div>
-                  <span className={`${s.badge} ${b.cls}`}>{b.label}</span>
+                  <span className={`${s.badge} ${s.stCompleted}`}>FINALIZED · 確定</span>
                   <div className={s.raceParts}>
                     出走 <b>{r.participant_count != null ? r.participant_count.toLocaleString('en-US') : '—'}</b> 頭
                   </div>
@@ -78,7 +52,7 @@ export function RacesView({ races }: { races: Race[] }) {
             })}
           </div>
         ) : (
-          <div className={s.empty}>完了したレースはまだありません。</div>
+          <div className={s.empty}>確定したレースはまだありません。</div>
         )}
       </div>
     </div>

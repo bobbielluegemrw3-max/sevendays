@@ -1,5 +1,6 @@
 import { raceNightNameV2 } from '@sevendays/domain';
 import { batchDateFor } from '@sevendays/shared';
+import { ApiError } from '../errors.js';
 import type { ApiRegistry } from '../router.js';
 
 /**
@@ -295,6 +296,158 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         personal,
         my_horse_names: myHorses.rows.map((r) => r.name),
         my_horses: myHorses.rows,
+      };
+    },
+  });
+
+  // あなたのレース記録(オーナー指示 2026-07-10): 日付ごとの自分の
+  // BURN(使用アイテム+ドロップ込み)/生存(DAY7込み)/P2P売却・購入/新規発行の
+  // アーカイブ — 審判演出の記録版。:date は 'latest' か YYYY-MM-DD。
+  // 相手ユーザーは Hall of Champions と同じマスク規則(R3)。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/daily-derby/my-results/:date',
+    auth: 'user',
+    handler: async (ctx) => {
+      const datesQ = await ctx.client.query<{ batch_date: string }>(
+        `select distinct b.batch_date::text as batch_date
+         from batch_runs b
+         join races r on r.batch_run_id = b.id
+         where r.status = 'FINALIZED'
+         order by batch_date desc
+         limit 30`,
+        [],
+      );
+      const dates = datesQ.rows.map((r) => r.batch_date);
+      const requested = ctx.params.date === 'latest' ? dates[0] : ctx.params.date;
+      const empty = { dates, burned: [], survived: [], sold: [], bought: [] };
+      if (!requested) return { date: null, ...empty };
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(requested)) {
+        throw new ApiError('VALIDATION_FAILED', 'date must be YYYY-MM-DD or latest');
+      }
+
+      const race = await ctx.client.query<{ id: string; batch_run_id: string }>(
+        `select r.id, r.batch_run_id
+         from races r join batch_runs b on b.id = r.batch_run_id
+         where b.batch_date = $1 and r.status = 'FINALIZED'
+         limit 1`,
+        [requested],
+      );
+      const raceRow = race.rows[0] ?? null;
+      if (!raceRow) return { date: requested, ...empty };
+
+      const mask = (email: string | null): string =>
+        !email
+          ? '—'
+          : email.endsWith('@user.sevendays')
+            ? 'ウォレットユーザー'
+            : `${email.slice(0, 2)}***`;
+
+      const burned = await ctx.client.query<{
+        name: string;
+        dna_hash: string;
+        day: number | null;
+        used_item_key: string | null;
+        drop_item_key: string | null;
+      }>(
+        `select h.name, h.dna_hash, s.current_day as day,
+                iu.item_key as used_item_key, ui.item_key as drop_item_key
+         from horse_burns hb
+         join horses h on h.id = hb.horse_id
+         left join race_participant_snapshots s on s.race_id = hb.race_id and s.horse_id = hb.horse_id
+         left join item_usages iu on iu.horse_id = hb.horse_id
+           and iu.effective_race_date = $2::date and iu.status <> 'CANCELLED'
+         left join user_items ui on ui.source_burn_event_id = hb.burn_event_id
+         where hb.race_id = $3 and hb.owner_user_id_at_snapshot = $1
+         order by h.name`,
+        [ctx.userId, requested, raceRow.id],
+      );
+
+      const survived = await ctx.client.query<{
+        name: string;
+        dna_hash: string;
+        from_day: number;
+      }>(
+        `select h.name, h.dna_hash, s.current_day as from_day
+         from race_participant_snapshots s
+         join horses h on h.id = s.horse_id
+         left join horse_burns hb on hb.race_id = s.race_id and hb.horse_id = s.horse_id
+         where s.race_id = $2 and s.owner_user_id = $1 and hb.id is null
+         order by s.current_day desc, h.name`,
+        [ctx.userId, raceRow.id],
+      );
+
+      const sold = await ctx.client.query<{
+        name: string;
+        dna_hash: string;
+        price: string;
+        day: number | null;
+        buyer_email: string | null;
+      }>(
+        `select h.name, h.dna_hash, a.assigned_price::text as price,
+                l.current_day as day, u.email as buyer_email
+         from ownership_assignments a
+         join horses h on h.id = a.horse_id
+         join users u on u.id = a.buyer_user_id
+         left join market_listings l on l.id = a.market_listing_id
+         where a.seller_user_id = $1 and a.status = 'SETTLED' and a.batch_run_id = $2
+         order by h.name`,
+        [ctx.userId, raceRow.batch_run_id],
+      );
+
+      const bought = await ctx.client.query<{
+        name: string;
+        dna_hash: string;
+        price: string;
+        day: number | null;
+        is_mint: boolean;
+        seller_email: string | null;
+      }>(
+        `select h.name, h.dna_hash, a.assigned_price::text as price,
+                coalesce(l.current_day, 0) as day,
+                (a.market_listing_id is null) as is_mint,
+                u.email as seller_email
+         from ownership_assignments a
+         join horses h on h.id = a.horse_id
+         left join users u on u.id = a.seller_user_id
+         left join market_listings l on l.id = a.market_listing_id
+         where a.buyer_user_id = $1 and a.status = 'SETTLED' and a.batch_run_id = $2
+         order by h.name`,
+        [ctx.userId, raceRow.batch_run_id],
+      );
+
+      return {
+        date: requested,
+        dates,
+        burned: burned.rows.map((r) => ({
+          name: r.name,
+          dna_hash: r.dna_hash,
+          day: r.day,
+          used_item_key: r.used_item_key,
+          drop_item_key: r.drop_item_key,
+        })),
+        survived: survived.rows.map((r) => ({
+          name: r.name,
+          dna_hash: r.dna_hash,
+          from_day: r.from_day,
+          to_day: Math.min(7, r.from_day + 1),
+          day7: r.from_day === 6,
+        })),
+        sold: sold.rows.map((r) => ({
+          name: r.name,
+          dna_hash: r.dna_hash,
+          price: r.price,
+          day: r.day,
+          counterpart: mask(r.buyer_email),
+        })),
+        bought: bought.rows.map((r) => ({
+          name: r.name,
+          dna_hash: r.dna_hash,
+          price: r.price,
+          day: r.day,
+          is_mint: r.is_mint,
+          counterpart: r.is_mint ? null : mask(r.seller_email),
+        })),
       };
     },
   });

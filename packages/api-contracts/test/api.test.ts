@@ -200,8 +200,10 @@ describe('user flow through the API', () => {
 describe('race transparency and admin surface after a real production day', () => {
   it('runs a mini production day, then reads it through the API', async () => {
     // three horses + one funded buyer
+    const horseOwners: string[] = [];
     for (let i = 0; i < 3; i += 1) {
       const owner = await newUser();
+      horseOwners.push(owner);
       await client.query(
         `insert into horses (owner_user_id, current_day, name, horse_type, rarity, dna_hash, dna_modifier,
                              horse_generation_version, mint_seed_hash, ability_json)
@@ -268,6 +270,34 @@ describe('race transparency and admin surface after a real production day', () =
     // buyer received a horse through the batch (P2P inventory was empty -> mint)
     const horses = await call('GET', '/api/v1/horses', asUser(buyer));
     expect((horses.body as { horses: unknown[] }).horses.length).toBeGreaterThanOrEqual(1);
+
+    // あなたのレース記録(オーナー指示 2026-07-10): 買い手には新規発行の入手が見える
+    const record = await call('GET', '/api/v1/daily-derby/my-results/latest', asUser(buyer));
+    expect(record.status).toBe(200);
+    const rec = record.body as {
+      date: string | null;
+      dates: string[];
+      burned: unknown[];
+      survived: unknown[];
+      sold: unknown[];
+      bought: { is_mint: boolean; counterpart: string | null; price: string }[];
+    };
+    expect(rec.date).toBe('2039-02-01');
+    expect(rec.dates).toContain('2039-02-01');
+    expect(rec.bought.length).toBeGreaterThanOrEqual(1);
+    expect(rec.bought[0]!.is_mint).toBe(true);
+    expect(rec.bought[0]!.counterpart).toBeNull();
+    // 出走した馬のオーナーには、その馬がBURNまたは生存のどちらかで必ず1件見える
+    const ownerRecord = await call(
+      'GET',
+      '/api/v1/daily-derby/my-results/2039-02-01',
+      asUser(horseOwners[0]!),
+    );
+    const oRec = ownerRecord.body as { burned: unknown[]; survived: unknown[] };
+    expect(oRec.burned.length + oRec.survived.length).toBe(1);
+    // 不正な日付は 400
+    const badDate = await call('GET', '/api/v1/daily-derby/my-results/not-a-date', asUser(buyer));
+    expect(badDate.status).toBe(400);
 
     // admin surface
     const admin = await newUser();
