@@ -26,10 +26,16 @@ function laneFor(name: string | undefined): number {
 export function DerbyRaceViz({
   progress,
   myName,
+  fullBleed = false,
+  spanSeconds = 13,
 }: {
-  /** 実走の進行 0..1(親が RACE_RUN から算出)。 */
+  /** 実走の進行 0..1(親が実走窓から算出)。 */
   progress: number;
   myName?: string | undefined;
+  /** 正典(daily-derby-show.html)どおりステージ全面をレースで満たすモード。 */
+  fullBleed?: boolean;
+  /** 実走窓の実秒数(停止検知の補間に使用)。 */
+  spanSeconds?: number;
 }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
   const propRef = useRef({ p: progress, at: 0 });
@@ -41,11 +47,10 @@ export function DerbyRaceViz({
     if (!cv) return;
     const ctx = cv.getContext('2d')!;
     let raf = 0;
-    const RACE_SECONDS = 13; // RACE_RUN.endAt - startAt
     const draw = (now: number) => {
       // prop が 1.6秒以上更新されていなければ時計停止中(QA一時停止) — 進めない
       const stale = now - propRef.current.at > 1600;
-      const p = Math.max(0, Math.min(1, propRef.current.p + (stale ? 0 : (now - propRef.current.at) / 1000 / RACE_SECONDS)));
+      const p = Math.max(0, Math.min(1, propRef.current.p + (stale ? 0 : (now - propRef.current.at) / 1000 / spanSeconds)));
       const w = cv.clientWidth;
       const h = cv.clientHeight;
       if (w > 0 && cv.width !== w) cv.width = w;
@@ -97,8 +102,18 @@ export function DerbyRaceViz({
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [youLane, myName]);
+  }, [youLane, myName, spanSeconds]);
 
+  if (fullBleed) {
+    return (
+      <div className={s.raceVizFull}>
+        <div className={s.raceVizFullHead}>
+          <span className={s.liveDot} /> RACE ENGINE — LIVE
+        </div>
+        <canvas ref={ref} className={s.raceCanvasFull} />
+      </div>
+    );
+  }
   return (
     <div className={s.raceViz}>
       <div className={s.raceVizHead}>

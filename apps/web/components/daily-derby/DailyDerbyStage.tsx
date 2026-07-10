@@ -8,7 +8,6 @@ import {
   LOGS_FROM,
   LOG_SECTIONS,
   MARKET_OPEN,
-  OPENING_STEPS,
   PRE_SHOW_SECONDS,
   RACE_RUN,
   SHOW_TOTAL,
@@ -19,7 +18,6 @@ import {
   type DerbyCounts,
   type DerbyNightResults,
   type LogTone,
-  type ShowStep,
 } from '@/lib/daily-derby';
 import type { DerbyConditionsView, MyDerbyHorse } from '@/lib/daily-derby';
 import { SegmentClock } from '@/components/daily-derby/SegmentClock';
@@ -517,82 +515,39 @@ function LiveShow({
       />
     );
   }
+  /* 正典(daily-derby-show.html)のレイヤー合成: ステージ全面のレースcanvasの上に
+     特大タイトル・LIVEバッジ・馬場1行が重なる。起動ターミナルは正典に無いため廃止。 */
+  const raceOn = elapsed >= TITLE_UNTIL;
+  const titleOn = elapsed < TITLE_UNTIL + 3.5;
   return (
-    <div>
-      <div className={s.liveTitle}>
-        <div className={s.liveRule} />
-        <div className={s.liveTitleText}>THE DAILY DERBY</div>
-        <div className={s.liveBadge}>
-          <span className={s.liveDot} />
-          LIVE
-        </div>
-        <div className={s.liveRule} />
-      </div>
-      {/* 起動ターミナルはレース開始前だけ。実走が始まったら実走ビジュアルに一本化して
-          高さ超過による見切れを防ぐ(ZIP2 崩れ修正③)。 */}
-      {elapsed >= TITLE_UNTIL && elapsed < RACE_RUN.startAt && (
-        <Terminal steps={OPENING_STEPS} elapsed={elapsed} counts={counts} />
-      )}
-      {/* 馬場発表(ZIP3 正典): 1行テキストを約3秒だけ一瞬表示。スタンプ演出は使わない。 */}
-      {conditions && elapsed >= TITLE_UNTIL + 0.5 && elapsed < TITLE_UNTIL + 3.5 && (
-        <div className={s.condFlash}>
-          <span className={s.condK}>天候</span>
-          <b style={{ color: CONDITION_COLORS[conditions.weather] }}>{conditions.weather_ja}</b>
-          <span className={s.condK}>/ 馬場</span>
-          <b style={{ color: CONDITION_COLORS[conditions.track] }}>{conditions.track_ja}</b>
-          <span className={s.condK}>/ コース</span>
-          <b style={{ color: CONDITION_COLORS[conditions.surface] }}>{conditions.surface_ja}</b>
-        </div>
-      )}
-      {elapsed >= RACE_RUN.startAt && (
+    <div className={s.showScene}>
+      {raceOn && (
         <DerbyRaceViz
-          progress={(elapsed - RACE_RUN.startAt) / (RACE_RUN.endAt - RACE_RUN.startAt)}
+          fullBleed
+          progress={(elapsed - TITLE_UNTIL) / (RACE_RUN.endAt - TITLE_UNTIL)}
+          spanSeconds={RACE_RUN.endAt - TITLE_UNTIL}
           myName={myHorses[0]?.name}
         />
       )}
-    </div>
-  );
-}
-
-function Terminal({
-  steps,
-  elapsed,
-  counts,
-}: {
-  steps: readonly ShowStep[];
-  elapsed: number;
-  counts: DerbyCounts;
-}) {
-  return (
-    <div className={s.terminal}>
-      {steps.map((step) => {
-        if (elapsed < step.startAt) return null;
-        const running = elapsed < step.startAt + step.duration;
-        const n = step.countKey ? counts[step.countKey] : undefined;
-        const doneLine = step.doneLine.replace('{n}', n === undefined ? '' : n.toLocaleString('en-US'));
-        const progress = step.progress
-          ? Math.min(1, (elapsed - step.startAt) / step.duration)
-          : null;
-        return (
-          <div key={step.key}>
-            <div className={`${s.tLine} ${running ? '' : s.tLineDone}`}>
-              {running ? (
-                <>
-                  <span className={s.tSpinner} />
-                  <span>{step.runLine}</span>
-                </>
-              ) : (
-                <span className={s.tCheck}>{doneLine}</span>
-              )}
-            </div>
-            {progress !== null && running && (
-              <div className={s.tProgress}>
-                <span style={{ width: `${Math.round(progress * 100)}%` }} />
-              </div>
-            )}
+      {titleOn && (
+        <div className={s.showCenter}>
+          <div className={s.showTitleBig}>THE DAILY DERBY</div>
+          <div className={s.liveBadge}>
+            <span className={s.liveDot} />
+            LIVE
           </div>
-        );
-      })}
+          {conditions && elapsed >= TITLE_UNTIL + 0.5 && (
+            <div className={s.condFlash}>
+              <span className={s.condK}>天候</span>
+              <b style={{ color: CONDITION_COLORS[conditions.weather] }}>{conditions.weather_ja}</b>
+              <span className={s.condK}>/ 馬場</span>
+              <b style={{ color: CONDITION_COLORS[conditions.track] }}>{conditions.track_ja}</b>
+              <span className={s.condK}>/ コース</span>
+              <b style={{ color: CONDITION_COLORS[conditions.surface] }}>{conditions.surface_ja}</b>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
