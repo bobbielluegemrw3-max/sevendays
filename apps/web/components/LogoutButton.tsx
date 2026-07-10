@@ -12,7 +12,7 @@ export function LogoutButton() {
         void supabaseBrowser()
           .auth.signOut()
           .then(() => {
-            router.push('/login');
+            router.push('/');
             router.refresh();
           });
       }}

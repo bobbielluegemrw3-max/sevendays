@@ -72,12 +72,13 @@ export async function serverApi<T>(
   return { status: response.status, body: response.body as T };
 }
 
-/** Like serverApi, but bounces unauthenticated visitors to /login. */
+/** Like serverApi, but bounces unauthenticated visitors to the landing page
+ * (Decision 083: /login is gone — every CTA there starts Google OAuth). */
 export async function serverApiOrLogin<T>(
   path: string,
   init: { method?: 'GET' | 'POST'; body?: unknown } = {},
 ): Promise<T> {
   const result = await serverApi<T>(path, init);
-  if (result.status === 401) redirect('/login');
+  if (result.status === 401) redirect('/');
   return result.body;
 }

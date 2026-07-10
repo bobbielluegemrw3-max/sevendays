@@ -100,18 +100,12 @@ export function GuideView() {
       <section id="register" className={`${s.sec} ${s.secGold}`}>
         <SecHead no="01" title="アカウント登録" icon="user" />
         <p className={s.p}>
-          ログイン方法は<b>3種類</b>。どれで始めても、あとから相互に連携できます
-          (例: メールで登録して、あとからMetaMaskを繋ぐ)。
+          ログインは<b>Googleアカウント</b>で行います。登録もログインも同じボタン、
+          パスワードは不要です。初回ログインであなたの厩舎が自動で開設されます。
         </p>
-        <div className={s.triad}>
-          <FBox icon="google" title="Google" desc="ワンクリックで開始" />
-          <FBox icon="wallet" title="MetaMask" desc="ウォレット署名で開始" />
-          <FBox icon="mail" title="メールアドレス" desc="メール+パスワード" />
-        </div>
-        <div className={s.mergeInto}><GuideIcon name="swap" /><span className={s.mergeLabel}>3つは1つのオーナーへ統合</span></div>
         <div className={`${s.fbox} ${s.fboxGold} ${s.fboxWide}`}>
-          <span className={s.fIconWrap}><GuideIcon name="user" /></span>
-          <div><div className={s.fT}>1つのオーナーアカウント</div><div className={s.fD}>残高・馬・履歴はすべて共通。アカウントページでいつでも連携を追加できます</div></div>
+          <span className={s.fIconWrap}><GuideIcon name="google" /></span>
+          <div><div className={s.fT}>Google でログイン</div><div className={s.fD}>残高・馬・履歴はすべてこの1つのオーナーアカウントに紐づきます</div></div>
         </div>
         <Tip>友人の紹介リンクから登録すると、その友人のTEAM(応援組織)に加わります(⑥参照)。</Tip>
       </section>

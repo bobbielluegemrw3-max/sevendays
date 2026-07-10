@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Countdown } from '@/components/Countdown';
 import { LocalPostTime, LocalRaceTime } from '@/components/LocalPostTime';
 import { LandingReveal } from '@/components/LandingReveal';
+import { GoogleLoginButton } from '@/components/GoogleLoginButton';
 import { DAY0_MINT_TOTAL_CHARGE, PRICE_TABLE_V1 } from '@sevendays/domain';
 import { pickShowcase } from '@/lib/horse-visual';
 import { pickNftShowcase } from '@/lib/nft-visual';
@@ -73,9 +74,7 @@ export function Landing() {
           <Link href="#collection">コレクション</Link>
           <Link href="#economy">エコノミー</Link>
         </div>
-        <Link href="/login" className={s.navCta}>
-          ログイン
-        </Link>
+        <GoogleLoginButton size="sm" label="Google でログイン" />
       </div>
 
       {/* ===== ① HERO ===== */}
@@ -97,9 +96,10 @@ export function Landing() {
             </p>
             <div className={s.hsub}>Provably fair. Fully replayable. No AI winners.</div>
             <div className={s.hbtns}>
-              <Link href="/login">
-                <button className={s.btnPrimary}>馬を迎える ▶</button>
-              </Link>
+              {/* ヒーローのデザインは変更禁止 — 見た目そのまま、動作だけGoogle直起動 */}
+              <GoogleLoginButton unstyled className={s.btnPrimary}>
+                馬を迎える ▶
+              </GoogleLoginButton>
               <Link href="#how">
                 <button className={s.btnGhost}>遊び方を見る</button>
               </Link>
@@ -173,9 +173,7 @@ export function Landing() {
               <div className={s.s}>
                 <LocalPostTime />
               </div>
-              <Link href="/login">
-                <button style={{ width: '100%' }}>レースに参加する</button>
-              </Link>
+              <GoogleLoginButton label="Google でレースに参加" />
             </div>
             {/* provably fair trust card */}
             <div className={s.trustCard}>
@@ -646,18 +644,14 @@ export function Landing() {
                     </div>
                     <span className={s.last}>DAY {day}</span>
                   </div>
-                  <Link href="/login">
-                    <button style={{ background: f.frameGrad }}>ログインして購入</button>
-                  </Link>
+                  <GoogleLoginButton label="Google で購入" className={`${s.galGoogle}`} />
                 </div>
               </div>
             );
           })}
         </div>
         <div className={s.colMore}>
-          <Link href="/login">
-            <button>すべての出品を見る →</button>
-          </Link>
+          <GoogleLoginButton unstyled>すべての出品を見る →</GoogleLoginButton>
         </div>
       </LandingReveal>
 
@@ -743,36 +737,11 @@ export function Landing() {
               厩舎のオーナーだ。
             </h2>
             <div>
-              <Link href="/login" className={s.finalCta}>
-                厩舎を持つ
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </Link>
+              <GoogleLoginButton size="lg" label="Google で厩舎を持つ" />
             </div>
-            <div className={s.methods}>
-              <span className={s.m}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="6" width="20" height="13" rx="2.5" />
-                  <path d="M16 12h2" />
-                </svg>
-                ウォレット
-              </span>
-              <span className={s.m}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 8v8M8 12h8" />
-                </svg>
-                Google
-              </span>
-              <span className={s.m}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="5" width="18" height="14" rx="2.5" />
-                  <path d="M4 7l8 6 8-6" />
-                </svg>
-                メール
-              </span>
-            </div>
+            <p className={s.p} style={{ margin: '18px 0 0', maxWidth: 'none' }}>
+              Googleアカウントで、すぐに始められます。
+            </p>
             <div className={s.fine}>USDT · POLYGON · PROVABLY FAIR</div>
           </div>
 
