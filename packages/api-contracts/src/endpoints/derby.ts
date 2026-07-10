@@ -268,6 +268,26 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         }
       }
 
+      // ADR-012: ショー最終幕で発表する「明日の予報」(今夜のバッチがコミット済みの場合)。
+      const fc = await ctx.client.query<{
+        forecast_weather: string;
+        forecast_track: string;
+        forecast_surface: string;
+      }>(
+        `select forecast_weather::text as forecast_weather,
+                forecast_track::text as forecast_track,
+                forecast_surface::text as forecast_surface
+         from night_forecasts where forecast_date = $1::date + 1`,
+        [today],
+      );
+      const tomorrowForecast = fc.rows[0]
+        ? {
+            weather: fc.rows[0].forecast_weather,
+            track: fc.rows[0].forecast_track,
+            surface: fc.rows[0].forecast_surface,
+          }
+        : null;
+
       // For the YOU-highlight in the log flood (owner plan A).
       const myHorses = await ctx.client.query<{ name: string; dna_hash: string; current_day: number }>(
         `select name, dna_hash, current_day from horses where owner_user_id = $1 and status = 'ACTIVE' limit 200`,
@@ -296,6 +316,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         personal,
         my_horse_names: myHorses.rows.map((r) => r.name),
         my_horses: myHorses.rows,
+        tomorrow_forecast: tomorrowForecast,
       };
     },
   });
@@ -496,11 +517,13 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         weather: string | null;
         track_condition: string | null;
         surface: string | null;
+        burn_rate: string | null;
       }>(
         `select b.batch_date::text as date, r.id as race_id,
                 r.participant_count as participants,
                 r.weather::text as weather, r.track_condition::text as track_condition,
                 r.surface::text as surface,
+                r.burn_rate::text as burn_rate,
                 (select count(*)::int from horse_burns hb where hb.race_id = r.id) as burned,
                 (select count(*)::int from race_participant_snapshots s
                    left join horse_burns hb2 on hb2.race_id = s.race_id and hb2.horse_id = s.horse_id

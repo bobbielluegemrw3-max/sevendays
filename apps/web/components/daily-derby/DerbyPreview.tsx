@@ -7,6 +7,7 @@ import {
   PRE_SHOW_SECONDS,
   SHOW_TOTAL,
   fixtureConditions,
+  fixtureForecast,
   fixtureMyHorses,
   fixtureNightResults,
 } from '@/lib/daily-derby';
@@ -220,6 +221,7 @@ export function DerbyPreview() {
         tonightVariant={tonightVariant}
         debugVerdict={debugVerdict}
         conditions={fixtureConditions(new Date().toISOString().slice(0, 10))}
+        tomorrowForecast={fixtureForecast(new Date().toISOString().slice(0, 10))}
       />
 
       <p className="faint" style={{ fontSize: '0.78rem', marginTop: '0.8rem' }}>

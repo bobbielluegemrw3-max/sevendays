@@ -33,6 +33,7 @@ interface DerbyStatus {
   personal: unknown;
   my_horse_names: string[];
   my_horses?: { name: string; dna_hash: string; current_day: number }[];
+  tomorrow_forecast?: { weather: string; track: string; surface: string } | null;
 }
 
 export function DerbyLive() {
@@ -131,6 +132,9 @@ export function DerbyLive() {
         currentDay: h.current_day,
       }))}
       conditions={status.conditions ? conditionsView(status.conditions) : null}
+      tomorrowForecast={
+        status.tomorrow_forecast ? conditionsView({ ...status.tomorrow_forecast, night_name: null }) : null
+      }
     />
   );
 }

@@ -26,6 +26,8 @@ interface LedgerDay {
   weather: string | null;
   track_condition: string | null;
   surface: string | null;
+  /** その夜に採用されたBURN率(ADR-012ジッター後の実効率・シードから検証可能)。 */
+  burn_rate: string | null;
 }
 
 interface LedgerTrade {
@@ -102,8 +104,8 @@ export function LedgerView() {
     if (!days || !viewMonth) return;
     const rows = days.filter((d) => d.date.startsWith(viewMonth)).sort((a, b) => a.date.localeCompare(b.date));
     downloadCsv(`sevendays-ledger-${viewMonth}.csv`, [
-      ['date', 'participants', 'survived', 'burned', 'day7_cleared', 'p2p_matched', 'matched_volume_usdt', 'day0_mints', 'weather', 'track', 'surface'],
-      ...rows.map((d) => [d.date, d.participants, d.survived, d.burned, d.day7, d.matched, d.matched_volume, d.mints, d.weather, d.track_condition, d.surface]),
+      ['date', 'participants', 'survived', 'burned', 'burn_rate', 'day7_cleared', 'p2p_matched', 'matched_volume_usdt', 'day0_mints', 'weather', 'track', 'surface'],
+      ...rows.map((d) => [d.date, d.participants, d.survived, d.burned, d.burn_rate, d.day7, d.matched, d.matched_volume, d.mints, d.weather, d.track_condition, d.surface]),
     ]);
   }, [days, viewMonth]);
 
@@ -193,6 +195,12 @@ export function LedgerView() {
               <div className={`${s.tStat} ${s.tTrade}`}><span className={s.tStatN}>{day.matched.toLocaleString('en-US')}</span><span className={s.tStatK}>成約</span></div>
               <div className={`${s.tStat} ${s.tTrade}`}><span className={s.tStatN}>{Number(day.matched_volume).toLocaleString('en-US')}</span><span className={s.tStatK}>成約総額 USDT</span></div>
               <div className={s.tStat}><span className={s.tStatN}>{day.mints.toLocaleString('en-US')}</span><span className={s.tStatK}>新規発行</span></div>
+              {day.burn_rate && (
+                <div className={`${s.tStat} ${s.tBurn}`}>
+                  <span className={s.tStatN}>{(Number(day.burn_rate) * 100).toFixed(2)}%</span>
+                  <span className={s.tStatK}>採用BURN率(シード由来)</span>
+                </div>
+              )}
             </div>
             <div className={s.digestStep}>
               <button type="button" className={s.stepBtn} onClick={() => void downloadDaily()} disabled={busy}>

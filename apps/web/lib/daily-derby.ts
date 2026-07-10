@@ -363,6 +363,11 @@ export function conditionsView(c: {
   };
 }
 
+/** プレビュー用: 「明日の予報」(ADR-012・ショー最終幕)。実結線はAPIのtomorrow_forecast。 */
+export function fixtureForecast(dateISO: string): DerbyConditionsView {
+  return fixtureConditions(`fc:${dateISO}`);
+}
+
 /** プレビュー用: 日付から決定論的に条件を作る(毎晩変わる)。 */
 export function fixtureConditions(dateISO: string): DerbyConditionsView {
   let h = 2166136261;

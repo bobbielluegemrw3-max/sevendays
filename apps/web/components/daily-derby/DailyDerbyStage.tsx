@@ -64,6 +64,8 @@ export interface DailyDerbyStageProps {
   myHorses?: readonly MyDerbyHorse[];
   /** 当夜のレース条件(Decision 082)。タイトル直後に一瞬テキスト表示する。 */
   conditions?: DerbyConditionsView | null;
+  /** 明日の予報(ADR-012)。ショー最終幕(YOUR RESULTSの後)で発表する。 */
+  tomorrowForecast?: DerbyConditionsView | null;
   /** 視覚QA専用: マウント時に審判を強制表示(プレビューのみ使用)。 */
   debugVerdict?: 'burn' | 'survive' | 'day7' | 'match_sell' | 'match_buy' | undefined;
   /** 出走馬カードの案切替(検討用 2026-07-10): 0=現行チップ / 1=出走カード / 2=パドック。 */
@@ -117,6 +119,7 @@ export function DailyDerbyStage({
   hoofbeatsSrc = '/sounds/hoofbeats.mp3',
   myHorses = [],
   conditions = null,
+  tomorrowForecast = null,
   debugVerdict,
   tonightVariant = 1,
   myHorseNames = [],
@@ -423,7 +426,7 @@ export function DailyDerbyStage({
             onMine={playOwnLine}
           />
         ) : (
-          <PersonalOrDone night={nightResults} />
+          <PersonalOrDone night={nightResults} forecast={tomorrowForecast} />
         )}
       </div>
 
@@ -889,7 +892,32 @@ function LogPhase({
 /* ショーの最後 = その夜の自分の全結果(オーナー指示 2026-07-11:
    審判で1頭ずつ流れた結果を、代表1件ではなく全件のサマリーで締める。
    同じデータが /races「あなたのレース記録」に残り続ける)。 */
-function PersonalOrDone({ night }: { night: DerbyNightResults | null }) {
+/* ADR-012 ショー最終幕: 明日の予報(的中率70%の参考情報)。
+   毎晩レースを見る理由と「明日の予報なんだった?」の会話を作る(オーナー §7-4)。 */
+function TomorrowForecast({ forecast }: { forecast: DerbyConditionsView }) {
+  return (
+    <div className={s.fcWrap}>
+      <div className={s.fcK}>— 明日の予報 —</div>
+      <div className={s.fcRow}>
+        <span className={s.condK}>天候</span>
+        <b style={{ color: CONDITION_COLORS[forecast.weather] }}>{forecast.weather_ja}</b>
+        <span className={s.condK}>/ 馬場</span>
+        <b style={{ color: CONDITION_COLORS[forecast.track] }}>{forecast.track_ja}</b>
+        <span className={s.condK}>/ コース</span>
+        <b style={{ color: CONDITION_COLORS[forecast.surface] }}>{forecast.surface_ja}</b>
+      </div>
+      <div className={s.fcNote}>予報は参考情報です(的中率70%の演出)。結果を保証するものではありません。</div>
+    </div>
+  );
+}
+
+function PersonalOrDone({
+  night,
+  forecast,
+}: {
+  night: DerbyNightResults | null;
+  forecast: DerbyConditionsView | null;
+}) {
   if (night && nightResultsCount(night) > 0) {
     return (
       <div className={`${s.nightSum} ${s.nightSumIn}`}>
@@ -900,14 +928,18 @@ function PersonalOrDone({ night }: { night: DerbyNightResults | null }) {
         </div>
         <NightResultsList results={night} />
         <div className={s.nightSumNote}>この結果はレースページの「あなたのレース記録」でいつでも見返せます。</div>
+        {forecast && <TomorrowForecast forecast={forecast} />}
       </div>
     );
   }
   return (
-    <div className={s.doneBanner}>
-      <div className={s.liveRule} />
-      <div className={s.doneText}>TODAY RACE END</div>
-      <div className={s.liveRule} />
+    <div>
+      <div className={s.doneBanner}>
+        <div className={s.liveRule} />
+        <div className={s.doneText}>TODAY RACE END</div>
+        <div className={s.liveRule} />
+      </div>
+      {forecast && <TomorrowForecast forecast={forecast} />}
     </div>
   );
 }
