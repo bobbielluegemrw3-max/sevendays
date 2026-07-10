@@ -179,7 +179,7 @@ export function Landing() {
                   03
                 </div>
                 <div className={s.t}>生存 or Burn</div>
-                <div className={s.d}>1日1回レース開催。毎晩1回、存在する全ての馬が一斉にレース出走。出走結果の下位約10%の馬はBurnで消滅。生き残り馬は価値が高まり翌日のレースへ。</div>
+                <div className={s.d}>1日1回レース開催。毎晩1回、存在する全ての馬が一斉にレース出走。成績下位の馬はBurnで消滅(全記録は台帳で公開)。生き残り馬は価値が高まり翌日のレースへ。</div>
               </div>
               <div className={s.step}>
                 <div className={s.no} style={{ color: '#c6ff3a' }}>
