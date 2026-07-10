@@ -100,20 +100,20 @@ export interface LogSection {
   rate: number;
 }
 
-/* 流量は正典 daily-derby-show.html 準拠(毎秒 約1.6〜2行のゆったりした流れ)。
-   旧: 毎秒14〜20行の滝 — プレビューと全く違うとオーナー指摘(2026-07-10)。 */
+/* 流量はオーナー承認の案A(2026-07-10): 毎秒約6行 —
+   旧の滝(14〜20行/秒)ほど激しくなく、正典(約1.6行/秒)より活気のある中間。 */
 export const LOG_SECTIONS: readonly LogSection[] = [
-  { key: 'BURN', tone: 'burn', header: '═══ BURN RESOLUTION ═══', startAt: 30, endAt: 40, rate: 1.8 },
-  { key: 'SURVIVE', tone: 'survive', header: '═══ SURVIVORS ═══', startAt: 40, endAt: 50, rate: 2 },
-  { key: 'VALUE', tone: 'value', header: '═══ VALUE PROGRESSION ═══', startAt: 50, endAt: 58, rate: 1.8 },
-  { key: 'DAY7', tone: 'day7', header: '═══ DAY7 CLEAR ═══', startAt: 58, endAt: 62, rate: 1.5 },
+  { key: 'BURN', tone: 'burn', header: '═══ BURN RESOLUTION ═══', startAt: 30, endAt: 40, rate: 6 },
+  { key: 'SURVIVE', tone: 'survive', header: '═══ SURVIVORS ═══', startAt: 40, endAt: 50, rate: 6 },
+  { key: 'VALUE', tone: 'value', header: '═══ VALUE PROGRESSION ═══', startAt: 50, endAt: 58, rate: 5 },
+  { key: 'DAY7', tone: 'day7', header: '═══ DAY7 CLEAR ═══', startAt: 58, endAt: 62, rate: 2.5 },
   { key: 'RACE_END', tone: 'end', header: '═══ RACE TURN COMPLETE ═══', startAt: 62, endAt: 62.2, rate: 0 },
-  { key: 'LIST', tone: 'list', header: '═══ P2P MARKETPLACE — SELL ORDERS ═══', startAt: 66, endAt: 72, rate: 2 },
-  { key: 'BID', tone: 'bid', header: '═══ P2P MARKETPLACE — BUY ORDERS ═══', startAt: 72, endAt: 78, rate: 2 },
-  { key: 'MATCH', tone: 'match', header: '═══ P2P MATCHING ═══', startAt: 78, endAt: 85, rate: 2 },
-  { key: 'MINT', tone: 'mint', header: '═══ DAY0 NEW HORSES ═══', startAt: 85, endAt: 90, rate: 1.8 },
-  { key: 'MLM', tone: 'mlm', header: '═══ SUPPORT BONUS ═══', startAt: 90, endAt: 93.5, rate: 2 },
-  { key: 'ITEM', tone: 'item', header: '═══ REVENGE BUFF DROPS ═══', startAt: 93.5, endAt: 96.5, rate: 2 },
+  { key: 'LIST', tone: 'list', header: '═══ P2P MARKETPLACE — SELL ORDERS ═══', startAt: 66, endAt: 72, rate: 6 },
+  { key: 'BID', tone: 'bid', header: '═══ P2P MARKETPLACE — BUY ORDERS ═══', startAt: 72, endAt: 78, rate: 6 },
+  { key: 'MATCH', tone: 'match', header: '═══ P2P MATCHING ═══', startAt: 78, endAt: 85, rate: 6 },
+  { key: 'MINT', tone: 'mint', header: '═══ DAY0 NEW HORSES ═══', startAt: 85, endAt: 90, rate: 5 },
+  { key: 'MLM', tone: 'mlm', header: '═══ SUPPORT BONUS ═══', startAt: 90, endAt: 93.5, rate: 6 },
+  { key: 'ITEM', tone: 'item', header: '═══ REVENGE BUFF DROPS ═══', startAt: 93.5, endAt: 96.5, rate: 6 },
 ] as const;
 
 export const LOGS_FROM = 30;

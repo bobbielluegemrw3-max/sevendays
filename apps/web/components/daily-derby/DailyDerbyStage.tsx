@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  OPENING_STEPS,
   ALERT_SECONDS,
   COMPLETE_AT,
   FIXTURE_COUNTS,
@@ -18,6 +19,7 @@ import {
   type DerbyCounts,
   type DerbyNightResults,
   type LogTone,
+  type ShowStep,
 } from '@/lib/daily-derby';
 import type { DerbyConditionsView, MyDerbyHorse } from '@/lib/daily-derby';
 import { SegmentClock } from '@/components/daily-derby/SegmentClock';
@@ -29,7 +31,6 @@ import {
   type VerdictInfo,
 } from '@/components/daily-derby/DerbyVerdict';
 import { NightResultsList, nightResultsCount } from '@/components/daily-derby/NightResultsList';
-import { DerbyRaceViz } from '@/components/daily-derby/DerbyRaceViz';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { DailyDerbyFailureState } from '@/components/daily-derby/DailyDerbyFailureState';
@@ -84,9 +85,15 @@ const CHAPTER_SECONDS = 1.4;
 /* ⑦点呼モード: 出走がこの頭数未満の「静かな夜」は濁流を1頭ずつの点呼に切替。 */
 const QUIET_NIGHT_HORSES = 500;
 
-/* 実走スプリントの実尺(正典 daily-derby-show.html は約9.5秒で駆け抜ける)。
-   ゲート音(RACE_RUN.startAt=17秒)と同時に一斉スタート→9.5秒でゴール。 */
-const RACE_SPRINT_SECONDS = 9.5;
+/* 一番最初のバージョンの起動ターミナル最終ステップ(絵文字なし)。 */
+const RACE_STEP: ShowStep = {
+  key: 'RACE',
+  runLine: 'Running Race Engine...',
+  doneLine: '✓ Race Completed',
+  startAt: RACE_RUN.startAt,
+  duration: RACE_RUN.endAt - RACE_RUN.startAt,
+  progress: true,
+};
 
 /* ④動く数字: 実バッチ値へ向かう ease-out 補間(表示専用・途中参加でも正値)。 */
 const easeOut = (x: number): number => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
@@ -519,39 +526,75 @@ function LiveShow({
       />
     );
   }
-  /* 正典(daily-derby-show.html)のレイヤー合成: ステージ全面のレースcanvasの上に
-     特大タイトル・LIVEバッジ・馬場1行が重なる。起動ターミナルは正典に無いため廃止。 */
-  const raceOn = elapsed >= TITLE_UNTIL;
-  const titleOn = elapsed < TITLE_UNTIL + 3.5;
+  /* オーナー指示(2026-07-10): ドット走行canvasは廃止し、一番最初のバージョン
+     (タイトル+起動ターミナル)へ戻す。天候テキストは現行の色分き1行のまま。 */
   return (
-    <div className={s.showScene}>
-      {raceOn && (
-        <DerbyRaceViz
-          fullBleed
-          progress={(elapsed - RACE_RUN.startAt) / RACE_SPRINT_SECONDS}
-          spanSeconds={RACE_SPRINT_SECONDS}
-          myName={myHorses[0]?.name}
-        />
+    <div>
+      <div className={s.liveTitle}>
+        <div className={s.liveRule} />
+        <div className={s.liveTitleText}>THE DAILY DERBY</div>
+        <div className={s.liveBadge}>
+          <span className={s.liveDot} />
+          LIVE
+        </div>
+        <div className={s.liveRule} />
+      </div>
+      {elapsed >= TITLE_UNTIL && (
+        <Terminal steps={[...OPENING_STEPS, RACE_STEP]} elapsed={elapsed} counts={counts} />
       )}
-      {titleOn && (
-        <div className={s.showCenter}>
-          <div className={s.showTitleBig}>THE DAILY DERBY</div>
-          <div className={s.liveBadge}>
-            <span className={s.liveDot} />
-            LIVE
-          </div>
-          {conditions && elapsed >= TITLE_UNTIL + 0.5 && (
-            <div className={s.condFlash}>
-              <span className={s.condK}>天候</span>
-              <b style={{ color: CONDITION_COLORS[conditions.weather] }}>{conditions.weather_ja}</b>
-              <span className={s.condK}>/ 馬場</span>
-              <b style={{ color: CONDITION_COLORS[conditions.track] }}>{conditions.track_ja}</b>
-              <span className={s.condK}>/ コース</span>
-              <b style={{ color: CONDITION_COLORS[conditions.surface] }}>{conditions.surface_ja}</b>
-            </div>
-          )}
+      {conditions && elapsed >= TITLE_UNTIL + 0.5 && elapsed < TITLE_UNTIL + 3.5 && (
+        <div className={s.condFlash}>
+          <span className={s.condK}>天候</span>
+          <b style={{ color: CONDITION_COLORS[conditions.weather] }}>{conditions.weather_ja}</b>
+          <span className={s.condK}>/ 馬場</span>
+          <b style={{ color: CONDITION_COLORS[conditions.track] }}>{conditions.track_ja}</b>
+          <span className={s.condK}>/ コース</span>
+          <b style={{ color: CONDITION_COLORS[conditions.surface] }}>{conditions.surface_ja}</b>
         </div>
       )}
+    </div>
+  );
+}
+
+function Terminal({
+  steps,
+  elapsed,
+  counts,
+}: {
+  steps: readonly ShowStep[];
+  elapsed: number;
+  counts: DerbyCounts;
+}) {
+  return (
+    <div className={s.terminal}>
+      {steps.map((step) => {
+        if (elapsed < step.startAt) return null;
+        const running = elapsed < step.startAt + step.duration;
+        const n = step.countKey ? counts[step.countKey] : undefined;
+        const doneLine = step.doneLine.replace('{n}', n === undefined ? '' : n.toLocaleString('en-US'));
+        const progress = step.progress
+          ? Math.min(1, (elapsed - step.startAt) / step.duration)
+          : null;
+        return (
+          <div key={step.key}>
+            <div className={`${s.tLine} ${running ? '' : s.tLineDone}`}>
+              {running ? (
+                <>
+                  <span className={s.tSpinner} />
+                  <span>{step.runLine}</span>
+                </>
+              ) : (
+                <span className={s.tCheck}>{doneLine}</span>
+              )}
+            </div>
+            {progress !== null && running && (
+              <div className={s.tProgress}>
+                <span style={{ width: `${Math.round(progress * 100)}%` }} />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
