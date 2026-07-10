@@ -1,6 +1,6 @@
 import { newUuid, generateSecureSeedHex, sha256Hex, Money } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import type { EconomyStatus } from '@sevendays/domain';
+import { deriveNightForecastV1, type EconomyStatus } from '@sevendays/domain';
 import {
   computeEconomyMetrics,
   currentEconomyStatus,
@@ -124,6 +124,19 @@ export function buildProductionHandlers(): StepHandlers {
     // commit and escrow are created atomically with the race: a race can
     // never exist without a committed seed hash.
     CREATE_RACES: async (ctx) => {
+      // ADR-012: 翌夜の条件シードを先にコミットする(予報の後出し防止)。
+      // 冪等(forecast_dateユニーク) — リトライ・再開でも1日1行。
+      {
+        const fseed = generateSecureSeedHex();
+        const { forecast } = deriveNightForecastV1(fseed);
+        await ctx.client.query(
+          `insert into night_forecasts
+             (forecast_date, seed, commit_hash, forecast_weather, forecast_track, forecast_surface)
+           values ($1::date + 1, $2, $3, $4::weather, $5::track_condition, $6::surface)
+           on conflict (forecast_date) do nothing`,
+          [ctx.batchDate, fseed, sha256Hex(fseed), forecast.weather, forecast.track, forecast.surface],
+        );
+      }
       const existing = await ctx.client.query<{ id: string }>(
         `select id from races where batch_run_id = $1`,
         [ctx.batchRunId],
@@ -197,6 +210,12 @@ export function buildProductionHandlers(): StepHandlers {
     // Step 9 — reveal: move the seed from escrow into the public commit row
     // (the DB trigger verifies SHA-256(seed) == commit_hash).
     REVEAL_RACE_SEEDS: async (ctx) => {
+      // ADR-012: 今夜の条件を決めた予報シードもレース後に公開扱いへ(冪等)。
+      await ctx.client.query(
+        `update night_forecasts set revealed_at = coalesce(revealed_at, now())
+          where forecast_date = $1::date`,
+        [ctx.batchDate],
+      );
       const raceId = await raceForBatch(ctx.client, ctx.batchRunId);
       const escrow = await ctx.client.query<{ seed: string }>(
         `select seed from race_seed_escrow where race_id = $1`,
@@ -539,8 +558,22 @@ export async function verifyReplayInputs(
     [raceId],
   );
 
-  const expectedWeather = deriveWeather(seed, raceEngineVersion);
-  const expectedTrack = deriveTrackCondition(seed, raceEngineVersion);
+  // ADR-012: 条件シード(night_forecasts)がある夜は、環境の再導出もそのシードから。
+  const fc = await client.query<{ seed: string }>(
+    `select nf.seed from night_forecasts nf
+     join batch_runs b on b.batch_date = nf.forecast_date
+     join races r on r.batch_run_id = b.id
+     where r.id = $1`,
+    [raceId],
+  );
+  const expectedEnv = fc.rows[0]
+    ? deriveNightForecastV1(fc.rows[0].seed).actual
+    : {
+        weather: deriveWeather(seed, raceEngineVersion),
+        track: deriveTrackCondition(seed, raceEngineVersion),
+      };
+  const expectedWeather = expectedEnv.weather;
+  const expectedTrack = expectedEnv.track;
 
   for (const snap of snapshots.rows) {
     if (snap.weather !== expectedWeather || snap.track_condition !== expectedTrack) {

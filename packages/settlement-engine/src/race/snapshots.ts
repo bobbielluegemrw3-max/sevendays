@@ -3,6 +3,7 @@ import type { SqlClient } from '@sevendays/shared';
 import {
   ABILITY_WEIGHTS_V1,
   ITEM_POLICY_VERSION_V2,
+  deriveNightForecastV1,
   type AbilityName,
   type HorseType,
   type Rarity,
@@ -67,11 +68,23 @@ export async function createParticipantSnapshots(
   client: SqlClient,
   input: CreateSnapshotsInput,
 ): Promise<number> {
-  const weather = deriveWeather(input.raceSeed, input.raceEngineVersion);
-  const track = deriveTrackCondition(input.raceSeed, input.raceEngineVersion);
-  // Race conditions v2 (Decision 082): item effectiveness follows tonight's
-  // weather x track x surface — seed commit-reveal, all three on races.
-  const surface = deriveSurface(input.raceSeed, input.raceEngineVersion);
+  // ADR-012: 前夜にコミット済みの条件シード(night_forecasts)があれば、そこから
+  // 実際の条件を導出する(予報との70%結合のため同一シードが必須)。行が無い日
+  // (初日・移行期)は従来どおりレースシード由来 — 後方互換のフォールバック。
+  const fc = await client.query<{ seed: string }>(
+    `select seed from night_forecasts where forecast_date = $1::date`,
+    [input.batchDate],
+  );
+  const derived = fc.rows[0]
+    ? deriveNightForecastV1(fc.rows[0].seed).actual
+    : {
+        weather: deriveWeather(input.raceSeed, input.raceEngineVersion),
+        track: deriveTrackCondition(input.raceSeed, input.raceEngineVersion),
+        surface: deriveSurface(input.raceSeed, input.raceEngineVersion),
+      };
+  const weather = derived.weather;
+  const track = derived.track;
+  const surface = derived.surface;
   const conditions = { weather, track, surface } as const;
   await client.query(
     `update races set weather = $2, track_condition = $3, surface = $4 where id = $1`,
