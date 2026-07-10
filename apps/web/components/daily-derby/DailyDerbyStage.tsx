@@ -23,7 +23,13 @@ import {
 } from '@/lib/daily-derby';
 import type { DerbyConditionsView, MyDerbyHorse } from '@/lib/daily-derby';
 import { SegmentClock } from '@/components/daily-derby/SegmentClock';
-import { DerbyVerdict, fixtureDropKey, fixtureUsedItemKey, type VerdictInfo } from '@/components/daily-derby/DerbyVerdict';
+import {
+  DerbyVerdict,
+  fixtureDropKey,
+  fixtureMaskedEmail,
+  fixtureUsedItemKey,
+  type VerdictInfo,
+} from '@/components/daily-derby/DerbyVerdict';
 import { DailyDerbyPersonalResult } from '@/components/daily-derby/DailyDerbyPersonalResult';
 import { DailyDerbyFailureState } from '@/components/daily-derby/DailyDerbyFailureState';
 import s from '../../app/daily-derby.module.css';
@@ -55,7 +61,7 @@ export interface DailyDerbyStageProps {
   /** 当夜のレース条件(Decision 082)。タイトル直後に一瞬テキスト表示する。 */
   conditions?: DerbyConditionsView | null;
   /** 視覚QA専用: マウント時に審判を強制表示(プレビューのみ使用)。 */
-  debugVerdict?: 'burn' | 'survive' | 'day7' | undefined;
+  debugVerdict?: 'burn' | 'survive' | 'day7' | 'match_sell' | 'match_buy' | undefined;
 }
 
 /* レース条件の値ごとの色(全部同色だと読み分けられない — オーナー指摘 2026-07-10)。 */
@@ -82,22 +88,43 @@ export function DailyDerbyStage({
   const [soundOn, setSoundOn] = useState(true);
   const effectiveNames = myHorses.length > 0 ? myHorses.map((h) => h.name) : myHorseNames;
   const [verdict, setVerdict] = useState<VerdictInfo | null>(null);
-  const verdictDone = useRef(false);
+  const [verdictQueued, setVerdictQueued] = useState(0);
+  /* 審判キュー: 複数馬・複数P2P成立でも1件ずつ順番に見せる(オーナー承認の方式)。 */
+  const verdictQueue = useRef<VerdictInfo[]>([]);
+  const verdictShowing = useRef(false);
+  const verdictTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seenVerdicts = useRef<Set<string>>(new Set());
+  const debugActive = useRef(false);
   useEffect(() => {
     if (!debugVerdict) {
       // ボタンで閉じた/ジャンプした: 強制表示を解除し、通常再生の審判は再度出せる
+      debugActive.current = false;
       setVerdict(null);
-      verdictDone.current = false;
+      setVerdictQueued(0);
+      verdictQueue.current = [];
+      verdictShowing.current = false;
+      if (verdictTimer.current) clearTimeout(verdictTimer.current);
+      verdictTimer.current = null;
+      seenVerdicts.current.clear();
       return;
     }
-    verdictDone.current = true;
+    // デバッグ中は自然再生のキュー/タイマーを止める(3.2秒で消える競合の防止)
+    debugActive.current = true;
+    if (verdictTimer.current) clearTimeout(verdictTimer.current);
+    verdictTimer.current = null;
+    verdictQueue.current = [];
+    setVerdictQueued(0);
+    verdictShowing.current = true;
     const horse = myHorses[0];
+    const kind = debugVerdict === 'match_sell' || debugVerdict === 'match_buy' ? 'match' : debugVerdict;
     setVerdict({
       name: horse?.name ?? 'Test Horse',
-      kind: debugVerdict,
+      kind,
       horse,
       dropKey: debugVerdict === 'burn' ? 'spirit_roar' : null,
       usedItemKey: debugVerdict === 'burn' ? 'rain_hood' : null,
+      matchSide: debugVerdict === 'match_sell' ? 'sell' : debugVerdict === 'match_buy' ? 'buy' : undefined,
+      counterpart: kind === 'match' ? 'k*****i@gmail.com' : undefined,
     });
     // QA表示は自動では消さない(スクリーンショットのため)。myHorsesは意図的に依存から除外。
   }, [debugVerdict]);
@@ -151,29 +178,63 @@ export function DailyDerbyStage({
     [soundOn, failed, getAudio],
   );
 
-  /* 自分該当行(DERBY_DRAMA): 最初の審判対象行(BURN/生存/DAY7)は
-     自分の馬の実NFTアートを見せるオーバーレイ。以降の該当行はチャイムのみ。 */
+  /* 審判キューの再生: 先頭を表示→表示時間後に次へ(空になったら閉じる)。 */
+  const showNextVerdict = useCallback(() => {
+    const next = verdictQueue.current.shift() ?? null;
+    setVerdict(next);
+    setVerdictQueued(verdictQueue.current.length);
+    if (!next) {
+      verdictShowing.current = false;
+      verdictTimer.current = null;
+      return;
+    }
+    verdictShowing.current = true;
+    playOneShot(next.kind === 'burn' ? 'ownBurn' : 'ownGood');
+    if (next.kind === 'burn' && next.dropKey) setTimeout(() => playOneShot('ownGood'), 1600);
+    const duration = next.kind === 'burn' ? (next.dropKey ? 5000 : 3600) : 3200;
+    verdictTimer.current = setTimeout(showNextVerdict, duration);
+  }, [playOneShot]);
+  useEffect(
+    () => () => {
+      if (verdictTimer.current) clearTimeout(verdictTimer.current);
+    },
+    [],
+  );
+
+  /* 自分該当行(DERBY_DRAMA): 審判対象行(BURN/生存/DAY7/P2Pマッチング)は
+     自分の馬の実NFTアートを見せるオーバーレイへ(1馬×1種につき1回)。
+     その他の該当行(価値上昇・出品など)はチャイムのみ。 */
   const playOwnLine = useCallback(
     (info: { name: string; tone: string }) => {
-      const isVerdictTone = info.tone === 'burn' || info.tone === 'survive' || info.tone === 'day7';
-      if (isVerdictTone && !verdictDone.current) {
-        verdictDone.current = true;
+      if (debugActive.current) return; // QA強制表示中は自然キューを積まない
+      const isVerdictTone =
+        info.tone === 'burn' || info.tone === 'survive' || info.tone === 'day7' || info.tone === 'match';
+      if (isVerdictTone) {
+        const seenKey = `${info.tone}:${info.name}`;
+        if (seenVerdicts.current.has(seenKey)) return;
+        seenVerdicts.current.add(seenKey);
         const horse = myHorses.find((h) => h.name === info.name);
-        const kind = info.tone === 'burn' ? 'burn' : info.tone === 'day7' ? 'day7' : 'survive';
+        const kind =
+          info.tone === 'burn' ? 'burn' : info.tone === 'day7' ? 'day7' : info.tone === 'match' ? 'match' : 'survive';
         const today = new Date().toISOString().slice(0, 10);
-        const dropKey = kind === 'burn' ? fixtureDropKey(info.name, today) : null;
-        const usedItemKey = kind === 'burn' ? fixtureUsedItemKey(info.name, today) : null;
-        setVerdict({ name: info.name, kind, horse, dropKey, usedItemKey });
-        playOneShot(kind === 'burn' ? 'ownBurn' : 'ownGood');
-        if (dropKey) setTimeout(() => playOneShot('ownGood'), 1600);
-        setTimeout(() => setVerdict(null), dropKey ? 5400 : 3800);
+        verdictQueue.current.push({
+          name: info.name,
+          kind,
+          horse,
+          dropKey: kind === 'burn' ? fixtureDropKey(info.name, today) : null,
+          usedItemKey: kind === 'burn' ? fixtureUsedItemKey(info.name, today) : null,
+          matchSide: kind === 'match' ? 'sell' : undefined,
+          counterpart: kind === 'match' ? fixtureMaskedEmail(info.name, today) : undefined,
+        });
+        if (verdictShowing.current) setVerdictQueued(verdictQueue.current.length);
+        else showNextVerdict();
         return;
       }
       if (performance.now() - lastOwnSoundAt.current < 400) return; // 連発抑制
       lastOwnSoundAt.current = performance.now();
       playOneShot(info.tone === 'burn' ? 'ownBurn' : 'ownGood');
     },
-    [playOneShot, myHorses],
+    [playOneShot, myHorses, showNextVerdict],
   );
 
   /* iOS/Safariはユーザー操作の文脈外の音声再生をブロックし、許可は音声要素
@@ -291,7 +352,7 @@ export function DailyDerbyStage({
       </div>
 
       {showTicker && tickerEvents.length > 0 && <Ticker events={tickerEvents} />}
-      {verdict && <DerbyVerdict verdict={verdict} />}
+      {verdict && <DerbyVerdict verdict={verdict} queued={verdictQueued} />}
     </div>
   );
 }

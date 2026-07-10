@@ -8,22 +8,27 @@ import type { MyDerbyHorse } from '@/lib/daily-derby';
 import s from '../../app/daily-derby.module.css';
 
 /**
- * 審判演出(2026-07-10 改訂): 自分の馬の結果行が流れた瞬間、
- * その馬の実NFTアートを全画面オーバーレイで見せる。
- *   - BURN: 馬が赤熱して暗く沈む。ドロップがあれば1.5秒後に獲得行を下に追加
- *     (馬は消さない — 「この馬のBURNからアイテムを得た」の関係を1画面で見せる)
- *   - 生存/DAY7: 馬が緑/金に輝く。文言は事実のみ(DAY4 → DAY5 等)、詩的な行は置かない。
- * 表示秒数は親が管理。
+ * 審判演出(2026-07-10 R3): 自分の馬の結果行が流れた瞬間、
+ * その馬の実NFTアートを全画面オーバーレイで見せる。4種すべて同一の仕組み:
+ *   - BURN: 赤熱して沈む+使用アイテム(喪失)とドロップ(獲得)を併記
+ *   - 生存: 緑に輝く+「DAY3 → DAY4」のDAY進行を強調
+ *   - DAY7: 金に輝く+CHAMPION
+ *   - P2Pマッチング: シアンに輝く+相手(マスク済みメール)と売却/購入成立
+ * 複数件は親がキューで順番に流す(queued = 残り件数表示)。表示秒数も親が管理。
  */
 
 export interface VerdictInfo {
   name: string;
-  kind: 'survive' | 'burn' | 'day7';
+  kind: 'survive' | 'burn' | 'day7' | 'match';
   horse: MyDerbyHorse | undefined;
   /** BURN時のドロップ(該当なしは null)。 */
   dropKey: string | null;
   /** その夜この馬に使っていたアイテム(BURNで共に消費。なしは null)。 */
   usedItemKey: string | null;
+  /** P2Pマッチングの向き(match時のみ)。 */
+  matchSide?: 'sell' | 'buy' | undefined;
+  /** P2P相手のマスク済みメール(match時のみ)。 */
+  counterpart?: string | undefined;
 }
 
 /** dna未取得時のフォールバック(馬名から擬似dna — プレビュー/旧APIレスポンス用)。 */
@@ -32,29 +37,34 @@ function dnaFor(horse: MyDerbyHorse | undefined, name: string): string {
   return `0x${Array.from(name).map((ch) => ch.charCodeAt(0).toString(16)).join('').padEnd(64, 'a').slice(0, 64)}`;
 }
 
-export function DerbyVerdict({ verdict }: { verdict: VerdictInfo }) {
+export function DerbyVerdict({ verdict, queued = 0 }: { verdict: VerdictInfo; queued?: number }) {
   const [showDrop, setShowDrop] = useState(false);
   useEffect(() => {
+    setShowDrop(false);
     if (verdict.kind !== 'burn' || !verdict.dropKey) return;
     const id = setTimeout(() => setShowDrop(true), 1500);
     return () => clearTimeout(id);
-  }, [verdict.kind, verdict.dropKey]);
+  }, [verdict]);
 
   const day = verdict.horse?.currentDay;
   const drop = verdict.dropKey ? ITEM_BY_KEY_V2.get(verdict.dropKey) : null;
   const used = verdict.usedItemKey ? ITEM_BY_KEY_V2.get(verdict.usedItemKey) : null;
+
   const kicker =
-    verdict.kind === 'burn' ? 'BURNED' : verdict.kind === 'day7' ? 'DAY7 CLEARED' : 'SURVIVED';
-  const sub =
-    verdict.kind === 'burn'
-      ? day !== undefined ? `DAY${day} — BURN` : 'BURN'
-      : verdict.kind === 'day7'
-        ? 'DAY7 走破'
-        : day !== undefined ? `DAY${day} → DAY${Math.min(7, day + 1)}` : '生存';
+    verdict.kind === 'burn' ? 'BURNED'
+    : verdict.kind === 'day7' ? 'DAY7 — CHAMPION'
+    : verdict.kind === 'match' ? 'P2P MATCHED'
+    : 'SURVIVED';
   const kickerCls =
-    verdict.kind === 'burn' ? s.verdictKickerBurn : verdict.kind === 'day7' ? s.verdictKickerGold : '';
+    verdict.kind === 'burn' ? s.verdictKickerBurn
+    : verdict.kind === 'day7' ? s.verdictKickerGold
+    : verdict.kind === 'match' ? s.verdictKickerCyan
+    : '';
   const horseCls =
-    verdict.kind === 'burn' ? s.vHorseBurn : verdict.kind === 'day7' ? s.vHorseDay7 : s.vHorseSurvive;
+    verdict.kind === 'burn' ? s.vHorseBurn
+    : verdict.kind === 'day7' ? s.vHorseDay7
+    : verdict.kind === 'match' ? s.vHorseMatch
+    : s.vHorseSurvive;
 
   return (
     <div className={s.verdictOverlay}>
@@ -64,7 +74,25 @@ export function DerbyVerdict({ verdict }: { verdict: VerdictInfo }) {
           <NftHorseArt look={deriveNftLook(dnaFor(verdict.horse, verdict.name), verdict.name)} className={s.vHorseArt} />
         </div>
         <div className={s.verdictName}>{verdict.name}</div>
-        <div className={s.verdictSub}>{sub}</div>
+        {verdict.kind === 'survive' ? (
+          <div className={s.verdictSub}>
+            {day !== undefined ? (
+              <>
+                DAY{day} <span className={s.vDayArrow}>→</span> <b className={s.vDayNew}>DAY{Math.min(7, day + 1)}</b>
+              </>
+            ) : (
+              '生存'
+            )}
+          </div>
+        ) : verdict.kind === 'match' ? (
+          <div className={s.verdictSub}>
+            {verdict.counterpart ?? '???'} と{verdict.matchSide === 'buy' ? '購入' : '売却'}マッチング成立
+          </div>
+        ) : (
+          <div className={s.verdictSub}>
+            {verdict.kind === 'day7' ? 'DAY7 走破' : day !== undefined ? `DAY${day} — BURN` : 'BURN'}
+          </div>
+        )}
         {verdict.kind === 'burn' && used && (
           <div className={s.usedRow}>
             <img className={s.usedIcon} src={`/items/${used.key}.webp`} alt={used.nameJa} />
@@ -79,23 +107,38 @@ export function DerbyVerdict({ verdict }: { verdict: VerdictInfo }) {
             </span>
           </div>
         )}
+        {queued > 0 && <div className={s.verdictQueued}>続いて あと {queued} 件</div>}
       </div>
     </div>
   );
 }
 
-/** 決定論的なドロップ判定(演出用・20%)。実データ結線時はAPI値に置換する。 */
+/* ---- フィクスチャ(演出用の決定論データ。実データ結線時にAPI値へ置換) ---- */
+
+/** 決定論的なドロップ判定(20%)。 */
 export function fixtureDropKey(name: string, dateISO: string): string | null {
   const u = hash01(`${name}:${dateISO}`);
   if (u >= 0.2) return null;
   return BURN_DROP_KEYS_V2[Math.floor((u / 0.2) * BURN_DROP_KEYS_V2.length) % BURN_DROP_KEYS_V2.length]!;
 }
 
-/** 決定論的な使用アイテム(演出用・55%)。実データ結線時はその夜の実使用アイテムに置換する。 */
+/** 決定論的な使用アイテム(55%)。 */
 export function fixtureUsedItemKey(name: string, dateISO: string): string | null {
   const u = hash01(`used:${name}:${dateISO}`);
   if (u >= 0.55) return null;
   return ITEM_CATALOG_V2[Math.floor((u / 0.55) * ITEM_CATALOG_V2.length) % ITEM_CATALOG_V2.length]!.key;
+}
+
+/** 決定論的なP2P相手のマスク済みメール。 */
+const MASKED_EMAILS = [
+  'k*****i@gmail.com',
+  'b********3@gmail.com',
+  'm***a@outlook.com',
+  's******o@yahoo.com',
+  't***u@proton.me',
+] as const;
+export function fixtureMaskedEmail(name: string, dateISO: string): string {
+  return MASKED_EMAILS[Math.floor(hash01(`p2p:${name}:${dateISO}`) * MASKED_EMAILS.length) % MASKED_EMAILS.length]!;
 }
 
 function hash01(src: string): number {

@@ -16,11 +16,15 @@ Seven Days Derby(NFT競走馬ゲーム)では毎晩20:00に全馬一斉のレー
 |---|--------|----------------|--------------------|
 | A | 「本日のレースに参加するあなたの馬」カード | 開始前カウントダウン中 | `01_countdown_tonight.png`(PC)/ `05_tonight_mobile.png`(モバイル) |
 | B | レース条件テキスト(一瞬だけ表示・値は色分け) | 20:00通過の約5秒後に約5秒間 | `02_conditions_text.png` |
-| C | 審判オーバーレイ(自分の馬の実NFTアート表示) | 自分の馬の結果の瞬間 | BURN: `03`→`04` / 生存: `06` / DAY7: `07` |
+| C | 審判オーバーレイ(自分の馬の実NFTアート表示) | 自分の馬の結果の瞬間 | BURN: `03`→`04` / 生存: `06` / DAY7: `07` / P2P: `08`(売却)`09`(購入) |
 
-演出の思想: **主役は文言ではなく「自分の馬そのもの」**。
-BURN=馬が赤熱して暗く沈む(尊厳ある散り際)+ドロップがあれば同じ画面に獲得行を追加、
-生存=緑に輝く、DAY7=金に輝く。詩的なセリフは置かない(オーナー指示 — 事実のみ)。
+演出の思想: **主役は文言ではなく「自分の馬そのもの」**。4種すべて同一の仕組み:
+BURN=馬が赤熱して暗く沈む(尊厳ある散り際)+使用アイテム(喪失)とドロップ(獲得)を併記、
+生存=緑に輝く+DAY進行の強調、DAY7=金に輝く(CHAMPION)、
+P2Pマッチング=シアンに輝く+相手(マスク済みメール)と売却/購入成立。
+詩的なセリフは置かない(オーナー指示 — 事実のみ)。
+複数件(複数馬・複数売買)は**キューで1件ずつ順番に表示**し、オーバーレイ下部に
+「続いて あと N 件」と出る(`verdictQueued`)。
 機能は完成済みなので、**見た目だけ**をもっとリッチに・映画的にしてほしいです。
 
 ## 2. サイトのデザインシステム(必ず従う)
@@ -72,10 +76,15 @@ BURN=馬が赤熱して暗く沈む(尊厳ある散り際)+ドロップがあれ
 値と色: 晴#ffd97a 曇#aab4c8 雨#6fc3ff 嵐#c78cff / 高速#00eaff 良#35d07f 稍重#e6b24a 不良#ff5c5c / 芝#58d68d ダート#d8a05a。
 色の提案変更はOK(系統の意味が直感的なら)。カード化・スタンプ化はしない。
 
-### C. 審判オーバーレイ(全画面 fixed。BURN/生存/DAY7共通の構造)
+### C. 審判オーバーレイ(全画面 fixed。BURN/生存/DAY7/P2P共通の構造)
 `.vHorseArt` は **JSが自分の馬の実NFTアートを描く canvas**(正方形・内部768px)。
-kickerとエフェクトクラスがkindで変わる: BURN=`verdictKickerBurn`+`vHorseBurn` /
-生存=(無印)+`vHorseSurvive` / DAY7=`verdictKickerGold`+`vHorseDay7`。
+kickerとエフェクトクラスがkindで変わる:
+BURN=`BURNED`/`verdictKickerBurn`+`vHorseBurn` / 生存=`SURVIVED`/(無印)+`vHorseSurvive` /
+DAY7=`DAY7 — CHAMPION`/`verdictKickerGold`+`vHorseDay7` /
+P2P=`P2P MATCHED`/`verdictKickerCyan`+`vHorseMatch`。
+生存のサブ行はDAY進行を強調: `DAY3 <span class="vDayArrow">→</span> <b class="vDayNew">DAY4</b>`。
+P2Pのサブ行: `k*****i@gmail.com と売却マッチング成立`(または購入)。
+複数件が続く時はカード最下部に `<div class="verdictQueued">続いて あと 2 件</div>`。
 ```html
 <div class="verdictOverlay">
   <div class="verdictCard">
@@ -135,8 +144,12 @@ kickerとエフェクトクラスがkindで変わる: BURN=`verdictKickerBurn`+`
 .verdictKicker { font-family: var(--font-display); font-weight: 800; font-size: 15px; letter-spacing: 0.4em; color: var(--good); }
 .verdictKickerBurn { color: var(--bad); }
 .verdictKickerGold { color: var(--gold-bright); }
+.verdictKickerCyan { color: var(--cyan); }
 .vHorse { width: min(280px, 62vw); margin: 14px auto 0; border-radius: 20px; position: relative; }
 .vHorseArt { width: 100%; height: auto; display: block; border-radius: 20px; }
+.vHorseMatch .vHorseArt { animation: vGlowCyan 2.4s ease-out forwards; }
+@keyframes vGlowCyan { 0% { filter: brightness(0.7); } 35% { filter: brightness(1.15) drop-shadow(0 0 34px rgba(0,234,255,0.6)); }
+  100% { filter: brightness(1.02) drop-shadow(0 0 20px rgba(0,234,255,0.38)); } }
 .vHorseSurvive .vHorseArt { animation: vGlowGood 2.4s ease-out forwards; }
 @keyframes vGlowGood { 0% { filter: brightness(0.7); } 35% { filter: brightness(1.15) drop-shadow(0 0 34px rgba(53,208,127,0.65)); }
   100% { filter: brightness(1.02) drop-shadow(0 0 20px rgba(53,208,127,0.4)); } }
@@ -151,6 +164,11 @@ kickerとエフェクトクラスがkindで変わる: BURN=`verdictKickerBurn`+`
 }
 .verdictName { font-family: var(--font-display); font-weight: 800; font-size: 21px; color: var(--text); margin-top: 12px; }
 .verdictSub { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); margin-top: 5px; letter-spacing: 0.14em; }
+.vDayArrow { color: var(--faint); margin: 0 2px; }
+.vDayNew { color: var(--good); font-size: 15px; display: inline-block;
+  animation: vDayPop 0.6s cubic-bezier(0.2,1.6,0.4,1) 0.9s both; text-shadow: 0 0 14px rgba(53,208,127,0.6); }
+@keyframes vDayPop { 0% { opacity:0; transform:scale(0.4); } 100% { opacity:1; transform:scale(1); } }
+.verdictQueued { font-family: var(--font-mono); font-size: 10px; color: var(--faint); margin-top: 14px; letter-spacing: 0.2em; }
 .usedRow { display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 14px;
   animation: verdictDim 0.6s ease-out; }
 .usedIcon { width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(255,92,92,0.35);
@@ -181,9 +199,10 @@ kickerとエフェクトクラスがkindで変わる: BURN=`verdictKickerBurn`+`
 
 ## 6. 納品形式
 
-- **自己完結の HTML 1ファイル**(CSS内蔵・JSなし or 最小)に、全6状態
-  (Aカード / B条件テキスト / C-BURN / C-BURN+ドロップ / C-生存 / C-DAY7)を
-  縦に並べたショーケースとして。各状態に見出しを付けてください。
+- **自己完結の HTML 1ファイル**(CSS内蔵・JSなし or 最小)に、全8状態
+  (Aカード / B条件テキスト / C-BURN / C-BURN+使用アイテム+ドロップ / C-生存 /
+  C-DAY7 / C-P2P売却 / C-P2P購入)を縦に並べたショーケースとして。
+  各状態に見出しを付けてください。
 - CSSアニメーション(赤熱、輝き、ドロップ出現など)はそのHTML内で実際に動く形で。
 - ZIPでも単一HTMLでも可。受け取り後、こちらでCSS Modulesに移植します。
 

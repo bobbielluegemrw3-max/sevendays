@@ -53,7 +53,9 @@ export function DerbyPreview() {
   const [scenario, setScenario] = useState<keyof typeof FIXTURE_RESULTS>('sold');
   const [failed, setFailed] = useState(false);
   const [myHorsesOverride, setMyHorsesOverride] = useState<ReturnType<typeof fixtureMyHorses> | null>(null);
-  const [debugVerdict, setDebugVerdict] = useState<'burn' | 'survive' | 'day7' | undefined>(undefined);
+  const [debugVerdict, setDebugVerdict] = useState<
+    'burn' | 'survive' | 'day7' | 'match_sell' | 'match_buy' | undefined
+  >(undefined);
   const speedRef = useRef(speed);
   const pausedRef = useRef(paused);
   speedRef.current = speed;
@@ -69,10 +71,10 @@ export function DerbyPreview() {
     const sc = q.get('scenario');
     if (sc && sc in FIXTURE_RESULTS) setScenario(sc);
     if (q.get('failed') === '1') setFailed(true);
-    // 視覚QA: ?verdict=burn|survive|day7 で審判を強制表示
+    // 視覚QA: ?verdict=burn|survive|day7|match_sell|match_buy で審判を強制表示
     const dv = q.get('verdict');
-    if (dv === 'burn' || dv === 'survive' || dv === 'day7') {
-      const idx = dv === 'survive' ? 1 : dv === 'day7' ? 2 : 0;
+    if (dv === 'burn' || dv === 'survive' || dv === 'day7' || dv === 'match_sell' || dv === 'match_buy') {
+      const idx = dv === 'survive' ? 1 : dv === 'day7' ? 2 : dv.startsWith('match') ? 3 : 0;
       setMyHorsesOverride(fixtureMyHorses().slice(idx, idx + 1));
       setDebugVerdict(dv);
     }
@@ -114,6 +116,8 @@ export function DerbyPreview() {
           { kind: 'survive', label: '審判: 生存', idx: 1 },
           { kind: 'burn', label: '審判: BURN', idx: 0 },
           { kind: 'day7', label: '審判: DAY7', idx: 2 },
+          { kind: 'match_sell', label: '審判: P2P売却', idx: 3 },
+          { kind: 'match_buy', label: '審判: P2P購入', idx: 3 },
         ] as const).map((vb) => (
           <button
             key={vb.kind}
