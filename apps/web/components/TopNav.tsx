@@ -25,6 +25,7 @@ export function TopNav({ isAdmin = false }: { isAdmin?: boolean }) {
         <Link href="/market">MARKET</Link>
         <Link href="/items">ITEMS</Link>
         <Link href="/champion">CHAMPION</Link>
+        <Link href="/ledger">LEDGER</Link>
         <Link href="/wallet">WALLET</Link>
         <Link href="/support">TEAM</Link>
         <Link href="/notifications">通知</Link>
