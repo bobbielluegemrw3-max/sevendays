@@ -81,7 +81,7 @@ h3 { font-size: 0.95rem; margin: 0.4rem 0; color: var(--muted); }
 /* ---------- top navigation ---------- */
 nav.topnav {
   position: sticky; top: 0; z-index: 30;
-  display: flex; flex-wrap: wrap; align-items: center; gap: 1.15rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.95rem;
   padding: 0.8rem 1.1rem;
   border-bottom: 1px solid var(--border);
   background: rgba(8, 6, 17, 0.8);
@@ -137,14 +137,26 @@ nav.topnav a.derby-cd-live .derby-cd-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.65; }
 }
-@media (max-width: 700px) {
+/* 1500px以下は「NEXT DERBY」ラベルを省き、リンク13個を1行に収める */
+@media (max-width: 1500px) {
   nav.topnav a.derby-cd .derby-cd-k { display: none; }
 }
 nav.topnav a:not(.brand) {
-  font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--muted);
+  font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.13em; color: var(--muted);
 }
 nav.topnav a:not(.brand):hover { color: var(--cyan); }
 nav.topnav .spacer { flex: 1; }
+
+/* ゲームページ(英語)とユーティリティ(日本語)の区切りと格差 */
+nav.topnav .topnav-sep { width: 1px; height: 15px; background: var(--border-strong); flex: none; align-self: center; }
+nav.topnav a.topnav-util { font-family: var(--font-jp); font-size: 0.66rem; letter-spacing: 0.02em; color: var(--faint); }
+nav.topnav a.topnav-util:hover { color: var(--cyan); }
+nav.topnav .topnav-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 15px; height: 15px; padding: 0 4px; margin-left: 5px; border-radius: 999px;
+  background: var(--magenta); color: #fff;
+  font-family: var(--font-mono); font-size: 9px; line-height: 1; vertical-align: 1px;
+}
 
 /* Narrow screens: brand + logout on the first row, links drop to a second
    full-width row that scrolls horizontally instead of wrapping raggedly. */

@@ -144,7 +144,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
       {/* ===== ① 昨夜の結果 ===== */}
       <section className={s.result}>
         <div className={s.tileHead}>
-          <span className={s.tileLabel}>① 昨夜の結果</span>
+          <span className={s.tileLabel}>昨夜の結果</span>
           {lastRace ? <Link href={`/races/${lastRace.id}`} className={s.tileLink}>レース詳細 →</Link> : null}
         </div>
         {myResults.length > 0 ? (
@@ -181,7 +181,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
       {/* ===== ② 今夜のレースまで ===== */}
       <section className={s.count}>
         <div className={s.tileHead}>
-          <span className={s.tileLabel}>② 今夜のレース</span>
+          <span className={s.tileLabel}>今夜のレース</span>
           <span className={s.live}><span className={s.dot}>●</span> LIVE 20:00 MYT</span>
         </div>
         <Countdown className={s.timer} />
@@ -190,19 +190,21 @@ export function DashboardView({ data }: { data: DashboardData }) {
           <span>RUNNERS <b>{active.length}</b></span>
         </div>
         <div className={s.countNote}>成績下位の馬はBurn=消滅。生き残った馬は日ごとに価値が上がります。全記録は台帳で公開。</div>
+        <Link href="/races" className={s.showCta}>今夜のショーを見る →</Link>
       </section>
 
       {/* ===== ③ 今日やること ===== */}
       {hasTasks ? (
         <section className={s.task}>
           <div className={s.taskRow}>
-            <span className={s.taskLabel}>③ 今日やること</span>
+            <span className={s.taskLabel}>今日やること</span>
             {untrained.length > 0 ? (
               <span className={s.taskItem}><b>{untrained.length}頭</b> が未調教</span>
             ) : null}
             {pendingCount > 0 ? (
               <span className={s.taskItem}><b>{pendingCount}件</b> が割当待ち</span>
             ) : null}
+            <Link href="/items" className={s.taskGhost}>アイテムを備える →</Link>
             <Link href={untrained.length > 0 ? '/horses' : '/market'} className={s.taskCta}>
               {untrained.length > 0 ? '調教する' : '馬を迎える'} →
             </Link>
@@ -212,8 +214,9 @@ export function DashboardView({ data }: { data: DashboardData }) {
       ) : (
         <section className={`${s.task} ${s.taskDone}`}>
           <div className={s.taskRow}>
-            <span className={s.taskLabel}>③ 今日やること</span>
+            <span className={s.taskLabel}>今日やること</span>
             <span className={s.taskDoneText}>本日のタスクは完了。あとは20:00の発走を待つだけ。</span>
+            <Link href="/items" className={s.taskGhost}>アイテムを備える →</Link>
           </div>
         </section>
       )}
@@ -221,7 +224,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
       {/* ===== ④ 資産(残高 / 評価額 / Revenge Buff) ===== */}
       <section className={s.assets}>
         <Link href="/wallet" className={`${s.kpi} ${s.kpiBal}`}>
-          <div className="k">④ 残高 BALANCE</div>
+          <div className="k">残高 BALANCE</div>
           <div className="v">{wallet ? money(wallet.available) : '—'}</div>
           <div className="s">USDT 利用可能{wallet && Number(wallet.locked) > 0 ? ` · ロック中 ${money(wallet.locked)}` : ''}</div>
         </Link>
@@ -258,22 +261,32 @@ export function DashboardView({ data }: { data: DashboardData }) {
         )}
       </section>
 
-      {/* ===== チャンピオン報酬(進行中のみ) ===== */}
+      {/* ===== チャンピオン報酬(進行中の全件) ===== */}
       {activeBuybacks.length > 0 ? (
         <section className={s.buyback}>
           <div className={s.bbHead}>
-            <span className={s.bbTitle}>チャンピオン報酬 受取中</span>
-            <span className={s.bbCount}>{Number(activeBuybacks[0]!.payments_paid)} / 7 回</span>
+            <span className={s.bbTitle}>
+              チャンピオン報酬 受取中{activeBuybacks.length > 1 ? ` · ${activeBuybacks.length}頭` : ''}
+            </span>
+            <Link href="/champion" className={s.tileLink}>CHAMPION →</Link>
           </div>
-          <div className={s.bar}><span style={{ width: `${(Number(activeBuybacks[0]!.payments_paid) / 7) * 100}%` }} /></div>
-          <div className={s.bbNote}>200 USDT を7回に分けて受取 · 毎晩20:00の精算で1回ずつ支払い</div>
+          {activeBuybacks.map((b) => (
+            <div key={b.id}>
+              <div className={s.bbHead} style={{ marginTop: 10 }}>
+                <span className={s.bbNote} style={{ margin: 0 }}>200 USDT を7回に分けて受取</span>
+                <span className={s.bbCount}>{Number(b.payments_paid)} / 7 回</span>
+              </div>
+              <div className={s.bar}><span style={{ width: `${(Number(b.payments_paid) / 7) * 100}%` }} /></div>
+            </div>
+          ))}
+          <div className={s.bbNote}>毎晩20:00の精算で1回ずつ支払い</div>
         </section>
       ) : null}
 
       {/* ===== ⑤ 通知 ===== */}
       <section className={s.notif}>
         <div className={s.tileHead}>
-          <span className={s.stableTitle}>⑤ 通知{unread > 0 ? <span className={s.notifBadge}>{unread}</span> : null}</span>
+          <span className={s.stableTitle}>通知{unread > 0 ? <span className={s.notifBadge}>{unread}</span> : null}</span>
           <Link href="/notifications" className={s.tileLink}>すべて →</Link>
         </div>
         {latestNotifs.length > 0 ? (

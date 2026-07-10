@@ -12,10 +12,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const authed = (await getAccessToken()) !== null;
   // ADMINリンクは管理者ロール保持者にのみ表示(ページ自体の保護は/adminレイアウトと
   // 各adminエンドポイントの権限検証が担う — これは導線の出し分けだけ)
+  // 通知の未読数はメニューのバッジ用(表示だけ・失敗しても0のまま)。
   let isAdmin = false;
+  let unread = 0;
   if (authed) {
-    const me = await serverApi<{ is_admin?: boolean }>('/api/v1/me');
+    const [me, notif] = await Promise.all([
+      serverApi<{ is_admin?: boolean }>('/api/v1/me'),
+      serverApi<{ notifications: { read_at: string | null }[] }>('/api/v1/notifications'),
+    ]);
     isAdmin = me.status === 200 && me.body.is_admin === true;
+    if (notif.status === 200) unread = notif.body.notifications.filter((n) => !n.read_at).length;
   }
   return (
     <html lang="ja">
@@ -31,7 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         {/* Anonymous pages (landing / login) carry their own header. */}
-        {authed ? <TopNav isAdmin={isAdmin} /> : null}
+        {authed ? <TopNav isAdmin={isAdmin} unread={unread} /> : null}
         <main>{children}</main>
       </body>
     </html>

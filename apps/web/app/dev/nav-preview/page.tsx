@@ -10,7 +10,7 @@ export default function NavPreview() {
   if (process.env.NODE_ENV === 'production') notFound();
   return (
     <div style={{ margin: '-1.5rem -1.1rem 0' }}>
-      <TopNav />
+      <TopNav unread={3} />
       <div style={{ height: 300 }} />
     </div>
   );

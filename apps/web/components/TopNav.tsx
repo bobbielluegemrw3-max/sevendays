@@ -5,10 +5,11 @@ import { DerbyCountdown } from '@/components/DerbyCountdown';
 /**
  * Signed-in header. The brand lockup mirrors the landing page exactly
  * (bar + "SEVEN DAYS" over "DERBY") so the logo reads as one product on
- * both sides of the login. On narrow screens the link row drops below the
- * brand and scrolls horizontally instead of wrapping.
+ * both sides of the login. Links are grouped: game pages (EN labels),
+ * then a separator, then utility pages (JP labels, dimmer). On narrow
+ * screens the link row drops below the brand and scrolls horizontally.
  */
-export function TopNav({ isAdmin = false }: { isAdmin?: boolean }) {
+export function TopNav({ isAdmin = false, unread = 0 }: { isAdmin?: boolean; unread?: number }) {
   return (
     <nav className="topnav">
       <Link href="/dashboard" className="brand" aria-label="Seven Days Derby">
@@ -19,7 +20,7 @@ export function TopNav({ isAdmin = false }: { isAdmin?: boolean }) {
         </span>
       </Link>
       <div className="topnav-links">
-        <Link href="/dashboard">HOME</Link>
+        <Link href="/dashboard">DASHBOARD</Link>
         <Link href="/horses">STABLE</Link>
         <Link href="/races">RACE</Link>
         <Link href="/market">MARKET</Link>
@@ -28,10 +29,13 @@ export function TopNav({ isAdmin = false }: { isAdmin?: boolean }) {
         <Link href="/ledger">LEDGER</Link>
         <Link href="/wallet">WALLET</Link>
         <Link href="/support">TEAM</Link>
-        <Link href="/notifications">通知</Link>
-        <Link href="/account">アカウント</Link>
-        <Link href="/guide">使い方</Link>
-        <Link href="/contact">お問い合わせ</Link>
+        <span className="topnav-sep" aria-hidden="true" />
+        <Link href="/notifications" className="topnav-util">
+          通知{unread > 0 ? <span className="topnav-badge">{unread > 99 ? '99+' : unread}</span> : null}
+        </Link>
+        <Link href="/account" className="topnav-util">アカウント</Link>
+        <Link href="/guide" className="topnav-util">使い方</Link>
+        <Link href="/contact" className="topnav-util">お問い合わせ</Link>
         {isAdmin && (
           <Link href="/admin" className="topnav-admin">ADMIN</Link>
         )}
