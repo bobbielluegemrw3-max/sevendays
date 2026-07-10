@@ -161,3 +161,87 @@
   margin: 0 0 7px; display: flex; align-items: center; gap: 8px; }
 .recGroupN { color: var(--gold, #c9a86a); }
 .recGroup .recRow { margin-bottom: 6px; }
+
+/* ============================================================================
+   APPEND to apps/web/app/races.module.css
+   「あなたのレース記録」Racing Diary リデザイン(2026-07-10 見やすさ改善)。
+   旧ブロック「あなたのレース記録(2026-07-10・審判演出の記録版)」の
+   .recNav / .recSelect は不要になったので削除してよい(recRow〜recBadge* は残す — 行の見た目で使用)。
+   トークンは globals.css の :root。モバイルファースト・横スクロール禁止。
+   ============================================================================ */
+
+.recStack { display: flex; flex-direction: column; gap: 14px; }
+
+/* ---- 月カレンダー(記録のある夜=点、選択中=シアン) ---- */
+.cal { border: 1px solid var(--border); border-radius: 14px; padding: 13px 14px; background: linear-gradient(180deg, rgba(20, 18, 34, 0), var(--panel)); }
+.calHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.calMonth { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--text); letter-spacing: 0.04em; }
+.calNav {
+  font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--cyan); line-height: 1;
+  border: 1px solid rgba(0, 234, 255, 0.35); border-radius: 9px; width: 32px; height: 30px;
+  background: rgba(0, 234, 255, 0.05); cursor: pointer;
+}
+.calNav:disabled { color: var(--faint); border-color: var(--border); background: transparent; cursor: default; }
+.calGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.calDow { text-align: center; font-family: var(--font-mono); font-size: 9px; color: var(--faint); padding-bottom: 3px; }
+.calCell {
+  position: relative; aspect-ratio: 1; border: 1px solid transparent; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 12px; color: var(--faint);
+}
+.calHas { color: var(--text); background: rgba(255, 255, 255, 0.03); border-color: var(--border); cursor: pointer; }
+.calHas:hover { border-color: var(--border-strong); }
+.calDot { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 999px; background: var(--cyan); }
+.calSel { color: #04141a; background: linear-gradient(135deg, var(--cyan), #5ff5ff); border-color: transparent; font-weight: 700; }
+
+/* ---- その夜のダイジェスト ---- */
+.digest {
+  border: 1px solid var(--border-strong); border-radius: 16px; padding: 15px 17px;
+  background: radial-gradient(500px 200px at 8% 0%, rgba(0, 234, 255, 0.08), transparent 66%), var(--panel);
+}
+.digestTop { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.digestDate { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--text); letter-spacing: 0.02em; }
+.digestDow { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.digestStep { display: flex; gap: 6px; margin-top: 13px; }
+.stepBtn {
+  font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--cyan);
+  border: 1px solid rgba(0, 234, 255, 0.35); border-radius: 999px; padding: 5px 12px;
+  background: rgba(0, 234, 255, 0.05); cursor: pointer;
+}
+.stepBtn:disabled { color: var(--faint); border-color: var(--border); background: transparent; cursor: default; }
+
+.tally { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+.tStat { display: flex; align-items: baseline; gap: 7px; border: 1px solid var(--border); border-radius: 11px; padding: 7px 12px; background: rgba(255, 255, 255, 0.015); }
+.tStatN { font-family: var(--font-display); font-weight: 800; font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; }
+.tStatK { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; color: var(--muted); }
+.tDay7 { border-color: rgba(240, 200, 110, 0.4); background: rgba(240, 200, 110, 0.07); } .tDay7 .tStatN { color: var(--gold-bright); }
+.tSrv { border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.07); } .tSrv .tStatN { color: var(--good); }
+.tBurn { border-color: rgba(255, 92, 92, 0.4); background: rgba(255, 92, 92, 0.07); } .tBurn .tStatN { color: var(--bad); }
+.tTrade { border-color: rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.06); } .tTrade .tStatN { color: var(--cyan); }
+
+.pl { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.pl b { font-family: var(--font-display); font-size: 13px; }
+.plIn b { color: var(--good); }
+.plOut b { color: var(--magenta-soft); }
+.digestEmpty { margin-top: 12px; font-family: var(--font-mono); font-size: 11.5px; color: var(--faint); }
+
+/* ---- カテゴリ別グループ ---- */
+.grp { margin-top: 2px; }
+.grpHead { display: flex; align-items: center; gap: 9px; margin: 16px 0 9px; }
+.grpBar { width: 3px; height: 14px; border-radius: 2px; }
+.grpName { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.16em; font-weight: 700; }
+.grpCount { font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+.g7 .grpBar { background: var(--gold-bright); } .g7 .grpName { color: var(--gold-bright); }
+.gs .grpBar { background: var(--good); } .gs .grpName { color: var(--good); }
+.gb .grpBar { background: var(--bad); } .gb .grpName { color: var(--bad); }
+.gt .grpBar { background: var(--cyan); } .gt .grpName { color: var(--cyan); }
+
+/* ---- モバイル(375px)微調整・横スクロール禁止 ---- */
+@media (max-width: 560px) {
+  .digestDate { font-size: 17px; }
+  .tStatN { font-size: 17px; }
+  .cal { padding: 11px 11px; }
+  .calCell { font-size: 11px; border-radius: 7px; }
+  .recArt { width: 44px; height: 44px; }
+}
+

@@ -69,7 +69,8 @@ export function DerbyRaceViz({
         if (mine) {
           ctx.fillStyle = '#00eaff';
           ctx.font = '700 10px Orbitron, sans-serif';
-          ctx.fillText('▲ YOU', x - 14, y - 9);
+          // 最上レーンで上端に見切れないようラベルyをクランプ(ZIP2 崩れ修正③)
+          ctx.fillText('▲ YOU', x - 14, y < 22 ? y + 18 : y - 9);
           ctx.shadowColor = '#00eaff';
           ctx.shadowBlur = 12;
           ctx.beginPath();

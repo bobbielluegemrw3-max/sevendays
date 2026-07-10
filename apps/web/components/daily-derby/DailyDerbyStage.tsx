@@ -476,15 +476,6 @@ function PreShowCountdown({
 
 /* ------------------------------------------------------------------- LIVE */
 
-const RACE_STEP: ShowStep = {
-  key: 'RACE',
-  runLine: '🏇 Running Race Engine...',
-  doneLine: '✓ Race Completed',
-  startAt: RACE_RUN.startAt,
-  duration: RACE_RUN.endAt - RACE_RUN.startAt,
-  progress: true,
-};
-
 function LiveShow({
   elapsed,
   counts,
@@ -537,17 +528,29 @@ function LiveShow({
         </div>
         <div className={s.liveRule} />
       </div>
-      {elapsed >= TITLE_UNTIL && (
-        <Terminal steps={[...OPENING_STEPS, RACE_STEP]} elapsed={elapsed} counts={counts} />
+      {/* 起動ターミナルはレース開始前だけ。実走が始まったら実走ビジュアルに一本化して
+          高さ超過による見切れを防ぐ(ZIP2 崩れ修正③)。 */}
+      {elapsed >= TITLE_UNTIL && elapsed < RACE_RUN.startAt && (
+        <Terminal steps={OPENING_STEPS} elapsed={elapsed} counts={counts} />
       )}
-      {conditions && elapsed >= TITLE_UNTIL + 0.5 && elapsed < TITLE_UNTIL + 5.5 && (
-        <div className={s.condFlash}>
-          <span className={s.condK}>天候</span>
-          <b style={{ color: CONDITION_COLORS[conditions.weather] }}>{conditions.weather_ja}</b>
-          <span className={s.condK}>/ 馬場</span>
-          <b style={{ color: CONDITION_COLORS[conditions.track] }}>{conditions.track_ja}</b>
-          <span className={s.condK}>/ コース</span>
-          <b style={{ color: CONDITION_COLORS[conditions.surface] }}>{conditions.surface_ja}</b>
+      {conditions && elapsed >= TITLE_UNTIL + 0.5 && elapsed < TITLE_UNTIL + 6 && (
+        <div className={s.babaWrap}>
+          <div className={s.babaK}>— 本日の馬場発表 —</div>
+          <div className={s.babaRow}>
+            <div className={s.babaStamp}>
+              <span className={s.babaStampK}>天候</span>
+              <span className={s.babaStampV} style={{ color: CONDITION_COLORS[conditions.weather] }}>{conditions.weather_ja}</span>
+            </div>
+            <div className={s.babaStamp}>
+              <span className={s.babaStampK}>馬場</span>
+              <span className={s.babaStampV} style={{ color: CONDITION_COLORS[conditions.track] }}>{conditions.track_ja}</span>
+            </div>
+            <div className={s.babaStamp}>
+              <span className={s.babaStampK}>コース</span>
+              <span className={s.babaStampV} style={{ color: CONDITION_COLORS[conditions.surface] }}>{conditions.surface_ja}</span>
+            </div>
+          </div>
+          {conditions.night_name && <div className={s.babaFes}>{conditions.night_name}</div>}
         </div>
       )}
       {elapsed >= RACE_RUN.startAt && (
