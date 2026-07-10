@@ -647,3 +647,82 @@
 .dropIcon { width: 54px; height: 54px; border-radius: 12px; border: 1px solid rgba(240, 200, 110, 0.6);
   box-shadow: 0 0 24px -4px rgba(240, 200, 110, 0.7); }
 .dropText { font-family: var(--font-mono); font-size: 12px; color: var(--gold-bright, #f0d9a8); }
+
+/* ==== SHOW REDESIGN(2026-07-11 承認7演出): MY LANE・ヒットストップ・章・数字・実走・着地・点呼 ==== */
+
+/* ②ヒットストップ(自分の審判の瞬間にステージが一瞬拡大) */
+.stageHit { animation: hitstop 0.32s ease; }
+@keyframes hitstop { 0% { transform: scale(1); } 30% { transform: scale(1.012); } 100% { transform: scale(1); } }
+
+/* ③チャプターカード(ターン境界の全画面章タイトル) */
+.chapCard { position: absolute; inset: 0; z-index: 45; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; background: rgba(5, 4, 10, 0.82); animation: chapIn 0.35s ease; }
+@keyframes chapIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+.chapNo { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.42em; color: var(--gold, #c9a86a); }
+.chapName { font-family: var(--font-display); font-weight: 900; font-size: clamp(26px, 5.5vw, 46px); letter-spacing: 0.14em; margin-top: 8px; }
+.chapCyan { color: var(--cyan); }
+.chapMag { color: var(--magenta-soft, #ff8fe4); }
+.chapGold { background: linear-gradient(92deg, #f6ecd2, var(--gold, #c9a86a)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.chapRule { width: 120px; height: 2px; margin-top: 14px; background: linear-gradient(90deg, transparent, var(--gold, #c9a86a), transparent); }
+
+/* ⑤自分視点のレース実走(軽量ドット走行canvas+▲YOU) */
+.raceViz { position: relative; margin-top: 14px; }
+.raceVizHead { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 11px;
+  letter-spacing: 0.14em; color: var(--muted); margin-bottom: 6px; }
+.raceCanvas { width: 100%; height: 240px; display: block; border: 1px solid var(--border, rgba(255,255,255,0.08));
+  border-radius: 12px; background: rgba(0, 0, 0, 0.25); }
+
+/* ①MY LANE(濁流の右の自分専用レーン) */
+.floodGrid { display: grid; grid-template-columns: 1fr 250px; gap: 0; min-height: 0; }
+.mylane { border-left: 1px solid var(--border, rgba(255,255,255,0.08));
+  background: linear-gradient(180deg, rgba(0, 234, 255, 0.04), transparent); padding: 11px 12px;
+  display: flex; flex-direction: column; min-height: 0; }
+.mylaneK { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.18em; color: var(--cyan);
+  padding-bottom: 8px; border-bottom: 1px solid var(--border, rgba(255,255,255,0.08)); }
+.mylaneList { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 7px; padding-top: 9px; }
+.myEv { border: 1px solid var(--border, rgba(255,255,255,0.08)); border-radius: 9px; padding: 7px 9px;
+  background: rgba(255, 255, 255, 0.02); animation: myEvIn 0.4s ease; }
+@keyframes myEvIn { 0% { transform: translateX(14px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+.myEvN { font-family: var(--font-display); font-weight: 700; font-size: 11.5px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; color: var(--text); }
+.myEvS { font-family: var(--font-mono); font-size: 9px; margin-top: 2px; color: var(--muted); }
+.myEvBurn { border-color: rgba(255, 92, 92, 0.4); }
+.myEvBurn .myEvS { color: var(--bad); }
+.myEvSurvive { border-color: rgba(53, 208, 127, 0.4); }
+.myEvSurvive .myEvS { color: var(--good); }
+.myEvDay7 { border-color: rgba(201, 168, 106, 0.5); background: rgba(201, 168, 106, 0.08); }
+.myEvDay7 .myEvS { color: var(--gold-bright, #f0d9a8); }
+.myEvMatch { border-color: rgba(0, 234, 255, 0.4); }
+.myEvMatch .myEvS { color: var(--cyan); }
+.mylaneEmpty { color: var(--faint); font-size: 10.5px; font-family: var(--font-mono); padding-top: 10px; line-height: 1.6; }
+
+/* ④動く数字(ターンごとの実バッチ値カウントアップ) */
+.counters { margin-left: auto; display: flex; gap: 14px; font-family: var(--font-mono); font-size: 10px; }
+.counter b { font-family: var(--font-display); font-weight: 800; font-size: 15px; display: block;
+  font-variant-numeric: tabular-nums; }
+.counterBurn b { color: var(--bad); }
+.counterGold b { color: var(--gold-bright, #f0d9a8); }
+.counterCyan b { color: var(--cyan); }
+.counter span { color: var(--faint); letter-spacing: 0.08em; }
+
+/* ②決定行の拡大ポップ(自分該当行の新規出現) */
+.lgPop { animation: lgpop 0.32s ease; transform-origin: left; }
+@keyframes lgpop { 0% { transform: scale(1.12); filter: brightness(1.5); } 100% { transform: scale(1); } }
+
+/* ⑦点呼モード(静かな夜は1頭ずつ) */
+.rollcall { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px 0; }
+.rollArt { width: 150px; height: 150px; border-radius: 14px; overflow: hidden; }
+.rollArt canvas { width: 100%; height: 100%; display: block; }
+.rollName { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--text); }
+.rollSub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+/* ⑥結果への着地(吸い込み→YOUR RESULTS) */
+.nightSumIn { animation: resultsIn 0.5s ease; }
+@keyframes resultsIn { 0% { opacity: 0; transform: scale(1.04); } 100% { opacity: 1; transform: scale(1); } }
+
+@media (max-width: 760px) {
+  .floodGrid { grid-template-columns: 1fr; }
+  .mylane { border-left: none; border-top: 1px solid var(--border, rgba(255,255,255,0.08)); max-height: 150px; }
+  .counters { width: 100%; margin-left: 0; justify-content: space-between; }
+  .raceCanvas { height: 190px; }
+}

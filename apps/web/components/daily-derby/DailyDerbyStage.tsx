@@ -31,6 +31,9 @@ import {
   type VerdictInfo,
 } from '@/components/daily-derby/DerbyVerdict';
 import { NightResultsList, nightResultsCount } from '@/components/daily-derby/NightResultsList';
+import { DerbyRaceViz } from '@/components/daily-derby/DerbyRaceViz';
+import { NftHorseArt } from '@/components/NftHorseArt';
+import { deriveNftLook } from '@/lib/nft-visual';
 import { DailyDerbyFailureState } from '@/components/daily-derby/DailyDerbyFailureState';
 import s from '../../app/daily-derby.module.css';
 
@@ -72,6 +75,20 @@ const CONDITION_COLORS: Record<string, string> = {
   TURF: '#58d68d', DIRT: '#d8a05a',
 };
 
+/* ③チャプター(ターン境界の全画面章タイトル・1.4秒)。 */
+const CHAPTERS = [
+  { at: LOGS_FROM, no: 'CHAPTER 01', name: 'RACE RESULTS', cls: 'chapCyan' },
+  { at: MARKET_OPEN.startAt, no: 'CHAPTER 02', name: 'P2P MARKETPLACE', cls: 'chapMag' },
+  { at: LOG_SECTIONS.find((sec) => sec.key === 'MLM')!.startAt, no: 'CHAPTER 03', name: 'REWARDS', cls: 'chapGold' },
+] as const;
+const CHAPTER_SECONDS = 1.4;
+
+/* ⑦点呼モード: 出走がこの頭数未満の「静かな夜」は濁流を1頭ずつの点呼に切替。 */
+const QUIET_NIGHT_HORSES = 500;
+
+/* ④動く数字: 実バッチ値へ向かう ease-out 補間(表示専用・途中参加でも正値)。 */
+const easeOut = (x: number): number => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
+
 export function DailyDerbyStage({
   secondsToStart,
   counts = FIXTURE_COUNTS,
@@ -90,6 +107,17 @@ export function DailyDerbyStage({
   const effectiveNames = myHorses.length > 0 ? myHorses.map((h) => h.name) : myHorseNames;
   const [verdict, setVerdict] = useState<VerdictInfo | null>(null);
   const [verdictQueued, setVerdictQueued] = useState(0);
+  /* ①MY LANE: 発火済みの自分イベントを時系列で保持(濁流右の専用レーン)。 */
+  const [myLane, setMyLane] = useState<VerdictInfo[]>([]);
+  /* ②ヒットストップ: 自分の審判の瞬間、ステージ全体を320msだけ微拡大。 */
+  const [stageHit, setStageHit] = useState(false);
+  const hitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hit = useCallback(() => {
+    setStageHit(false);
+    if (hitTimer.current) clearTimeout(hitTimer.current);
+    requestAnimationFrame(() => setStageHit(true));
+    hitTimer.current = setTimeout(() => setStageHit(false), 340);
+  }, []);
   /* 審判キュー: 複数馬・複数P2P成立でも1件ずつ順番に見せる(オーナー承認の方式)。 */
   const verdictQueue = useRef<VerdictInfo[]>([]);
   const verdictShowing = useRef(false);
@@ -179,7 +207,8 @@ export function DailyDerbyStage({
     [soundOn, failed, getAudio],
   );
 
-  /* 審判キューの再生: 先頭を表示→表示時間後に次へ(空になったら閉じる)。 */
+  /* 審判キューの再生: 先頭を表示→表示時間後に次へ(空になったら閉じる)。
+     表示の瞬間に ②ヒットストップ+①MY LANEへの記帳も行う。 */
   const showNextVerdict = useCallback(() => {
     const next = verdictQueue.current.shift() ?? null;
     setVerdict(next);
@@ -190,11 +219,25 @@ export function DailyDerbyStage({
       return;
     }
     verdictShowing.current = true;
+    hit();
+    setMyLane((prev) => [...prev, next]);
     playOneShot(next.kind === 'burn' ? 'ownBurn' : 'ownGood');
     if (next.kind === 'burn' && next.dropKey) setTimeout(() => playOneShot('ownGood'), 1600);
     const duration = next.kind === 'burn' ? (next.dropKey ? 5000 : 3600) : 3200;
     verdictTimer.current = setTimeout(showNextVerdict, duration);
-  }, [playOneShot]);
+  }, [playOneShot, hit]);
+
+  /* リプレイ/翌日待機へ戻ったらMY LANEと審判の既読をリセット(ループ視聴)。 */
+  const wasPreShow = useRef(secondsToStart > 0);
+  useEffect(() => {
+    const isPreShow = secondsToStart > 0;
+    if (isPreShow && !wasPreShow.current) {
+      setMyLane([]);
+      seenVerdicts.current.clear();
+      verdictQueue.current = [];
+    }
+    wasPreShow.current = isPreShow;
+  }, [secondsToStart > 0]);
   useEffect(
     () => () => {
       if (verdictTimer.current) clearTimeout(verdictTimer.current);
@@ -320,9 +363,13 @@ export function DailyDerbyStage({
   );
 
   const showTicker = !failed && elapsed >= LOGS_FROM && elapsed < SHOW_TOTAL + 30;
+  const chapter = !failed && elapsed < SHOW_TOTAL
+    ? CHAPTERS.find((c) => elapsed >= c.at && elapsed < c.at + CHAPTER_SECONDS)
+    : undefined;
+  const quiet = counts.horses < QUIET_NIGHT_HORSES && myHorses.length > 0;
 
   return (
-    <div className={s.stage}>
+    <div className={`${s.stage} ${stageHit ? s.stageHit : ''}`}>
       <button
         type="button"
         className={s.soundBtn}
@@ -344,7 +391,10 @@ export function DailyDerbyStage({
             elapsed={elapsed}
             counts={counts}
             myHorseNames={effectiveNames}
+            myHorses={myHorses}
             conditions={conditions}
+            myLane={myLane}
+            quiet={quiet}
             onMine={playOwnLine}
           />
         ) : (
@@ -352,6 +402,13 @@ export function DailyDerbyStage({
         )}
       </div>
 
+      {chapter && (
+        <div className={s.chapCard}>
+          <div className={s.chapNo}>{chapter.no}</div>
+          <div className={`${s.chapName} ${s[chapter.cls]}`}>{chapter.name}</div>
+          <div className={s.chapRule} />
+        </div>
+      )}
       {showTicker && tickerEvents.length > 0 && <Ticker events={tickerEvents} />}
       {verdict && <DerbyVerdict verdict={verdict} queued={verdictQueued} />}
     </div>
@@ -432,13 +489,19 @@ function LiveShow({
   elapsed,
   counts,
   myHorseNames,
+  myHorses,
   conditions,
+  myLane,
+  quiet,
   onMine,
 }: {
   elapsed: number;
   counts: DerbyCounts;
   myHorseNames: readonly string[];
+  myHorses: readonly MyDerbyHorse[];
   conditions: DerbyConditionsView | null;
+  myLane: readonly VerdictInfo[];
+  quiet: boolean;
   onMine: (info: { name: string; tone: string }) => void;
 }) {
   if (elapsed >= COMPLETE_AT) {
@@ -451,7 +514,17 @@ function LiveShow({
     );
   }
   if (elapsed >= LOGS_FROM) {
-    return <LogPhase elapsed={elapsed} counts={counts} myHorseNames={myHorseNames} onMine={onMine} />;
+    return (
+      <LogPhase
+        elapsed={elapsed}
+        counts={counts}
+        myHorseNames={myHorseNames}
+        myHorses={myHorses}
+        myLane={myLane}
+        quiet={quiet}
+        onMine={onMine}
+      />
+    );
   }
   return (
     <div>
@@ -476,6 +549,12 @@ function LiveShow({
           <span className={s.condK}>/ コース</span>
           <b style={{ color: CONDITION_COLORS[conditions.surface] }}>{conditions.surface_ja}</b>
         </div>
+      )}
+      {elapsed >= RACE_RUN.startAt && (
+        <DerbyRaceViz
+          progress={(elapsed - RACE_RUN.startAt) / (RACE_RUN.endAt - RACE_RUN.startAt)}
+          myName={myHorses[0]?.name}
+        />
       )}
     </div>
   );
@@ -541,20 +620,92 @@ const TONE_CLASS: Record<LogTone, string> = {
   end: s.lgEnd!,
 };
 
+/* ④動く数字: ターンごとの実バッチ値カウントアップ(表示専用の補間)。 */
+function Counters({ elapsed, counts }: { elapsed: number; counts: DerbyCounts }) {
+  const p2pAt = MARKET_OPEN.startAt;
+  const rewardsAt = LOG_SECTIONS.find((sec) => sec.key === 'MLM')!.startAt;
+  if (elapsed < p2pAt) {
+    const p = easeOut((elapsed - LOGS_FROM) / (p2pAt - LOGS_FROM));
+    return (
+      <div className={s.counters}>
+        <div className={`${s.counter} ${s.counterBurn}`}>
+          <b>{Math.round(counts.burns * p).toLocaleString('en-US')}</b>
+          <span>BURNED</span>
+        </div>
+        <div className={`${s.counter} ${s.counterGold}`}>
+          <b>{Math.round((counts.horses - counts.burns) * p).toLocaleString('en-US')}</b>
+          <span>SURVIVED</span>
+        </div>
+      </div>
+    );
+  }
+  if (elapsed < rewardsAt) {
+    const matched = matchingCount(elapsed, counts);
+    return (
+      <div className={s.counters}>
+        <div className={`${s.counter} ${s.counterCyan}`}>
+          <b>
+            {matched.toLocaleString('en-US')} / {counts.assignments.toLocaleString('en-US')}
+          </b>
+          <span>MATCHED</span>
+        </div>
+        <div className={`${s.counter} ${s.counterGold}`}>
+          <b>{Math.round(counts.mints * easeOut((elapsed - p2pAt) / (rewardsAt - p2pAt))).toLocaleString('en-US')}</b>
+          <span>DAY0 MINTS</span>
+        </div>
+      </div>
+    );
+  }
+  const p = easeOut((elapsed - rewardsAt) / (COMPLETE_AT - rewardsAt));
+  return (
+    <div className={s.counters}>
+      <div className={`${s.counter} ${s.counterGold}`}>
+        <b>{Math.round(counts.buffs * p).toLocaleString('en-US')}</b>
+        <span>REVENGE BUFFS</span>
+      </div>
+    </div>
+  );
+}
+
+/* ⑦点呼モード: 静かな夜は濁流の代わりに自分の馬を1頭ずつ大写し(4秒交代)。 */
+function Rollcall({ elapsed, myHorses }: { elapsed: number; myHorses: readonly MyDerbyHorse[] }) {
+  const idx = Math.max(0, Math.floor((elapsed - LOGS_FROM) / 4)) % myHorses.length;
+  const horse = myHorses[idx]!;
+  const dna = horse.dnaHash
+    ?? `0x${Array.from(horse.name).map((ch) => ch.charCodeAt(0).toString(16)).join('').padEnd(64, 'a').slice(0, 64)}`;
+  return (
+    <div className={s.rollcall}>
+      <div className={s.rollArt}>
+        <NftHorseArt look={deriveNftLook(dna, horse.name)} className={s.vHorseArt} />
+      </div>
+      <div className={s.rollName}>{horse.name}</div>
+      <div className={s.rollSub}>
+        点呼 {idx + 1} / {myHorses.length} — 静かな夜
+      </div>
+    </div>
+  );
+}
+
 function LogPhase({
   elapsed,
   counts,
   myHorseNames,
+  myHorses,
+  myLane,
+  quiet,
   onMine,
 }: {
   elapsed: number;
   counts: DerbyCounts;
   myHorseNames: readonly string[];
+  myHorses: readonly MyDerbyHorse[];
+  myLane: readonly VerdictInfo[];
+  quiet: boolean;
   onMine: (info: { name: string; tone: string }) => void;
 }) {
   const myNames = useMemo(() => new Set(myHorseNames), [myHorseNames]);
   const lines = logWindow(elapsed, 44, myNames);
-  // 自分該当行が新しく現れたらチャイム(1行につき1回)
+  // 自分該当行が新しく現れたらチャイム/審判キューへ(1行につき1回)
   const seenMine = useRef<Set<string>>(new Set());
   useEffect(() => {
     for (const line of lines) {
@@ -564,10 +715,8 @@ function LogPhase({
       }
     }
   }, [lines, onMine]);
-  const matched = matchingCount(elapsed, counts);
-  const inMarketOpen = elapsed >= MARKET_OPEN.startAt && elapsed < MARKET_OPEN.endAt;
-  const matchSection = LOG_SECTIONS.find((sec) => sec.key === 'MATCH')!;
-  const showCounter = elapsed >= matchSection.startAt && elapsed < matchSection.endAt + 3;
+  // ⑦静かな夜は結果ターン(TURN1)を点呼モードに切り替える
+  const rollcall = quiet && elapsed < MARKET_OPEN.startAt && myHorses.length > 0;
   return (
     <div className={s.logPhase}>
       <div className={s.logHead}>
@@ -575,31 +724,53 @@ function LogPhase({
           THE DAILY DERBY <span className={s.liveDot} />
         </span>
         <span className={s.logTurn}>{turnLabel(elapsed)}</span>
-        {showCounter && (
-          <span className={s.logCounter}>
-            MATCHED {matched.toLocaleString('en-US')} / {counts.assignments.toLocaleString('en-US')}
-          </span>
-        )}
+        <Counters elapsed={elapsed} counts={counts} />
       </div>
 
-      {inMarketOpen && (
-        <div className={s.mktOpen}>
-          <div className={s.liveRule} />
-          <div className={s.mktTitle}>GLOBAL MARKETPLACE OPENING</div>
-          <div className={s.liveRule} />
-        </div>
-      )}
-
-      <div className={s.logStream} aria-live="off">
-        {lines.map((line) => (
-          <div
-            key={line.id}
-            className={`${s.lg} ${TONE_CLASS[line.tone]} ${line.mine ? s.lgMine : ''}`}
-          >
-            {line.text}
-            {line.mine ? '  ◀ YOU' : ''}
+      <div className={s.floodGrid}>
+        {rollcall ? (
+          <Rollcall elapsed={elapsed} myHorses={myHorses} />
+        ) : (
+          <div className={s.logStream} aria-live="off">
+            {lines.map((line) => (
+              <div
+                key={line.id}
+                className={`${s.lg} ${TONE_CLASS[line.tone]} ${line.mine ? `${s.lgMine} ${s.lgPop}` : ''}`}
+              >
+                {line.text}
+                {line.mine ? '  ◀ YOU' : ''}
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+        <div className={s.mylane}>
+          <div className={s.mylaneK}>MY LANE — あなたの馬</div>
+          <div className={s.mylaneList}>
+            {myLane.length === 0 ? (
+              <div className={s.mylaneEmpty}>あなたの馬の結果がここに順番に刻まれます。</div>
+            ) : (
+              myLane.map((ev, i) => {
+                const cls =
+                  ev.kind === 'burn' ? s.myEvBurn
+                  : ev.kind === 'day7' ? s.myEvDay7
+                  : ev.kind === 'match' ? s.myEvMatch
+                  : s.myEvSurvive;
+                const day = ev.horse?.currentDay;
+                const sub =
+                  ev.kind === 'day7' ? 'DAY7 走破 — CHAMPION'
+                  : ev.kind === 'burn' ? (day !== undefined ? `DAY${day} — BURN` : 'BURN')
+                  : ev.kind === 'match' ? `${ev.matchSide === 'buy' ? '購入' : '売却'}マッチング成立`
+                  : day !== undefined ? `DAY${day} → DAY${Math.min(7, day + 1)} 生存` : '生存';
+                return (
+                  <div key={`${ev.kind}:${ev.name}:${i}`} className={`${s.myEv} ${cls}`}>
+                    <div className={s.myEvN}>{ev.name}</div>
+                    <div className={s.myEvS}>{sub}</div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -613,7 +784,7 @@ function LogPhase({
 function PersonalOrDone({ night }: { night: DerbyNightResults | null }) {
   if (night && nightResultsCount(night) > 0) {
     return (
-      <div className={s.nightSum}>
+      <div className={`${s.nightSum} ${s.nightSumIn}`}>
         <div className={s.nightSumHead}>
           <div className={s.liveRule} />
           <div className={s.nightSumK}>YOUR RESULTS — 本日のあなたの全結果</div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
+  FIXTURE_COUNTS,
   FIXTURE_TICKER,
   PRE_SHOW_SECONDS,
   SHOW_TOTAL,
@@ -43,6 +44,7 @@ export function DerbyPreview() {
   const [speed, setSpeed] = useState(1);
   const [paused, setPaused] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [quiet, setQuiet] = useState(false);
   const [myHorsesOverride, setMyHorsesOverride] = useState<ReturnType<typeof fixtureMyHorses> | null>(null);
   const [debugVerdict, setDebugVerdict] = useState<
     'burn' | 'survive' | 'day7' | 'match_sell' | 'match_buy' | undefined
@@ -60,6 +62,7 @@ export function DerbyPreview() {
     if (t !== null && Number.isFinite(Number(t))) setSecondsToStart(Number(t));
     if (q.get('paused') === '1') setPaused(true);
     if (q.get('failed') === '1') setFailed(true);
+    if (q.get('quiet') === '1') setQuiet(true);
     // 視覚QA: ?verdict=burn|survive|day7|match_sell|match_buy で審判を強制表示
     const dv = q.get('verdict');
     if (dv === 'burn' || dv === 'survive' || dv === 'day7' || dv === 'match_sell' || dv === 'match_buy') {
@@ -143,6 +146,18 @@ export function DerbyPreview() {
         >
           失敗モード
         </button>
+        <button
+          type="button"
+          className="secondary"
+          style={{
+            padding: '0.35rem 0.7rem',
+            fontSize: '0.68rem',
+            borderColor: quiet ? 'var(--gold, #c9a86a)' : undefined,
+          }}
+          onClick={() => setQuiet((v) => !v)}
+        >
+          {quiet ? '静かな夜(点呼) ✕' : '静かな夜(点呼)'}
+        </button>
         <span style={{ flexBasis: '100%' }} />
         <label style={{ flexDirection: 'row', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem' }}>
           倍速
@@ -167,6 +182,7 @@ export function DerbyPreview() {
 
       <DailyDerbyStage
         secondsToStart={secondsToStart}
+        counts={quiet ? { ...FIXTURE_COUNTS, horses: 180, burns: 19, listed: 168, assignments: 150, mints: 12 } : FIXTURE_COUNTS}
         tickerEvents={FIXTURE_TICKER}
         nightResults={fixtureNightResults()}
         failed={failed}

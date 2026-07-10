@@ -153,3 +153,10 @@
 .recBadgeGold { color: var(--gold-bright, #f0d9a8); border-color: rgba(240, 200, 110, 0.5); background: rgba(240, 200, 110, 0.1); }
 .recBadgeCyan { color: var(--cyan); border-color: rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.08); }
 .recBadgeMint { color: var(--magenta-soft); border-color: rgba(255, 45, 196, 0.4); background: rgba(255, 45, 196, 0.07); }
+
+/* グループ見出し(SHOW REDESIGN ⑥: DAY7走破·n / 生存·n / BURN·n / P2P売買·n / 新規発行·n) */
+.recGroup { margin-bottom: 4px; }
+.recGroupK { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.14em; color: var(--muted);
+  margin: 4px 0 7px; display: flex; align-items: center; gap: 8px; }
+.recGroupN { color: var(--gold, #c9a86a); }
+.recGroup .recRow { margin-bottom: 6px; }

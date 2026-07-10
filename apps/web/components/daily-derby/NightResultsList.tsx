@@ -25,10 +25,25 @@ export function nightResultsCount(r: DerbyNightResults): number {
   return r.burned.length + r.survived.length + r.sold.length + r.bought.length;
 }
 
+function Group({ label, count, children }: { label: string; count: number; children: React.ReactNode }) {
+  if (count === 0) return null;
+  return (
+    <div className={s.recGroup}>
+      <div className={s.recGroupK}>
+        {label} <span className={s.recGroupN}>· {count}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export function NightResultsList({ results }: { results: DerbyNightResults }) {
+  const day7 = results.survived.filter((h) => h.day7);
+  const survived = results.survived.filter((h) => !h.day7);
   return (
     <div className={s.recList}>
-      {results.survived.filter((h) => h.day7).map((h) => (
+      <Group label="DAY7 走破" count={day7.length}>
+      {day7.map((h) => (
         <div key={`d7:${h.name}`} className={`${s.recRow} ${s.recDay7}`}>
           <HorseThumb dna={h.dna_hash} name={h.name} />
           <div className={s.recBody}>
@@ -38,7 +53,9 @@ export function NightResultsList({ results }: { results: DerbyNightResults }) {
           <span className={`${s.recBadge} ${s.recBadgeGold}`}>DAY7</span>
         </div>
       ))}
-      {results.survived.filter((h) => !h.day7).map((h) => (
+      </Group>
+      <Group label="生存" count={survived.length}>
+      {survived.map((h) => (
         <div key={`sv:${h.name}`} className={s.recRow}>
           <HorseThumb dna={h.dna_hash} name={h.name} />
           <div className={s.recBody}>
@@ -50,6 +67,8 @@ export function NightResultsList({ results }: { results: DerbyNightResults }) {
           <span className={`${s.recBadge} ${s.recBadgeGood}`}>生存</span>
         </div>
       ))}
+      </Group>
+      <Group label="BURN(消滅)" count={results.burned.length}>
       {results.burned.map((h) => (
         <div key={`bu:${h.name}`} className={`${s.recRow} ${s.recBurn}`}>
           <HorseThumb dna={h.dna_hash} name={h.name} />
@@ -66,6 +85,8 @@ export function NightResultsList({ results }: { results: DerbyNightResults }) {
           <span className={`${s.recBadge} ${s.recBadgeBad}`}>BURN</span>
         </div>
       ))}
+      </Group>
+      <Group label="P2P売買" count={results.sold.length + results.bought.filter((h) => !h.is_mint).length}>
       {results.sold.map((h) => (
         <div key={`so:${h.name}`} className={s.recRow}>
           <HorseThumb dna={h.dna_hash} name={h.name} />
@@ -78,22 +99,33 @@ export function NightResultsList({ results }: { results: DerbyNightResults }) {
           <span className={`${s.recBadge} ${s.recBadgeCyan}`}>売却</span>
         </div>
       ))}
-      {results.bought.map((h) => (
+      {results.bought.filter((h) => !h.is_mint).map((h) => (
         <div key={`bo:${h.name}`} className={s.recRow}>
           <HorseThumb dna={h.dna_hash} name={h.name} />
           <div className={s.recBody}>
             <div className={s.recName}>{h.name}</div>
             <div className={s.recSub}>
-              {h.is_mint
-                ? <>新規発行(DAY0)で入手 — <b className={s.recGold}>{h.price} USDT</b></>
-                : <>{h.counterpart} と購入マッチング成立(DAY{h.day}) — <b className={s.recGold}>{h.price} USDT</b></>}
+              {h.counterpart} と購入マッチング成立(DAY{h.day}) — <b className={s.recGold}>{h.price} USDT</b>
             </div>
           </div>
-          <span className={`${s.recBadge} ${h.is_mint ? s.recBadgeMint : s.recBadgeCyan}`}>
-            {h.is_mint ? '新規発行' : '購入'}
-          </span>
+          <span className={`${s.recBadge} ${s.recBadgeCyan}`}>購入</span>
         </div>
       ))}
+      </Group>
+      <Group label="新規発行" count={results.bought.filter((h) => h.is_mint).length}>
+      {results.bought.filter((h) => h.is_mint).map((h) => (
+        <div key={`mi:${h.name}`} className={s.recRow}>
+          <HorseThumb dna={h.dna_hash} name={h.name} />
+          <div className={s.recBody}>
+            <div className={s.recName}>{h.name}</div>
+            <div className={s.recSub}>
+              新規発行(DAY0)で入手 — <b className={s.recGold}>{h.price} USDT</b>
+            </div>
+          </div>
+          <span className={`${s.recBadge} ${s.recBadgeMint}`}>新規発行</span>
+        </div>
+      ))}
+      </Group>
     </div>
   );
 }
