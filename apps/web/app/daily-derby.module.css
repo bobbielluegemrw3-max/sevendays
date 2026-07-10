@@ -601,35 +601,29 @@
   color: var(--gold-bright, #f0d9a8); white-space: nowrap; }
 .nightSumNote { font-family: var(--font-mono); font-size: 10px; color: var(--faint); margin-top: 12px; text-align: center; }
 
-/* 審判オーバーレイ: 自分の馬の実NFTアートを主役に(文言は事実のみ) */
+/* 審判オーバーレイ(ZIP4 正典): 特大・カード枠なし・kind別インセットグロー */
 .verdictOverlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
-  background: rgba(2, 2, 8, 0.92); animation: verdictDim 0.25s ease-out; }
+  background: rgba(4, 3, 9, 0.72); backdrop-filter: blur(3px); animation: verdictDim 0.3s ease-out; }
 @keyframes verdictDim { 0% { opacity: 0; } 100% { opacity: 1; } }
-.verdictCard { width: min(560px, 94vw); text-align: center; animation: verdictIn 0.3s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.verdictCard { width: min(760px, 94%); padding: 8px 12px; text-align: center;
+  animation: verdictIn 0.5s cubic-bezier(0.2, 1.4, 0.4, 1); }
 @keyframes verdictIn { 0% { opacity: 0; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } }
-.verdictKicker { font-family: var(--font-display); font-weight: 800; font-size: 15px; letter-spacing: 0.4em; color: var(--good); }
+.verdictKicker { position: relative; display: inline-block; font-family: var(--font-display); font-weight: 800;
+  font-size: 15px; letter-spacing: 0.42em; text-indent: 0.42em; color: var(--good); }
 .verdictKickerBurn { color: var(--bad); }
 .verdictKickerGold { color: var(--gold-bright, #f0d9a8); }
 .verdictKickerCyan { color: var(--cyan); }
-.vHorse { width: min(280px, 62vw); margin: 14px auto 0; border-radius: 20px; position: relative; }
-.vHorseArt { width: 100%; height: auto; display: block; border-radius: 20px; }
-.vHorseSurvive .vHorseArt { animation: vGlowGood 2.4s ease-out forwards; }
-@keyframes vGlowGood { 0% { filter: brightness(0.7); } 35% { filter: brightness(1.15) drop-shadow(0 0 34px rgba(53, 208, 127, 0.65)); }
-  100% { filter: brightness(1.02) drop-shadow(0 0 20px rgba(53, 208, 127, 0.4)); } }
-.vHorseDay7 .vHorseArt { animation: vGlowGold 2.6s ease-out forwards; }
-@keyframes vGlowGold { 0% { filter: brightness(0.7); } 35% { filter: brightness(1.2) drop-shadow(0 0 40px rgba(240, 200, 110, 0.8)); }
-  100% { filter: brightness(1.05) drop-shadow(0 0 24px rgba(240, 200, 110, 0.55)); } }
-.vHorseMatch .vHorseArt { animation: vGlowCyan 2.4s ease-out forwards; }
-@keyframes vGlowCyan { 0% { filter: brightness(0.7); } 35% { filter: brightness(1.15) drop-shadow(0 0 34px rgba(0, 234, 255, 0.6)); }
-  100% { filter: brightness(1.02) drop-shadow(0 0 20px rgba(0, 234, 255, 0.38)); } }
-.vHorseBurn .vHorseArt { animation: vBurn 2.6s ease-in forwards; }
-@keyframes vBurn {
-  0% { filter: brightness(1); }
-  30% { filter: brightness(1.25) saturate(1.3) drop-shadow(0 0 36px rgba(255, 92, 92, 0.85)); }
-  100% { filter: brightness(0.42) saturate(0.35) drop-shadow(0 0 16px rgba(255, 92, 92, 0.45)); }
-}
-.verdictName { font-family: var(--font-display); font-weight: 800; font-size: 21px; color: var(--text); margin-top: 12px; }
-.verdictSub { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); margin-top: 5px; letter-spacing: 0.14em; }
+.vHorse { width: min(300px, 66vw); height: min(300px, 66vw); margin: 16px auto 8px; border-radius: 16px;
+  overflow: hidden; position: relative;
+  background: radial-gradient(80% 78% at 50% 42%, rgba(0, 234, 255, 0.1), rgba(10, 8, 19, 0.92) 74%); }
+.vHorseArt { width: 100%; height: 100%; display: block; }
+.vHorseSurvive { box-shadow: 0 0 34px rgba(53, 208, 127, 0.35) inset; }
+.vHorseDay7 { box-shadow: 0 0 40px rgba(242, 228, 191, 0.45) inset; }
+.vHorseMatch { box-shadow: 0 0 34px rgba(0, 234, 255, 0.4) inset; }
+.vHorseBurn { box-shadow: 0 0 40px rgba(255, 92, 92, 0.4) inset; }
+.vHorseBurn .vHorseArt { filter: sepia(0.5) hue-rotate(-30deg) saturate(2); }
+.verdictName { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: var(--text); margin-top: 8px; }
+.verdictSub { font-family: var(--font-mono); font-size: 13px; color: var(--muted); margin-top: 7px; letter-spacing: 0.14em; }
 .vDayArrow { color: var(--faint); margin: 0 2px; }
 .vDayNew { color: var(--good); font-size: 15px; display: inline-block;
   animation: vDayPop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) 0.9s both; text-shadow: 0 0 14px rgba(53, 208, 127, 0.6); }
