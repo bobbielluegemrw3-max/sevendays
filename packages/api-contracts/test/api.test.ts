@@ -299,6 +299,25 @@ describe('race transparency and admin surface after a real production day', () =
     const badDate = await call('GET', '/api/v1/daily-derby/my-results/not-a-date', asUser(buyer));
     expect(badDate.status).toBe(400);
 
+    // 透明性台帳(オーナー承認 2026-07-10): 集計・匿名成約・全馬結果
+    const summary = await call('GET', '/api/v1/transparency/summary', asUser(buyer));
+    expect(summary.status).toBe(200);
+    const sDays = (summary.body as {
+      days: { date: string; participants: number; burned: number; survived: number; race_id: string }[];
+    }).days;
+    expect(sDays.length).toBeGreaterThanOrEqual(1);
+    expect(sDays[0]!.date).toBe('2039-02-01');
+    expect(sDays[0]!.participants).toBe(3);
+    expect(sDays[0]!.survived + sDays[0]!.burned).toBe(3);
+    const dayDetail = await call('GET', '/api/v1/transparency/day/2039-02-01', asUser(buyer));
+    expect(dayDetail.status).toBe(200);
+    const dayTrades = (dayDetail.body as { trades: { buyer_anon: string }[] }).trades;
+    expect(dayTrades.length).toBeGreaterThanOrEqual(1);
+    expect(dayTrades[0]!.buyer_anon).toMatch(/^U-[0-9a-f]{4}$/);
+    const dayResults = await call('GET', '/api/v1/transparency/day/2039-02-01/results', asUser(buyer));
+    expect((dayResults.body as { total: number }).total).toBe(3);
+    expect((dayResults.body as { results: { horse_name: string }[] }).results.length).toBe(3);
+
     // admin surface
     const admin = await newUser();
     await client.query(

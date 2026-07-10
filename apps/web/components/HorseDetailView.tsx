@@ -69,8 +69,8 @@ function statusMeta(horse: HorseDetail): StatusMeta {
       return {
         badge: s.stBurned!, label: 'BURNED · 消滅', isActive: false, burned: true,
         heroValLabel: '結末', heroVal: '消滅', heroValUnit: '', heroValMuted: true,
-        sideLabel: '結末 · OUTCOME', sideNote: `Day ${d} のレースで下位10.7%に入りBurn`,
-        dayNote: 'このレースで下位10.7%に入り、Burn(消滅)しました。',
+        sideLabel: '結末 · OUTCOME', sideNote: `Day ${d} のレースで成績下位に入りBurn`,
+        dayNote: 'このレースで成績下位に入り、Burn(消滅)しました。',
         retiredClass: s.retiredBurned!, retiredNote: 'この馬は消滅しました。厩舎の記録としてのみ残ります。',
       };
     case 'ACTIVE':

@@ -472,4 +472,144 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       };
     },
   });
+
+  /* ---- 透明性台帳(オーナー承認 2026-07-10) --------------------------------
+     BURN率の宣言をやめ、毎晩の実データそのものを公開する。数値は全て実テーブル由来・
+     率は返さない(見る側が算出する)。ユーザーは匿名ID(uuidのmd5先頭4桁)のみ。
+     アイテム使用・運営ウォレット・メール・実IDは出さない。 */
+
+  // 日次集計(直近60日)。台帳カレンダーと月次CSVの元データ。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/transparency/summary',
+    auth: 'user',
+    handler: async (ctx) => {
+      const rows = await ctx.client.query<{
+        date: string;
+        race_id: string;
+        participants: number;
+        burned: number;
+        day7: number;
+        matched: number;
+        matched_volume: string;
+        mints: number;
+        weather: string | null;
+        track_condition: string | null;
+        surface: string | null;
+      }>(
+        `select b.batch_date::text as date, r.id as race_id,
+                r.participant_count as participants,
+                r.weather::text as weather, r.track_condition::text as track_condition,
+                r.surface::text as surface,
+                (select count(*)::int from horse_burns hb where hb.race_id = r.id) as burned,
+                (select count(*)::int from race_participant_snapshots s
+                   left join horse_burns hb2 on hb2.race_id = s.race_id and hb2.horse_id = s.horse_id
+                  where s.race_id = r.id and hb2.id is null and s.current_day = 6) as day7,
+                (select count(*)::int from ownership_assignments a
+                  where a.batch_run_id = b.id and a.status = 'SETTLED') as matched,
+                (select coalesce(sum(a.assigned_price), 0)::text from ownership_assignments a
+                  where a.batch_run_id = b.id and a.status = 'SETTLED') as matched_volume,
+                (select count(*)::int from ownership_assignments a
+                  where a.batch_run_id = b.id and a.status = 'SETTLED'
+                    and a.market_listing_id is null) as mints
+         from batch_runs b
+         join races r on r.batch_run_id = b.id
+         where r.status = 'FINALIZED'
+         order by b.batch_date desc
+         limit 60`,
+        [],
+      );
+      return {
+        days: rows.rows.map((r) => ({
+          ...r,
+          survived: Math.max(0, (r.participants ?? 0) - r.burned),
+        })),
+      };
+    },
+  });
+
+  // 日次詳細: 集計+匿名の成約一覧(高額順・上限500)。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/transparency/day/:date',
+    auth: 'user',
+    handler: async (ctx) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(ctx.params.date ?? '')) {
+        throw new ApiError('VALIDATION_FAILED', 'date must be YYYY-MM-DD');
+      }
+      const race = await ctx.client.query<{ id: string; batch_run_id: string }>(
+        `select r.id, r.batch_run_id
+         from races r join batch_runs b on b.id = r.batch_run_id
+         where b.batch_date = $1 and r.status = 'FINALIZED' limit 1`,
+        [ctx.params.date],
+      );
+      const raceRow = race.rows[0] ?? null;
+      if (!raceRow) return { date: ctx.params.date, race_id: null, trades: [] };
+      const trades = await ctx.client.query<{
+        horse_name: string;
+        price: string;
+        is_mint: boolean;
+        day: number;
+        buyer_anon: string;
+        seller_anon: string | null;
+      }>(
+        `select h.name as horse_name, a.assigned_price::text as price,
+                (a.market_listing_id is null) as is_mint,
+                coalesce(l.current_day, 0) as day,
+                'U-' || substr(encode(digest(a.buyer_user_id::text, 'md5'), 'hex'), 1, 4) as buyer_anon,
+                case when a.seller_user_id is null then null
+                     else 'U-' || substr(encode(digest(a.seller_user_id::text, 'md5'), 'hex'), 1, 4)
+                end as seller_anon
+         from ownership_assignments a
+         join horses h on h.id = a.horse_id
+         left join market_listings l on l.id = a.market_listing_id
+         where a.batch_run_id = $1 and a.status = 'SETTLED'
+         order by a.assigned_price desc, h.name
+         limit 500`,
+        [raceRow.batch_run_id],
+      );
+      return { date: ctx.params.date, race_id: raceRow.id, trades: trades.rows };
+    },
+  });
+
+  // 日次CSV用: 全馬の結果(順位・馬名・Day・スコア・BURN)。上限5000。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/transparency/day/:date/results',
+    auth: 'user',
+    handler: async (ctx) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(ctx.params.date ?? '')) {
+        throw new ApiError('VALIDATION_FAILED', 'date must be YYYY-MM-DD');
+      }
+      const race = await ctx.client.query<{ id: string }>(
+        `select r.id from races r join batch_runs b on b.id = r.batch_run_id
+         where b.batch_date = $1 and r.status = 'FINALIZED' limit 1`,
+        [ctx.params.date],
+      );
+      const raceRow = race.rows[0] ?? null;
+      if (!raceRow) return { date: ctx.params.date, results: [], total: 0 };
+      const total = await ctx.client.query<{ n: number }>(
+        `select count(*)::int as n from race_results where race_id = $1`,
+        [raceRow.id],
+      );
+      const rows = await ctx.client.query<{
+        final_rank: number;
+        horse_name: string;
+        day: number;
+        final_score: string;
+        is_burned: boolean;
+      }>(
+        `select rr.final_rank, h.name as horse_name, s.current_day as day,
+                rr.final_score::text as final_score, rr.is_burned
+         from race_results rr
+         join horses h on h.id = rr.horse_id
+         left join race_participant_snapshots s on s.race_id = rr.race_id and s.horse_id = rr.horse_id
+         where rr.race_id = $1
+         order by rr.final_rank
+         limit 5000`,
+        [raceRow.id],
+      );
+      return { date: ctx.params.date, results: rows.rows, total: total.rows[0]!.n };
+    },
+  });
 }

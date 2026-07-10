@@ -188,9 +188,8 @@ export function DashboardView({ data }: { data: DashboardData }) {
         <div className={s.countMeta}>
           <span>発走まで</span>
           <span>RUNNERS <b>{active.length}</b></span>
-          <span>BURN <b className="hot">10.7%</b></span>
         </div>
-        <div className={s.countNote}>下位10.7%はBurn=消滅。生き残った馬は日ごとに価値が上がります。</div>
+        <div className={s.countNote}>成績下位の馬はBurn=消滅。生き残った馬は日ごとに価値が上がります。全記録は台帳で公開。</div>
       </section>
 
       {/* ===== ③ 今日やること ===== */}

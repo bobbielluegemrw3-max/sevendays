@@ -29,6 +29,16 @@ export function RacesView({ races }: { races: Race[] }) {
       {/* あなたのレース記録(日付で遡れる審判アーカイブ) */}
       <MyDerbyRecord />
 
+      {/* 透明性台帳への導線(全ユーザーの毎晩の全記録・CSV) */}
+      <Link href="/ledger" className={s.raceRow}>
+        <div className={s.raceDate}>
+          <div className={s.raceMd}>台帳</div>
+          <div className={s.raceYear}>LEDGER</div>
+        </div>
+        <div className={s.raceParts}>毎晩の全記録(生存・BURN・売買)を公開 · CSVダウンロード可</div>
+        <span className={s.raceGo}>開く →</span>
+      </Link>
+
       {/* 確定したレース(全体・検証ページへ) */}
       <div>
         <div className={s.secLabel}>確定したレース · FINALIZED</div>
