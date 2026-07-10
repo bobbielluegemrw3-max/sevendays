@@ -132,31 +132,32 @@
 .recNavBtn:disabled { color: var(--faint); border-color: var(--border); background: transparent; cursor: default; }
 .recSelect { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--text);
   border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; background: var(--panel); }
-.recList { display: flex; flex-direction: column; gap: 9px; }
-.recRow { display: flex; align-items: center; gap: 14px; border: 1px solid var(--border); border-radius: 13px;
-  padding: 10px 14px; background: linear-gradient(120deg, rgba(0, 234, 255, 0.04), transparent 60%); }
-.recBurn { background: linear-gradient(120deg, rgba(255, 92, 92, 0.07), transparent 60%);
-  border-color: rgba(255, 92, 92, 0.25); }
-.recDay7 { background: linear-gradient(120deg, rgba(240, 200, 110, 0.09), transparent 60%);
-  border-color: rgba(240, 200, 110, 0.4); }
-.recArt { width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0; }
+/* 行の様式はハンドオフ(handoff-derby-show の YOUR RESULTS)準拠:
+   一様な行+46pxアート+8.5pxバッジ、DAY7だけ金塗りチップ。 */
+.recList { display: flex; flex-direction: column; gap: 2px; }
+.recRow { display: flex; align-items: center; gap: 11px; border: 1px solid var(--border); border-radius: 11px;
+  padding: 8px 11px; background: rgba(255, 255, 255, 0.015); }
+.recArt { width: 46px; height: 46px; border-radius: 9px; flex-shrink: 0; overflow: hidden;
+  background: radial-gradient(80% 78% at 50% 42%, rgba(0, 234, 255, 0.1), rgba(10, 8, 19, 0.92) 74%); }
 .recBody { flex: 1; min-width: 0; }
-.recName { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--text); }
-.recSub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.6;
-  overflow-wrap: anywhere; }
+.recName { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.recSub { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); margin-top: 2px; line-height: 1.6;
+  overflow-wrap: anywhere; white-space: normal; }
 .recGood { color: var(--good); }
 .recGold { color: var(--gold-bright, #f0d9a8); }
-.recBadge { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
-  border: 1px solid var(--border); border-radius: 999px; padding: 4px 11px; white-space: nowrap; }
-.recBadgeGood { color: var(--good); border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.08); }
-.recBadgeBad { color: var(--bad); border-color: rgba(255, 92, 92, 0.4); background: rgba(255, 92, 92, 0.08); }
-.recBadgeGold { color: var(--gold-bright, #f0d9a8); border-color: rgba(240, 200, 110, 0.5); background: rgba(240, 200, 110, 0.1); }
-.recBadgeCyan { color: var(--cyan); border-color: rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.08); }
-.recBadgeMint { color: var(--magenta-soft); border-color: rgba(255, 45, 196, 0.4); background: rgba(255, 45, 196, 0.07); }
+.recBadge { font-family: var(--font-display); font-size: 8.5px; font-weight: 700; letter-spacing: 0.06em;
+  border-radius: 6px; padding: 3px 8px; white-space: nowrap; }
+.recBadgeGood { color: var(--good); border: 1px solid rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.08); }
+.recBadgeBad { color: var(--bad); border: 1px solid rgba(255, 92, 92, 0.4); background: rgba(255, 92, 92, 0.1); }
+.recBadgeGold { color: #0a0813; border: none;
+  background: linear-gradient(92deg, var(--gold, #c9a86a), var(--gold-bright, #f2e4bf)); }
+.recBadgeCyan { color: var(--cyan); border: 1px solid rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.08); }
+.recBadgeMint { color: var(--magenta-soft); border: 1px solid rgba(255, 45, 196, 0.4); background: rgba(255, 45, 196, 0.07); }
 
 /* グループ見出し(SHOW REDESIGN ⑥: DAY7走破·n / 生存·n / BURN·n / P2P売買·n / 新規発行·n) */
-.recGroup { margin-bottom: 4px; }
+.recGroup { margin-bottom: 12px; }
 .recGroupK { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.14em; color: var(--muted);
-  margin: 4px 0 7px; display: flex; align-items: center; gap: 8px; }
+  margin: 0 0 7px; display: flex; align-items: center; gap: 8px; }
 .recGroupN { color: var(--gold, #c9a86a); }
 .recGroup .recRow { margin-bottom: 6px; }

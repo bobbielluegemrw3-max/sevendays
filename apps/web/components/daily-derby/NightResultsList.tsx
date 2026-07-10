@@ -44,7 +44,7 @@ export function NightResultsList({ results }: { results: DerbyNightResults }) {
     <div className={s.recList}>
       <Group label="DAY7 走破" count={day7.length}>
       {day7.map((h) => (
-        <div key={`d7:${h.name}`} className={`${s.recRow} ${s.recDay7}`}>
+        <div key={`d7:${h.name}`} className={s.recRow}>
           <HorseThumb dna={h.dna_hash} name={h.name} />
           <div className={s.recBody}>
             <div className={s.recName}>{h.name}</div>
@@ -70,7 +70,7 @@ export function NightResultsList({ results }: { results: DerbyNightResults }) {
       </Group>
       <Group label="BURN(消滅)" count={results.burned.length}>
       {results.burned.map((h) => (
-        <div key={`bu:${h.name}`} className={`${s.recRow} ${s.recBurn}`}>
+        <div key={`bu:${h.name}`} className={s.recRow}>
           <HorseThumb dna={h.dna_hash} name={h.name} />
           <div className={s.recBody}>
             <div className={s.recName}>{h.name}</div>
