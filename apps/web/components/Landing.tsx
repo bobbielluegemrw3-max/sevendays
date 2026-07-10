@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Countdown } from '@/components/Countdown';
 import { LocalPostTime, LocalRaceTime } from '@/components/LocalPostTime';
 import { LandingReveal } from '@/components/LandingReveal';
+import { DAY0_MINT_TOTAL_CHARGE, PRICE_TABLE_V1 } from '@sevendays/domain';
 import { pickShowcase } from '@/lib/horse-visual';
 import { pickNftShowcase } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
@@ -605,6 +606,10 @@ export function Landing() {
         <div className={s.galGrid}>
           {horses.map((h, i) => {
             const f = looks[i]!;
+            // 実在の購入価格のみ表示: 新規Mint=102(価格100+手数料2)、P2PはDAY毎の
+            // ラダー価格そのまま(2%手数料は売り手側控除 = Decision 069)。
+            const day = i === 0 ? 0 : ((i - 1) % 6) + 1;
+            const price = day === 0 ? DAY0_MINT_TOTAL_CHARGE : PRICE_TABLE_V1[day] ?? '100.00';
             return (
               <div
                 key={i}
@@ -634,12 +639,12 @@ export function Landing() {
                   </div>
                   <div className={s.priceRow}>
                     <div>
-                      <div className={s.pl}>PRICE</div>
+                      <div className={s.pl}>{day === 0 ? 'MINT · 手数料込' : 'P2P PRICE'}</div>
                       <div className={s.pv}>
-                        <span className={s.d}>◈</span> {h.price}
+                        {price} <span className={s.u}>USDT</span>
                       </div>
                     </div>
-                    <span className={s.last}>last {h.last}</span>
+                    <span className={s.last}>DAY {day}</span>
                   </div>
                   <Link href="/login">
                     <button style={{ background: f.frameGrad }}>ログインして購入</button>
@@ -779,21 +784,9 @@ export function Landing() {
                 <span className={s.gnum}>GATE 08</span>
                 <span className={s.gopen}>READY</span>
                 <span className={s.aura} />
-                {/* まだ迎えていない一頭 = 蹄鉄エンブレム(意図的なプレースホルダ) */}
-                <div className={s.horseArt} style={{ color: '#5ff5ff' }}>
-                  <svg viewBox="0 0 64 64">
-                    <path
-                      d="M16 54 C6 44 6 22 24 14 M48 54 C58 44 58 22 40 14 M24 14 C28 11 36 11 40 14"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="5"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="15.5" cy="52" r="2.4" fill="currentColor" />
-                    <circle cx="48.5" cy="52" r="2.4" fill="currentColor" />
-                    <circle cx="12" cy="34" r="2" fill="currentColor" />
-                    <circle cx="52" cy="34" r="2" fill="currentColor" />
-                  </svg>
+                {/* まだ迎えていない一頭 = 実アートのシルエット(案1・2026-07-11オーナー選定) */}
+                <div className={s.gateHorse}>
+                  <NftHorseArt look={stableLooks[4]!} />
                   <span className={s.phLabel}>YOUR NFT — MINTED AT SIGN-UP</span>
                 </div>
                 <div className={s.gateBars}>

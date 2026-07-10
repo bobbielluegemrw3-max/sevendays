@@ -174,6 +174,12 @@
 .stableTile .plate { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); gap: 8px; }
 .stableTile .plate .nm { font-family: var(--font-display); font-weight: 700; font-size: 12px; color: #f2ead6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stableTile .plate .rr { font-family: var(--font-display); font-size: 8.5px; letter-spacing: 0.05em; padding: 3px 7px; border-radius: 4px; white-space: nowrap; }
+@media (max-width: 679px) {
+  /* 6タイル均等割はモバイルで極細になり画像が潰れる → 固定幅の横スクロールラックに */
+  .stableRail { overflow-x: auto; scrollbar-width: none; }
+  .stableRail::-webkit-scrollbar { display: none; }
+  .stableTile { flex: 0 0 148px; }
+}
 .qCards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 22px; }
 .qCard { position: relative; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 18px; padding: 24px; background: linear-gradient(165deg, rgba(255, 255, 255, 0.02), transparent 70%); overflow: hidden; }
 .qCard .rule { position: absolute; top: 0; left: 0; right: 0; height: 2px; }
@@ -274,6 +280,13 @@
 .tNode .lbl { font-family: var(--font-mono); font-size: 9.5px; color: #8f8ac2; }
 .supportBadge { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; font-family: var(--font-display); font-size: 11px; letter-spacing: 0.08em;
   color: #ff8fe4; border: 1px solid rgba(255, 45, 196, 0.45); border-radius: 999px; padding: 7px 14px; background: rgba(255, 45, 196, 0.08); }
+@media (max-width: 679px) {
+  /* 4ノードが3+1に折り返して壊れて見える → 縮めて1列に収める */
+  .teamNodes { gap: 10px; justify-content: center; flex-wrap: nowrap; }
+  .tNode .disc { width: 52px; height: 52px; border-radius: 12px; }
+  .tNode.center .disc { width: 64px; height: 64px; }
+  .tNode .lbl { font-size: 8.5px; }
+}
 
 /* ⑧ showcase gallery */
 .showcaseNote { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-family: var(--font-mono); font-size: 11.5px; color: #8f8ac2; }
@@ -304,6 +317,7 @@
 .galCard .priceRow .pl { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.08em; color: #8f8ac2; }
 .galCard .priceRow .pv { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: #f2ead6; }
 .galCard .priceRow .pv .d { color: #00eaff; }
+.galCard .priceRow .pv .u { font-family: var(--font-mono); font-size: 10px; color: #8f8ac2; margin-left: 2px; }
 .galCard .priceRow .last { font-family: var(--font-mono); font-size: 9px; color: #6a6690; }
 .galCard button { width: 100%; margin-top: 12px; padding: 11px; font-size: 12px; border-radius: 10px; color: #0a0813; border: none; }
 .colMore { text-align: center; margin-top: 26px; }
@@ -400,6 +414,10 @@
   background: linear-gradient(180deg, rgba(0, 234, 255, 0.13), transparent); border-bottom: 1px solid rgba(0, 234, 255, 0.2); }
 .horseArt { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; z-index: 2; }
 .horseArt svg { width: 62%; height: 62%; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.5)); }
+/* 案1「シルエットの影」— 実アートを黒い影+シアン縁光にし「まだ姿の見えない一頭」を演出 */
+.gateHorse { position: absolute; inset: 0; z-index: 2; }
+.gateHorse canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+  filter: brightness(0) drop-shadow(0 0 22px rgba(0, 234, 255, 0.6)) drop-shadow(0 0 60px rgba(0, 234, 255, 0.28)); }
 .phLabel { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.14em; color: rgba(143, 138, 194, 0.5); white-space: nowrap; }
 .gatePlate { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; padding: 8px 20px 16px; }
 .gatePlate .gpt { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.16em; color: #c9a86a; }
