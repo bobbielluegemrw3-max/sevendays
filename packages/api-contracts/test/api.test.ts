@@ -1157,6 +1157,24 @@ describe('manual marketplace (Decision 076)', () => {
     expect(rows.find((h) => h.id === horse)?.listing).toBe('MANUAL');
     expect(rows.find((h) => h.id === day0)?.listing).toBeNull();
 
+    // 詳細APIも listing と history(戦績)を返す
+    const detail = await call('GET', `/api/v1/horses/${horse}`, asUser(seller));
+    expect(detail.status).toBe(200);
+    expect((detail.body as { listing: string | null }).listing).toBe('MANUAL');
+    expect(Array.isArray((detail.body as { history: unknown[] }).history)).toBe(true);
+
+    // 手動出品中は今夜走らない — 調教もアイテムも無駄にさせない(HORSE_MARKET_LOCKED)
+    const train = await call('POST', `/api/v1/horses/${horse}/training`, asUser(seller), {
+      body: { training_type: 'SPEED_TRAINING' },
+    });
+    expect(train.status).toBe(409);
+    expect((train.body as { error: { code: string } }).error.code).toBe('HORSE_MARKET_LOCKED');
+    const boost = await call('POST', `/api/v1/horses/${horse}/item`, asUser(seller), {
+      body: { item_key: 'rain_hood' },
+    });
+    expect(boost.status).toBe(409);
+    expect((boost.body as { error: { code: string } }).error.code).toBe('HORSE_MARKET_LOCKED');
+
     // Unlist the SAME day -> blocked by the one-action-per-day rule.
     const sameDay = await call('POST', '/api/v1/market/unlist', asUser(seller), {
       body: { horse_id: horse },

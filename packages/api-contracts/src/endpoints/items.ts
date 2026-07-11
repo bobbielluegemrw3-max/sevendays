@@ -188,6 +188,14 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
       if (horse.rows[0].status !== 'ACTIVE') {
         throw new ApiError('HORSE_NOT_ACTIVE', `Horse is ${horse.rows[0].status}`);
       }
+      // 手動出品中(Market Lock)は今夜走らない — アイテムを実消費させない(087監査)
+      const marketLocked = await ctx.client.query(
+        `select 1 from market_listings where horse_id = $1 and status = 'LISTED' and source = 'MANUAL'`,
+        [ctx.params.id],
+      );
+      if (marketLocked.rows[0]) {
+        throw new ApiError('HORSE_MARKET_LOCKED', 'A manually listed horse does not race tonight');
+      }
       if ((await getMarketplaceState(ctx.client)) !== 'OPEN') {
         throw new ApiError('MARKETPLACE_LOCKED', 'Item intake is closed during Daily Settlement');
       }

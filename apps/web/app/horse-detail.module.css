@@ -128,3 +128,48 @@
 .stBurned   { color: var(--magenta-soft); border-color: var(--magenta); background: rgba(255, 45, 196, 0.14); letter-spacing: 0.06em; }
 .stCleared  { color: var(--gold-bright); border-color: var(--gold); background: rgba(201, 168, 106, 0.16); letter-spacing: 0.06em; }
 .stMemorial { color: #0a0813; border-color: transparent; background: linear-gradient(92deg, var(--gold), #f7eccb); letter-spacing: 0.06em; }
+
+/* ---- 出品状態(087監査) ------------------------------------------------------ */
+.stListed { color: var(--warn); border-color: rgba(230, 178, 74, 0.5); background: rgba(230, 178, 74, 0.1); letter-spacing: 0.06em; }
+.stSmart  { color: var(--cyan); border-color: rgba(0, 234, 255, 0.35); background: rgba(0, 234, 255, 0.05); letter-spacing: 0.06em; }
+.retiredListed { border: 1px solid rgba(230, 178, 74, 0.35); background: linear-gradient(120deg, rgba(230, 178, 74, 0.07), transparent 72%); }
+.retiredCta {
+  margin-left: auto; white-space: nowrap; text-decoration: none;
+  font-family: var(--font-display); font-weight: 700; font-size: 11px; color: #1a1206;
+  background: linear-gradient(100deg, var(--warn), #f2d492); padding: 7px 13px; border-radius: 9px;
+}
+.retiredCta:hover { filter: brightness(1.07); }
+
+/* ---- レアリティ凡例の余白 ---------------------------------------------------- */
+.legendWrap { margin-top: 8px; }
+
+/* ---- 戦績(7日間の物語) ------------------------------------------------------ */
+.histBox {
+  border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+  background: linear-gradient(180deg, rgba(20, 18, 34, 0), #0f0d1a);
+}
+.histRow {
+  display: flex; align-items: baseline; gap: 10px 14px; flex-wrap: wrap;
+  padding: 10px 14px;
+}
+.histRow + .histRow { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.histBurned { background: rgba(255, 45, 196, 0.05); }
+.histDay { font-family: var(--font-display); font-size: 10.5px; font-weight: 700; color: var(--text); flex: none; }
+.histDate { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); flex: none; }
+.histRank { font-family: var(--font-mono); font-size: 11px; color: var(--text); }
+.histRank b { font-family: var(--font-display); font-size: 13px; color: var(--cyan); }
+.histRank small { color: var(--faint); font-size: 9px; }
+.histScore { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); }
+.histCond { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); flex: 1; min-width: 120px; }
+.histResult { margin-left: auto; flex: none; }
+.histBurnTag {
+  font-family: var(--font-display); font-size: 8.5px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--magenta-soft); border: 1px solid var(--magenta); border-radius: 5px; padding: 2px 7px;
+  background: rgba(255, 45, 196, 0.12);
+}
+.histSurviveTag {
+  font-family: var(--font-display); font-size: 8.5px; font-weight: 700; letter-spacing: 0.08em;
+  color: #9dffc4; border: 1px solid var(--good); border-radius: 5px; padding: 2px 7px;
+  background: rgba(53, 208, 127, 0.1);
+}
+.histNote { font-family: var(--font-mono); font-size: 9px; color: #4a4668; margin-top: 7px; line-height: 1.5; }

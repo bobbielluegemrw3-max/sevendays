@@ -308,3 +308,6 @@
   .stat { padding: 9px 11px; }
   .stat :global(.v) { font-size: 17px; }
 }
+
+/* レアリティ凡例の余白 */
+.legendWrap { margin-top: 10px; }

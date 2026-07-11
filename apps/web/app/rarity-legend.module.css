@@ -1,0 +1,23 @@
+/* レアリティ凡例 — どのページにも1行で置ける控えめなストリップ */
+.legend {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px;
+  background: rgba(10, 8, 22, 0.4);
+}
+.head {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
+  color: var(--faint); flex: none;
+}
+.chip {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  font-family: var(--font-display); font-size: 8.5px; font-weight: 700; letter-spacing: 0.05em;
+  border: 1px solid transparent; border-radius: 5px; padding: 2px 7px; white-space: nowrap;
+}
+.chip small { font-family: var(--font-mono); font-size: 8px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+.cCOMMON    { color: #c3ccd8; border-color: #8a92a0; background: rgba(130, 140, 160, 0.12); }
+.cUNCOMMON  { color: #9dffc4; border-color: var(--good); background: rgba(53, 208, 127, 0.12); }
+.cRARE      { color: #a9f6ff; border-color: var(--cyan); background: rgba(0, 234, 255, 0.12); }
+.cEPIC      { color: var(--magenta-soft); border-color: var(--magenta); background: rgba(255, 45, 196, 0.12); }
+.cLEGENDARY { color: #0a0813; border-color: transparent; background: linear-gradient(92deg, var(--gold), #f7eccb); }
+.cLEGENDARY small { color: #4a3c1e; }
+.note { font-family: var(--font-mono); font-size: 8.5px; color: var(--faint); }

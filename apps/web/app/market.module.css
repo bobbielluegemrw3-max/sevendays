@@ -169,3 +169,6 @@
 .pickName { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 0.3rem; }
 .pickMeta { font-family: var(--font-mono); font-size: 0.56rem; color: var(--muted); }
 .pickEmpty { color: var(--muted); font-size: 0.82rem; }
+
+/* レアリティ凡例の余白 */
+.legendWrap { margin-top: 10px; }

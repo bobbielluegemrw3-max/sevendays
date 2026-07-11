@@ -21,8 +21,26 @@ const HORSE: HorseDetail = {
   horse_type: 'POWER', rarity: 'LEGENDARY',
   dna_hash: '0xa1f4' + 'c3d9'.repeat(15), dna_modifier: '0.00',
   ability_json: { base_speed: 62, base_power: 78, base_stamina: 55, base_guts: 47, base_luck: 33 },
-  condition: '82', fatigue: '34',
+  // 本番のNUMERIC(20,8)テキストを再現(整数表示のQA用)
+  condition: '82.00000000', fatigue: '34.00000000',
   mint_seed_hash: '0x77aa'.concat('19be'.repeat(15)), horse_generation_version: 'v1.0.0',
+  listing: 'SMART',
+  history: [
+    { batch_date: '2026-07-06', final_rank: 812, final_score: '71.42', is_burned: false, participant_count: 1520, weather: 'SUNNY', track_condition: 'GOOD', surface: 'TURF' },
+    { batch_date: '2026-07-07', final_rank: 233, final_score: '84.09', is_burned: false, participant_count: 1618, weather: 'CLOUDY', track_condition: 'FAST', surface: 'TURF' },
+    { batch_date: '2026-07-08', final_rank: 1211, final_score: '63.77', is_burned: false, participant_count: 1702, weather: 'RAIN', track_condition: 'SOFT', surface: 'DIRT' },
+    { batch_date: '2026-07-09', final_rank: 87, final_score: '90.15', is_burned: false, participant_count: 1793, weather: 'STORM', track_condition: 'HEAVY', surface: 'DIRT' },
+    { batch_date: '2026-07-10', final_rank: 460, final_score: '78.30', is_burned: false, participant_count: 1874, weather: 'SUNNY', track_condition: 'FAST', surface: 'TURF' },
+  ],
+};
+
+// 手動出品中(Market Lock)の表示QA用
+const HORSE_LISTED: HorseDetail = {
+  ...HORSE,
+  id: 'b2c5d8e1', name: 'Velvet Storm', rarity: 'RARE', horse_type: 'SPRINTER',
+  current_day: 5, listing: 'MANUAL',
+  dna_hash: '0xb2c5' + 'd8e1'.repeat(15),
+  history: HORSE.history.slice(0, 4),
 };
 
 const RESULTS = Array.from({ length: 137 }, (_, i) => ({
@@ -44,6 +62,9 @@ export default function PagesPreview() {
     <div>
       {sect('/horses/[id] 馬詳細')}
       <HorseDetailView horse={HORSE} />
+
+      {sect('/horses/[id] 馬詳細(手動出品中 = Market Lock)')}
+      <HorseDetailView horse={HORSE_LISTED} />
 
       {sect('/races 一覧')}
       <RacesView

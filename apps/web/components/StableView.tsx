@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { PURCHASE_LOCK_AMOUNT } from '@sevendays/domain';
 import { money, horseValue } from '@/components/stable-shared';
 import { ChampionCard, ListedCard, StableBrowser } from '@/components/StableBrowser';
+import { RarityLegend } from '@/components/RarityLegend';
 import s from '../app/stable.module.css';
 
 /* ============================================================================
@@ -90,6 +91,7 @@ export function StableView({ data }: { data: StableData }) {
               : '出走中の馬はいません。上の「馬を迎える」から参加しましょう。'}
           </div>
         )}
+        <div className={s.legendWrap}><RarityLegend /></div>
       </section>
 
       {/* ===== 出品中(Market Lock=今夜走らない・調教CTAなし) ===== */}

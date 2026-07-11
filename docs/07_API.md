@@ -26,6 +26,7 @@ All public APIs are versioned:
 - POST `/api/v1/wallet/deposit`
 - POST `/api/v1/wallet/withdraw`
 - GET `/api/v1/horses` (2026-07-05: response rows additionally carry read-only `dna_hash` and `trained_for_next_race` — the latter mirrors the POST /training effective_race_date rule — so the dashboard can render deterministic art and the trained/untrained badge without extra calls; 2026-07-11 Decision 087 audit: rows also carry `listing` = 'SMART' | 'MANUAL' | null so the stable page can show the market-lock truth — a manually listed horse does not race tonight; limit raised 100 → 500 to match the show-all UI)
+- GET `/api/v1/horses/{id}` (2026-07-11 Decision 087 audit: response additionally carries `listing` and `history` — the horse's full race record from race_results/races: batch_date, final_rank/final_score, is_burned, participant_count and the revealed conditions weather/track_condition/surface). POST `/horses/{id}/training` and POST `/horses/{id}/item` now reject a MANUALLY listed horse with HORSE_MARKET_LOCKED (409) — a market-locked horse does not race tonight, so training rights and item units must not be wasted on it.
 - GET `/api/v1/horses/{id}`
 - POST `/api/v1/purchase`
 - POST `/api/v1/purchase/{id}/cancel`

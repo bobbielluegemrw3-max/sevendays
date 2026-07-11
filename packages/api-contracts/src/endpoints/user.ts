@@ -170,16 +170,32 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     path: '/api/v1/horses/:id',
     auth: 'user',
     handler: async (ctx) => {
+      // 087監査: listing(出品状態)と history(この馬の全戦績)を追加 —
+      // 詳細ページが「出品中=今夜走らない」の事実と7日間の物語を表示できるように。
       const rows = await ctx.client.query(
         `select id, name, status::text as status, current_day, horse_type::text as horse_type,
                 rarity::text as rarity, dna_hash, dna_modifier::text as dna_modifier,
                 ability_json, condition::text as condition, fatigue::text as fatigue,
-                mint_seed_hash, horse_generation_version
+                mint_seed_hash, horse_generation_version,
+                (select l.source::text from market_listings l
+                 where l.horse_id = horses.id and l.status = 'LISTED' limit 1) as listing
          from horses where id = $1 and owner_user_id = $2`,
         [ctx.params.id, ctx.userId],
       );
       if (!rows.rows[0]) throw new ApiError('NOT_FOUND', 'Horse not found');
-      return rows.rows[0];
+      const history = await ctx.client.query(
+        `select br.batch_date::text as batch_date, rr.final_rank, rr.final_score::text as final_score,
+                rr.is_burned, r.participant_count,
+                r.weather::text as weather, r.track_condition::text as track_condition,
+                r.surface::text as surface
+         from race_results rr
+         join races r on r.id = rr.race_id
+         join batch_runs br on br.id = r.batch_run_id
+         where rr.horse_id = $1
+         order by br.batch_date asc`,
+        [ctx.params.id],
+      );
+      return { ...rows.rows[0], history: history.rows };
     },
   });
 
@@ -277,6 +293,15 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       // training (and notifying "applied") would be a lie.
       if (horse.rows[0].status !== 'ACTIVE') {
         throw new ApiError('HORSE_NOT_ACTIVE', `Horse is ${horse.rows[0].status}; only ACTIVE horses can train`);
+      }
+
+      // 手動出品中(Market Lock)は今夜走らない — 1日1回の調教権を無駄にさせない(087監査)
+      const marketLocked = await ctx.client.query(
+        `select 1 from market_listings where horse_id = $1 and status = 'LISTED' and source = 'MANUAL'`,
+        [ctx.params.id],
+      );
+      if (marketLocked.rows[0]) {
+        throw new ApiError('HORSE_MARKET_LOCKED', 'A manually listed horse does not race tonight');
       }
 
       if ((await getMarketplaceState(ctx.client)) !== 'OPEN') {
