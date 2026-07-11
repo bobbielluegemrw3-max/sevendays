@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { SupportDashboardView } from '@/components/SupportDashboardView';
 
 /**
@@ -6,8 +6,8 @@ import { SupportDashboardView } from '@/components/SupportDashboardView';
  * submission). 組織の閲覧/配置は /dev/support-map-preview 側。
  * 404 in production.
  */
-export default function SupportPreview() {
-  if (process.env.NODE_ENV === 'production') notFound();
+export default async function SupportPreview() {
+  await requireDevPreviewAccess();
   const iso = (d: number, h = 12) => new Date(Date.UTC(2026, 6, d, h)).toISOString();
   return (
     <SupportDashboardView

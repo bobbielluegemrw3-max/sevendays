@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { SupportMapView } from '@/components/SupportMapView';
 import type { SupportTreeInput } from '@/lib/support-tree';
 
@@ -8,8 +8,8 @@ import type { SupportTreeInput } from '@/lib/support-tree';
  * (プールの「配置」→ ツリー上のノードをクリック → 確定で実際に生える)。
  * 404 in production.
  */
-export default function SupportMapPreview() {
-  if (process.env.NODE_ENV === 'production') notFound();
+export default async function SupportMapPreview() {
+  await requireDevPreviewAccess();
   const iso = (d: number) => new Date(Date.UTC(2026, 5, d, 12)).toISOString();
   const n = (
     id: string,

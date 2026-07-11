@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { HorseArt } from '@/components/HorseArt';
 import { BASES, deriveHorseArt } from '@/lib/horse-visual';
 import { COLORWAYS, deriveHorseArtV2 } from '@/lib/horse-palettes';
@@ -21,8 +21,8 @@ const card: React.CSSProperties = {
 const artBox: React.CSSProperties = { height: 150, position: 'relative' };
 const lab: React.CSSProperties = { fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--muted)', marginTop: 6 };
 
-export default function PalettePreview() {
-  if (process.env.NODE_ENV === 'production') notFound();
+export default async function PalettePreview() {
+  await requireDevPreviewAccess();
 
   const compare = NAMES.map((name, i) => {
     const dna = `0x${(i * 2654435761 >>> 0).toString(16).padStart(8, '0')}${'ab'.repeat(24)}`;

@@ -1,11 +1,11 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { ItemsView } from '@/components/ItemsView';
 import { AFFINITY_JA, ITEM_CATALOG_V2 } from '@sevendays/domain';
 import type { CatalogItem } from '@/lib/items';
 
 /** Dev-only visual preview of /items with fixture inventory. 404 in prod. */
-export default function ItemsPreview() {
-  if (process.env.NODE_ENV === 'production') notFound();
+export default async function ItemsPreview() {
+  await requireDevPreviewAccess();
   const catalog: CatalogItem[] = ITEM_CATALOG_V2.map((i) => ({
     key: i.key,
     name_ja: i.nameJa,

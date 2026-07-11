@@ -1,12 +1,13 @@
 import { AdminDashboardView } from '@/components/AdminDashboardView';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { AdminEconomyView } from '@/components/AdminEconomyView';
 import { AdminItemsView } from '@/components/AdminItemsView';
 import { AdminRacesView } from '@/components/AdminRacesView';
 
 /* 視覚QA専用(仮データ)。本番挙動は /admin(要admin権限)。 */
 
-export default function AdminPreviewPage() {
-  if (process.env.NODE_ENV === 'production') return <p>dev only</p>;
+export default async function AdminPreviewPage() {
+  await requireDevPreviewAccess();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
       <AdminDashboardView

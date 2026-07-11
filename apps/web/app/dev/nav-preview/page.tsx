@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { TopNav } from '@/components/TopNav';
 
 /**
@@ -6,8 +6,8 @@ import { TopNav } from '@/components/TopNav';
  * authenticated sessions). The negative margin cancels <main>'s padding so
  * the nav spans the full viewport exactly like in the real layout.
  */
-export default function NavPreview() {
-  if (process.env.NODE_ENV === 'production') notFound();
+export default async function NavPreview() {
+  await requireDevPreviewAccess();
   return (
     <div style={{ margin: '-1.5rem -1.1rem 0' }}>
       <TopNav unread={3} />

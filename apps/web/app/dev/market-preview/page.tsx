@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { MarketPlaceView } from '@/components/MarketPlaceView';
 import { PurchaseView } from '@/components/PurchaseView';
 import { ReservePanel } from '@/components/ReservePanel';
@@ -17,7 +17,7 @@ export default async function MarketPreview({
 }: {
   searchParams: Promise<{ empty?: string; full?: string; choose?: string }>;
 }) {
-  if (process.env.NODE_ENV === 'production') notFound();
+  await requireDevPreviewAccess();
   const flags = await searchParams;
   const iso = (d: number, h = 10) => new Date(Date.UTC(2026, 6, d, h)).toISOString();
   const dna = (seed: string) => `0x${seed.repeat(32).slice(0, 64)}`;

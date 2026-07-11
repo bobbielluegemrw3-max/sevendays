@@ -1,9 +1,9 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { ChampionView } from '@/components/champion/ChampionView';
 
 /** Dev-only visual preview of /champion (sample hall + rewards). 404 in prod. */
-export default function ChampionPreview() {
-  if (process.env.NODE_ENV === 'production') notFound();
+export default async function ChampionPreview() {
+  await requireDevPreviewAccess();
   return (
     <ChampionView
       buybacks={[

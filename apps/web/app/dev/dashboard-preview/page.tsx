@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { DashboardView, type DashHorse } from '@/components/DashboardView';
 
 /**
@@ -30,7 +30,7 @@ export default async function DashboardPreview({
 }: {
   searchParams: Promise<{ choose?: string }>;
 }) {
-  if (process.env.NODE_ENV === 'production') notFound();
+  await requireDevPreviewAccess();
   const flags = await searchParams;
   const now = Date.now();
   const iso = (minsAgo: number) => new Date(now - minsAgo * 60000).toISOString();

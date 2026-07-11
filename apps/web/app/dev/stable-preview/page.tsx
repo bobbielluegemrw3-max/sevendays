@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { StableView, type StableHorse } from '@/components/StableView';
 
 /** Dev-only /horses preview with a large mixed stable (404 in production). */
@@ -40,7 +40,7 @@ const HORSES: StableHorse[] = [
   H('f005', 'Aurora Crown', 'RARE', 'SPRINTER', 7, 0, 0, false, 'MEMORIALIZED'),
 ];
 
-export default function StablePreview() {
-  if (process.env.NODE_ENV === 'production') notFound();
+export default async function StablePreview() {
+  await requireDevPreviewAccess();
   return <StableView data={{ horses: HORSES, pendingCount: 2 }} />;
 }

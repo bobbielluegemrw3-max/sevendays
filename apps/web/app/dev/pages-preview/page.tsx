@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { HorseDetailView, type HorseDetail } from '@/components/HorseDetailView';
 import { RacesView } from '@/components/RacesView';
 import { RaceDetailView } from '@/components/RaceDetailView';
@@ -43,6 +43,60 @@ const HORSE_LISTED: HorseDetail = {
   history: HORSE.history.slice(0, 4),
 };
 
+// ハンドオフSTATE 02: Day6・走破戦(今夜生き残ればチャンピオン)
+const HORSE_DAY6: HorseDetail = {
+  ...HORSE,
+  id: 'c3d6e9f2', name: 'Iron Monarch', rarity: 'EPIC', horse_type: 'ENDURANCE',
+  current_day: 6, listing: 'SMART',
+  dna_hash: '0xc3d6' + 'e9f2'.repeat(15),
+  condition: '74.00000000', fatigue: '52.00000000',
+  history: [
+    ...HORSE.history,
+    { batch_date: '2026-07-11', final_rank: 129, final_score: '88.61', is_burned: false, participant_count: 1910, weather: 'CLOUDY', track_condition: 'GOOD', surface: 'DIRT' },
+  ],
+};
+
+// ハンドオフSTATE 04系: チャンピオン(報酬受取中)/ 記念馬(NFT化済み)
+const HORSE_CHAMPION: HorseDetail = {
+  ...HORSE_DAY6,
+  id: 'd4e7f0a3', name: 'Grand Victory', rarity: 'EPIC', horse_type: 'ENDURANCE',
+  status: 'DAY7_CLEARED', current_day: 7, listing: null,
+  dna_hash: '0xd4e7' + 'f0a3'.repeat(15),
+  history: [
+    ...HORSE_DAY6.history,
+    { batch_date: '2026-07-12', final_rank: 44, final_score: '92.30', is_burned: false, participant_count: 1988, weather: 'SUNNY', track_condition: 'FAST', surface: 'TURF' },
+  ],
+};
+const HORSE_MEMORIAL: HorseDetail = {
+  ...HORSE_CHAMPION,
+  id: 'e5f8a1b4', name: 'Lucky Legend', rarity: 'LEGENDARY', horse_type: 'BALANCED',
+  status: 'MEMORIALIZED',
+  dna_hash: '0xe5f8' + 'a1b4'.repeat(15),
+};
+
+// ハンドオフSTATE 05: BURNED(最終戦で消滅)
+const HORSE_BURNED: HorseDetail = {
+  ...HORSE,
+  id: 'f6a9b2c5', name: 'Burning Meteor', rarity: 'RARE', horse_type: 'POWER',
+  status: 'BURNED', current_day: 4, listing: null,
+  dna_hash: '0xf6a9' + 'b2c5'.repeat(15),
+  condition: '41.00000000', fatigue: '77.00000000',
+  history: [
+    ...HORSE.history.slice(0, 3),
+    { batch_date: '2026-07-09', final_rank: 1730, final_score: '48.02', is_burned: true, participant_count: 1793, weather: 'STORM', track_condition: 'HEAVY', surface: 'DIRT' },
+  ],
+};
+
+// 未出走(戦績なし・Day0)の空状態QA用
+const HORSE_ROOKIE: HorseDetail = {
+  ...HORSE,
+  id: 'a7b0c3d6', name: 'Silent Dash', rarity: 'COMMON', horse_type: 'LUCK',
+  current_day: 0, listing: null,
+  dna_hash: '0xa7b0' + 'c3d6'.repeat(15),
+  condition: '80.00000000', fatigue: '0.00000000',
+  history: [],
+};
+
 const RESULTS = Array.from({ length: 137 }, (_, i) => ({
   horse_id: `h-${(i + 1).toString().padStart(4, '0')}`,
   final_score: (95 - i * 0.31).toFixed(2),
@@ -50,8 +104,8 @@ const RESULTS = Array.from({ length: 137 }, (_, i) => ({
   is_burned: i >= 122,
 }));
 
-export default function PagesPreview() {
-  if (process.env.NODE_ENV === 'production') notFound();
+export default async function PagesPreview() {
+  await requireDevPreviewAccess();
   void now;
   const sect = (title: string) => (
     <h2 style={{ margin: '3rem 0 1rem', color: 'var(--cyan)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>
@@ -65,6 +119,21 @@ export default function PagesPreview() {
 
       {sect('/horses/[id] 馬詳細(手動出品中 = Market Lock)')}
       <HorseDetailView horse={HORSE_LISTED} />
+
+      {sect('/horses/[id] 馬詳細(Day6 走破戦 — 今夜走破すればチャンピオン)')}
+      <HorseDetailView horse={HORSE_DAY6} />
+
+      {sect('/horses/[id] 馬詳細(チャンピオン — 報酬受取中)')}
+      <HorseDetailView horse={HORSE_CHAMPION} />
+
+      {sect('/horses/[id] 馬詳細(記念馬 — NFT化済み)')}
+      <HorseDetailView horse={HORSE_MEMORIAL} />
+
+      {sect('/horses/[id] 馬詳細(BURNED — 消滅)')}
+      <HorseDetailView horse={HORSE_BURNED} />
+
+      {sect('/horses/[id] 馬詳細(新馬 Day0 — 未出走・戦績なし)')}
+      <HorseDetailView horse={HORSE_ROOKIE} />
 
       {sect('/races 一覧')}
       <RacesView

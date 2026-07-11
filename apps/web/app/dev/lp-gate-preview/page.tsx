@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { Countdown } from '@/components/Countdown';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { pickNftShowcase } from '@/lib/nft-visual';
@@ -67,8 +67,8 @@ function GateCard({
   );
 }
 
-export default function LpGatePreview() {
-  if (process.env.NODE_ENV === 'production') notFound();
+export default async function LpGatePreview() {
+  await requireDevPreviewAccess();
   const look = pickNftShowcase(4, lcg(20260711))[0]!;
   return (
     <div className={`landing-bleed ${s.page}`} style={{ minHeight: '100vh', padding: '48px clamp(20px,4vw,64px) 80px' }}>

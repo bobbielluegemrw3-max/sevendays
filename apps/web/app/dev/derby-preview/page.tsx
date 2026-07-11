@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { DerbyPreview } from '@/components/daily-derby/DerbyPreview';
 
 /**
@@ -6,8 +6,8 @@ import { DerbyPreview } from '@/components/daily-derby/DerbyPreview';
  * シミュレート時計で 3分前カウントダウン → 20:00 ファンファーレ → LIVE演出 →
  * マーケットプレイス → 個人結果 の全状態を確認できる。本番ビルドでは 404。
  */
-export default function DerbyPreviewPage() {
-  if (process.env.NODE_ENV === 'production') notFound();
+export default async function DerbyPreviewPage() {
+  await requireDevPreviewAccess();
   return (
     <>
       <h1>Daily Derby Preview</h1>
