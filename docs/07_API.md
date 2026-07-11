@@ -49,7 +49,7 @@ All public APIs are versioned:
 - GET `/api/v1/support/bonuses` (Decision 074)
 - POST `/api/v1/support/place` (Decision 074)
 
-`POST /purchase` requires Marketplace OPEN, sufficient USER_AVAILABLE balance, and Idempotency-Key. It creates immediate fund locking.
+`POST /purchase` requires Marketplace OPEN, sufficient USER_AVAILABLE balance, and Idempotency-Key. It creates immediate fund locking. Decision 085: optional body `{count}` (1-10, default 1) creates that many sessions in one call — the server derives per-session idempotency keys `{key}#i` (count=1 keeps the bare key for backward compatibility), so a replay of the same request converges on the same sessions. Sessions are created one-by-one; if creation fails midway (insufficient balance / session cap), the already-created sessions REMAIN valid (each independently cancellable) and a retry with the same key resumes from where it stopped. Response adds `session_ids` (array; `purchase_session_id` stays = first id). A best-effort reservation-received email (Resend, Decision 081 wrapper) fires for newly created sessions only — never on replay, never blocking the purchase.
 
 `POST /purchase/{id}/cancel` is allowed only before batch lock and when session is cancellable.
 
@@ -69,7 +69,7 @@ Support Bonus (Decision 074; user-facing name サポートボーナス — never
 Manual Marketplace (Decision 076):
 - POST `/market/list` `{horse_id}` lists the caller's ACTIVE Day1-6 horse at the CURRENT ladder price (no free pricing). While listed the horse does not race (Market Lock, snapshot exclusion). Errors: HORSE_NOT_FOUND, NOT_HORSE_OWNER, HORSE_NOT_ACTIVE, MARKET_DAY_RANGE, MARKET_ALREADY_LISTED, MARKET_ACTION_LIMIT, MARKETPLACE_LOCKED.
 - POST `/market/unlist` `{horse_id}` requests delisting; it takes effect AFTER the next batch (a sale tonight wins). Replays converge quietly. Listing operations are limited to one per horse per day.
-- GET `/market/place` returns the shelf (all LISTED horses in matching order, Decision 012), tonight's pending buy-reservation COUNT, the last 20 settled P2P matches (anonymized: horse name, price, masked buyer id) and the caller's own manual listings. The buy side itself is unchanged (POST /purchase reservations).
+- GET `/market/place` returns the shelf (all LISTED horses in matching order, Decision 012), tonight's pending buy-reservation COUNT, the last 20 settled matches and the caller's own manual listings. Decision 085: `recent_matches` now includes Day0 mint settlements (`is_mint` flag) alongside P2P matches, plus `dna_hash`/`rarity` so the UI can render SOLD art cards (still anonymized: horse name, price, masked buyer id). The buy side itself is unchanged (POST /purchase reservations).
 
 Item System (Decisions 078/079) — effects are public deterministic rules (item_policy_v1.0); the daily setting 1-6 is seed-committed and revealed with results (`races.item_setting`):
 

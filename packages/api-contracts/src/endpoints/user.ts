@@ -4,6 +4,8 @@ import {
   MIN_WITHDRAWAL_AMOUNT,
   DEFAULT_CHAIN,
   TRAINING_TYPES,
+  MAX_CONCURRENT_PURCHASE_SESSIONS,
+  PURCHASE_LOCK_AMOUNT,
   renderNotification,
 } from '@sevendays/domain';
 import { ensureUserAccounts, getBalance, withdrawalFundLock } from '@sevendays/ledger';
@@ -15,6 +17,7 @@ import {
 } from '@sevendays/settlement-engine';
 import { verifyWalletLink } from '@sevendays/blockchain';
 import { ApiError } from '../errors.js';
+import { sendCsEmail } from '../cs/mail.js';
 import type { ApiRegistry } from '../router.js';
 
 /** User APIs (07_API.md) — JWT auth; reads are RLS-shaped (own rows only). */
@@ -357,12 +360,70 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     path: '/api/v1/purchase',
     auth: 'user',
     idempotencyKeyRequired: true,
-    handler: async (ctx) => {
-      const result = await createPurchaseSession(ctx.client, {
-        userId: ctx.userId,
-        idempotencyKey: ctx.idempotencyKey!,
-      });
-      return { purchase_session_id: result.sessionId, already_exists: result.alreadyExists };
+    // Decision 085: 複数頭予約。countぶんのセッションを順に作成する。
+    // 途中で失敗(残高不足・上限)しても作成済みセッションはそのまま残る —
+    // 各セッションは独立に有効で、同じキーの再試行は作成済み分をリプレイして続きから進む。
+    input: z.object({
+      count: z.number().int().min(1).max(MAX_CONCURRENT_PURCHASE_SESSIONS).optional(),
+    }),
+    handler: async (ctx, input) => {
+      const count = input.count ?? 1;
+      const key = ctx.idempotencyKey!;
+      const sessions: { id: string; alreadyExists: boolean }[] = [];
+      for (let i = 0; i < count; i += 1) {
+        // 単頭は従来どおり素のキー(後方互換)。複数頭は決定論的な派生キー。
+        const derivedKey = count === 1 ? key : `${key}#${i + 1}`;
+        const result = await createPurchaseSession(ctx.client, {
+          userId: ctx.userId,
+          idempotencyKey: derivedKey,
+        });
+        sessions.push({ id: result.sessionId, alreadyExists: result.alreadyExists });
+      }
+
+      // 予約受付メール(Decision 085)— ベストエフォート。リプレイでは送らない。
+      // 送信失敗で購入を絶対に落とさない(ウェルカムメールと同じ流儀)。
+      const createdCount = sessions.filter((s) => !s.alreadyExists).length;
+      if (createdCount > 0) {
+        const u = await ctx.client.query<{ email: string }>(
+          `select email from users where id = $1`,
+          [ctx.userId],
+        );
+        const email = u.rows[0]?.email;
+        if (email && !email.endsWith('@user.sevendays')) {
+          const totalLock = (Number(PURCHASE_LOCK_AMOUNT) * createdCount).toFixed(2);
+          sendCsEmail({
+            toEmail: email,
+            subject: '購入予約を受け付けました — 今夜20:00に処理されます / Reservation received',
+            body: [
+              'Dear Owner,',
+              '',
+              `Your purchase reservation (${createdCount} horse${createdCount > 1 ? 's' : ''}) has been received.`,
+              `Locked: up to ${totalLock} USDT (the difference from the assigned price is refunded automatically).`,
+              'After tonight\'s 20:00 (MYT) race, the smart marketplace system will settle your reservation',
+              'as a P2P trade with another owner or a newly minted horse.',
+              'You can cancel before the 20:00 settlement for a full refund.',
+              '',
+              '----------------------------------------',
+              '',
+              'オーナー様',
+              '',
+              `購入予約(${createdCount}頭)を受け付けました。`,
+              `ロック額: 最大 ${totalLock} USDT(割当価格との差額は自動で返金されます)`,
+              '今夜20:00(MYT)のレース終了後、スマートマーケットプレイスシステムが予約を処理します。',
+              '他のオーナーとのP2P取引、または新規発行馬の購入となります。',
+              '20:00の精算前であればキャンセル(全額返金)できます。',
+              '',
+              'Seven Days Derby',
+            ].join('\n'),
+          }).catch(() => undefined);
+        }
+      }
+
+      return {
+        purchase_session_id: sessions[0]!.id,
+        already_exists: sessions.every((s) => s.alreadyExists),
+        session_ids: sessions.map((s) => s.id),
+      };
     },
   });
 

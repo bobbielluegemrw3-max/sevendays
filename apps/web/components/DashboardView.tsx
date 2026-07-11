@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { Countdown } from '@/components/Countdown';
 import { NftHorseArt } from '@/components/NftHorseArt';
-import { CreateSessionButton } from '@/components/PurchasePanel';
 import { PwaSetupTile } from '@/components/PwaSetupTile';
 import { deriveNftLook } from '@/lib/nft-visual';
 import s from '../app/dashboard.module.css';
@@ -207,7 +206,8 @@ export function DashboardView({ data }: { data: DashboardData }) {
         <div className={s.tileHead}>
           <span className={s.stableTitle}>マイ厩舎<small>STABLE {active.length} · 評価額 {stableValue.toFixed(2)} USDT</small></span>
           <span className={s.stableActions}>
-            <span className={s.stableBuy}><CreateSessionButton label="馬を迎える ▶" /></span>
+            {/* 購入は/marketの予約ファネルに一本化(Decision 085) — 即時ロックのボタンは廃止 */}
+            <Link href="/market" className={s.stableBuy}>馬を迎える ▶</Link>
             <Link href="/horses" className={s.tileLink}>すべて →</Link>
           </span>
         </div>

@@ -114,11 +114,11 @@ export function GuideView() {
       <section id="buy" className={`${s.sec} ${s.secCyan}`}>
         <SecHead no="02" title="馬の購入" icon="cart" />
         <p className={s.p}>
-          馬は「購入セッション」を作成して迎えます。あなたの馬は毎晩20:00(マレーシア時間)の
+          馬はマーケットプレイスで「購入予約」をして迎えます。あなたの馬は毎晩20:00(マレーシア時間)の
           バッチで決定され、DNAから<b>見た目・名前・能力が一意に生成</b>されます(あとから変更不可・完全に決定論)。
         </p>
         <div className={s.flow}>
-          <FBox icon="cart" title="セッション作成" desc={<>177.16 USDT をロック<br />(価格テーブル上限)</>} />
+          <FBox icon="cart" title="購入予約" desc={<>1頭につき最大 177.16 USDT をロック<br />(価格テーブル上限)</>} />
           <Arrow />
           <FBox icon="moon" title="20:00 バッチ" desc="あなたの馬が決定" />
           <Arrow />

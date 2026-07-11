@@ -12,7 +12,7 @@ import d from '../app/support.module.css';
  * /market — 見えるマーケットプレイス(Decision 076) リデザイン。
  * 需要(今夜の買い予約件数)・供給(出品棚)・直近の成約を「市場の鼓動」として
  * 上部に。続いて自分の出品管理+手動出品、マッチング順の出品棚、成約フィード。
- * 買い予約そのもの(購入セッション)は既存の購入UIが担う(page.tsx で下段に併置)。
+ * 買い予約(購入予約)は SHOWCASE 直下の ReservePanel が担う(Decision 085)。
  *
  * 手動出品の約束事(UIで明示・不変): 出品中はレースに出走しない(Market Lock・
  * day/価値凍結)、価格は当日ラダー固定、取り下げは翌バッチ反映、出品は馬ごと1日1回。
@@ -35,6 +35,11 @@ export interface MatchRow {
   price: string;
   buyer: string;
   matched_at: string;
+  /** SOLDカード用のアート素材(Decision 085)。 */
+  dna_hash: string;
+  rarity: string;
+  /** true = Day0新規発行の成約(P2Pではなくミント)。 */
+  is_mint: boolean;
 }
 export interface MyListing {
   listing_id: string;
@@ -73,11 +78,14 @@ const rarClass = (rarity: string): string => (RARITIES.includes(rarity) ? rarity
 export function MarketPlaceView({
   data,
   myHorses,
+  reserveSlot,
   preview = false,
 }: {
   data: MarketPlaceData;
   /** 出品ダイアログの候補(自分のACTIVE馬)。 */
   myHorses: ListableHorse[];
+  /** SHOWCASE直下に差し込む購入予約パネル+予約一覧(Decision 085)。 */
+  reserveSlot?: React.ReactNode;
   preview?: boolean;
 }) {
   const router = useRouter();
@@ -87,6 +95,13 @@ export function MarketPlaceView({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** 棚カードタップ時の「指名購入はできません」ファネルモーダル(Decision 085)。 */
+  const [funnel, setFunnel] = useState<{ name: string; sold: boolean } | null>(null);
+
+  const scrollToReserve = () => {
+    setFunnel(null);
+    document.getElementById('reserve')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const myIds = new Set(data.my_listings.map((l) => l.horse_id));
   const listable = myHorses.filter(
@@ -161,6 +176,63 @@ export function MarketPlaceView({
 
       {notice && <p className="ok">{notice}</p>}
 
+      {/* ---- 第1幕: SHOWCASE(出品中+直近の実成約SOLD、Decision 085) ---- */}
+      <section className="panel">
+        <div className="section-head">
+          <h2>SHOWCASE</h2>
+          <span className="muted">出品中の馬は先頭から順にマッチングされます</span>
+        </div>
+        {data.shelf.length === 0 && data.recent_matches.length === 0 ? (
+          <p className="empty">まだ出品も成約もありません。今夜の最初の取引者になりましょう。</p>
+        ) : (
+          <div className={s.shelfGrid}>
+            {data.shelf.map((item, i) => (
+              <div
+                key={item.listing_id}
+                className={`${s.shelfCard} ${s.shelfClickable} ${myIds.has(item.horse_id) ? s.shelfMine : ''}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => setFunnel({ name: item.name, sold: false })}
+                onKeyDown={(e) => { if (e.key === 'Enter') setFunnel({ name: item.name, sold: false }); }}
+              >
+                <span className={s.shelfOrder}>#{i + 1}</span>
+                {myIds.has(item.horse_id) && <span className={s.mineTag}>MINE</span>}
+                <NftHorseArt look={deriveNftLook(item.dna_hash, item.name)} className={s.shelfArt} />
+                <div className={s.shelfName}>{item.name}</div>
+                <div className={s.shelfRar}><span className={`${s.rar} ${s[`rar${rarClass(item.rarity)}`]}`}>{item.rarity}</span></div>
+                <div className={s.shelfMeta}>DAY {item.current_day}</div>
+                <div className={s.shelfPrice}>{fmt(item.price)} USDT</div>
+              </div>
+            ))}
+            {/* 実成約のSOLDカード — 架空の馬は置かない(Decision 085) */}
+            {data.recent_matches.slice(0, Math.max(4, 12 - data.shelf.length)).map((m, i) => (
+              <div
+                key={`sold-${i}`}
+                className={`${s.shelfCard} ${s.shelfClickable} ${s.shelfSold}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => setFunnel({ name: m.horse_name, sold: true })}
+                onKeyDown={(e) => { if (e.key === 'Enter') setFunnel({ name: m.horse_name, sold: true }); }}
+              >
+                <span className={s.soldTag}>{m.is_mint ? 'SOLD · 新規発行' : 'SOLD'}</span>
+                <NftHorseArt look={deriveNftLook(m.dna_hash, m.horse_name)} className={`${s.shelfArt} ${s.soldArt}`} />
+                <div className={s.shelfName}>{m.horse_name}</div>
+                <div className={s.shelfRar}><span className={`${s.rar} ${s[`rar${rarClass(m.rarity)}`]}`}>{m.rarity}</span></div>
+                <div className={s.shelfMeta}>{m.matched_at.slice(5, 10)} 成約 → {m.buyer}</div>
+                <div className={`${s.shelfPrice} ${s.soldPrice}`}>{fmt(m.price)} USDT</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className={s.shelfNote}>
+          指名購入はありません — すべての取引は毎晩20:00の一斉マッチング(先着順)で公平に成立します。
+          カードをタップすると仕組みの説明が見られます。
+        </p>
+      </section>
+
+      {/* ---- 第2幕: 購入予約パネル+予約一覧(page.tsx から注入) ---- */}
+      {reserveSlot}
+
       {/* ---- 自分の出品 ---- */}
       <section className="panel">
         <div className="section-head">
@@ -195,35 +267,6 @@ export function MarketPlaceView({
         </p>
       </section>
 
-      {/* ---- 出品棚 ---- */}
-      <section className="panel">
-        <div className="section-head">
-          <h2>出品中の馬</h2>
-          <span className="muted">先頭から順にマッチングされます</span>
-        </div>
-        {data.shelf.length === 0 ? (
-          <p className="empty">現在、出品中の馬はいません。</p>
-        ) : (
-          <div className={s.shelfGrid}>
-            {data.shelf.map((item, i) => (
-              <div key={item.listing_id} className={`${s.shelfCard} ${myIds.has(item.horse_id) ? s.shelfMine : ''}`}>
-                <span className={s.shelfOrder}>#{i + 1}</span>
-                {myIds.has(item.horse_id) && <span className={s.mineTag}>MINE</span>}
-                <NftHorseArt look={deriveNftLook(item.dna_hash, item.name)} className={s.shelfArt} />
-                <div className={s.shelfName}>{item.name}</div>
-                <div className={s.shelfRar}><span className={`${s.rar} ${s[`rar${rarClass(item.rarity)}`]}`}>{item.rarity}</span></div>
-                <div className={s.shelfMeta}>DAY {item.current_day}</div>
-                <div className={s.shelfPrice}>{fmt(item.price)} USDT</div>
-              </div>
-            ))}
-          </div>
-        )}
-        <p className={s.shelfNote}>
-          購入は「買い予約」で行います(下の購入セクション)。どの馬が割り当たるかは毎晩のバッチが
-          決定論ルール(古い出品から順)で決めます。
-        </p>
-      </section>
-
       {/* ---- 直近の成約 ---- */}
       <section className="panel">
         <h2>直近の成約</h2>
@@ -240,6 +283,30 @@ export function MarketPlaceView({
           ))
         )}
       </section>
+
+      {/* ---- ファネルモーダル: 指名購入不可の説明 → 購入予約へ(Decision 085) ---- */}
+      {funnel && (
+        <div className={d.overlay} role="dialog" aria-modal="true" onClick={() => setFunnel(null)}>
+          <div className={d.dialog} onClick={(e) => e.stopPropagation()}>
+            <div className={d.dialogTitle}>
+              {funnel.sold ? `${funnel.name} は成約済みです` : `${funnel.name} を指名して購入することはできません`}
+            </div>
+            <p className={s.funnelText}>
+              公平性のため、特定の馬を選んで買う仕組みはありません。
+              すべての取引は毎晩20:00の一斉マッチングで、購入予約の先着順に自動で成立します
+              (人の手や優先枠は一切入りません)。
+            </p>
+            <p className={s.funnelText}>
+              購入予約をすると、今夜のマッチングでこの棚の出品馬、または新規発行馬が
+              あなたの厩舎に割り当てられます。
+            </p>
+            <div className={d.dialogActions}>
+              <button type="button" className="secondary" onClick={() => setFunnel(null)}>閉じる</button>
+              <button type="button" onClick={scrollToReserve}>購入予約へ進む ▼</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---- 出品ダイアログ(確認チェックボックスを維持) ---- */}
       {dialogOpen && (

@@ -4,37 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 
-/** Creates a purchase session; the page lists ALL sessions server-side. */
-export function CreateSessionButton({ label = '購入セッションを作成' }: { label?: string }) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function create() {
-    setBusy(true);
-    setError(null);
-    const result = await apiFetch('/api/v1/purchase', {
-      method: 'POST',
-      idempotencyKey: crypto.randomUUID(),
-    });
-    setBusy(false);
-    if (result.status !== 200) {
-      setError(errorMessage(result.body) ?? '購入セッションの作成に失敗しました');
-      return;
-    }
-    router.refresh();
-  }
-
-  return (
-    <div className="stack">
-      {error ? <p className="error">{error}</p> : null}
-      <button onClick={() => void create()} disabled={busy}>
-        {label}
-      </button>
-    </div>
-  );
-}
-
+/** 予約のキャンセル(20:00のバッチロック前のみ)。作成は ReservePanel(Decision 085)。 */
 export function CancelSessionButton({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);

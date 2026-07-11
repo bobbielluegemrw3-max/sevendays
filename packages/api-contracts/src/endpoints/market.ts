@@ -162,17 +162,24 @@ export function registerMarketEndpoints(registry: ApiRegistry): void {
       const demand = await ctx.client.query<{ n: number }>(
         `select count(*)::int as n from purchase_sessions where status = 'PENDING_ASSIGNMENT'`,
       );
+      // Decision 085: SOLDカード用にアート素材(dna_hash/rarity)を含め、
+      // Day0新規発行の成約も is_mint フラグ付きで棚の実績として返す。
       const recent = await ctx.client.query<{
         horse_name: string;
         price: string;
         buyer: string;
         created_at: string;
+        dna_hash: string;
+        rarity: string;
+        is_mint: boolean;
       }>(
         `select h.name as horse_name, a.assigned_price::text as price,
-                a.buyer_user_id::text as buyer, a.created_at::text as created_at
+                a.buyer_user_id::text as buyer, a.created_at::text as created_at,
+                h.dna_hash, h.rarity::text as rarity,
+                (a.market_listing_id is null) as is_mint
          from ownership_assignments a
          join horses h on h.id = a.horse_id
-         where a.status = 'SETTLED' and a.market_listing_id is not null
+         where a.status = 'SETTLED'
          order by a.created_at desc limit 20`,
       );
       const mine = await ctx.client.query(
@@ -193,6 +200,9 @@ export function registerMarketEndpoints(registry: ApiRegistry): void {
           price: r.price,
           buyer: maskedUser(r.buyer),
           matched_at: r.created_at,
+          dna_hash: r.dna_hash,
+          rarity: r.rarity,
+          is_mint: r.is_mint,
         })),
         my_listings: mine.rows,
       };

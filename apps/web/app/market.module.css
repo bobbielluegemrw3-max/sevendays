@@ -60,6 +60,76 @@
 .mineTag { position: absolute; top: -8px; right: -6px; font-family: var(--font-display); font-size: 0.55rem; font-weight: 700; color: var(--cyan); background: #0a0816; border: 1px solid var(--border-strong); border-radius: 5px; padding: 0.06rem 0.35rem; }
 .shelfNote { font-family: var(--font-mono); font-size: 0.66rem; color: var(--faint); margin-top: 0.7rem; }
 
+/* ---- SHOWCASE: クリック可能カード+SOLDカード(Decision 085) ---- */
+.shelfClickable { cursor: pointer; transition: border-color 0.15s ease, transform 0.15s ease; }
+.shelfClickable:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+.shelfSold { background: linear-gradient(160deg, rgba(201, 168, 106, 0.05), var(--panel-2)); }
+.soldArt { filter: saturate(0.55) brightness(0.8); }
+.soldTag {
+  position: absolute; top: -8px; right: -6px; z-index: 1;
+  font-family: var(--font-display); font-size: 0.55rem; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--gold-bright); background: #0a0816; border: 1px solid rgba(201, 168, 106, 0.5);
+  border-radius: 5px; padding: 0.06rem 0.35rem; white-space: nowrap;
+}
+.soldPrice { color: var(--muted); }
+.funnelText { color: var(--text); font-size: 0.85rem; line-height: 1.8; margin: 0.6rem 0; }
+
+/* ---- 購入予約パネル(Decision 085) ---- */
+.reserve {
+  border: 1px solid rgba(0, 234, 255, 0.3); border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  background: linear-gradient(120deg, rgba(0, 234, 255, 0.07), transparent 70%);
+  scroll-margin-top: 80px;
+}
+.reserveHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1rem; }
+.reserveTitle { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; letter-spacing: 0.08em; color: var(--cyan); }
+.reserveBalance { margin-left: auto; font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); }
+.reserveBalance b { color: var(--gold-bright); font-size: 0.95rem; }
+.reserveDeposit { margin-left: 0.7rem; color: var(--cyan); text-decoration: none; font-size: 0.72rem; }
+.reserveDeposit:hover { text-decoration: underline; }
+.reserveSteps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-top: 0.8rem; }
+@media (max-width: 700px) { .reserveSteps { grid-template-columns: 1fr; } }
+.reserveStep {
+  border: 1px solid var(--border); border-radius: 10px; padding: 0.55rem 0.7rem;
+  font-size: 0.74rem; color: var(--muted); line-height: 1.6; background: rgba(10, 8, 22, 0.5);
+}
+.reserveStep b { color: var(--text); }
+.reserveStepK { display: block; font-family: var(--font-display); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; color: var(--cyan); margin-bottom: 0.15rem; }
+.reserveStepGood { color: var(--good); }
+.reserveAction { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem 1rem; margin-top: 0.9rem; }
+.reserveMax { font-size: 0.82rem; color: var(--text); }
+.reserveMax b { color: var(--cyan); }
+.reserveSelectWrap { flex: none; }
+.reserveSelect {
+  font-family: var(--font-display); font-weight: 700; font-size: 0.85rem;
+  color: var(--text); background: #0a0816; border: 1px solid var(--border-strong);
+  border-radius: 9px; padding: 0.45rem 0.6rem; cursor: pointer;
+}
+.reserveCta {
+  margin-left: auto; white-space: nowrap; border: none; cursor: pointer; text-decoration: none;
+  font-family: var(--font-display); font-weight: 700; font-size: 0.82rem; color: #04141a;
+  background: linear-gradient(100deg, var(--cyan), #5ff5ff); padding: 0.55rem 1.1rem; border-radius: 9px;
+  display: inline-flex; align-items: center;
+}
+.reserveCta:hover { filter: brightness(1.07); }
+.reserveBlocked { margin-top: 0.9rem; font-size: 0.8rem; color: var(--warn); }
+.reservePendingNote { margin-top: 0.6rem; font-family: var(--font-mono); font-size: 0.66rem; color: var(--faint); }
+.reserveConfirmText { color: var(--text); font-size: 0.88rem; line-height: 1.8; margin: 0.6rem 0 0.3rem; }
+.reserveConfirmText b { color: var(--cyan); }
+.reserveConfirmSub { color: var(--muted); font-size: 0.76rem; margin: 0 0 0.4rem; }
+
+/* 予約完了・待機案内(第3幕) */
+.reserveDone { margin-top: 0.6rem; }
+.reserveDoneTitle { font-family: var(--font-display); font-weight: 800; font-size: 1rem; color: var(--good); }
+.reserveDoneText { color: var(--text); font-size: 0.85rem; line-height: 1.9; margin: 0.55rem 0 0.2rem; }
+.reserveDoneSub { color: var(--muted); font-size: 0.74rem; line-height: 1.7; margin: 0.3rem 0 0.6rem; }
+.reserveDoneLinks { display: flex; flex-wrap: wrap; gap: 0.6rem 1.2rem; }
+.reserveLink {
+  color: var(--cyan); text-decoration: none; font-family: var(--font-display);
+  font-weight: 700; font-size: 0.74rem; letter-spacing: 0.04em;
+}
+.reserveLink:hover { text-decoration: underline; }
+
 /* ---- 成約フィード ---- */
 .matchRow { display: flex; align-items: center; gap: 0.8rem; border-bottom: 1px solid var(--border); padding: 0.5rem 0.2rem; font-family: var(--font-mono); font-size: 0.76rem; }
 .matchRow:last-child { border-bottom: none; }

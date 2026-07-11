@@ -24,7 +24,7 @@ export interface StableHorse {
 // status: 'ACTIVE'(出走中) | 'BURNED'(消滅) | 'DAY7_CLEARED'(チャンピオン) | 'MEMORIALIZED'(記念馬)
 export interface StableData {
   horses: StableHorse[];   // 全所有馬(現役 + 過去)
-  pendingCount: number;    // 割当待ち購入セッション数
+  pendingCount: number;    // 割当待ちの購入予約数
 }
 
 export function StableView({ data }: { data: StableData }) {
@@ -59,7 +59,7 @@ export function StableView({ data }: { data: StableData }) {
         <div>
           <div className={s.welcomeTitle}>新しい馬を迎える</div>
           <div className={s.welcomeText}>
-            <b>{money(PURCHASE_LOCK_AMOUNT)} USDT</b> がロックされ、今夜20:00のレースで馬が割り当てられます。
+            マーケットで購入予約(1頭につき最大 <b>{money(PURCHASE_LOCK_AMOUNT)} USDT</b> ロック)をすると、今夜20:00のレースで馬が割り当てられます。
             {pendingCount > 0 ? <span className={s.welcomePending}> 現在 {pendingCount}件 割当待ち。</span> : null}
           </div>
         </div>

@@ -1,11 +1,12 @@
 import { AssignmentList, type Assignment } from '@/components/AssignmentList';
-import { CreateSessionButton, CancelSessionButton } from '@/components/PurchasePanel';
+import { CancelSessionButton } from '@/components/PurchasePanel';
 import s from '../app/purchase.module.css';
 
 /* ============================================================================
- * /purchase(購入)再設計 — ダッシュボード Option 1c と同じ部品言語。
- * 純粋な表示コンポーネント。仕組み説明 + セッション一覧(既存 Create/Cancel ボタン)
- * + 割当履歴(client の <AssignmentList>)。データ取得層 page.tsx は依頼側で結線。
+ * 購入予約の一覧+割当履歴(Decision 085で再編)。
+ * 予約の作成は /market の ReservePanel が担い、本コンポーネントは
+ * 「あなたの予約」(キャンセル導線つき)と割当履歴の表示に専念する。
+ * 純粋な表示コンポーネント。データ取得層 page.tsx は依頼側で結線。
  * 表示数値は各 API の値のみ(架空値なし)。
  * ========================================================================== */
 
@@ -25,6 +26,7 @@ function sessionMeta(status: string): { cls: string; label: string; pending: boo
     case 'ASSIGNED': return { cls: s.stAssigned!, label: '割当済', pending: false };
     case 'COMPLETED': return { cls: s.stAssigned!, label: '完了', pending: false };
     case 'REFUNDED': return { cls: s.stMuted!, label: '返金済', pending: false };
+    case 'EXPIRED': return { cls: s.stMuted!, label: '返金済(未割当)', pending: false };
     case 'CANCELLED': return { cls: s.stMuted!, label: 'キャンセル', pending: false };
     default: return { cls: s.stMuted!, label: status, pending: false };
   }
@@ -32,36 +34,11 @@ function sessionMeta(status: string): { cls: string; label: string; pending: boo
 
 export function PurchaseView({ sessions, assignments }: { sessions: Session[]; assignments: Assignment[] }) {
   return (
-    <div className={s.wrap}>
-      <div className={s.h1}>購入</div>
-
-      {/* 仕組み + CTA */}
-      <section className={s.intro}>
-        <div className={s.introTop}>
-          <div className={s.introTitle}>馬を迎える</div>
-          <div className={s.introCta}><CreateSessionButton /></div>
-        </div>
-        <div className={s.steps}>
-          <div className={s.step}>
-            <div className={`${s.stepK} ${s.stepKcyan}`}>① ロック</div>
-            <div className={s.stepT}><b>177.16</b> USDT を確保（価格テーブル上限）</div>
-          </div>
-          <div className={s.step}>
-            <div className={`${s.stepK} ${s.stepKcyan}`}>② 割当</div>
-            <div className={s.stepT}>今夜のバッチで馬が決定。Day0ミントは請求 <b>102</b>（価格100+手数料2）</div>
-          </div>
-          <div className={s.step}>
-            <div className={`${s.stepK} ${s.stepKgood}`}>③ 返金</div>
-            <div className={s.stepT}>割当価格との差額・ロック超過は<b className={s.good ?? ''}>自動返金</b></div>
-          </div>
-        </div>
-        <div className={s.introNote}>バッチのロック前ならキャンセル可（同時に最大10件まで作成できます）。</div>
-      </section>
-
-      {/* セッション */}
+    <div className={s.wrap} id="sessions">
+      {/* 予約一覧 */}
       <div>
         <div className={s.secHead}>
-          <span className={s.secLabel}>あなたのセッション · SESSIONS</span>
+          <span className={s.secLabel}>あなたの予約 · RESERVATIONS</span>
           <span className={s.secCount}>{sessions.length}</span>
         </div>
         {sessions.length > 0 ? (
@@ -85,7 +62,7 @@ export function PurchaseView({ sessions, assignments }: { sessions: Session[]; a
             })}
           </div>
         ) : (
-          <div className={s.empty}>セッションはまだありません。上の「購入セッションを作成」から馬を迎えましょう。</div>
+          <div className={s.empty}>予約はまだありません。上の「購入予約」から馬を迎えましょう。</div>
         )}
       </div>
 

@@ -156,6 +156,80 @@ describe('user flow through the API', () => {
     expect((history.body as { entries: unknown[] }).entries.length).toBeGreaterThanOrEqual(3);
   });
 
+  it('multi-head reservation: count creates N sessions, replays converge, partial failure resumes (Decision 085)', async () => {
+    const user = await newUser();
+    await depositConfirmation(client, {
+      userId: user,
+      amount: Money.of('600'),
+      idempotencyKey: randomUUID(),
+    });
+
+    // count out of range -> validation error
+    const tooMany = await call('POST', '/api/v1/purchase', asUser(user), {
+      idempotencyKey: randomUUID(),
+      body: { count: 11 },
+    });
+    expect(tooMany.status).toBe(400);
+
+    // count=3 creates three distinct sessions and locks 3x177.16
+    const key = randomUUID();
+    const created = await call('POST', '/api/v1/purchase', asUser(user), {
+      idempotencyKey: key,
+      body: { count: 3 },
+    });
+    expect(created.status).toBe(200);
+    const body = created.body as { purchase_session_id: string; session_ids: string[]; already_exists: boolean };
+    expect(body.session_ids).toHaveLength(3);
+    expect(new Set(body.session_ids).size).toBe(3);
+    expect(body.purchase_session_id).toBe(body.session_ids[0]);
+    expect(body.already_exists).toBe(false);
+    const locked = await call('GET', '/api/v1/wallet', asUser(user));
+    expect((locked.body as { locked: string }).locked).toBe('531.48000000');
+
+    // replay with the same key+count returns the SAME sessions, no new locks
+    const replay = await call('POST', '/api/v1/purchase', asUser(user), {
+      idempotencyKey: key,
+      body: { count: 3 },
+    });
+    expect((replay.body as { session_ids: string[] }).session_ids).toEqual(body.session_ids);
+    expect((replay.body as { already_exists: boolean }).already_exists).toBe(true);
+    const lockedAfterReplay = await call('GET', '/api/v1/wallet', asUser(user));
+    expect((lockedAfterReplay.body as { locked: string }).locked).toBe('531.48000000');
+
+    // partial failure: 200 USDT funds head 1 (177.16) but not head 2 — the
+    // call fails, yet head 1's session remains valid and locked...
+    const partialUser = await newUser();
+    await depositConfirmation(client, {
+      userId: partialUser,
+      amount: Money.of('200'),
+      idempotencyKey: randomUUID(),
+    });
+    const partialKey = randomUUID();
+    const partial = await call('POST', '/api/v1/purchase', asUser(partialUser), {
+      idempotencyKey: partialKey,
+      body: { count: 2 },
+    });
+    expect(partial.status).toBeGreaterThanOrEqual(400);
+    const midWallet = await call('GET', '/api/v1/wallet', asUser(partialUser));
+    expect((midWallet.body as { locked: string }).locked).toBe('177.16000000');
+
+    // ...and a retry with the same key RESUMES: head 1 replays (no double
+    // lock), head 2 is created once funds arrive.
+    await depositConfirmation(client, {
+      userId: partialUser,
+      amount: Money.of('200'),
+      idempotencyKey: randomUUID(),
+    });
+    const resumed = await call('POST', '/api/v1/purchase', asUser(partialUser), {
+      idempotencyKey: partialKey,
+      body: { count: 2 },
+    });
+    expect(resumed.status).toBe(200);
+    expect((resumed.body as { session_ids: string[] }).session_ids).toHaveLength(2);
+    const finalWallet = await call('GET', '/api/v1/wallet', asUser(partialUser));
+    expect((finalWallet.body as { locked: string }).locked).toBe('354.32000000');
+  });
+
   it('withdrawal: minimum enforced, funds locked before broadcast, idempotent', async () => {
     const user = await newUser();
     await depositConfirmation(client, {
