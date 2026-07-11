@@ -263,6 +263,25 @@ export function trainingModifierV1(horseType: HorseType, training: TrainingType 
 export const RECOVERY_TRAINING_FATIGUE_BONUS = 1.0;
 
 // ---------------------------------------------------------------------------
+// Recommended training (Decision 088) — the one-tap bulk-train heuristic and
+// the おすすめ badge share this. Pure math over the v1.0 constants:
+//   - fatigue >= 60 -> RECOVERY (the compounding fatigue/condition penalty
+//     outweighs the +1 attack edge long before this point)
+//   - SPRINTER -> SPEED (+5), POWER -> POWER (+5)
+//   - ENDURANCE (+5) / BALANCED (+4 all, recovery's side effects win) /
+//     LUCK (recovery +4 beats +3) -> RECOVERY
+// ---------------------------------------------------------------------------
+
+export const RECOMMENDED_RECOVERY_FATIGUE_THRESHOLD = 60;
+
+export function recommendedTrainingV1(horseType: HorseType, fatigue: number): TrainingType {
+  if (fatigue >= RECOMMENDED_RECOVERY_FATIGUE_THRESHOLD) return 'RECOVERY_TRAINING';
+  if (horseType === 'SPRINTER') return 'SPEED_TRAINING';
+  if (horseType === 'POWER') return 'POWER_TRAINING';
+  return 'RECOVERY_TRAINING';
+}
+
+// ---------------------------------------------------------------------------
 // Weather / Track v1.0 (Decision 053)
 // ---------------------------------------------------------------------------
 

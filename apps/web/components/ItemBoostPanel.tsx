@@ -114,9 +114,10 @@ export function ItemBoostPanel({
 
   return (
     <div className={s.boost}>
-      <div className={s.boostTitle}>ブーストアイテム</div>
+      <div className={s.boostTitle}>ブーストアイテム<span className={s.boostPaid}>任意 · ショップ購入制</span></div>
       <div className={s.boostDesc}>
-        1頭・1レース・1個まで。効果はアイテムの適性と今夜のレース条件(天候×馬場×コース・レース後公開)で決まります。
+        調教とは別の上乗せ(なくても走れます)。1頭・1レース・1個まで。
+        効果はアイテムの適性と今夜のレース条件(天候×馬場×コース・レース後公開)で決まります。
       </div>
 
       {pendingHere ? (

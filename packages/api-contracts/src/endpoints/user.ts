@@ -6,6 +6,7 @@ import {
   TRAINING_TYPES,
   MAX_CONCURRENT_PURCHASE_SESSIONS,
   PURCHASE_LOCK_AMOUNT,
+  recommendedTrainingV1,
   renderNotification,
 } from '@sevendays/domain';
 import { ensureUserAccounts, getBalance, withdrawalFundLock } from '@sevendays/ledger';
@@ -432,6 +433,72 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         auto_list: input.auto_list,
         auto_reserve: autoReserve,
         auto_reserve_max: autoReserveMax,
+      };
+    },
+  });
+
+  // 一括調教(Decision 088)— 未調教のACTIVE馬(手動出品中を除く)全頭に
+  // recommendedTrainingV1(タイプ相性+疲労60で回復)を適用する。冪等:
+  // 調教済み・スナップショット済みの馬は on conflict / 事前チェックでスキップ。
+  // 通知は出さない(N頭ぶんのスパム防止 — 結果はレスポンスとバッジで見える)。
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/horses/train-all',
+    auth: 'user',
+    handler: async (ctx) => {
+      if ((await getMarketplaceState(ctx.client)) !== 'OPEN') {
+        throw new ApiError('MARKETPLACE_LOCKED', 'Training intake is closed during Daily Settlement');
+      }
+      const today = batchDateFor(new Date());
+      const completedToday = await ctx.client.query(
+        `select 1 from batch_runs where batch_date = $1 and status = 'COMPLETED'`,
+        [today],
+      );
+      const effectiveRaceDate = completedToday.rows[0] ? addDays(today, 1) : today;
+
+      // 対象: 自分のACTIVE馬 − 手動出品中 − 調教済み − スナップショット確定済み
+      const targets = await ctx.client.query<{
+        id: string;
+        horse_type: string;
+        fatigue: string;
+      }>(
+        `select h.id, h.horse_type::text as horse_type, h.fatigue::text as fatigue
+         from horses h
+         where h.owner_user_id = $1 and h.status = 'ACTIVE'
+           and not exists (select 1 from market_listings l
+                           where l.horse_id = h.id and l.status = 'LISTED' and l.source = 'MANUAL')
+           and not exists (select 1 from training_sessions t
+                           where t.horse_id = h.id and t.effective_race_date = $2)
+           and not exists (select 1 from race_participant_snapshots s
+                           join races r on r.id = s.race_id
+                           join batch_runs b on b.id = r.batch_run_id
+                           where s.horse_id = h.id and b.batch_date = $2)
+         order by h.created_at`,
+        [ctx.userId, effectiveRaceDate],
+      );
+
+      const byType: Record<string, number> = {};
+      let trained = 0;
+      for (const horse of targets.rows) {
+        const training = recommendedTrainingV1(
+          horse.horse_type as Parameters<typeof recommendedTrainingV1>[0],
+          Number(horse.fatigue),
+        );
+        const inserted = await ctx.client.query<{ id: string }>(
+          `insert into training_sessions (horse_id, user_id, training_type, training_date, effective_race_date)
+           values ($1, $2, $3::training_type, $4, $5)
+           on conflict (horse_id, effective_race_date) do nothing
+           returning id`,
+          [horse.id, ctx.userId, training, today, effectiveRaceDate],
+        );
+        if (inserted.rows.length === 0) continue; // 並行の個別調教が勝った — そのまま尊重
+        trained += 1;
+        byType[training] = (byType[training] ?? 0) + 1;
+      }
+      return {
+        trained,
+        by_type: byType,
+        effective_race_date: effectiveRaceDate,
       };
     },
   });

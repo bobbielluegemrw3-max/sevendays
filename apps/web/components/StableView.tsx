@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PURCHASE_LOCK_AMOUNT } from '@sevendays/domain';
 import { money, horseValue } from '@/components/stable-shared';
+import { BulkTrainButton } from '@/components/BulkTrainButton';
 import { ChampionCard, ListedCard, StableBrowser } from '@/components/StableBrowser';
 import { RarityLegend } from '@/components/RarityLegend';
 import s from '../app/stable.module.css';
@@ -83,7 +84,10 @@ export function StableView({ data }: { data: StableData }) {
           <span className={s.secNote}><span className={s.live}>●</span> 今夜20:00 一斉発走</span>
         </div>
         {racing.length > 0 ? (
-          <StableBrowser kind="active" horses={racing} />
+          <>
+            <BulkTrainButton untrainedCount={racing.filter((h) => !h.trained_for_next_race).length} />
+            <StableBrowser kind="active" horses={racing} />
+          </>
         ) : (
           <div className={s.emptyBox}>
             {pendingCount > 0

@@ -2,8 +2,21 @@ import { describe, expect, it } from 'vitest';
 import {
   NOTIFICATION_TEMPLATES_V1,
   NOTIFICATION_TYPES_V1,
+  recommendedTrainingV1,
   renderNotification,
 } from '../src/index.js';
+
+describe('recommended training (Decision 088)', () => {
+  it('follows type affinity while fresh, flips to recovery at fatigue 60', () => {
+    expect(recommendedTrainingV1('SPRINTER', 0)).toBe('SPEED_TRAINING');
+    expect(recommendedTrainingV1('POWER', 30)).toBe('POWER_TRAINING');
+    expect(recommendedTrainingV1('ENDURANCE', 0)).toBe('RECOVERY_TRAINING');
+    expect(recommendedTrainingV1('BALANCED', 0)).toBe('RECOVERY_TRAINING');
+    expect(recommendedTrainingV1('LUCK', 0)).toBe('RECOVERY_TRAINING');
+    expect(recommendedTrainingV1('SPRINTER', 60)).toBe('RECOVERY_TRAINING');
+    expect(recommendedTrainingV1('POWER', 99)).toBe('RECOVERY_TRAINING');
+  });
+});
 
 describe('notification templates (Decision 065)', () => {
   it('defines the owner-adopted types + support bonus + item types (074/078/079) + trade automation (086)', () => {

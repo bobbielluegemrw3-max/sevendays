@@ -752,6 +752,62 @@ describe('training (Decision 066)', () => {
       await client.query(`update marketplace_status set state = 'OPEN' where id = true`);
     }
   });
+
+  it('train-all bulk-trains untrained horses with the recommended type (Decision 088)', async () => {
+    const owner = await newUser();
+    const mk = async (type: string, fatigue: string): Promise<string> => {
+      const r = await client.query<{ id: string }>(
+        `insert into horses (owner_user_id, current_day, name, horse_type, rarity, dna_hash, dna_modifier,
+                             horse_generation_version, mint_seed_hash, ability_json, fatigue)
+         values ($1, 2, $2, $3, 'COMMON', $4, 0.5, 'horse_generation_v1.0', $5, $6, $7) returning id`,
+        [
+          owner,
+          `Bulk ${randomUUID().slice(0, 14)}`,
+          type,
+          randomUUID().replaceAll('-', ''),
+          randomUUID().replaceAll('-', ''),
+          JSON.stringify({ speed: 75, power: 75, stamina: 75, recovery: 75, luck: 75 }),
+          fatigue,
+        ],
+      );
+      return r.rows[0]!.id;
+    };
+    const sprinter = await mk('SPRINTER', '10');   // -> SPEED
+    const tired = await mk('SPRINTER', '75');      // 疲労60以上 -> RECOVERY
+    const hand = await mk('POWER', '10');          // 先に個別調教 -> スキップ
+    const listed = await mk('BALANCED', '10');     // 手動出品中 -> スキップ
+
+    await call('POST', `/api/v1/horses/${hand}/training`, asUser(owner), {
+      body: { training_type: 'RECOVERY_TRAINING' },
+    });
+    await client.query(
+      `insert into market_listings (horse_id, seller_user_id, listing_price, current_day, batch_run_id,
+                                    deterministic_market_tiebreak_score, source)
+       values ($1, $2, '121.00', 2, null, 0.5, 'MANUAL')`,
+      [listed, owner],
+    );
+
+    const bulk = await call('POST', '/api/v1/horses/train-all', asUser(owner), { body: {} });
+    expect(bulk.status).toBe(200);
+    const body = bulk.body as { trained: number; by_type: Record<string, number> };
+    expect(body.trained).toBe(2);
+    expect(body.by_type).toEqual({ SPEED_TRAINING: 1, RECOVERY_TRAINING: 1 });
+
+    const trainedRows = await client.query<{ horse_id: string; training_type: string }>(
+      `select horse_id, training_type::text as training_type from training_sessions
+       where horse_id = any($1::uuid[])`,
+      [[sprinter, tired, hand, listed]],
+    );
+    const byHorse = new Map(trainedRows.rows.map((r) => [r.horse_id, r.training_type]));
+    expect(byHorse.get(sprinter)).toBe('SPEED_TRAINING');
+    expect(byHorse.get(tired)).toBe('RECOVERY_TRAINING');
+    expect(byHorse.get(hand)).toBe('RECOVERY_TRAINING'); // 個別調教が残る(上書きしない)
+    expect(byHorse.has(listed)).toBe(false);             // 出品中はスキップ
+
+    // 再実行は何もしない(冪等)
+    const again = await call('POST', '/api/v1/horses/train-all', asUser(owner), { body: {} });
+    expect((again.body as { trained: number }).trained).toBe(0);
+  });
 });
 
 describe('admin recovery surface (Decision 067)', () => {

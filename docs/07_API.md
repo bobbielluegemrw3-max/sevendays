@@ -67,6 +67,8 @@ Support Bonus (Decision 074; user-facing name サポートボーナス — never
 - POST `/support/place` `{user_id, parent_user_id}` places a pooled referral either directly under the sponsor (unlimited width) or under any node inside the sponsor's own placement subtree. ONE-SHOT: replaying the identical placement succeeds quietly; any different placement is refused. Errors: SUPPORT_NOT_YOUR_REFERRAL, SUPPORT_ALREADY_PLACED, SUPPORT_PARENT_OUT_OF_SCOPE, SUPPORT_PLACEMENT_CYCLE.
 - POST `/admin/support/replace` `{user_id, new_parent_user_id|null, reason}` is the audited SUPER_ADMIN-only exception path (placement_audit ADMIN_OVERRIDE + audit_logs).
 
+- POST `/api/v1/horses/train-all` (Decision 088) — one-tap bulk training: applies recommendedTrainingV1 (type affinity; fatigue ≥ 60 → recovery) to every untrained ACTIVE horse of the caller, skipping manually listed (Market Lock) and snapshot-frozen horses; individually trained horses are respected via on-conflict skip. Returns `{trained, by_type, effective_race_date}`. No per-horse notifications. Requires Marketplace OPEN.
+
 Trade automation settings (Decision 086):
 - GET `/trade-settings` returns `{chosen, auto_list, auto_reserve, auto_reserve_max}`; `chosen:false` means the user has never made the mandatory listing-mode choice (the UI must block with the choice modal; until chosen the user's horses are never smart-listed).
 - POST `/trade-settings` `{auto_list, auto_reserve?, auto_reserve_max?}` upserts the choice. `auto_reserve` requires `auto_list` (TRADE_SETTINGS_INVALID). `auto_reserve_max` 1-10 or null = MAX (as balance/slots allow, default 1). Switching `auto_list` OFF flags the caller's live SMART listings `cancel_after_batch` (delisted after tonight, a sale tonight wins — same promise as manual unlist).

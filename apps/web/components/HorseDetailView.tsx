@@ -252,15 +252,18 @@ export function HorseDetailView({ horse }: { horse: HorseDetail }) {
         <div className={`${s.train} ${s.trainActive}`}>
           <div className={s.trainHead}>
             <div>
-              <div className={s.trainTitle}>今日の調教</div>
-              <div className={s.trainDesc}>コンディションを整え、今夜のレースに備えましょう。疲労とのバランスが鍵です。</div>
+              <div className={s.trainTitle}>今日の調教<span className={s.trainFree}>無料 · 1日1回</span></div>
+              <div className={s.trainDesc}>
+                調教は今夜のスコアに直接加点します(馬タイプとの相性で+3〜5)。攻めれば疲労が溜まり、回復調教で癒せます —
+                疲労はスコアとコンディションを蝕むので、7日間の采配が鍵です。
+              </div>
             </div>
           </div>
           <div className={s.trainForm}>
-            <TrainingForm horseId={horse.id} />
+            <TrainingForm horseId={horse.id} horseType={horse.horse_type} fatigue={Number(horse.fatigue)} />
             <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} />
           </div>
-          <div className={s.trainNote}>調教は1日1回。今夜20:00のスナップショット確定までに実施すると、今夜のレースに反映されます。</div>
+          <div className={s.trainNote}>今夜20:00のスナップショット確定までに実施すると、今夜のレースに反映されます。</div>
         </div>
       ) : m.marketLocked ? (
         <div className={`${s.retired} ${s.retiredListed}`}>
