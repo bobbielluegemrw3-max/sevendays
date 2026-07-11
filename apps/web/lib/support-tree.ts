@@ -47,6 +47,9 @@ export const NODE_W = 128;
 export const NODE_H = 62;
 export const GAP_X = 20;
 export const LEVEL_H = 118;
+/** 左端のTIERチップ(「TIER 1 3 USDT」等)のための水平ガター。
+ *  ノードのxはここから始まる — チップとタイルが重ならない(オーナー指摘 2026-07-11)。 */
+export const TIER_RAIL_W = 112;
 const SLOT = NODE_W + GAP_X;
 
 /** self を根(tier 0)に、APIの nodes(tier 1..7)をツリー化して座標を計算。 */
@@ -73,7 +76,7 @@ export function layoutSupportTree(
 
   const placed: LaidOutNode[] = [];
   const edges: TreeEdge[] = [];
-  let nextLeafX = 0;
+  let nextLeafX = TIER_RAIL_W; // 左端はTIERチップの帯 — タイルはその右から
   let maxTier = 0;
 
   const layout = (node: SupportTreeInput | null, id: string | null, tier: number): number => {
@@ -114,7 +117,7 @@ export function layoutSupportTree(
 
   layout(null, 'SELF', 0);
 
-  const width = Math.max(nextLeafX - GAP_X, NODE_W);
+  const width = Math.max(nextLeafX - GAP_X, TIER_RAIL_W + NODE_W);
   const height = (maxTier + 1) * LEVEL_H + NODE_H;
   return { nodes: placed, edges, width, height, maxTier };
 }

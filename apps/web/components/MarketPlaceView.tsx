@@ -183,7 +183,7 @@ export function MarketPlaceView({
       <section className="panel">
         <div className="section-head">
           <h2>SHOWCASE</h2>
-          <span className="muted">出品中の馬は先頭から順にマッチングされます</span>
+          <span className={s.shelfHeadNote}>出品中の馬は先頭から順にマッチングされます</span>
         </div>
         {data.shelf.length === 0 && data.recent_matches.length === 0 ? (
           <p className="empty">まだ出品も成約もありません。今夜の最初の取引者になりましょう。</p>

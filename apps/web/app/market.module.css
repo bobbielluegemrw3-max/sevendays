@@ -32,7 +32,9 @@
 .pulseSub { font-family: var(--font-mono); font-size: 0.62rem; color: var(--faint); margin-top: 0.15rem; }
 
 /* ---- 出品棚 ---- */
-.shelfGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.7rem; }
+/* 見出し注記(モバイルで折り返してもカードに密着しないよう、棚側に余白を持たせる) */
+.shelfHeadNote { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); text-align: right; }
+.shelfGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.7rem; margin-top: 1rem; }
 .shelfCard {
   border: 1px solid var(--border); border-radius: 12px;
   background: linear-gradient(160deg, rgba(0, 234, 255, 0.04), var(--panel-2));

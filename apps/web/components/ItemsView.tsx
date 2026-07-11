@@ -220,7 +220,7 @@ export function ItemsView({
               </div>
             ))}
           </div>
-          <div className={s.settingGrid}>
+          <div className={`${s.settingGrid} ${s.settingGridSurface}`}>
             {Object.entries(SURFACE_PROBABILITY_V1).map(([k, p]) => (
               <div key={k} className={s.settingCell}>
                 <div className={s.settingN}>{SURFACE_JA[k as keyof typeof SURFACE_JA]}</div>

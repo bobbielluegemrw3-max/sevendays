@@ -149,13 +149,17 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
         </div>
       </section>
 
-      {/* ---- ④ 招待リンク ---- */}
-      <section className="panel">
-        <h2>招待リンク</h2>
+      {/* ---- ④ 招待リンク(1cカード: リンクピル+一体型コピーCTA) ---- */}
+      <section className={s.invite}>
+        <div className={s.inviteHead}>
+          <span className={s.inviteTitle}>招待リンク · INVITE</span>
+          <span className={s.inviteCode}>あなたのコード <b>{summary.referral_code}</b></span>
+        </div>
         <div className={s.inviteRow}>
           <span className={s.inviteLink}>{inviteUrl}</span>
-          <button type="button" onClick={copyInvite}>コピー</button>
-          {copied && <span className={s.copied}>コピーしました</span>}
+          <button type="button" className={s.inviteCopy} onClick={copyInvite}>
+            {copied ? '✓ コピーしました' : 'リンクをコピー'}
+          </button>
         </div>
         <p className={s.inviteNote}>
           招待しただけではボーナスは発生しません。サポートボーナスは、あなたのネットワーク内で

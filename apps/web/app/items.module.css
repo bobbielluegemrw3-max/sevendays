@@ -18,7 +18,11 @@
 .settingHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 0.8rem; margin-bottom: 0.7rem; }
 .settingTitle { font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--cyan); }
 .settingLead { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); }
-.settingGrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; }
+/* Decision 082で「設定1〜6」→天候4×馬場4×コース2 になった — 6カラムの残骸だと
+   右側に空セルが並ぶ(オーナー指摘 2026-07-11)。天候/馬場=4列、コースは2列全幅。 */
+.settingGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+.settingGrid + .settingGrid { margin-top: 0.5rem; }
+.settingGridSurface { grid-template-columns: repeat(2, 1fr); }
 .settingCell {
   border: 1px solid var(--border); border-radius: 10px; padding: 0.55rem 0.4rem; text-align: center;
   background: rgba(255, 255, 255, 0.015);

@@ -289,13 +289,21 @@
           return { scene: g.scene, clip: pickClip(g.animations || []), scale, feetY: -gMin * scale, hH: gh * scale };
         };
         let models;
-        try {
-          // 写実モデル(Holsteiner・鞍/頭絡付き・gallopアニメ)。単位差はtoModelで正規化。
-          const g = await loader.loadAsync("/champions/keiba/models/holsteiner.glb");
-          models = [toModel(g)];
-        } catch (e1) {
-          const g = await loader.loadAsync("https://threejs.org/examples/models/gltf/Horse.glb");
-          models = [toModel(g)];
+        if (this.env && this.env.metallic) {
+          // Seven Days metallic: 馬はNFTスプライトで描く(_syncHorses3Dが早期returnし
+          // GLB馬は一度も描画されない)。11MBのholsteiner.glbロードを丸ごと省略して
+          // ヒーロー初回表示を大幅短縮(オーナー指摘 2026-07-11)。
+          // 3Dはアリーナ(床・走路・レール)の描画のみ担う。
+          models = [];
+        } else {
+          try {
+            // 写実モデル(Holsteiner・鞍/頭絡付き・gallopアニメ)。単位差はtoModelで正規化。
+            const g = await loader.loadAsync("/champions/keiba/models/holsteiner.glb");
+            models = [toModel(g)];
+          } catch (e1) {
+            const g = await loader.loadAsync("https://threejs.org/examples/models/gltf/Horse.glb");
+            models = [toModel(g)];
+          }
         }
         // Seven Days メタリックマスター(Manus納品 2026-07-08)。404でも3Dは
         // 継続し、従来のcanvas色替えにフォールバックする。
