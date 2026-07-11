@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>馬詳細 リデザイン — Seven Days Derby</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Space+Grotesk:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050409;--bg-2:#0a0714;--panel:#12101d;--panel-2:#16132a;
+  --border:rgba(255,255,255,.08);--border-strong:rgba(0,234,255,.28);
+  --text:#eae7ff;--muted:#8f8ac2;--faint:#5a5580;
+  --cyan:#00eaff;--cyan-deep:#0088a0;--magenta:#ff2dc4;--magenta-soft:#ff8fe4;
+  --gold:#c9a86a;--gold-bright:#f2e4bf;--good:#35d07f;--bad:#ff5c5c;--warn:#e6b24a;
+  --font-display:'Orbitron',system-ui,sans-serif;
+  --font-sans:'Space Grotesk','Zen Kaku Gothic New',system-ui,sans-serif;
+  --font-jp:'Zen Kaku Gothic New','Hiragino Kaku Gothic ProN',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;color:var(--text);font-family:var(--font-sans);line-height:1.6;
+  background:radial-gradient(900px 500px at 50% -8%, #1a0b2e 0%, #0a0714 46%, var(--bg) 100%),var(--bg);
+  background-attachment:fixed;-webkit-font-smoothing:antialiased;}
+
+/* showcase chrome */
+.scHead{max-width:1040px;margin:0 auto;padding:30px 20px 6px;}
+.scTitle{font-family:var(--font-display);font-weight:800;font-size:20px;letter-spacing:.02em;}
+.scSub{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:6px;line-height:1.7;}
+.scTag{max-width:1040px;margin:34px auto 0;padding:0 20px;display:flex;align-items:center;gap:10px;}
+.scTag .n{font-family:var(--font-display);font-weight:800;font-size:11px;letter-spacing:.14em;color:#04141a;
+  background:linear-gradient(100deg,var(--cyan),#5ff5ff);border-radius:6px;padding:3px 9px;}
+.scTag .t{font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:.04em;}
+.scTag .line{flex:1;height:1px;background:linear-gradient(90deg,var(--border-strong),transparent);}
+
+/* ---------- page ---------- */
+.page{max-width:1040px;margin:0 auto;padding:14px 20px 26px;display:flex;flex-direction:column;gap:16px;}
+
+.crumb{font-family:var(--font-display);font-size:10px;letter-spacing:.14em;color:var(--muted);text-decoration:none;}
+.crumb:hover{color:var(--cyan);}
+
+/* masthead */
+.mast{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;}
+.mastL{min-width:0;}
+.titleRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:7px;}
+.title{font-family:var(--font-display);font-weight:800;font-size:27px;letter-spacing:.01em;}
+.mastR{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
+.mastValK{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.12em;color:var(--muted);}
+.mastVal{font-family:var(--font-display);font-weight:800;font-size:30px;color:var(--gold-bright);line-height:1;}
+.mastVal small{font-family:var(--font-mono);font-weight:400;font-size:12px;color:var(--muted);margin-left:6px;}
+.mastVal.muted{color:var(--muted);}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-family:var(--font-display);
+  font-size:9px;font-weight:700;letter-spacing:.08em;white-space:nowrap;text-transform:uppercase;border:1px solid transparent;}
+.rarCOMMON{color:#c3ccd8;border-color:#8a92a0;background:rgba(130,140,160,.14);}
+.rarUNCOMMON{color:#9dffc4;border-color:var(--good);background:rgba(53,208,127,.15);}
+.rarRARE{color:#a9f6ff;border-color:var(--cyan);background:rgba(0,234,255,.16);}
+.rarEPIC{color:var(--magenta-soft);border-color:var(--magenta);background:rgba(255,45,196,.16);}
+.rarLEGENDARY{color:#0a0813;border-color:transparent;background:linear-gradient(92deg,var(--gold),#f7eccb);}
+.typeBadge{color:var(--muted);border-color:rgba(0,234,255,.28);background:rgba(0,234,255,.06);}
+.stActive{color:var(--cyan);border-color:rgba(0,234,255,.4);background:rgba(0,234,255,.08);letter-spacing:.06em;}
+.stBurned{color:var(--magenta-soft);border-color:var(--magenta);background:rgba(255,45,196,.14);letter-spacing:.06em;}
+.stCleared{color:var(--gold-bright);border-color:var(--gold);background:rgba(201,168,106,.16);letter-spacing:.06em;}
+.stMemorial{color:#0a0813;border-color:transparent;background:linear-gradient(92deg,var(--gold),#f7eccb);letter-spacing:.06em;}
+.stListed{color:var(--warn);border-color:rgba(230,178,74,.5);background:rgba(230,178,74,.1);letter-spacing:.06em;}
+.stSmart{color:var(--cyan);border-color:rgba(0,234,255,.35);background:rgba(0,234,255,.05);letter-spacing:.06em;}
+.todo{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-display);font-size:9.5px;font-weight:700;
+  letter-spacing:.06em;padding:4px 10px;border-radius:999px;white-space:nowrap;}
+.todoDo{color:var(--magenta-soft);border:1px solid var(--magenta);background:rgba(255,45,196,.12);}
+.todoDone{color:#9dffc4;border:1px solid rgba(53,208,127,.5);background:rgba(53,208,127,.1);}
+.todoDot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor;}
+
+/* hero row: art | action */
+.heroRow{display:grid;grid-template-columns:1fr;gap:16px;}
+@media(min-width:980px){.heroRow{grid-template-columns:1.08fr .92fr;align-items:stretch;}}
+
+.hero{border-radius:18px;padding:1px;box-shadow:0 18px 40px -18px rgba(0,0,0,.7);
+  background:conic-gradient(from 140deg,#3a2f18,var(--gold),#f2e4bf,var(--cyan),var(--magenta),var(--gold),#3a2f18);}
+.heroBurned{background:linear-gradient(180deg,#2a2740,#1a1830);}
+.heroInner{border-radius:17px;background:linear-gradient(180deg,#12101d,#0a0813);overflow:hidden;height:100%;display:flex;flex-direction:column;}
+.artBox{position:relative;background:radial-gradient(90% 80% at 50% 42%, rgba(0,234,255,.07), transparent 70%);flex:1;min-height:250px;}
+.artBox svg{position:absolute;inset:0;width:100%;height:100%;padding:16px 10px 30px;}
+.scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,19,0) 46%,rgba(10,8,19,.92) 96%);pointer-events:none;}
+.artCap{position:absolute;left:16px;right:16px;bottom:13px;display:flex;justify-content:space-between;align-items:flex-end;}
+.artCapK{font-family:var(--font-mono);font-size:9.5px;color:var(--muted);}
+.artCapDay{font-family:var(--font-display);font-weight:800;font-size:15px;color:var(--text);letter-spacing:.02em;}
+.dayBig{text-align:right;}
+.dayBig .l{font-family:var(--font-display);font-size:8.5px;color:var(--faint);letter-spacing:.14em;}
+.dayBig .v{font-family:var(--font-display);font-weight:800;font-size:26px;color:var(--cyan);line-height:1;}
+.dayBig .v small{font-size:13px;color:var(--faint);}
+.heroFoot{padding:13px 16px 15px;}
+.rail{display:flex;gap:4px;}
+.pip{flex:1;height:6px;border-radius:2px;background:rgba(255,255,255,.1);}
+.pipDone{background:var(--cyan);}
+.pipToday{background:var(--magenta);box-shadow:0 0 7px var(--magenta);}
+.pipBurn{background:var(--magenta);opacity:.4;}
+.dayNote{font-family:var(--font-mono);font-size:9.5px;color:var(--faint);margin-top:9px;line-height:1.55;}
+
+/* action column (training / outcome) */
+.action{display:flex;flex-direction:column;}
+.trainCard{border:1px solid rgba(255,45,196,.4);border-radius:16px;padding:15px 17px;
+  background:linear-gradient(150deg,rgba(255,45,196,.11),transparent 70%);height:100%;display:flex;flex-direction:column;}
+.trainTop{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.trainTitle{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--magenta-soft);}
+.freeTag{font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--good);
+  border:1px solid rgba(53,208,127,.45);border-radius:5px;padding:2px 7px;}
+.trainDesc{color:var(--muted);font-size:12px;margin-top:7px;line-height:1.6;}
+.tCards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:12px;}
+@media(max-width:560px){.tCards{grid-template-columns:1fr;}}
+.tCard{display:flex;flex-direction:column;gap:4px;text-align:left;border:1px solid var(--border);border-radius:11px;
+  padding:9px 10px;background:rgba(10,8,22,.5);cursor:pointer;}
+.tCardOn{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,234,255,.25);background:rgba(0,234,255,.05);}
+.tCardK{font-family:var(--font-display);font-weight:700;font-size:11.5px;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.reco{font-size:8px;font-weight:700;letter-spacing:.06em;color:#04141a;background:linear-gradient(100deg,var(--cyan),#5ff5ff);border-radius:4px;padding:1px 5px;}
+.tBonus{font-size:10.5px;color:var(--muted);}
+.tBonus b{font-family:var(--font-display);font-size:12.5px;color:var(--cyan);}
+.tSub{font-family:var(--font-mono);font-size:9px;color:var(--magenta-soft);}
+.tSub.good{color:var(--good);}
+.btn{appearance:none;border:none;border-radius:11px;padding:11px 14px;font-family:var(--font-display);
+  font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;color:#04141a;
+  background:linear-gradient(100deg,var(--cyan),#5ff5ff 55%,var(--cyan));box-shadow:0 10px 24px -10px rgba(0,234,255,.7);margin-top:11px;width:100%;}
+.trainNote{font-family:var(--font-mono);font-size:9px;color:var(--faint);margin-top:9px;line-height:1.55;}
+/* item boost */
+.boost{border-top:1px solid rgba(255,255,255,.07);margin-top:13px;padding-top:12px;}
+.boostTitle{font-family:var(--font-display);font-weight:700;font-size:12.5px;color:var(--text);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.paidTag{font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--warn);border:1px solid rgba(230,178,74,.45);border-radius:5px;padding:2px 7px;white-space:nowrap;}
+.freeTag{white-space:nowrap;}
+.boostDesc{color:var(--muted);font-size:11px;margin-top:6px;line-height:1.55;}
+.boostRow{display:flex;gap:8px;margin-top:9px;}
+.sel{flex:1;background:var(--bg);color:var(--text);border:1px solid var(--border-strong);border-radius:10px;padding:9px 10px;font-family:var(--font-sans);font-size:12px;}
+.btnGhost{appearance:none;border:1px solid rgba(255,45,196,.5);background:rgba(255,45,196,.1);color:var(--magenta-soft);
+  border-radius:10px;padding:9px 13px;font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:.05em;cursor:pointer;white-space:nowrap;}
+
+/* outcome / listed cards fill the action column */
+.outcome{border-radius:16px;padding:18px;height:100%;display:flex;flex-direction:column;justify-content:center;gap:12px;}
+.outBurned{border:1px solid rgba(255,45,196,.32);background:linear-gradient(150deg,rgba(255,45,196,.08),transparent 72%);}
+.outGold{border:1px solid rgba(201,168,106,.34);background:linear-gradient(150deg,rgba(201,168,106,.1),transparent 72%);}
+.outListed{border:1px solid rgba(230,178,74,.35);background:linear-gradient(150deg,rgba(230,178,74,.08),transparent 72%);}
+.outHead{font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:.02em;}
+.outBurned .outHead{color:var(--magenta-soft);}
+.outGold .outHead{color:var(--gold-bright);}
+.outListed .outHead{color:var(--warn);}
+.outText{font-size:12.5px;color:#c3ccd8;line-height:1.7;}
+.outCta{align-self:flex-start;text-decoration:none;font-family:var(--font-display);font-weight:700;font-size:11px;
+  color:#1a1206;background:linear-gradient(100deg,var(--warn),#f2d492);padding:8px 14px;border-radius:9px;}
+
+/* section label */
+.secLabel{font-family:var(--font-display);font-size:11px;letter-spacing:.2em;color:var(--muted);margin-bottom:11px;}
+.secLabel.dim{color:var(--faint);}
+
+/* VALUE LADDER */
+.ladWrap{border:1px solid var(--border);border-radius:16px;padding:16px 18px 15px;
+  background:linear-gradient(180deg,rgba(20,18,34,0),var(--panel));}
+.ladHead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.ladNow{font-family:var(--font-mono);font-size:11px;color:var(--muted);}
+.ladNow b{font-family:var(--font-display);font-size:15px;color:var(--gold-bright);font-weight:700;}
+.ladArrow{color:var(--faint);font-family:var(--font-mono);font-size:12px;}
+.ladNext{font-family:var(--font-mono);font-size:11px;}
+.ladNext .k{color:var(--cyan);}
+.ladNext b{font-family:var(--font-display);font-size:15px;color:var(--cyan);font-weight:700;}
+.ladNext.champ .k{color:var(--gold);}
+.ladNext.champ b{color:var(--gold-bright);}
+.ladBars{display:flex;align-items:flex-end;gap:5px;height:150px;}
+.ladCol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:5px;min-width:0;}
+.ladPrice{font-family:var(--font-mono);font-size:9px;color:var(--faint);white-space:nowrap;}
+.ladBar{width:100%;border-radius:4px 4px 0 0;position:relative;transition:height .5s ease;}
+.barPast{background:linear-gradient(180deg,rgba(0,234,255,.5),rgba(0,234,255,.12));}
+.barNow{background:linear-gradient(180deg,var(--magenta),rgba(255,45,196,.25));box-shadow:0 0 14px rgba(255,45,196,.5);}
+.barNext{background:linear-gradient(180deg,var(--cyan),rgba(0,234,255,.3));box-shadow:0 0 14px rgba(0,234,255,.5);}
+.barFuture{background:rgba(255,255,255,.06);}
+.barChamp{background:linear-gradient(180deg,var(--gold-bright),var(--gold));box-shadow:0 0 16px rgba(201,168,106,.55);}
+.barChampFuture{background:linear-gradient(180deg,rgba(201,168,106,.35),rgba(201,168,106,.1));}
+.barBurn{background:repeating-linear-gradient(45deg,rgba(255,45,196,.5),rgba(255,45,196,.5) 4px,rgba(255,45,196,.15) 4px,rgba(255,45,196,.15) 8px);}
+.ladPin{position:absolute;top:-19px;left:50%;transform:translateX(-50%);font-family:var(--font-display);font-size:7.5px;
+  font-weight:700;letter-spacing:.05em;padding:2px 5px;border-radius:4px;white-space:nowrap;}
+.pinNow{color:#fff;background:var(--magenta);}
+.pinNext{color:#04141a;background:var(--cyan);}
+.pinChamp{color:#1a1206;background:var(--gold-bright);}
+.pinBurn{color:#fff;background:var(--magenta);}
+.ladDay{font-family:var(--font-mono);font-size:8.5px;color:var(--muted);white-space:nowrap;}
+.ladDay.champ{color:var(--gold);font-weight:700;}
+.ladNote{font-family:var(--font-mono);font-size:9px;color:#4a4668;margin-top:12px;line-height:1.55;}
+
+/* lower row: vitals+ability | history */
+.lowRow{display:grid;grid-template-columns:1fr;gap:18px;}
+@media(min-width:980px){.lowRow{grid-template-columns:1fr 1fr;align-items:start;}}
+
+/* vitals */
+.vitals{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.mini{border-radius:13px;padding:11px 13px;}
+.miniCond{border:1px solid rgba(0,234,255,.24);background:linear-gradient(180deg,rgba(0,234,255,.06),transparent);}
+.miniFtg{border:1px solid rgba(255,45,196,.28);background:linear-gradient(180deg,rgba(255,45,196,.07),transparent);}
+.miniK{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;}
+.miniCond .miniK{color:var(--cyan);}.miniFtg .miniK{color:var(--magenta-soft);}
+.miniRow{display:flex;align-items:center;gap:9px;margin-top:7px;}
+.miniNum{font-family:var(--font-display);font-weight:700;font-size:18px;}
+.miniCond .miniNum{color:#a9f6ff;}.miniFtg .miniNum{color:var(--magenta-soft);}
+.track{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;}
+.track>span{display:block;height:100%;}
+.fillCyan{background:linear-gradient(90deg,var(--cyan-deep),var(--cyan));}
+.fillMag{background:linear-gradient(90deg,#7a1660,var(--magenta));}
+
+/* ability */
+.abilityBox{display:grid;grid-template-columns:1fr;gap:9px;border:1px solid var(--border);border-radius:13px;
+  padding:14px 16px;background:linear-gradient(180deg,rgba(20,18,34,0),var(--panel));}
+.abRow{display:flex;align-items:center;gap:10px;}
+.abLabel{width:74px;font-size:12px;color:#c3ccd8;white-space:nowrap;}
+.abVal{font-family:var(--font-display);font-weight:700;font-size:13px;color:var(--text);width:32px;text-align:right;}
+/* rarity legend */
+.legend{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid var(--border);border-radius:10px;
+  padding:7px 12px;background:rgba(10,8,22,.4);margin-top:11px;}
+.legHead{font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;color:var(--faint);}
+.chip{display:inline-flex;align-items:baseline;gap:5px;font-family:var(--font-display);font-size:8.5px;font-weight:700;
+  letter-spacing:.05em;border:1px solid transparent;border-radius:5px;padding:2px 7px;white-space:nowrap;}
+.chip small{font-family:var(--font-mono);font-size:8px;font-weight:400;color:var(--muted);}
+.cCOMMON{color:#c3ccd8;border-color:#8a92a0;background:rgba(130,140,160,.12);}
+.cUNCOMMON{color:#9dffc4;border-color:var(--good);background:rgba(53,208,127,.12);}
+.cRARE{color:#a9f6ff;border-color:var(--cyan);background:rgba(0,234,255,.12);}
+.cEPIC{color:var(--magenta-soft);border-color:var(--magenta);background:rgba(255,45,196,.12);}
+.cLEGENDARY{color:#0a0813;border-color:transparent;background:linear-gradient(92deg,var(--gold),#f7eccb);}
+.cLEGENDARY small{color:#4a3c1e;}
+.legNote{font-family:var(--font-mono);font-size:8.5px;color:var(--faint);}
+
+/* history */
+.histBox{border:1px solid var(--border);border-radius:13px;overflow:hidden;background:linear-gradient(180deg,rgba(20,18,34,0),var(--panel));}
+.histRow{display:flex;align-items:baseline;gap:9px 13px;flex-wrap:wrap;padding:10px 13px;}
+.histRow+.histRow{border-top:1px solid rgba(255,255,255,.05);}
+.histBurned{background:rgba(255,45,196,.05);}
+.histDay{font-family:var(--font-display);font-size:10.5px;font-weight:700;color:var(--text);}
+.histDate{font-family:var(--font-mono);font-size:9.5px;color:var(--faint);}
+.histRank{font-family:var(--font-mono);font-size:11px;color:var(--text);}
+.histRank b{font-family:var(--font-display);font-size:13px;color:var(--cyan);}
+.histRank small{color:var(--faint);font-size:9px;}
+.histScore{font-family:var(--font-mono);font-size:9.5px;color:var(--muted);}
+.histCond{font-family:var(--font-mono);font-size:9.5px;color:var(--muted);flex:1;min-width:110px;}
+.histRes{margin-left:auto;flex:none;}
+.burnTag{font-family:var(--font-display);font-size:8.5px;font-weight:700;letter-spacing:.08em;color:var(--magenta-soft);
+  border:1px solid var(--magenta);border-radius:5px;padding:2px 7px;background:rgba(255,45,196,.12);white-space:nowrap;}
+.survTag{font-family:var(--font-display);font-size:8.5px;font-weight:700;letter-spacing:.08em;color:#9dffc4;
+  border:1px solid var(--good);border-radius:5px;padding:2px 7px;background:rgba(53,208,127,.1);white-space:nowrap;}
+.histRes{flex:none;}
+.histNote{font-family:var(--font-mono);font-size:9px;color:#4a4668;margin-top:8px;line-height:1.5;}
+
+/* provenance */
+.prov{border:1px solid var(--border);border-radius:13px;padding:14px 16px;background:linear-gradient(180deg,rgba(20,18,34,0),#0f0d1a);
+  display:flex;flex-direction:column;gap:9px;}
+.provRow{display:flex;justify-content:space-between;gap:14px;align-items:baseline;}
+.provRow+.provRow{border-top:1px solid rgba(255,255,255,.05);padding-top:9px;}
+.provK{font-family:var(--font-mono);font-size:10px;color:var(--faint);}
+.provV{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);text-align:right;word-break:break-all;}
+.provNote{font-family:var(--font-mono);font-size:9px;color:#4a4668;margin-top:2px;line-height:1.5;}
+
+.divider{max-width:1040px;margin:26px auto 0;border-top:1px dashed rgba(255,255,255,.08);}
+</style>
+</head>
+<body>
+<div class="scHead">
+  <div class="scTitle">馬詳細ページ リデザイン — /horses/[id]</div>
+  <div class="scSub">1c部品言語で情報設計を再構築。最重要の日課「今日の調教」をヒーロー横に同格配置し、価値の物語を1本の<b style="color:var(--gold-bright)">バリューラダー</b>に集約（Day0→Day6→走破200 USDT）。数値は HorseDetail と PRICE_TABLE_V1 由来のみ。5状態を縦に掲載。</div>
+</div>
+<div id="app"></div>
+
+<script>
+var PRICE = ['100.00','110.00','121.00','133.10','146.41','161.05','177.16'];
+var CHAMP = '200';
+
+function horseSVG(hue,dim){
+  var c1='hsl('+hue+' 85% 66%)',c2='hsl('+((hue+40)%360)+' 90% 74%)',glow='hsl('+hue+' 90% 60%)';
+  var st=dim?'filter:grayscale(1) brightness(.6);opacity:.5':'';
+  return '<svg viewBox="0 0 400 300" style="'+st+'" aria-hidden="true">'
+   +'<defs><linearGradient id="g'+hue+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+c1+'"/><stop offset="1" stop-color="'+c2+'"/></linearGradient>'
+   +'<filter id="f'+hue+'" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="'+glow+'" flood-opacity="0.8"/></filter></defs>'
+   +'<g fill="url(#g'+hue+')" filter="url(#f'+hue+')">'
+   +'<ellipse cx="218" cy="150" rx="90" ry="45"/><circle cx="285" cy="146" r="52"/><circle cx="150" cy="150" r="44"/>'
+   +'<path d="M150 118 Q126 66 96 50 Q82 44 74 58 Q70 84 120 132 Z"/>'
+   +'<path d="M96 52 Q70 40 52 52 Q40 60 46 74 L70 88 Q88 84 108 70 Z"/>'
+   +'<path d="M92 40 L86 22 L104 40 Z"/>'
+   +'<path d="M158 176 Q140 214 120 250 L134 254 Q152 216 172 184 Z"/>'
+   +'<path d="M186 184 L178 250 L190 252 L200 186 Z"/>'
+   +'<path d="M300 176 Q330 208 356 240 L344 250 Q314 214 286 186 Z"/>'
+   +'<path d="M262 186 L268 252 L280 250 L282 184 Z"/>'
+   +'<path d="M330 128 Q372 132 384 186 Q388 214 372 226 Q380 184 342 150 Z"/>'
+   +'</g></svg>';
+}
+
+var RAR=[['COMMON','45%','+0'],['UNCOMMON','30%','+2'],['RARE','15%','+4'],['EPIC','8%','+7'],['LEGENDARY','2%','+12']];
+function legend(){
+  var h='<div class="legend"><span class="legHead">レアリティ</span>';
+  RAR.forEach(function(r){h+='<span class="chip c'+r[0]+'">'+r[0]+'<small>'+r[1]+' · スコア'+r[2]+'</small></span>';});
+  h+='<span class="legNote">出現率とスコア加点は公開ルール</span></div>';
+  return h;
+}
+
+var ABJA={base_speed:'スピード',base_power:'パワー',base_stamina:'スタミナ',base_guts:'根性',base_luck:'運'};
+function abilityBox(ab){
+  var h='<div class="abilityBox">';
+  Object.keys(ab).forEach(function(k){
+    var v=ab[k],w=Math.max(3,Math.min(100,v));
+    h+='<div class="abRow"><span class="abLabel">'+(ABJA[k]||k)+'</span>'
+      +'<span class="track"><span class="fillCyan" style="width:'+w+'%"></span></span>'
+      +'<span class="abVal">'+v+'</span></div>';
+  });
+  return h+'</div>';
+}
+
+// value ladder ---------------------------------------------------------------
+function ladder(cfg){
+  var reached, mode=cfg.status;
+  // build headline
+  var head='';
+  if(mode==='ACTIVE'){
+    if(cfg.day>=6){
+      head='<span class="ladNow">現在 <b>'+PRICE[6]+'</b> USDT</span><span class="ladArrow">→</span>'
+        +'<span class="ladNext champ"><span class="k">今夜走破すれば</span> <b>'+CHAMP+'</b> USDT ＋記念NFT</span>';
+    }else{
+      head='<span class="ladNow">現在 <b>'+PRICE[cfg.day]+'</b> USDT</span><span class="ladArrow">→</span>'
+        +'<span class="ladNext"><span class="k">今夜生き残れば</span> <b>'+PRICE[cfg.day+1]+'</b> USDT</span>';
+    }
+  }else if(mode==='LISTED'){
+    head='<span class="ladNow">出品価格 <b>'+PRICE[cfg.day]+'</b> USDT</span>'
+      +'<span class="ladNext"><span class="k" style="color:var(--warn)">今夜は出走しません（価値は凍結）</span></span>';
+  }else if(mode==='BURNED'){
+    head='<span class="ladNow" style="color:var(--magenta-soft)">Day '+cfg.day+' で消滅</span>'
+      +'<span class="ladNext"><span class="k" style="color:var(--faint)">この先の価値には進めませんでした</span></span>';
+  }else if(mode==='DAY7_CLEARED'){
+    head='<span class="ladNow">7日走破 · チャンピオン報酬 <b>'+CHAMP+'</b> USDT 受取中</span>';
+  }else{ // MEMORIALIZED
+    head='<span class="ladNow">7日完走 · 記念NFT · 報酬 '+CHAMP+' USDT 受取済</span>';
+  }
+
+  var bars='';
+  for(var i=0;i<7;i++){
+    var cls='barFuture',pin='';
+    if(mode==='ACTIVE'||mode==='LISTED'){
+      if(i<cfg.day){cls='barPast';}
+      else if(i===cfg.day){cls='barNow';pin='<span class="ladPin pinNow">現在</span>';}
+      else if(i===cfg.day+1 && mode==='ACTIVE'){cls='barNext';pin='<span class="ladPin pinNext">今夜</span>';}
+    }else if(mode==='BURNED'){
+      if(i<cfg.day){cls='barPast';}
+      else if(i===cfg.day){cls='barBurn';pin='<span class="ladPin pinBurn">消滅</span>';}
+    }else{ // champion / memorial reached all
+      cls='barPast';
+    }
+    var h=Math.max(24,Math.round(parseFloat(PRICE[i])/200*100));
+    bars+='<div class="ladCol"><div class="ladPrice">'+PRICE[i]+'</div>'
+      +'<div class="ladBar '+cls+'" style="height:'+h+'%">'+pin+'</div>'
+      +'<div class="ladDay">Day'+i+'</div></div>';
+  }
+  // champion column
+  var ccls='barChampFuture',cpin='';
+  if(mode==='DAY7_CLEARED'||mode==='MEMORIALIZED'){ccls='barChamp';cpin='<span class="ladPin pinChamp">走破</span>';}
+  else if(mode==='ACTIVE'&&cfg.day>=6){ccls='barChamp';cpin='<span class="ladPin pinChamp">今夜</span>';}
+  bars+='<div class="ladCol"><div class="ladPrice" style="color:var(--gold)">'+CHAMP+'</div>'
+    +'<div class="ladBar '+ccls+'" style="height:100%">'+cpin+'</div>'
+    +'<div class="ladDay champ">走破</div></div>';
+
+  return '<div><div class="secLabel">価値の階段 · VALUE LADDER</div>'
+    +'<div class="ladWrap"><div class="ladHead">'+head+'</div>'
+    +'<div class="ladBars">'+bars+'</div>'
+    +'<div class="ladNote">価値は7日間の価格表（PRICE TABLE）で決まる公開値。毎晩のレースを生き残るほど上がり、7日走り切ると 200 USDT で買い戻されチャンピオンNFTになります。</div>'
+    +'</div></div>';
+}
+
+// training card (ACTIVE) -----------------------------------------------------
+function trainCard(cfg){
+  var T=[['スピード調教','+4','疲労が溜まる(+5)',false,cfg.reco==='SPEED'],
+         ['パワー調教','+3','疲労が溜まる(+5)',false,cfg.reco==='POWER'],
+         ['回復調教','+2','疲労を癒す(-3)',true,cfg.reco==='RECOVERY']];
+  var cards='';
+  T.forEach(function(t){
+    cards+='<div class="tCard'+(t[4]?' tCardOn':'')+'">'
+      +'<span class="tCardK">'+t[0]+(t[4]?'<span class="reco">おすすめ</span>':'')+'</span>'
+      +'<span class="tBonus">今夜のスコア <b>'+t[1]+'</b></span>'
+      +'<span class="tSub'+(t[3]?' good':'')+'">'+t[2]+'</span></div>';
+  });
+  return '<div class="trainCard">'
+    +'<div class="trainTop"><span class="trainTitle">今日の調教</span><span class="freeTag">無料 · 1日1回</span>'
+    +'<span class="todo todoDo" style="margin-left:auto"><span class="todoDot"></span>未調教</span></div>'
+    +'<div class="trainDesc">今夜のスコアに直接加点（馬タイプとの相性で <b style="color:var(--cyan)">+3〜5</b>）。攻めれば疲労が溜まり、回復調教で癒せます。7日間の采配が価値を伸ばす鍵です。</div>'
+    +'<div class="tCards">'+cards+'</div>'
+    +'<button class="btn">この調教にする（今夜20:00まで）</button>'
+    +'<div class="boost"><div class="boostTitle">ブーストアイテム<span class="paidTag">任意 · ショップ購入制</span></div>'
+    +'<div class="boostDesc">調教とは別の上乗せ（無くても走れます）。1頭・1レース・1個まで。効果は今夜の天候×馬場×コースで決まります。</div>'
+    +'<div class="boostRow"><select class="sel"><option>アイテムを選ぶ…</option><option>ステイヤーの護符（所持 1）</option><option>幸運のひづめ（3.00 USDT）</option></select>'
+    +'<button class="btnGhost">買って使う</button></div></div>'
+    +'<div class="trainNote">今夜20:00のスナップショット確定までに実施すると、今夜のレースに反映されます。加点値・疲労は公開ルール（trainingModifierV1 / CONDITION_FATIGUE_V1）由来。</div>'
+    +'</div>';
+}
+
+function outcomeCard(cfg){
+  if(cfg.status==='LISTED'){
+    return '<div class="outcome outListed"><div class="outHead">出品中 — 今夜は走りません</div>'
+      +'<div class="outText">マーケットに出品中のため、今夜のレースには出走しません（Day '+cfg.day+'・価値は凍結）。出品中は調教とアイテムは使えません。売れると価格の98%（手数料2%）を受け取り、通知とメールでお知らせします。取り下げは翌バッチから反映されます。</div>'
+      +'<a class="outCta" href="#">出品を管理 →</a></div>';
+  }
+  if(cfg.status==='BURNED'){
+    return '<div class="outcome outBurned"><div class="outHead">BURNED — 消滅</div>'
+      +'<div class="outText">Day '+cfg.day+' のレースで成績下位に入り、Burn（消滅）しました。<b style="color:var(--magenta-soft)">Burn＝毎晩の下位の馬が消える仕組み</b>で、生き残った馬の価値を支えます。この馬は厩舎の記録としてのみ残ります。</div></div>';
+  }
+  if(cfg.status==='DAY7_CLEARED'){
+    return '<div class="outcome outGold"><div class="outHead">チャンピオン — 7日走破</div>'
+      +'<div class="outText">7日間を走り切ったチャンピオンです。<b style="color:var(--gold-bright)">チャンピオン報酬 200 USDT</b>（7日分割）を受け取り中。走破後は記念NFTとして厩舎に残ります。</div></div>';
+  }
+  // MEMORIALIZED
+  return '<div class="outcome outGold"><div class="outHead">記念馬 — NFT</div>'
+    +'<div class="outText">7日間を走り切った証。<b style="color:var(--gold-bright)">記念NFT</b>として厩舎に永久保存されます。チャンピオン報酬 200 USDT の受け取りは完了しています。</div></div>';
+}
+
+// status meta ---------------------------------------------------------------
+function statusBadge(cfg){
+  var map={ACTIVE:['stActive','出走中'],LISTED:['stListed','出品中'],BURNED:['stBurned','BURNED · 消滅'],
+    DAY7_CLEARED:['stCleared','チャンピオン'],MEMORIALIZED:['stMemorial','記念馬 · NFT']};
+  var m=map[cfg.status];
+  return '<span class="badge '+m[0]+'">'+m[1]+'</span>';
+}
+function mastValue(cfg){
+  if(cfg.status==='ACTIVE'||cfg.status==='LISTED')
+    return {k:cfg.status==='LISTED'?'出品価格 · LISTED':'現在価値 · CURRENT VALUE',v:PRICE[cfg.day],u:'USDT',muted:false};
+  if(cfg.status==='BURNED') return {k:'結末 · OUTCOME',v:'消滅',u:'',muted:true};
+  if(cfg.status==='DAY7_CLEARED') return {k:'報酬 · REWARD',v:'200',u:'USDT',muted:false};
+  return {k:'結末 · OUTCOME',v:'記念NFT',u:'',muted:false};
+}
+function dayNote(cfg){
+  if(cfg.status==='ACTIVE'){
+    if(cfg.day>=6) return 'Day '+cfg.day+' を走行中。今夜のレースを走破すれば7日完走 — チャンピオン報酬 200 USDT ＋記念NFT。';
+    return 'Day '+cfg.day+' を走行中。今夜のレースを生き延びれば Day '+(cfg.day+1)+' へ、価値も上昇します。'+(cfg.listing==='SMART'?' スマート出品中 — 今夜売れた場合はレース後に新オーナーへ引き渡し。':'');
+  }
+  if(cfg.status==='LISTED') return 'マーケットに出品中 — 今夜は出走しません（Day '+cfg.day+'・価値は凍結）。';
+  if(cfg.status==='BURNED') return 'Day '+cfg.day+' のレースで下位に入り Burn（消滅）しました。';
+  if(cfg.status==='DAY7_CLEARED') return '7日間を走り切ったチャンピオン。報酬 200 USDT を受け取り中です。';
+  return '7日間を走り切った記念馬。厩舎に永久保存されます。';
+}
+
+function rail(cfg){
+  var reached = (cfg.status==='DAY7_CLEARED'||cfg.status==='MEMORIALIZED')?7:cfg.day;
+  var h='';
+  for(var dd=1;dd<=7;dd++){
+    var cls='pip';
+    if(cfg.status==='BURNED'){ if(dd<=cfg.day) cls='pipDone'; else cls='pip'; if(dd===cfg.day) cls='pipBurn'; }
+    else{ if(dd < reached+1) cls='pipDone'; if(dd===reached+1 && cfg.status==='ACTIVE') cls='pipToday'; if(reached>=7) cls='pipDone'; }
+    h+='<span class="'+cls+'"></span>';
+  }
+  return '<div class="rail">'+h+'</div>';
+}
+
+function history(cfg){
+  if(!cfg.history||!cfg.history.length) return '';
+  var rows='';
+  cfg.history.forEach(function(r,i){
+    rows+='<div class="histRow'+(r.burn?' histBurned':'')+'">'
+      +'<span class="histDay">第'+(i+1)+'戦</span>'
+      +'<span class="histDate">'+r.date+'</span>'
+      +'<span class="histRank"><b>'+r.rank.toLocaleString('en-US')+'</b><small> / '+r.part.toLocaleString('en-US')+'頭</small></span>'
+      +'<span class="histScore">SCORE '+r.score+'</span>'
+      +'<span class="histCond">'+r.cond+'</span>'
+      +'<span class="histRes">'+(r.burn?'<span class="burnTag">BURN</span>':'<span class="survTag">生存</span>')+'</span></div>';
+  });
+  return '<div><div class="secLabel">戦績 · RACE HISTORY</div><div class="histBox">'+rows+'</div>'
+    +'<div class="histNote">全結果はコミット済みシードから決定論計算 — 台帳（LEDGER）とレース詳細で誰でも検証できます。</div></div>';
+}
+
+function renderHorse(cfg){
+  var mv=mastValue(cfg);
+  var isActive = cfg.status==='ACTIVE';
+  var actionHTML = isActive ? trainCard(cfg) : outcomeCard(cfg);
+  var smartBadge = cfg.listing==='SMART' ? '<span class="badge stSmart">出品中 · スマート</span>' : '';
+
+  return '<div class="page">'
+    +'<a class="crumb" href="#">← マイ厩舎</a>'
+    // masthead
+    +'<div class="mast"><div class="mastL"><div class="titleRow">'
+    +'<span class="title">'+cfg.name+'</span>'
+    +'<span class="badge rar'+cfg.rarity+'">'+cfg.rarity+'</span>'
+    +'<span class="badge typeBadge">'+cfg.type+'</span>'
+    +statusBadge(cfg)+smartBadge
+    +'</div></div>'
+    +'<div class="mastR"><div class="mastValK">'+mv.k+'</div>'
+    +'<div class="mastVal'+(mv.muted?' muted':'')+'">'+mv.v+(mv.u?'<small>'+mv.u+'</small>':'')+'</div></div></div>'
+    // hero row: art | action
+    +'<div class="heroRow">'
+    +'<div class="hero'+(cfg.status==='BURNED'?' heroBurned':'')+'"><div class="heroInner">'
+    +'<div class="artBox">'+horseSVG(cfg.hue,cfg.status==='BURNED')
+    +'<div class="scrim"></div>'
+    +'<div class="artCap"><div><div class="artCapK">'+cfg.name.toUpperCase()+'</div><div class="artCapDay">'+cfg.type+' · '+cfg.rarity+'</div></div>'
+    +'<div class="dayBig"><div class="l">DAY</div><div class="v">'+Math.min(7,cfg.day)+'<small>/7</small></div></div></div></div>'
+    +'<div class="heroFoot">'+rail(cfg)+'<div class="dayNote">'+dayNote(cfg)+'</div></div>'
+    +'</div></div>'
+    +'<div class="action">'+actionHTML+'</div>'
+    +'</div>'
+    // value ladder (full width)
+    +ladder(cfg)
+    // lower row: vitals+ability | history
+    +'<div class="lowRow">'
+    +'<div><div class="secLabel">状態と能力 · VITALS & ABILITY</div>'
+    +'<div class="vitals">'
+    +'<div class="mini miniCond"><div class="miniK">CONDITION コンディション</div><div class="miniRow"><span class="miniNum">'+cfg.cond+'</span><span class="track"><span class="fillCyan" style="width:'+cfg.cond+'%"></span></span></div></div>'
+    +'<div class="mini miniFtg"><div class="miniK">FATIGUE 疲労</div><div class="miniRow"><span class="miniNum">'+cfg.fatigue+'</span><span class="track"><span class="fillMag" style="width:'+cfg.fatigue+'%"></span></span></div></div>'
+    +'</div>'
+    +abilityBox(cfg.ab)+legend()+'</div>'
+    +history(cfg)
+    +'</div>'
+    // provenance
+    +'<div><div class="secLabel dim">検証情報 · PROVENANCE</div><div class="prov">'
+    +'<div class="provRow"><span class="provK">DNA HASH</span><span class="provV">'+cfg.dna+' (mod '+cfg.mod+')</span></div>'
+    +'<div class="provRow"><span class="provK">MINT SEED</span><span class="provV">'+cfg.seed+'</span></div>'
+    +'<div class="provRow"><span class="provK">GEN VERSION</span><span class="provV">'+cfg.gen+'</span></div>'
+    +'<div class="provNote">見た目と能力は dna_hash から決定論生成。誰でも同じ入力から同じ結果を再計算・検証できます。</div>'
+    +'</div></div>'
+    +'</div>';
+}
+
+var STATES=[
+  {label:'STATE 01 · 出走中 Day2（通常・未調教）',cfg:{
+    name:'Azure Comet',rarity:'RARE',type:'SPEED',status:'ACTIVE',day:2,listing:null,reco:'SPEED',
+    cond:78,fatigue:34,hue:200,dna:'0x7a3f…c19d',seed:'0x2be0…88ff',gen:'gen_v2.1',mod:'3',
+    ab:{base_speed:84,base_power:61,base_stamina:55,base_guts:48,base_luck:40},
+    history:[{date:'07/09',rank:1240,part:9331,score:'71.42',cond:'晴 · 良 · 芝',burn:false},
+             {date:'07/10',rank:833,part:8402,score:'78.10',cond:'曇 · 稍重 · ダート',burn:false}]}},
+  {label:'STATE 02 · 出走中 Day6（今夜が走破戦・スマート出品中）',cfg:{
+    name:'Golden Emperor',rarity:'LEGENDARY',type:'POWER',status:'ACTIVE',day:6,listing:'SMART',reco:'RECOVERY',
+    cond:71,fatigue:58,hue:47,dna:'0x9f12…a4e6',seed:'0x51cc…2d09',gen:'gen_v2.1',mod:'11',
+    ab:{base_speed:70,base_power:92,base_stamina:78,base_guts:66,base_luck:58},
+    history:[{date:'07/04',rank:5102,part:9331,score:'66.30',cond:'晴 · 良 · 芝',burn:false},
+             {date:'07/05',rank:2841,part:8990,score:'72.55',cond:'雨 · 重 · ダート',burn:false},
+             {date:'07/06',rank:1503,part:8402,score:'79.12',cond:'曇 · 良 · 芝',burn:false},
+             {date:'07/07',rank:944,part:7788,score:'83.40',cond:'晴 · 良 · ダート',burn:false},
+             {date:'07/08',rank:512,part:7001,score:'88.01',cond:'曇 · 稍重 · 芝',burn:false},
+             {date:'07/09',rank:233,part:6540,score:'91.77',cond:'晴 · 良 · 芝',burn:false}]}},
+  {label:'STATE 03 · 出品中（Market Lock・今夜走らない）',cfg:{
+    name:'Crimson Nova',rarity:'EPIC',type:'STAMINA',status:'LISTED',day:3,listing:'MANUAL',reco:'SPEED',
+    cond:64,fatigue:41,hue:340,dna:'0x33ab…7f52',seed:'0xa0d1…4c8b',gen:'gen_v2.1',mod:'6',
+    ab:{base_speed:58,base_power:63,base_stamina:88,base_guts:71,base_luck:44},
+    history:[{date:'07/07',rank:2210,part:8990,score:'70.18',cond:'晴 · 良 · 芝',burn:false},
+             {date:'07/08',rank:1489,part:8402,score:'76.44',cond:'曇 · 稍重 · ダート',burn:false},
+             {date:'07/09',rank:1002,part:7788,score:'80.90',cond:'雨 · 重 · 芝',burn:false}]}},
+  {label:'STATE 04 · 記念馬（7日完走・MEMORIALIZED）',cfg:{
+    name:'Solar Sovereign',rarity:'LEGENDARY',type:'GUTS',status:'MEMORIALIZED',day:7,listing:null,reco:'RECOVERY',
+    cond:82,fatigue:60,hue:44,dna:'0x18cd…be71',seed:'0x77aa…10f3',gen:'gen_v2.0',mod:'9',
+    ab:{base_speed:62,base_power:68,base_stamina:80,base_guts:90,base_luck:60},
+    history:[{date:'07/01',rank:4880,part:9331,score:'67.02',cond:'晴 · 良 · 芝',burn:false},
+             {date:'07/02',rank:3120,part:8990,score:'73.20',cond:'曇 · 良 · ダート',burn:false},
+             {date:'07/03',rank:1998,part:8402,score:'78.90',cond:'雨 · 重 · 芝',burn:false},
+             {date:'07/04',rank:1104,part:7788,score:'83.55',cond:'晴 · 稍重 · ダート',burn:false},
+             {date:'07/05',rank:640,part:7001,score:'87.60',cond:'曇 · 良 · 芝',burn:false},
+             {date:'07/06',rank:288,part:6540,score:'91.02',cond:'晴 · 良 · 芝',burn:false},
+             {date:'07/07',rank:141,part:6011,score:'93.88',cond:'晴 · 良 · ダート',burn:false}]}},
+  {label:'STATE 05 · BURNED（Day3 で消滅）',cfg:{
+    name:'Phantom Drift',rarity:'UNCOMMON',type:'LUCK',status:'BURNED',day:3,listing:null,reco:'SPEED',
+    cond:22,fatigue:74,hue:288,dna:'0x60e4…d3a1',seed:'0xcc90…7b22',gen:'gen_v2.1',mod:'2',
+    ab:{base_speed:52,base_power:44,base_stamina:49,base_guts:51,base_luck:82},
+    history:[{date:'07/07',rank:6120,part:8990,score:'62.10',cond:'雨 · 重 · ダート',burn:false},
+             {date:'07/08',rank:7401,part:8402,score:'58.44',cond:'曇 · 稍重 · 芝',burn:false},
+             {date:'07/09',rank:8390,part:7788,score:'51.02',cond:'晴 · 良 · 芝',burn:true}]}}
+];
+
+var app=document.getElementById('app');
+var html='';
+STATES.forEach(function(s,i){
+  html+='<div class="scTag"><span class="n">'+String(i+1).padStart(2,'0')+'</span><span class="t">'+s.label+'</span><span class="line"></span></div>';
+  html+=renderHorse(s.cfg);
+  if(i<STATES.length-1) html+='<div class="divider"></div>';
+});
+app.innerHTML=html;
+</script>
+</body></html>

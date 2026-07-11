@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import type { JSX } from 'react';
 import {
   PRICE_TABLE_V1,
   SURFACE_JA,
