@@ -12,11 +12,12 @@
 
 /* ---- 今日の設定 1〜6 ---- */
 .setting {
-  margin-top: 0.9rem; border: 1px dashed rgba(0, 234, 255, 0.28);
-  border-radius: var(--radius); padding: 0.9rem 1rem; background: rgba(0, 234, 255, 0.03);
+  margin-top: 0.9rem; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.9rem 1rem;
+  background: linear-gradient(180deg, rgba(20, 18, 34, 0), var(--panel));
 }
 .settingHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 0.8rem; margin-bottom: 0.7rem; }
-.settingTitle { font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--cyan); }
+.settingTitle { font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--text); }
 .settingLead { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); }
 /* Decision 082で「設定1〜6」→天候4×馬場4×コース2 になった — 6カラムの残骸だと
    右側に空セルが並ぶ(オーナー指摘 2026-07-11)。天候/馬場=4列、コースは2列全幅。 */
@@ -30,7 +31,6 @@
 .settingHi { border-color: rgba(242, 228, 191, 0.35); background: rgba(242, 228, 191, 0.05); }
 .settingN { font-family: var(--font-display); font-weight: 800; font-size: 0.92rem; color: var(--muted); }
 .settingHi .settingN { color: var(--gold-bright); }
-.settingCell:nth-child(3) .settingN, .settingCell:nth-child(4) .settingN { color: var(--cyan); }
 .settingCoeff { font-family: var(--font-display); font-weight: 700; font-size: 0.8rem; color: var(--text); margin-top: 0.15rem; }
 .settingBar { height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin-top: 0.45rem; }
 .settingBar > span { display: block; height: 100%; background: linear-gradient(90deg, #0088a0, var(--cyan)); }
@@ -44,20 +44,21 @@
 
 /* ---- 設定結果(本日/昨日)+ 今夜は未確定 ---- */
 .settingResult { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.9rem; }
+/* 枠色/背景はJSX側が当日の天候色でティントする(単調シアンの解消・2026-07-12) */
 .settingResultCard {
-  flex: 1; min-width: 260px; border: 1px solid rgba(0, 234, 255, 0.4); border-radius: var(--radius);
-  padding: 1rem 1.1rem; background: linear-gradient(150deg, rgba(0, 234, 255, 0.09), transparent 68%), var(--panel);
+  flex: 1; min-width: 260px; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1rem 1.1rem; background: var(--panel);
 }
 .settingResultHead { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
-.settingResultLabel { font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.14em; color: var(--cyan); }
+.settingResultLabel { font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.14em; color: var(--muted); }
 .settingResultDate { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); }
 .settingResultBody { display: flex; align-items: flex-end; gap: 1rem; margin-top: 0.5rem; }
-.settingResultBig { font-family: var(--font-display); font-weight: 800; font-size: 3.2rem; line-height: 0.9; text-shadow: 0 0 22px rgba(0, 234, 255, 0.3); }
+.settingResultBig { font-family: var(--font-display); font-weight: 800; font-size: 3.2rem; line-height: 0.9; text-shadow: 0 0 22px rgba(255, 255, 255, 0.12); }
 .settingResultCoeff { font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; color: var(--text); }
 .settingResultTier { font-family: var(--font-mono); font-size: 0.62rem; color: var(--muted); margin-top: 0.15rem; }
 .settingResultNote { font-family: var(--font-mono); font-size: 0.62rem; color: var(--faint); line-height: 1.6; margin-top: 0.6rem; }
 .settingTonight {
-  width: 240px; flex: none; border: 1px dashed var(--border-strong); border-radius: var(--radius);
+  width: 240px; flex: none; border: 1px dashed rgba(143, 138, 194, 0.5); border-radius: var(--radius);
   padding: 1rem 1.1rem; display: flex; flex-direction: column; justify-content: center;
 }
 .settingTonightK { font-family: var(--font-display); font-size: 0.64rem; letter-spacing: 0.14em; color: var(--muted); }

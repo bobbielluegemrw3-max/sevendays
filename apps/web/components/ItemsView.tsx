@@ -87,6 +87,20 @@ export function ItemsView({
   const WEATHER_COLOR: Record<string, string> = {
     SUNNY: 'var(--gold-bright)', CLOUDY: 'var(--muted)', RAIN: 'var(--cyan)', STORM: 'var(--magenta-soft)',
   };
+  // 条件ごとの意味色(オーナー指摘 2026-07-12「シアンばかりで単調」への対応)。
+  // 8桁hexのアルファ付きで枠/背景の淡色も同系で統一する。
+  const WEATHER_ACCENT: Record<string, string> = {
+    SUNNY: '#f2e4bf', CLOUDY: '#8f8ac2', RAIN: '#00eaff', STORM: '#ff8fe4',
+  };
+  const TRACK_ACCENT: Record<string, string> = {
+    FAST: '#00eaff', GOOD: '#35d07f', SOFT: '#e6b24a', HEAVY: '#ff8fe4',
+  };
+  const SURFACE_ACCENT: Record<string, string> = { TURF: '#35d07f', DIRT: '#c9a86a' };
+  /** settingCell のアクセント一式(枠・淡背景・見出し・バー)。 */
+  const cellAccent = (hex: string) => ({
+    borderColor: `${hex}40`,
+    background: `${hex}0d`,
+  });
   const sortedHistory = [...conditionHistory].sort((a, b) => a.date.localeCompare(b.date));
   const latest = sortedHistory[sortedHistory.length - 1];
   const todayISO = today ?? latest?.date ?? '';
@@ -162,9 +176,21 @@ export function ItemsView({
         {/* 条件の結果(本日/昨日) + 今夜は未確定 */}
         {latest ? (
           <div className={s.settingResult}>
-            <div className={s.settingResultCard}>
+            {/* カード全体を当日の天候色でティント(嵐=マゼンタ/晴=金/雨=シアン/曇=紫灰) */}
+            <div
+              className={s.settingResultCard}
+              style={{
+                borderColor: `${WEATHER_ACCENT[latest.weather] ?? '#00eaff'}66`,
+                background: `linear-gradient(150deg, ${WEATHER_ACCENT[latest.weather] ?? '#00eaff'}17, transparent 68%)`,
+              }}
+            >
               <div className={s.settingResultHead}>
-                <span className={s.settingResultLabel}>{todayRevealed ? '本日のレース条件' : '前回のレース条件'}</span>
+                <span
+                  className={s.settingResultLabel}
+                  style={{ color: WEATHER_COLOR[latest.weather] ?? 'var(--cyan)' }}
+                >
+                  {todayRevealed ? '本日のレース条件' : '前回のレース条件'}
+                </span>
                 <span className={s.settingResultDate}>{latest.date.slice(5).replace('-', '/')}</span>
               </div>
               <div className={s.settingResultBody}>
@@ -202,30 +228,42 @@ export function ItemsView({
           </div>
           <div className={s.settingGrid}>
             {Object.entries(WEATHER_PROBABILITY_V1).map(([k, p]) => (
-              <div key={k} className={`${s.settingCell} ${k === 'STORM' ? s.settingHi : ''}`}>
-                <div className={s.settingN}>{WEATHER_JA[k as keyof typeof WEATHER_JA]}</div>
+              <div key={k} className={s.settingCell} style={cellAccent(WEATHER_ACCENT[k] ?? '#8f8ac2')}>
+                <div className={s.settingN} style={{ color: WEATHER_ACCENT[k] ?? 'var(--muted)' }}>
+                  {WEATHER_JA[k as keyof typeof WEATHER_JA]}
+                </div>
                 <div className={s.settingCoeff}>天候</div>
-                <div className={s.settingBar}><span style={{ width: `${Number(p) * 250}%` }} /></div>
+                <div className={s.settingBar}>
+                  <span style={{ width: `${Number(p) * 250}%`, background: WEATHER_ACCENT[k] ?? 'var(--cyan)' }} />
+                </div>
                 <div className={s.settingProb}>出現 {Math.round(Number(p) * 100)}%</div>
               </div>
             ))}
           </div>
           <div className={s.settingGrid}>
             {Object.entries(TRACK_PROBABILITY_V1).map(([k, p]) => (
-              <div key={k} className={`${s.settingCell} ${k === 'HEAVY' ? s.settingHi : ''}`}>
-                <div className={s.settingN}>{TRACK_JA[k as keyof typeof TRACK_JA]}</div>
+              <div key={k} className={s.settingCell} style={cellAccent(TRACK_ACCENT[k] ?? '#8f8ac2')}>
+                <div className={s.settingN} style={{ color: TRACK_ACCENT[k] ?? 'var(--muted)' }}>
+                  {TRACK_JA[k as keyof typeof TRACK_JA]}
+                </div>
                 <div className={s.settingCoeff}>馬場</div>
-                <div className={s.settingBar}><span style={{ width: `${Number(p) * 250}%` }} /></div>
+                <div className={s.settingBar}>
+                  <span style={{ width: `${Number(p) * 250}%`, background: TRACK_ACCENT[k] ?? 'var(--cyan)' }} />
+                </div>
                 <div className={s.settingProb}>出現 {Math.round(Number(p) * 100)}%</div>
               </div>
             ))}
           </div>
           <div className={`${s.settingGrid} ${s.settingGridSurface}`}>
             {Object.entries(SURFACE_PROBABILITY_V1).map(([k, p]) => (
-              <div key={k} className={s.settingCell}>
-                <div className={s.settingN}>{SURFACE_JA[k as keyof typeof SURFACE_JA]}</div>
+              <div key={k} className={s.settingCell} style={cellAccent(SURFACE_ACCENT[k] ?? '#8f8ac2')}>
+                <div className={s.settingN} style={{ color: SURFACE_ACCENT[k] ?? 'var(--muted)' }}>
+                  {SURFACE_JA[k as keyof typeof SURFACE_JA]}
+                </div>
                 <div className={s.settingCoeff}>コース</div>
-                <div className={s.settingBar}><span style={{ width: `${Number(p) * 250}%` }} /></div>
+                <div className={s.settingBar}>
+                  <span style={{ width: `${Number(p) * 250}%`, background: SURFACE_ACCENT[k] ?? 'var(--cyan)' }} />
+                </div>
                 <div className={s.settingProb}>出現 {Math.round(Number(p) * 100)}%</div>
               </div>
             ))}
