@@ -228,3 +228,6 @@
 .provK { font-family: var(--font-mono); font-size: 10px; color: var(--faint); flex: none; }
 .provV { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); word-break: break-all; text-align: right; }
 .provNote { font-family: var(--font-mono); font-size: 9px; color: #4a4668; margin-top: 2px; line-height: 1.5; }
+
+/* 調教フォームの縦リズム(divルートなので form.stack のグローバルが効かない) */
+.tStack { display: flex; flex-direction: column; gap: 12px; }

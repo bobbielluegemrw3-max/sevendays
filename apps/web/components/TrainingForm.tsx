@@ -69,7 +69,7 @@ export function TrainingForm({
   }
 
   return (
-    <div className="stack">
+    <div className={s.tStack}>
       <div className={s.tCards}>
         {TRAINING_TYPES.map((t) => {
           const bonus = trainingModifierV1(type, t.value);

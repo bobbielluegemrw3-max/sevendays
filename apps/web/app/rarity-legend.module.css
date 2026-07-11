@@ -1,17 +1,21 @@
-/* レアリティ凡例 — どのページにも1行で置ける控えめなストリップ */
+/* レアリティ凡例 — どのページにも置ける控えめなストリップ。
+   チップは等幅グリッドで全幅に分配(左寄せの折返しで右に空白を残さない)。 */
 .legend {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px;
+  display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px;
   background: rgba(10, 8, 22, 0.4);
 }
-.head {
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 14px; flex-wrap: wrap; }
+.title {
   font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
   color: var(--faint); flex: none;
 }
+.note { font-family: var(--font-mono); font-size: 8.5px; color: var(--faint); }
+.chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 6px; }
 .chip {
-  display: inline-flex; align-items: baseline; gap: 5px;
+  display: inline-flex; align-items: baseline; justify-content: center; gap: 5px;
   font-family: var(--font-display); font-size: 8.5px; font-weight: 700; letter-spacing: 0.05em;
-  border: 1px solid transparent; border-radius: 5px; padding: 2px 7px; white-space: nowrap;
+  border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; white-space: nowrap;
 }
 .chip small { font-family: var(--font-mono); font-size: 8px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
 .cCOMMON    { color: #c3ccd8; border-color: #8a92a0; background: rgba(130, 140, 160, 0.12); }
@@ -20,4 +24,3 @@
 .cEPIC      { color: var(--magenta-soft); border-color: var(--magenta); background: rgba(255, 45, 196, 0.12); }
 .cLEGENDARY { color: #0a0813; border-color: transparent; background: linear-gradient(92deg, var(--gold), #f7eccb); }
 .cLEGENDARY small { color: #4a3c1e; }
-.note { font-family: var(--font-mono); font-size: 8.5px; color: var(--faint); }
