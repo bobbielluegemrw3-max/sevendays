@@ -336,6 +336,77 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     },
   });
 
+  // 売買自動化設定(Decision 086)。行が存在する = 出品方式を明示的に選択済み。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/trade-settings',
+    auth: 'user',
+    handler: async (ctx) => {
+      const r = await ctx.client.query<{
+        auto_list: boolean;
+        auto_reserve: boolean;
+        auto_reserve_max: number | null;
+      }>(
+        `select auto_list, auto_reserve, auto_reserve_max
+         from user_trade_settings where user_id = $1`,
+        [ctx.userId],
+      );
+      const row = r.rows[0];
+      if (!row) {
+        // 未選択: 初回モーダルの表示条件。デフォルトは何も自動化しない
+        return { chosen: false, auto_list: false, auto_reserve: false, auto_reserve_max: 1 };
+      }
+      return { chosen: true, ...row };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/trade-settings',
+    auth: 'user',
+    input: z.object({
+      auto_list: z.boolean(),
+      auto_reserve: z.boolean().optional(),
+      /** 1晩の自動予約上限。null = MAX(残高と枠の許す限り)。 */
+      auto_reserve_max: z.number().int().min(1).max(10).nullable().optional(),
+    }),
+    handler: async (ctx, input) => {
+      const autoReserve = input.auto_reserve ?? false;
+      const autoReserveMax = input.auto_reserve_max === undefined ? 1 : input.auto_reserve_max;
+      if (autoReserve && !input.auto_list) {
+        throw new ApiError(
+          'TRADE_SETTINGS_INVALID',
+          'Auto-reservation requires the smart listing mode (Decision 086)',
+        );
+      }
+      await ctx.client.query(
+        `insert into user_trade_settings (user_id, auto_list, auto_reserve, auto_reserve_max)
+         values ($1, $2, $3, $4)
+         on conflict (user_id) do update
+           set auto_list = excluded.auto_list,
+               auto_reserve = excluded.auto_reserve,
+               auto_reserve_max = excluded.auto_reserve_max,
+               updated_at = now()`,
+        [ctx.userId, input.auto_list, autoReserve, autoReserveMax],
+      );
+      // Smartをやめた場合、既存のSmart出品は翌バッチで取り下げ(今夜売れたら売却優先 —
+      // 手動出品の取り下げと同じ約束事)
+      if (!input.auto_list) {
+        await ctx.client.query(
+          `update market_listings set cancel_after_batch = true
+           where seller_user_id = $1 and status = 'LISTED' and source = 'SMART'`,
+          [ctx.userId],
+        );
+      }
+      return {
+        chosen: true,
+        auto_list: input.auto_list,
+        auto_reserve: autoReserve,
+        auto_reserve_max: autoReserveMax,
+      };
+    },
+  });
+
   // Own-session list (the UI showed only the latest session, hiding the
   // rest — production finding, 2026-07-04). Same visibility rules as
   // GET /purchase/{id}.

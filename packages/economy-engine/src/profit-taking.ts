@@ -54,6 +54,8 @@ export async function selectProfitTakingListings(
   const dayMin = input.eligibleDayMin ?? 1;
   const dayMax = input.eligibleDayMax ?? 6;
 
+  // Decision 086: Smart出品はオーナーが明示的に auto_list=true を選んだ馬だけが
+  // 母集団。設定行が無い(未選択)ユーザーの馬は決して自動出品されない。
   const rows = await client.query<{
     id: string;
     owner_user_id: string;
@@ -62,6 +64,7 @@ export async function selectProfitTakingListings(
   }>(
     `select h.id, h.owner_user_id, h.current_day, h.last_listed_at::text as last_listed_at
      from horses h
+     join user_trade_settings uts on uts.user_id = h.owner_user_id and uts.auto_list = true
      where h.status = 'ACTIVE'
        and h.current_day between $1 and $2
        and not exists (select 1 from market_listings l

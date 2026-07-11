@@ -65,13 +65,20 @@ export function computeUnlockedTiers(orgVolumeText: string, directVolumeText: st
   return unlocked;
 }
 
+// Decision 087: 手動出品中(Market Lock)の馬はティアボリュームから除外する。
+// 凍結中の馬はBURNリスクを負っていないため、含めると「手動出品で駐車したまま
+// ティアを維持する」ノーリスクの水増しが可能になる。SMART出品中は走り続ける
+// (リスク継続)ので通常どおり数える。
+const NOT_MARKET_LOCKED = `not exists (select 1 from market_listings ml
+                       where ml.horse_id = h.id and ml.status = 'LISTED' and ml.source = 'MANUAL')`;
+
 /** DIRECT volumes (Decision 074 metric) for a set of users, as NUMERIC text. */
 async function directVolumes(client: SqlClient, ids: readonly string[]): Promise<Map<string, string>> {
   const r = await client.query<{ id: string; volume: string }>(
     `select u.id, coalesce(sum(case h.current_day ${PRICE_CASE} end), 0)::text as volume
      from users u
      left join users r on r.direct_referrer_user_id = u.id and r.status = 'ACTIVE'
-     left join horses h on h.owner_user_id = r.id and h.status = 'ACTIVE'
+     left join horses h on h.owner_user_id = r.id and h.status = 'ACTIVE' and ${NOT_MARKET_LOCKED}
      where u.id = any($1)
      group by u.id`,
     [ids],
@@ -93,7 +100,7 @@ async function orgVolumes(client: SqlClient, ids: readonly string[]): Promise<Ma
      select o.root_id as id, coalesce(sum(case h.current_day ${PRICE_CASE} end), 0)::text as volume
      from org o
      join users m on m.id = o.member_id and m.status = 'ACTIVE'
-     left join horses h on h.owner_user_id = o.member_id and h.status = 'ACTIVE'
+     left join horses h on h.owner_user_id = o.member_id and h.status = 'ACTIVE' and ${NOT_MARKET_LOCKED}
      where o.depth >= 1
      group by o.root_id`,
     [ids],

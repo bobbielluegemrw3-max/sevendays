@@ -2,18 +2,20 @@ import { notFound } from 'next/navigation';
 import { MarketPlaceView } from '@/components/MarketPlaceView';
 import { PurchaseView } from '@/components/PurchaseView';
 import { ReservePanel } from '@/components/ReservePanel';
+import { TradeAutoTile, TradeModeModal } from '@/components/TradeAutoControls';
 
 /**
  * Dev-only visual preview of /market (Decision 076 + 085 funnel) with
  * fixture data: demand count, a 6-horse shelf (one MINE), SOLD cards from
  * recent matches (incl. a mint), the reserve panel (balance-driven max-N),
  * reservations, and my listings incl. a cancel-pending one. 404 in production.
- * URL flags: ?empty=1 (no funds), ?full=1 (session cap reached).
+ * URL flags: ?empty=1 (no funds), ?full=1 (session cap reached),
+ * ?choose=1 (mandatory listing-mode modal, Decision 086).
  */
 export default async function MarketPreview({
   searchParams,
 }: {
-  searchParams: Promise<{ empty?: string; full?: string }>;
+  searchParams: Promise<{ empty?: string; full?: string; choose?: string }>;
 }) {
   if (process.env.NODE_ENV === 'production') notFound();
   const flags = await searchParams;
@@ -45,8 +47,9 @@ export default async function MarketPreview({
         pending_buy_count: 1834,
         recent_matches: recent,
         my_listings: [
-          { listing_id: 'l3', horse_id: 'mine1', price: '133.10', current_day: 3, listed_at: iso(6), cancel_after_batch: false, name: 'Crimson Tiger', dna_hash: dna('3c'), rarity: 'COMMON' },
-          { listing_id: 'l9', horse_id: 'mine2', price: '110.00', current_day: 1, listed_at: iso(4), cancel_after_batch: true, name: 'Emerald Storm', dna_hash: dna('7e'), rarity: 'RARE' },
+          { listing_id: 'l3', horse_id: 'mine1', price: '133.10', current_day: 3, listed_at: iso(6), cancel_after_batch: false, source: 'MANUAL', name: 'Crimson Tiger', dna_hash: dna('3c'), rarity: 'COMMON' },
+          { listing_id: 'l9', horse_id: 'mine2', price: '110.00', current_day: 1, listed_at: iso(4), cancel_after_batch: true, source: 'MANUAL', name: 'Emerald Storm', dna_hash: dna('7e'), rarity: 'RARE' },
+          { listing_id: 'l10', horse_id: 'mine3', price: '146.41', current_day: 4, listed_at: iso(6, 20), cancel_after_batch: false, source: 'SMART', name: 'Neon Blaze', dna_hash: dna('b7'), rarity: 'EPIC' },
         ],
       }}
       myHorses={[
@@ -57,6 +60,16 @@ export default async function MarketPreview({
       reserveSlot={
         <>
           <ReservePanel preview available={available} pendingCount={pendingCount} />
+          <TradeAutoTile
+            preview
+            settings={{ chosen: true, auto_list: true, auto_reserve: true, auto_reserve_max: 1 }}
+          />
+          {flags.choose ? (
+            <TradeModeModal
+              preview
+              settings={{ chosen: false, auto_list: false, auto_reserve: false, auto_reserve_max: 1 }}
+            />
+          ) : null}
           <PurchaseView
             sessions={[
               { id: 's1', status: 'PENDING_ASSIGNMENT', locked_amount: '177.16', assigned_price: null, refund_amount: null, created_at: iso(7, 3) },

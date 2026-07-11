@@ -177,13 +177,45 @@ describe('profit taking selection (Decisions 015-017)', () => {
     }
   }
 
-  async function newUser(): Promise<string> {
+  async function newUser(autoList = true): Promise<string> {
     const r = await client.query<{ id: string }>(
       `insert into users (email) values ($1) returning id`,
       [`${randomUUID()}@test.dev`],
     );
+    // Decision 086: Smart出品はauto_list=trueの明示的選択が前提
+    await client.query(
+      `insert into user_trade_settings (user_id, auto_list) values ($1, $2)`,
+      [r.rows[0]!.id, autoList],
+    );
     return r.rows[0]!.id;
   }
+
+  it('only horses of auto_list=true owners are eligible (Decision 086)', async () => {
+    await client.query(`update horses set status = 'BURNED' where status = 'ACTIVE'`);
+    const optedIn = await newUser(true);
+    const optedOut = await newUser(false);
+    // 未選択(設定行なし)ユーザー
+    const unchosen = await client.query<{ id: string }>(
+      `insert into users (email) values ($1) returning id`,
+      [`${randomUUID()}@test.dev`],
+    );
+    await seedHorses([optedIn, optedOut, unchosen.rows[0]!.id], 4);
+
+    const batch = await client.query<{ id: string }>(
+      `insert into batch_runs (batch_date, batch_algorithm_version) values ('2036-02-03', 'batch_v1.0') returning id`,
+    );
+    const result = await selectProfitTakingListings(client, {
+      batchRunId: batch.rows[0]!.id,
+      economyStatus: 'NORMAL',
+      liquidityPolicyVersion: 'liquidity_policy_v1.0',
+      assignmentAlgorithmVersion: 'assignment_algorithm_v1.0',
+    });
+    // 母集団はオプトインの4頭のみ。OFFと未選択の馬は決して選ばれない
+    expect(result.eligibleCount).toBe(4);
+    for (const s of result.selected) {
+      expect(s.ownerUserId).toBe(optedIn);
+    }
+  });
 
   it('floor(eligible * rate), owner limit 1 then single relaxation to 2, never 3', async () => {
     // isolate: retire anything eligible from other suites

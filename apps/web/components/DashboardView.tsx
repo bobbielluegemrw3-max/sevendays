@@ -3,6 +3,7 @@ import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { Countdown } from '@/components/Countdown';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { PwaSetupTile } from '@/components/PwaSetupTile';
+import { TradeAutoTile, TradeModeModal, type TradeSettings } from '@/components/TradeAutoControls';
 import { deriveNftLook } from '@/lib/nft-visual';
 import s from '../app/dashboard.module.css';
 
@@ -42,6 +43,8 @@ export interface DashboardData {
   myResults: DashResult[];
   buybacks: DashBuyback[];
   notifications: DashNotification[];
+  /** 売買自動化設定(Decision 086)。null = 取得失敗(モーダル/タイルとも出さない)。 */
+  trade: TradeSettings | null;
 }
 
 /* ---- helpers -------------------------------------------------------------- */
@@ -246,8 +249,14 @@ export function DashboardView({ data }: { data: DashboardData }) {
         </section>
       ) : null}
 
+      {/* ===== 売買の自動化(Decision 086: トグルはここと/marketの2箇所) ===== */}
+      {data.trade ? <TradeAutoTile settings={data.trade} /> : null}
+
       {/* ===== アプリ化&通知ON の導線(通知一覧はメニューのバッジ+通知ページへ集約) ===== */}
       <PwaSetupTile />
+
+      {/* ===== 出品方式の必須選択(未選択ユーザーにブロッキング表示) ===== */}
+      {data.trade ? <TradeModeModal settings={data.trade} /> : null}
     </div>
   );
 }

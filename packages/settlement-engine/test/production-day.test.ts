@@ -74,6 +74,10 @@ async function newUser(): Promise<string> {
     `insert into users (email) values ($1) returning id`,
     [`${randomUUID()}@test.dev`],
   );
+  // Decision 086: Smart出品(Step21-22)の母集団に入るには明示的なauto_list=trueが必要
+  await client.query(`insert into user_trade_settings (user_id, auto_list) values ($1, true)`, [
+    r.rows[0]!.id,
+  ]);
   return r.rows[0]!.id;
 }
 

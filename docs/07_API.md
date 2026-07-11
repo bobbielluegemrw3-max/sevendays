@@ -66,6 +66,11 @@ Support Bonus (Decision 074; user-facing name サポートボーナス — never
 - POST `/support/place` `{user_id, parent_user_id}` places a pooled referral either directly under the sponsor (unlimited width) or under any node inside the sponsor's own placement subtree. ONE-SHOT: replaying the identical placement succeeds quietly; any different placement is refused. Errors: SUPPORT_NOT_YOUR_REFERRAL, SUPPORT_ALREADY_PLACED, SUPPORT_PARENT_OUT_OF_SCOPE, SUPPORT_PLACEMENT_CYCLE.
 - POST `/admin/support/replace` `{user_id, new_parent_user_id|null, reason}` is the audited SUPER_ADMIN-only exception path (placement_audit ADMIN_OVERRIDE + audit_logs).
 
+Trade automation settings (Decision 086):
+- GET `/trade-settings` returns `{chosen, auto_list, auto_reserve, auto_reserve_max}`; `chosen:false` means the user has never made the mandatory listing-mode choice (the UI must block with the choice modal; until chosen the user's horses are never smart-listed).
+- POST `/trade-settings` `{auto_list, auto_reserve?, auto_reserve_max?}` upserts the choice. `auto_reserve` requires `auto_list` (TRADE_SETTINGS_INVALID). `auto_reserve_max` 1-10 or null = MAX (as balance/slots allow, default 1). Switching `auto_list` OFF flags the caller's live SMART listings `cancel_after_batch` (delisted after tonight, a sale tonight wins — same promise as manual unlist).
+- POST `/internal/market/post-batch` (internal; worker fires once after the day's batch COMPLETED, fully idempotent): sends the per-seller sold email (mail_claims unique claim) and creates auto reservations for `auto_reserve` users — min(setting, free session slots, balance/177.16) sessions with keys `autoreserve:{date}:{user}#i` + AUTO_RESERVED notification + email with an off-switch pointer.
+
 Manual Marketplace (Decision 076):
 - POST `/market/list` `{horse_id}` lists the caller's ACTIVE Day1-6 horse at the CURRENT ladder price (no free pricing). While listed the horse does not race (Market Lock, snapshot exclusion). Errors: HORSE_NOT_FOUND, NOT_HORSE_OWNER, HORSE_NOT_ACTIVE, MARKET_DAY_RANGE, MARKET_ALREADY_LISTED, MARKET_ACTION_LIMIT, MARKETPLACE_LOCKED.
 - POST `/market/unlist` `{horse_id}` requests delisting; it takes effect AFTER the next batch (a sale tonight wins). Replays converge quietly. Listing operations are limited to one per horse per day.

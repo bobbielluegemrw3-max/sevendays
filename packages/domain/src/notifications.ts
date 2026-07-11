@@ -24,6 +24,10 @@ export const NOTIFICATION_TYPES_V1 = [
   'MARKETPLACE_LOCKED',
   'MARKETPLACE_REOPENED',
   'SUPPORT_BONUS_PAID',
+  // Decision 086: 売買自動化の3種(売却・自動出品・自動予約)
+  'HORSE_SOLD',
+  'AUTO_LISTED',
+  'AUTO_RESERVED',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES_V1)[number];
@@ -97,6 +101,18 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   SUPPORT_BONUS_PAID: {
     title: 'サポートボーナスを受け取りました。',
     body: '{amount} USDT がウォレットに反映されました。(Tier {tier})',
+  },
+  HORSE_SOLD: {
+    title: '{horse_name} が売れました。',
+    body: '{proceeds} USDT(手数料控除後)がウォレットに反映されました。',
+  },
+  AUTO_LISTED: {
+    title: '{horse_name} が自動出品されました。',
+    body: '今夜のマッチング対象です(価格 {price} USDT)。出品中もレースに出走します。',
+  },
+  AUTO_RESERVED: {
+    title: '自動購入予約を作成しました。',
+    body: '{count}頭(最大ロック {total} USDT)。今夜20:00に処理されます。設定はダッシュボードから変更できます。',
   },
 };
 

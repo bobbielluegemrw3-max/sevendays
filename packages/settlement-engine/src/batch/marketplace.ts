@@ -42,9 +42,19 @@ export async function reopenMarketplace(client: SqlClient, batchRunId: string): 
   // the batch. A listing that survived tonight's matching is delisted now
   // (a sale tonight wins — matched listings are no longer LISTED) and the
   // horse races again from tomorrow. Idempotent by shape.
+  // Decision 086: auto_list OFF切替でフラグされたSMART出品も同じ約束事で
+  // ここで取り下げる(sourceを問わない)。
   await client.query(
     `update market_listings set status = 'CANCELLED'
-     where status = 'LISTED' and source = 'MANUAL' and cancel_after_batch = true`,
+     where status = 'LISTED' and cancel_after_batch = true`,
+  );
+  // Decision 087: 売れ残ったSMART出品は毎晩ここで自動取り下げる。SMART出品中の
+  // 馬は走り続けてDayが進むため、出品を持ち越すと「古いDay価格のまま今のDayの馬が
+  // 売れる」価格ズレが生じる(売り手が損)。取り下げれば翌晩の利確選定が最新Dayの
+  // 価格で出品し直す。手動出品は馬ごと凍結される(価格とDayが常に一致)ので持ち越す。
+  await client.query(
+    `update market_listings set status = 'CANCELLED'
+     where status = 'LISTED' and source = 'SMART'`,
   );
   await client.query(
     `update marketplace_status

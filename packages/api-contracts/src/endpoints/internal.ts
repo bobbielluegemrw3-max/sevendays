@@ -15,6 +15,7 @@ import { ApiError } from '../errors.js';
 import type { ApiRegistry } from '../router.js';
 import { buildWebPushTransport } from '../push/webpush.js';
 import { hasBroadcast, raceReminderMessage, raceStartMessage, sendNightlyBroadcast } from '../push/broadcast.js';
+import { runMarketPostBatch } from '../market/post-batch.js';
 
 /**
  * Internal APIs (07_API.md) — Cloud Run service authentication ONLY.
@@ -86,6 +87,19 @@ export function registerInternalEndpoints(registry: ApiRegistry): void {
         message: raceReminderMessage(),
         transport,
       });
+    },
+  });
+
+  // バッチ後スイープ(Decision 086): 自動購入予約+売却メール。ワーカーが当日バッチ
+  // COMPLETED後に叩く。全処理冪等(再実行・多重呼び出しは収束する)。
+  registry.register({
+    method: 'POST',
+    path: '/internal/market/post-batch',
+    auth: 'internal',
+    input: schedulableDateInput,
+    handler: async (ctx, input) => {
+      const batchDate = input.batch_date ?? batchDateFor(new Date());
+      return runMarketPostBatch(ctx.client, batchDate);
     },
   });
 

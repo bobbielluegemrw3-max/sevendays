@@ -230,6 +230,148 @@ describe('user flow through the API', () => {
     expect((finalWallet.body as { locked: string }).locked).toBe('354.32000000');
   });
 
+  it('trade settings: mandatory choice, auto_reserve requires auto_list, opt-out flags smart listings (Decision 086)', async () => {
+    const user = await newUser();
+
+    // 未選択 = chosen:false(初回モーダルの表示条件)
+    const before = await call('GET', '/api/v1/trade-settings', asUser(user));
+    expect(before.status).toBe(200);
+    expect((before.body as { chosen: boolean }).chosen).toBe(false);
+
+    // 自動予約はSmartモードが前提
+    const invalid = await call('POST', '/api/v1/trade-settings', asUser(user), {
+      body: { auto_list: false, auto_reserve: true },
+    });
+    expect(invalid.status).toBe(400);
+    expect((invalid.body as { error: { code: string } }).error.code).toBe('TRADE_SETTINGS_INVALID');
+
+    // Smart+自動予約MAX(null)を選択
+    const saved = await call('POST', '/api/v1/trade-settings', asUser(user), {
+      body: { auto_list: true, auto_reserve: true, auto_reserve_max: null },
+    });
+    expect(saved.status).toBe(200);
+    const after = await call('GET', '/api/v1/trade-settings', asUser(user));
+    expect(after.body).toEqual({ chosen: true, auto_list: true, auto_reserve: true, auto_reserve_max: null });
+
+    // Smartをやめると既存SMART出品が翌バッチ取り下げにフラグされる
+    const horse = await client.query<{ id: string }>(
+      `insert into horses (owner_user_id, current_day, name, horse_type, rarity, dna_hash, dna_modifier,
+                           horse_generation_version, mint_seed_hash, ability_json)
+       values ($1, 3, 'Trade Setting Horse', 'BALANCED', 'COMMON', $2, 0.5, 'horse_generation_v1.0', $3, $4)
+       returning id`,
+      [
+        user,
+        randomUUID().replaceAll('-', ''),
+        randomUUID().replaceAll('-', ''),
+        JSON.stringify({ speed: 70, power: 70, stamina: 70, recovery: 70, luck: 70 }),
+      ],
+    );
+    // 日付は過去・COMPLETED: 後続テストのadminダッシュボード(latest_batch)を汚さない
+    const smartBatch = await client.query<{ id: string }>(
+      `insert into batch_runs (batch_date, batch_algorithm_version, status)
+       values ('2038-06-02', 'batch_v1.0', 'COMPLETED') returning id`,
+    );
+    await client.query(
+      `insert into market_listings (horse_id, seller_user_id, listing_price, current_day, batch_run_id,
+                                    deterministic_market_tiebreak_score, source)
+       values ($1, $2, '133.10', 3, $3, 0.5, 'SMART')`,
+      [horse.rows[0]!.id, user, smartBatch.rows[0]!.id],
+    );
+    await call('POST', '/api/v1/trade-settings', asUser(user), {
+      body: { auto_list: false },
+    });
+    const flagged = await client.query<{ cancel_after_batch: boolean }>(
+      `select cancel_after_batch from market_listings where horse_id = $1 and status = 'LISTED'`,
+      [horse.rows[0]!.id],
+    );
+    expect(flagged.rows[0]!.cancel_after_batch).toBe(true);
+
+    // 後片付け: 後続のミニ本番日テストに馬と出品を持ち込まない
+    await client.query(`update market_listings set status = 'CANCELLED' where horse_id = $1`, [
+      horse.rows[0]!.id,
+    ]);
+    await client.query(`update horses set status = 'BURNED' where id = $1`, [horse.rows[0]!.id]);
+  });
+
+  it('post-batch sweep: auto reservations are created once, capped, and idempotent (Decision 086)', async () => {
+    const internal: AuthContext = { kind: 'internal' };
+    const batchDate = '2038-06-01'; // 過去日付: 後続のミニ本番日(2039-02-01)のlatest_batchを汚さない
+
+    // 完了済みバッチ(スイープの前提条件)
+    await client.query(
+      `insert into batch_runs (batch_date, batch_algorithm_version, status)
+       values ($1, 'batch_v1.0', 'COMPLETED')`,
+      [batchDate],
+    );
+
+    // 自動予約ON(上限2)・残高400 = 残高で2頭ぶん
+    const user = await newUser();
+    await depositConfirmation(client, {
+      userId: user,
+      amount: Money.of('400'),
+      idempotencyKey: randomUUID(),
+    });
+    await call('POST', '/api/v1/trade-settings', asUser(user), {
+      body: { auto_list: true, auto_reserve: true, auto_reserve_max: 2 },
+    });
+    // 自動予約OFFのユーザーには何も起きない
+    const bystander = await newUser();
+    await depositConfirmation(client, {
+      userId: bystander,
+      amount: Money.of('400'),
+      idempotencyKey: randomUUID(),
+    });
+    await call('POST', '/api/v1/trade-settings', asUser(bystander), { body: { auto_list: true } });
+
+    const run = await call('POST', '/internal/market/post-batch', internal, {
+      body: { batch_date: batchDate },
+    });
+    expect(run.status).toBe(200);
+    const result = run.body as { autoReserveUsers: number; autoReserveSessions: number };
+    expect(result.autoReserveUsers).toBe(1);
+    expect(result.autoReserveSessions).toBe(2);
+
+    const sessions = await client.query<{ count: string }>(
+      `select count(*)::text as count from purchase_sessions
+       where user_id = $1 and status = 'PENDING_ASSIGNMENT'`,
+      [user],
+    );
+    expect(sessions.rows[0]!.count).toBe('2');
+    const bystanderSessions = await client.query<{ count: string }>(
+      `select count(*)::text as count from purchase_sessions where user_id = $1`,
+      [bystander],
+    );
+    expect(bystanderSessions.rows[0]!.count).toBe('0');
+
+    // 通知は1件(冪等)
+    const notif = await client.query<{ count: string }>(
+      `select count(*)::text as count from notifications
+       where user_id = $1 and notification_type = 'AUTO_RESERVED'`,
+      [user],
+    );
+    expect(notif.rows[0]!.count).toBe('1');
+
+    // 再実行しても増えない(セッション・通知とも収束)
+    const again = await call('POST', '/internal/market/post-batch', internal, {
+      body: { batch_date: batchDate },
+    });
+    expect((again.body as { autoReserveSessions: number }).autoReserveSessions).toBe(0);
+    const sessionsAfter = await client.query<{ count: string }>(
+      `select count(*)::text as count from purchase_sessions where user_id = $1`,
+      [user],
+    );
+    expect(sessionsAfter.rows[0]!.count).toBe('2');
+
+    // 後片付け: PENDINGを残すと後続のミニ本番日バッチに巻き込まれる
+    const mine = await client.query<{ id: string }>(
+      `select id from purchase_sessions where user_id = $1 and status = 'PENDING_ASSIGNMENT'`,
+      [user],
+    );
+    for (const s of mine.rows) {
+      await call('POST', `/api/v1/purchase/${s.id}/cancel`, asUser(user));
+    }
+  });
+
   it('withdrawal: minimum enforced, funds locked before broadcast, idempotent', async () => {
     const user = await newUser();
     await depositConfirmation(client, {
@@ -326,7 +468,7 @@ describe('race transparency and admin surface after a real production day', () =
       body: { batch_date: '2039-02-01' },
     });
     expect(internal.status).toBe(200);
-    expect((internal.body as { status: string }).status).toBe('COMPLETED');
+    expect((internal.body as { status: string }).status, JSON.stringify(internal.body)).toBe('COMPLETED');
 
     // races are transparently readable, and replay verification passes
     const races = await call('GET', '/api/v1/races', asUser(buyer));
@@ -788,6 +930,48 @@ describe('support bonus network (Decision 074)', () => {
     expect(body.max_tiers).toBe(7);
     expect(body.pool_count).toBe(2);
     expect(body.tier_amounts).toEqual(['3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00']);
+  });
+
+  it('market-locked (manually listed) horses do not count toward tier volume (Decision 087)', async () => {
+    const sponsor = await newUser();
+    const member = await referredUser(sponsor);
+    // 配置してorgボリュームの対象にする
+    await call('POST', '/api/v1/support/place', asUser(sponsor), {
+      body: { user_id: member, parent_user_id: sponsor },
+    });
+
+    // メンバーがDay3の馬を2頭保有(各133.10)
+    const mkHorse = async (): Promise<string> => {
+      const r = await client.query<{ id: string }>(
+        `insert into horses (owner_user_id, current_day, name, horse_type, rarity, dna_hash, dna_modifier,
+                             horse_generation_version, mint_seed_hash, ability_json)
+         values ($1, 3, $2, 'BALANCED', 'COMMON', $3, 0.5, 'horse_generation_v1.0', $4, '{"speed":70,"power":70,"stamina":70,"recovery":70,"luck":70}')
+         returning id`,
+        [member, `Tier Vol ${randomUUID().slice(0, 12)}`, randomUUID().replaceAll('-', ''), randomUUID().replaceAll('-', '')],
+      );
+      return r.rows[0]!.id;
+    };
+    const racing = await mkHorse();
+    const parked = await mkHorse();
+
+    const before = await call('GET', '/api/v1/support/summary', asUser(sponsor));
+    expect((before.body as { org_volume: string }).org_volume).toBe('266.20');
+    expect((before.body as { direct_volume: string }).direct_volume).toBe('266.20');
+
+    // 1頭を手動出品(Market Lock)→ ボリュームから外れる
+    await client.query(
+      `insert into market_listings (horse_id, seller_user_id, listing_price, current_day, batch_run_id,
+                                    deterministic_market_tiebreak_score, source)
+       values ($1, $2, '133.10', 3, null, 0.5, 'MANUAL')`,
+      [parked, member],
+    );
+    const after = await call('GET', '/api/v1/support/summary', asUser(sponsor));
+    expect((after.body as { org_volume: string }).org_volume).toBe('133.10');
+    expect((after.body as { direct_volume: string }).direct_volume).toBe('133.10');
+
+    // 後片付け(後続テストにACTIVE馬と出品を残さない)
+    await client.query(`update market_listings set status = 'CANCELLED' where horse_id = $1`, [parked]);
+    await client.query(`update horses set status = 'BURNED' where id = any($1::uuid[])`, [[racing, parked]]);
   });
 
   it('MetaMask-first members display as a masked wallet, not the synthetic email', async () => {

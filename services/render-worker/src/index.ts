@@ -40,6 +40,7 @@ const withClient = <T>(fn: (client: SqlClient) => Promise<T>): Promise<T> => wit
 const INTERNAL_PATHS = [
   '/internal/batch/start',
   '/internal/push/race-reminder',
+  '/internal/market/post-batch',
   '/internal/race/run',
   '/internal/burn/run',
   '/internal/mlm/pay',
@@ -116,6 +117,7 @@ async function memorialJob(client: SqlClient): Promise<Record<string, unknown>> 
 // ------------------------------------------------------------- scheduler
 const chainEnabled = Boolean(process.env.CHAIN_RPC_URL);
 const lastRun: Record<string, number> = {};
+let lastPostBatchDate: string | null = null;
 
 function every(key: string, ms: number): boolean {
   const now = Date.now();
@@ -164,6 +166,23 @@ async function tick(): Promise<void> {
       if (existing.rows.length === 0) {
         console.log(`[scheduler] daily batch due for ${today}`);
         await dispatchInternal('/internal/batch/start', { batch_date: today });
+      }
+    }
+
+    // バッチ後スイープ(Decision 086): 当日バッチがCOMPLETEDになったら1回
+    // (自動購入予約+売却メール)。エンドポイントは完全冪等なので、
+    // ワーカー再起動での再実行は無害。COMPLETEDまでは5分おきに確認する。
+    if (
+      lastPostBatchDate !== today &&
+      Date.now() >= batchStartUtc(today).getTime() &&
+      every('market-post-batch', 300_000)
+    ) {
+      const done = await withClient((client) =>
+        client.query(`select 1 from batch_runs where batch_date = $1 and status = 'COMPLETED'`, [today]),
+      );
+      if (done.rows.length > 0) {
+        await dispatchInternal('/internal/market/post-batch', { batch_date: today });
+        lastPostBatchDate = today;
       }
     }
 

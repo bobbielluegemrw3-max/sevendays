@@ -1,4 +1,6 @@
+import { insertNotification } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
+import { renderNotification } from '@sevendays/domain';
 import type { EligibleHorse, PriceTablePolicy } from '@sevendays/economy-engine';
 import { getPrice } from '@sevendays/economy-engine';
 import { marketTiebreakScore } from '../assignment/tiebreak.js';
@@ -6,7 +8,9 @@ import { marketTiebreakScore } from '../assignment/tiebreak.js';
 /**
  * Batch Step 22 — Create Market Listings from the deterministic Profit
  * Taking selection. Listing only: ownership stays with the seller until
- * Assignment Settlement completes (Decision 015).
+ * Assignment Settlement completes (Decision 015). Each created listing
+ * notifies its owner (AUTO_LISTED, Decision 086) — dedupe-keyed so a
+ * resumed batch never double-notifies.
  */
 export async function createMarketListings(
   client: SqlClient,
@@ -38,6 +42,20 @@ export async function createMarketListings(
     if (inserted.rows.length === 0) continue;
     created += 1;
     await client.query(`update horses set last_listed_at = now() where id = $1`, [horse.horseId]);
+
+    const named = await client.query<{ name: string }>(`select name from horses where id = $1`, [
+      horse.horseId,
+    ]);
+    const rendered = renderNotification('AUTO_LISTED', {
+      horse_name: named.rows[0]?.name ?? '',
+      price: price.toFixed8(),
+    });
+    await insertNotification(client, {
+      userId: horse.ownerUserId,
+      type: 'AUTO_LISTED',
+      dedupeKey: `notif:AUTO_LISTED:${input.batchRunId}:${horse.horseId}`,
+      payload: { ...rendered, horse_id: horse.horseId, price: price.toFixed8() },
+    });
   }
   return created;
 }

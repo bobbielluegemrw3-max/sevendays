@@ -1,6 +1,11 @@
 import { Money, generateSecureSeedHex, insertNotification, sha256Hex, sha256Parts } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import { DAY0_MINT_PRICE, DAY0_MINT_TOTAL_CHARGE, renderNotification } from '@sevendays/domain';
+import {
+  DAY0_MINT_PRICE,
+  DAY0_MINT_TOTAL_CHARGE,
+  P2P_FEE_SPLIT_RATE,
+  renderNotification,
+} from '@sevendays/domain';
 import {
   assignmentSettlement,
   day0MintSettlement,
@@ -214,6 +219,28 @@ async function completeSettlement(
     dedupeKey: `notif:ASSIGNMENT_COMPLETED:${sessionId}`,
     payload: { ...rendered, horse_id: assignment.horse_id, price: price.toFixed8() },
   });
+
+  // 売り手にも通知(HORSE_SOLD, Decision 086)— 従来は残高が増えるだけで
+  // 売れたことを知る術がなかった。手取り = 価格 − 2%(assignmentSettlementと同式)。
+  if (assignment.seller_user_id !== null) {
+    const feeHalf = price.mulFloor(P2P_FEE_SPLIT_RATE);
+    const proceeds = price.sub(feeHalf).sub(feeHalf);
+    const soldRendered = renderNotification('HORSE_SOLD', {
+      horse_name: horse.rows[0]?.name ?? '',
+      proceeds: proceeds.toFixed8(),
+    });
+    await insertNotification(client, {
+      userId: assignment.seller_user_id,
+      type: 'HORSE_SOLD',
+      dedupeKey: `notif:HORSE_SOLD:${sessionId}`,
+      payload: {
+        ...soldRendered,
+        horse_id: assignment.horse_id,
+        proceeds: proceeds.toFixed8(),
+        price: price.toFixed8(),
+      },
+    });
+  }
 
   // 5. Final marker.
   await client.query(

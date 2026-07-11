@@ -25,8 +25,13 @@ const HORSES: DashHorse[] = [
   H('0797', 'Burning Meteor', 'RARE', 'POWER', 4, 0, 0, false, 'BURNED'),
 ];
 
-export default function DashboardPreview() {
+export default async function DashboardPreview({
+  searchParams,
+}: {
+  searchParams: Promise<{ choose?: string }>;
+}) {
   if (process.env.NODE_ENV === 'production') notFound();
+  const flags = await searchParams;
   const now = Date.now();
   const iso = (minsAgo: number) => new Date(now - minsAgo * 60000).toISOString();
   return (
@@ -49,6 +54,10 @@ export default function DashboardPreview() {
           { id: 'n3', notification_type: 'BUYBACK_PAYMENT_PAID', payload_json: { title: 'チャンピオン報酬が支払われました。' }, read_at: null, created_at: iso(37) },
           { id: 'n4', notification_type: 'TRAINING_COMPLETED', payload_json: { title: 'トレーニングが完了しました。' }, read_at: iso(300), created_at: iso(1500) },
         ],
+        // ?choose=1 で必須選択モーダル(Decision 086)をプレビュー
+        trade: flags.choose
+          ? { chosen: false, auto_list: false, auto_reserve: false, auto_reserve_max: 1 }
+          : { chosen: true, auto_list: true, auto_reserve: true, auto_reserve_max: null },
       }}
     />
   );

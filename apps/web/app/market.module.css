@@ -147,6 +147,12 @@
 .myName { font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; color: var(--text); }
 .myMeta { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); }
 .mySpacer { flex: 1; }
+.srcBadge {
+  font-family: var(--font-display); font-size: 0.55rem; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 0.1rem 0.4rem;
+  white-space: nowrap;
+}
+.srcSmart { color: var(--cyan); border-color: rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.07); }
 .pendingBadge {
   font-family: var(--font-display); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em;
   color: var(--warn); border: 1px solid rgba(230, 178, 74, 0.5); border-radius: 5px; padding: 0.1rem 0.4rem;

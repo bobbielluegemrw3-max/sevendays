@@ -6,11 +6,14 @@ import {
 } from '../src/index.js';
 
 describe('notification templates (Decision 065)', () => {
-  it('defines the owner-adopted types + support bonus + item types (074/078/079)', () => {
-    expect(NOTIFICATION_TYPES_V1).toHaveLength(16);
+  it('defines the owner-adopted types + support bonus + item types (074/078/079) + trade automation (086)', () => {
+    expect(NOTIFICATION_TYPES_V1).toHaveLength(19);
     expect(NOTIFICATION_TYPES_V1).toContain('SUPPORT_BONUS_PAID');
     expect(NOTIFICATION_TYPES_V1).toContain('ITEM_DROPPED');
     expect(NOTIFICATION_TYPES_V1).toContain('ITEM_GIFT_RECEIVED');
+    expect(NOTIFICATION_TYPES_V1).toContain('HORSE_SOLD');
+    expect(NOTIFICATION_TYPES_V1).toContain('AUTO_LISTED');
+    expect(NOTIFICATION_TYPES_V1).toContain('AUTO_RESERVED');
     expect(Object.keys(NOTIFICATION_TEMPLATES_V1).sort()).toEqual([...NOTIFICATION_TYPES_V1].sort());
   });
 
@@ -51,6 +54,9 @@ describe('notification templates (Decision 065)', () => {
       tier: 1,
       item_name: 'X',
       sender: 'X',
+      proceeds: '1',
+      count: 1,
+      total: '1',
     };
     for (const type of NOTIFICATION_TYPES_V1) {
       const rendered = renderNotification(type, generic);

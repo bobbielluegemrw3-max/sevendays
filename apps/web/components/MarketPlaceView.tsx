@@ -48,6 +48,8 @@ export interface MyListing {
   current_day: number;
   listed_at: string;
   cancel_after_batch: boolean;
+  /** 'SMART'(自動出品) | 'MANUAL'(手動出品)。Decision 086で両方見せる。 */
+  source: string;
   name: string;
   dna_hash: string;
   /** レアリティ(新規)。 */
@@ -249,10 +251,15 @@ export function MarketPlaceView({
               <NftHorseArt look={deriveNftLook(l.dna_hash, l.name)} className={s.myArt} />
               <span className={s.myName}>{l.name}</span>
               <span className={`${s.rar} ${s[`rar${rarClass(l.rarity)}`]}`}>{l.rarity}</span>
+              <span className={`${s.srcBadge} ${l.source === 'SMART' ? s.srcSmart : ''}`}>
+                {l.source === 'SMART' ? 'スマート出品' : '手動出品'}
+              </span>
               <span className={s.myMeta}>Day {l.current_day} · {fmt(l.price)} USDT · 出品 {l.listed_at.slice(0, 10)}</span>
               <span className={s.mySpacer} />
               {l.cancel_after_batch ? (
                 <span className={s.pendingBadge}>取り下げ予約済(今夜のバッチ後)</span>
+              ) : l.source === 'SMART' ? (
+                <span className={s.myMeta}>取り下げはAUTO設定のスマート出品OFFで(翌バッチ反映)</span>
               ) : (
                 <button type="button" className="secondary" disabled={busy} onClick={() => void submitUnlist(l)}>
                   取り下げる

@@ -64,6 +64,8 @@ export const API_ERROR_STATUS: Record<string, number> = {
   CS_SEND_FAILED: 502,
   CONTACT_LIMIT: 429,
   MARKET_DAY_RANGE: 400,
+  // 売買自動化設定 (Decision 086)
+  TRADE_SETTINGS_INVALID: 400,
 };
 
 export class ApiError extends Error {

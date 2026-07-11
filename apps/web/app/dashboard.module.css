@@ -286,6 +286,68 @@
 }
 .pwaGhostBtn:hover { background: rgba(0, 234, 255, 0.08); }
 
+/* ---- 出品方式の必須選択モーダル(Decision 086) ------------------------------ */
+.tmDialog { max-width: 640px; }
+.tmLead { color: var(--muted); font-size: 12.5px; line-height: 1.7; margin: 6px 0 12px; }
+.tmGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .tmGrid { grid-template-columns: 1fr; } }
+.tmCard {
+  border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px; background: rgba(10, 8, 22, 0.5);
+}
+.tmCardSmart {
+  border-color: rgba(0, 234, 255, 0.4);
+  background: linear-gradient(160deg, rgba(0, 234, 255, 0.07), rgba(10, 8, 22, 0.5));
+}
+.tmCardHead { font-family: var(--font-display); font-weight: 800; font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.tmBadge {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #04141a;
+  background: linear-gradient(100deg, var(--cyan), #5ff5ff); border-radius: 6px; padding: 2px 7px;
+}
+.tmList { margin: 0; padding-left: 17px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.tmList li { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+.tmList li b { color: var(--text); }
+.tmCta {
+  border: none; cursor: pointer; border-radius: 9px; padding: 9px 14px;
+  font-family: var(--font-display); font-weight: 700; font-size: 12px; color: #04141a;
+  background: linear-gradient(100deg, var(--cyan), #5ff5ff);
+}
+.tmCta:hover { filter: brightness(1.07); }
+.tmGhost { width: 100%; }
+.tmNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin: 12px 0 0; }
+
+/* ---- AUTOトグルタイル(Decision 086) --------------------------------------- */
+.auto {
+  border: 1px solid rgba(255, 45, 196, 0.25); border-radius: 14px; padding: 14px 16px;
+  background: linear-gradient(120deg, rgba(255, 45, 196, 0.05), transparent 72%);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.autoHead { display: flex; align-items: baseline; gap: 12px; }
+.autoLabel { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.2em; color: var(--magenta-soft); }
+.autoNote { margin-left: auto; font-family: var(--font-mono); font-size: 9px; color: var(--faint); }
+.autoRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.autoRowDisabled { opacity: 0.5; }
+.autoName { font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--text); white-space: nowrap; }
+.autoDesc { font-size: 11px; color: var(--muted); line-height: 1.5; flex: 1; min-width: 180px; }
+.autoMax { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.autoMaxSelect {
+  font-family: var(--font-display); font-weight: 700; font-size: 11px;
+  color: var(--text); background: #0a0816; border: 1px solid var(--border-strong);
+  border-radius: 8px; padding: 4px 8px; cursor: pointer;
+}
+.tgl {
+  position: relative; width: 38px; height: 21px; border-radius: 999px; flex: none;
+  border: 1px solid var(--border-strong); background: rgba(255, 255, 255, 0.06); cursor: pointer;
+  transition: background 0.15s ease;
+}
+.tgl:disabled { cursor: not-allowed; }
+.tglOn { background: linear-gradient(100deg, var(--cyan), #5ff5ff); border-color: transparent; }
+.tglKnob {
+  position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 999px;
+  background: #eae7ff; transition: transform 0.15s ease;
+}
+.tglOn .tglKnob { transform: translateX(17px); background: #04141a; }
+
 /* ---- レアリティバッジ(全5段階) ------------------------------------------- */
 .rar {
   display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px;

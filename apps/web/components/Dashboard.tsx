@@ -1,4 +1,5 @@
 import { serverApi, serverApiOrLogin } from '@/lib/server-api';
+import type { TradeSettings } from '@/components/TradeAutoControls';
 import {
   DashboardView,
   type DashHorse,
@@ -18,7 +19,7 @@ interface RaceResultRow { horse_id: string; final_score: string; final_rank: num
  *  hands plain data to the presentational DashboardView. */
 export default async function Dashboard() {
   await serverApiOrLogin<Me>('/api/v1/me');
-  const [walletR, horsesR, buffR, sessionsR, racesR, buybacksR, notifR] = await Promise.all([
+  const [walletR, horsesR, buffR, sessionsR, racesR, buybacksR, notifR, tradeR] = await Promise.all([
     serverApi<DashWallet>('/api/v1/wallet'),
     serverApi<{ horses: DashHorse[] }>('/api/v1/horses'),
     serverApi<DashBuff>('/api/v1/revenge-buffs/current'),
@@ -26,6 +27,7 @@ export default async function Dashboard() {
     serverApi<{ races: DashRace[] }>('/api/v1/races'),
     serverApi<{ buybacks: DashBuyback[] }>('/api/v1/buybacks'),
     serverApi<{ notifications: DashNotification[] }>('/api/v1/notifications'),
+    serverApi<TradeSettings>('/api/v1/trade-settings'),
   ]);
 
   const horses = horsesR.status === 200 ? horsesR.body.horses : [];
@@ -58,6 +60,7 @@ export default async function Dashboard() {
         myResults,
         buybacks: buybacksR.status === 200 ? buybacksR.body.buybacks : [],
         notifications: notifR.status === 200 ? notifR.body.notifications : [],
+        trade: tradeR.status === 200 ? tradeR.body : null,
       }}
     />
   );

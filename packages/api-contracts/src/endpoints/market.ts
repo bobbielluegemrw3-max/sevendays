@@ -182,13 +182,16 @@ export function registerMarketEndpoints(registry: ApiRegistry): void {
          where a.status = 'SETTLED'
          order by a.created_at desc limit 20`,
       );
+      // Decision 086: SMART出品も所有者に見せる(従来はMANUALのみで、自分の馬が
+      // 自動出品されても一覧に出なかった)。sourceでバッジを出し分ける。
       const mine = await ctx.client.query(
         `select l.id as listing_id, l.horse_id, l.listing_price::text as price,
                 l.current_day, l.listed_at::text as listed_at, l.cancel_after_batch,
+                l.source::text as source,
                 h.name, h.dna_hash, h.rarity::text as rarity
          from market_listings l
          join horses h on h.id = l.horse_id
-         where l.seller_user_id = $1 and l.status = 'LISTED' and l.source = 'MANUAL'
+         where l.seller_user_id = $1 and l.status = 'LISTED'
          order by l.listed_at asc`,
         [ctx.userId],
       );

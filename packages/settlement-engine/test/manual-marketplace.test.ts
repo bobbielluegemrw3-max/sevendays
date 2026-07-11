@@ -114,4 +114,39 @@ describe('market lock and deferred unlist', () => {
     expect(horse.rows[0]!.status).toBe('ACTIVE');
     expect(horse.rows[0]!.current_day).toBe(2);
   });
+
+  it('unsold SMART listings expire at reopen; manual listings carry over (Decision 087)', async () => {
+    const owner = await newUser();
+    const smartHorse = await newHorse(owner, 3);
+    const manualHorse = await newHorse(owner, 4);
+
+    const batch = await client.query<{ id: string }>(
+      `insert into batch_runs (batch_date, batch_algorithm_version)
+       values ('2033-05-02', 'batch_v1.0') returning id`,
+    );
+    // 今夜のバッチで作られたが売れ残ったSMART出品
+    await client.query(
+      `insert into market_listings (horse_id, seller_user_id, listing_price, current_day,
+                                    batch_run_id, deterministic_market_tiebreak_score, source)
+       values ($1, $2, 133.10, 3, $3, 0.5, 'SMART')`,
+      [smartHorse, owner, batch.rows[0]!.id],
+    );
+    // 手動出品(取り下げ予約なし)
+    const manualListing = await listManually(manualHorse, owner, 4);
+
+    await reopenMarketplace(client, batch.rows[0]!.id);
+
+    // SMARTは自動取り下げ(翌晩の選定が最新Day価格で出品し直す)
+    const smart = await client.query<{ status: string }>(
+      `select status::text as status from market_listings where horse_id = $1`,
+      [smartHorse],
+    );
+    expect(smart.rows[0]!.status).toBe('CANCELLED');
+    // 手動は持ち越し(馬ごと凍結で価格ズレが起きないため)
+    const manual = await client.query<{ status: string }>(
+      `select status::text as status from market_listings where id = $1`,
+      [manualListing],
+    );
+    expect(manual.rows[0]!.status).toBe('LISTED');
+  });
 });
