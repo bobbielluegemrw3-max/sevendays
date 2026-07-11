@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 
 /** Creates a purchase session; the page lists ALL sessions server-side. */
-export function CreateSessionButton() {
+export function CreateSessionButton({ label = '購入セッションを作成' }: { label?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export function CreateSessionButton() {
     <div className="stack">
       {error ? <p className="error">{error}</p> : null}
       <button onClick={() => void create()} disabled={busy}>
-        購入セッションを作成
+        {label}
       </button>
     </div>
   );

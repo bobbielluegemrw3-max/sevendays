@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { getAccessToken, serverApi } from '@/lib/server-api';
 import { TopNav } from '@/components/TopNav';
@@ -6,6 +6,17 @@ import { TopNav } from '@/components/TopNav';
 export const metadata: Metadata = {
   title: 'Seven Days Derby',
   description: '7日間のサバイバルレース。毎晩20:00、その日のすべての馬が一斉に発走。',
+  // PWA(ホーム画面追加)対応。SWは /sw.js(キャッシュなし・プッシュ受け皿のみ)。
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/icons/icon-180.png', sizes: '180x180', type: 'image/png' }],
+  },
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Seven Days Derby' },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#050409',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

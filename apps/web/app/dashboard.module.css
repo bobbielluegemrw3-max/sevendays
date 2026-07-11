@@ -32,7 +32,8 @@
       "task     task"
       "assets   assets"
       "stable   stable"
-      "buyback  notif";
+      "buyback  buyback"
+      "pwa      pwa";
     gap: 16px;
     align-items: start;
   }
@@ -42,7 +43,7 @@
   .assets  { grid-area: assets; }
   .stable  { grid-area: stable; }
   .buyback { grid-area: buyback; }
-  .notif   { grid-area: notif; }
+  .pwa     { grid-area: pwa; }
 }
 
 /* 共通タイル外観 */
@@ -181,46 +182,29 @@
 }
 .stableTitle { font-weight: 700; font-size: 15px; color: var(--text); }
 .stableTitle small { font-family: var(--font-display); font-size: 10px; color: var(--faint); letter-spacing: 0.1em; margin-left: 8px; }
-.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
-
-.hcard {
-  display: flex; flex-direction: column; gap: 9px;
-  border: 1px solid var(--border); border-radius: 14px; padding: 11px;
+/* 厩舎ストリップ — 要約行のみ(アート/名前/レアリティ/Day/調教)。詳細はSTABLEページ */
+.strip { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+@media (min-width: 900px) { .strip { grid-template-columns: repeat(2, 1fr); gap: 8px 12px; } }
+.srow {
+  display: flex; align-items: center; gap: 11px; min-width: 0;
+  border: 1px solid var(--border); border-radius: 12px; padding: 9px 12px;
   background: linear-gradient(160deg, rgba(0, 234, 255, 0.05), transparent 62%);
-  text-decoration: none; color: inherit; transition: border-color 0.15s ease, transform 0.15s ease;
+  text-decoration: none; color: inherit; transition: border-color 0.15s ease;
 }
-.hcard:hover { border-color: var(--border-strong); transform: translateY(-2px); }
-.hart {
-  position: relative; height: 118px; border-radius: 11px; overflow: hidden;
+.srow:hover { border-color: var(--border-strong); }
+.sart {
+  width: 46px; height: 46px; flex: none; border-radius: 9px; overflow: hidden;
   background: radial-gradient(80% 78% at 50% 42%, rgba(0, 234, 255, 0.1), rgba(10, 8, 19, 0.92) 74%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 .hartCanvas { display: block; width: 100%; height: 100%; object-fit: contain; }
-.artBadge { position: absolute; }
-.artRarity { top: 8px; left: 8px; }
-.artTrain { bottom: 8px; right: 8px; }
+.sname { flex: 1; font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sday { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); flex: none; }
+.srow .trainBadge { margin-left: auto; flex: none; }
 
-.hbody { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
-.hrow1 { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
-.hname { font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hday { font-family: var(--font-mono); font-size: 9px; color: var(--faint); flex: none; }
-.hfoot { display: flex; align-items: center; gap: 10px; }
-.hmeter { flex: 1; display: flex; align-items: center; gap: 5px; }
-.hmeter :global(.k) { font-family: var(--font-mono); font-size: 8px; color: var(--faint); }
-.hvalue { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--gold-bright); flex: none; }
-/* .rar(後段)の display:inline-flex に負けないよう .hcard で詳細度を上げる */
-.hcard .inlineRarity, .hcard .inlineTrain { display: none; }
-
-/* トラック(COND/FTG メーター & 7日レール) */
-.track { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
-.track > span { display: block; height: 100%; }
-.fillCyan { background: linear-gradient(90deg, var(--cyan-deep), var(--cyan)); }
-.fillMag { background: linear-gradient(90deg, #7a1660, var(--magenta)); }
-
-.rail { display: flex; gap: 4px; }
-.pip { flex: 1; height: 6px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); }
-.pipDone { flex: 1; height: 6px; border-radius: 2px; background: var(--cyan); }
-.pipToday { flex: 1; height: 6px; border-radius: 2px; background: var(--magenta); box-shadow: 0 0 7px var(--magenta); }
+/* 厩舎ヘッダーの「馬を迎える」直接購入ボタン */
+.stableActions { display: flex; align-items: center; gap: 14px; flex: none; white-space: nowrap; }
+.stableBuy button { padding: 7px 14px; font-size: 11px; border-radius: 9px; white-space: nowrap; }
 
 /* 厩舎 空状態 */
 .stableEmpty {
@@ -245,19 +229,22 @@
 .bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); box-shadow: 0 0 10px rgba(242, 228, 191, 0.4); }
 .bbNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 8px; }
 
-/* ---- ⑤ 通知 ---------------------------------------------------------------- */
-.notif {
-  border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px;
-  background: linear-gradient(180deg, rgba(20, 18, 34, 0), var(--panel));
+/* ---- アプリ化&通知の導線(PWA) ---------------------------------------------- */
+.pwa {
+  border: 1px solid rgba(0, 234, 255, 0.24); border-radius: 14px; padding: 14px 16px;
+  background: linear-gradient(120deg, rgba(0, 234, 255, 0.06), transparent 72%);
 }
-.notifBadge { font-family: var(--font-mono); font-size: 9.5px; color: #150410; background: var(--magenta); border-radius: 999px; padding: 1px 7px; margin-left: 8px; }
-.notifList { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
-.notifRow { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 2px; }
-.notifBody { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
-.notifDot { flex: none; width: 6px; height: 6px; border-radius: 999px; background: #3a3658; }
-.notifDot.unread { background: var(--magenta); box-shadow: 0 0 7px var(--magenta); }
-.notifTitle { font-size: 11.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.notifTime { font-family: var(--font-mono); font-size: 9px; color: var(--faint); flex: none; }
+.pwaRow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pwaLabel { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.2em; color: var(--cyan); white-space: nowrap; }
+.pwaText { font-size: 12.5px; color: var(--text); line-height: 1.6; }
+.pwaSteps { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 7px; line-height: 1.8; }
+.pwaBtn {
+  margin-left: auto; white-space: nowrap; border: none; cursor: pointer;
+  font-family: var(--font-display); font-weight: 700; font-size: 11px; color: #04141a;
+  background: linear-gradient(100deg, var(--cyan), #5ff5ff); padding: 8px 14px; border-radius: 9px;
+}
+.pwaBtn:hover { filter: brightness(1.07); }
+.pwaDone { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--good); white-space: nowrap; }
 
 /* ---- レアリティバッジ(全5段階) ------------------------------------------- */
 .rar {
@@ -282,20 +269,14 @@
    本文中のインライン badge を表示する。
    ========================================================================== */
 @media (max-width: 899px) {
-  .gallery { grid-template-columns: 1fr; gap: 8px; }
-
-  .hcard { flex-direction: row; align-items: center; gap: 11px; padding: 10px 12px; }
-  .hart { width: 46px; height: 46px; flex: none; }
-  .artBadge { display: none; }              /* オーバーレイ badge を隠す */
-  .hbody { flex: 1; }
-  .hday { display: none; }
-  .hmeter { display: none; }                /* 行では COND/FTG メーターは省略 */
-  .hcard .inlineRarity { display: inline-flex; }   /* 名前の隣にレアリティ */
-  .hcard .inlineTrain { display: inline-flex; }    /* 右端に調教バッジ */
-  .hvalue { margin-left: auto; }
-
-  /* 上部 2タイルはモバイルでは「② カウントダウン → ① 結果」の順で縦積み */
+  /* 上部 2タイルはモバイルでは「カウントダウン → 結果」の順で縦積み */
   .count { order: -1; }
+  /* 厩舎ヘッダーは「タイトル行 → ボタン行」に折り返す */
+  .stable .tileHead { flex-wrap: wrap; }
+}
+@media (max-width: 480px) {
+  /* 狭幅では馬名を優先しレアリティバッジを省略(詳細はSTABLEページ) */
+  .srow .rar { display: none; }
 }
 
 /* さらに狭い端末での結果行の詰め */

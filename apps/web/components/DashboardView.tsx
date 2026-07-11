@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { Countdown } from '@/components/Countdown';
 import { NftHorseArt } from '@/components/NftHorseArt';
+import { CreateSessionButton } from '@/components/PurchasePanel';
+import { PwaSetupTile } from '@/components/PwaSetupTile';
 import { deriveNftLook } from '@/lib/nft-visual';
 import s from '../app/dashboard.module.css';
 
@@ -52,19 +54,9 @@ function money(v: string): string {
 function num(n: number): string {
   return n.toLocaleString('en-US');
 }
-function pct(raw: string): number {
-  const n = Number(raw);
-  return Number.isFinite(n) ? Math.max(6, Math.min(100, n)) : 60;
-}
 /** その馬の本日の P2P 価値 — 不変の価格テーブルから。 */
 function horseValue(currentDay: number): string {
   return PRICE_TABLE_V1[Math.max(0, Math.min(6, currentDay))] ?? PRICE_TABLE_V1[0]!;
-}
-function timeAgo(iso: string): string {
-  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
-  if (mins < 60) return `${mins}分前`;
-  if (mins < 1440) return `${Math.floor(mins / 60)}時間前`;
-  return `${Math.floor(mins / 1440)}日前`;
 }
 function rarClass(rarity: string): string {
   return s[`rar${RARITIES.includes(rarity) ? rarity : 'COMMON'}`]!;
@@ -76,53 +68,25 @@ function StableArt({ horse }: { horse: DashHorse }) {
   return <NftHorseArt look={look} className={s.hartCanvas} />;
 }
 
-/** 7日レール(done=通過, today=今夜のDay)。 */
-function DayRail({ day }: { day: number }) {
-  return (
-    <div className={s.rail}>
-      {Array.from({ length: 7 }, (_, i) => {
-        const d = i + 1;
-        const cls = d < day + 1 ? s.pipDone : d === day + 1 ? s.pipToday : s.pip;
-        return <span key={d} className={cls} />;
-      })}
-    </div>
-  );
-}
-
-/** 厩舎ギャラリーの1頭。PCは縦カード、モバイルは横行にリフロー(CSS側)。 */
-function HorseCard({ h }: { h: DashHorse }) {
+/** 厩舎ストリップの1頭 — 要約行のみ(詳細はSTABLEページの仕事)。 */
+function HorseStrip({ h }: { h: DashHorse }) {
   const trained = h.trained_for_next_race;
   return (
-    <Link href={`/horses/${h.id}`} className={s.hcard}>
-      <div className={s.hart}>
+    <Link href={`/horses/${h.id}`} className={s.srow}>
+      <div className={s.sart}>
         <StableArt horse={h} />
-        {/* PC: アート上のオーバーレイ badge(モバイルでは非表示) */}
-        <span className={`${s.rar} ${rarClass(h.rarity)} ${s.artBadge} ${s.artRarity}`}>{h.rarity}</span>
-        <span className={`${s.trainBadge} ${trained ? s.trainYes : s.trainNo} ${s.artBadge} ${s.artTrain}`}>{trained ? '調教済' : '未調教'}</span>
       </div>
-      <div className={s.hbody}>
-        <div className={s.hrow1}>
-          <span className={s.hname}>{h.name}</span>
-          {/* モバイル: 名前の隣にレアリティ(PCでは非表示) */}
-          <span className={`${s.rar} ${rarClass(h.rarity)} ${s.inlineRarity}`}>{h.rarity}</span>
-          <span className={s.hday}>Day {Math.min(7, h.current_day)}/7</span>
-        </div>
-        <DayRail day={h.current_day} />
-        <div className={s.hfoot}>
-          <span className={s.hmeter}><span className="k">C</span><span className={s.track}><span className={s.fillCyan} style={{ width: `${pct(h.condition)}%` }} /></span></span>
-          <span className={s.hmeter}><span className="k">F</span><span className={s.track}><span className={s.fillMag} style={{ width: `${pct(h.fatigue)}%` }} /></span></span>
-          <span className={s.hvalue}>{horseValue(h.current_day)}</span>
-          {/* モバイル: 右端に調教バッジ(PCでは非表示 = アート上に出る) */}
-          <span className={`${s.trainBadge} ${trained ? s.trainYes : s.trainNo} ${s.inlineTrain}`}>{trained ? '調教済' : '未調教'}</span>
-        </div>
-      </div>
+      <span className={s.sname}>{h.name}</span>
+      <span className={`${s.rar} ${rarClass(h.rarity)}`}>{h.rarity}</span>
+      <span className={s.sday}>Day {Math.min(7, h.current_day)}/7</span>
+      <span className={`${s.trainBadge} ${trained ? s.trainYes : s.trainNo}`}>{trained ? '調教済' : '未調教'}</span>
     </Link>
   );
 }
 
 /* ---- main ----------------------------------------------------------------- */
 export function DashboardView({ data }: { data: DashboardData }) {
-  const { wallet, horses, buff, pendingCount, lastRace, myResults, buybacks, notifications } = data;
+  const { wallet, horses, buff, pendingCount, lastRace, myResults, buybacks } = data;
 
   const active = horses.filter((h) => h.status === 'ACTIVE');
   const untrained = active.filter((h) => !h.trained_for_next_race);
@@ -135,8 +99,6 @@ export function DashboardView({ data }: { data: DashboardData }) {
   const bestRank = rankPool.reduce((m, r) => Math.min(m, r.final_rank), Infinity);
   const participants = lastRace?.participant_count ?? 0;
 
-  const latestNotifs = notifications.slice(0, 4);
-  const unread = notifications.filter((n) => !n.read_at).length;
   const hasTasks = untrained.length > 0 || pendingCount > 0;
 
   return (
@@ -240,23 +202,24 @@ export function DashboardView({ data }: { data: DashboardData }) {
         </div>
       </section>
 
-      {/* ===== マイ厩舎(ギャラリー) ===== */}
+      {/* ===== マイ厩舎(要約ストリップ + 直接購入) ===== */}
       <section className={s.stable}>
         <div className={s.tileHead}>
           <span className={s.stableTitle}>マイ厩舎<small>STABLE {active.length} · 評価額 {stableValue.toFixed(2)} USDT</small></span>
-          <Link href="/horses" className={s.tileLink}>すべて →</Link>
+          <span className={s.stableActions}>
+            <span className={s.stableBuy}><CreateSessionButton label="馬を迎える ▶" /></span>
+            <Link href="/horses" className={s.tileLink}>すべて →</Link>
+          </span>
         </div>
         {active.length > 0 ? (
-          <div className={s.gallery}>
-            {active.slice(0, 8).map((h) => <HorseCard key={h.id} h={h} />)}
+          <div className={s.strip}>
+            {active.slice(0, 8).map((h) => <HorseStrip key={h.id} h={h} />)}
           </div>
         ) : (
           <div className={s.stableEmpty}>
             {pendingCount > 0
-              ? `割当待ち ${pendingCount} 件 — 今夜のレースで確定します。まずは馬を迎えて参加しましょう。`
-              : '出走中の馬はいません。今夜のダービーに参加しましょう。'}
-            <br />
-            <Link href="/market" className={s.ctaPrimary}>馬を迎える ▶</Link>
+              ? `割当待ち ${pendingCount} 件 — 今夜のレースで確定します。`
+              : '出走中の馬はいません。上の「馬を迎える ▶」から今夜のダービーに参加しましょう。'}
           </div>
         )}
       </section>
@@ -283,28 +246,8 @@ export function DashboardView({ data }: { data: DashboardData }) {
         </section>
       ) : null}
 
-      {/* ===== ⑤ 通知 ===== */}
-      <section className={s.notif}>
-        <div className={s.tileHead}>
-          <span className={s.stableTitle}>通知{unread > 0 ? <span className={s.notifBadge}>{unread}</span> : null}</span>
-          <Link href="/notifications" className={s.tileLink}>すべて →</Link>
-        </div>
-        {latestNotifs.length > 0 ? (
-          <div className={s.notifList}>
-            {latestNotifs.map((n) => (
-              <div key={n.id} className={s.notifRow}>
-                <span className={s.notifBody}>
-                  <span className={`${s.notifDot} ${n.read_at ? '' : s.unread}`} />
-                  <span className={s.notifTitle}>{n.payload_json?.title ?? n.notification_type}</span>
-                </span>
-                <span className={s.notifTime}>{timeAgo(n.created_at)}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className={s.empty}>通知はまだありません。</div>
-        )}
-      </section>
+      {/* ===== アプリ化&通知ON の導線(通知一覧はメニューのバッジ+通知ページへ集約) ===== */}
+      <PwaSetupTile />
     </div>
   );
 }
