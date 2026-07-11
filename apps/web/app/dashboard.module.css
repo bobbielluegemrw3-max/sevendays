@@ -246,6 +246,39 @@
 .pwaBtn:hover { filter: brightness(1.07); }
 .pwaDone { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--good); white-space: nowrap; }
 
+/* iOS向け: ホーム画面追加の3ステップ(番号チップ+矢印。読ませず見せる) */
+.pwaFlow { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
+.pwaStep {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px;
+  font-size: 10.5px; color: var(--text); background: rgba(20, 18, 34, 0.55);
+  white-space: nowrap;
+}
+.pwaStepNum {
+  font-family: var(--font-display); font-weight: 700; font-size: 8.5px; color: #04141a;
+  background: var(--cyan); border-radius: 999px; width: 14px; height: 14px;
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+}
+.pwaIcon { width: 13px; height: 13px; color: var(--cyan); flex: none; }
+.pwaArrow { color: var(--muted); font-size: 10px; }
+@media (max-width: 520px) {
+  /* 狭幅はチップを縦積みの番号リストに(折返しで矢印が浮くのを防ぐ) */
+  .pwaFlow { flex-direction: column; align-items: stretch; gap: 6px; }
+  .pwaStep { white-space: normal; }
+  .pwaArrow { display: none; }
+}
+
+/* Android向け: 通知ON後に出す控えめな「+ アプリを追加」行 */
+.pwaInstallRow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+.pwaHint { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.pwaGhostBtn {
+  margin-left: auto; white-space: nowrap; cursor: pointer;
+  border: 1px solid rgba(0, 234, 255, 0.4); background: transparent; color: var(--cyan);
+  font-family: var(--font-display); font-weight: 700; font-size: 10.5px;
+  padding: 7px 13px; border-radius: 9px;
+}
+.pwaGhostBtn:hover { background: rgba(0, 234, 255, 0.08); }
+
 /* ---- レアリティバッジ(全5段階) ------------------------------------------- */
 .rar {
   display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px;

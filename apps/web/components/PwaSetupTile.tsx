@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/client-api';
 import s from '../app/dashboard.module.css';
 
-type PwaState = 'loading' | 'done' | 'enable' | 'ios-install' | 'install';
+type PwaState = 'loading' | 'done' | 'enable' | 'blocked' | 'ios-install' | 'install';
+
+/** Android Chrome系が発火する「アプリを追加」ネイティブダイアログの起動イベント。 */
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+}
 
 /** VAPID公開鍵(base64url)を PushManager.subscribe 用の Uint8Array へ。 */
 function urlBase64ToUint8Array(base64: string): Uint8Array {
@@ -48,15 +53,29 @@ async function syncPushSubscription(): Promise<void> {
   }
 }
 
+/** iOSの共有ボタン(□↑)。文字で説明せずアイコンで見せる。 */
+function ShareIcon() {
+  return (
+    <svg className={s.pwaIcon} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 15V3" />
+      <path d="M8 7l4-4 4 4" />
+      <path d="M8 11H6a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-2" />
+    </svg>
+  );
+}
+
 /**
  * ダッシュボードの「アプリ化&通知ON」導線。
- * - iOS Safari(未インストール)は通知APIが無い → ホーム画面追加の手順を出す
- * - 通知APIがある環境(インストール済みPWA / Android / PCブラウザ)は許可ボタン
+ * - iOS Safari(未インストール)は通知APIが無い → 番号チップ3ステップでホーム画面追加を誘導
+ * - 通知APIがある環境(インストール済みPWA / Android / PCブラウザ)は許可ボタン1つ
+ * - Androidは通知ON完了後に beforeinstallprompt 経由の「+ アプリを追加」を控えめに提示
  * - 許可済みなら購読をサーバーへ同期して完了表示。SW(/sw.js)はキャッシュなしで
  *   プッシュ受信・クリック遷移のみを担う。配信は夜間バッチのブロードキャスト。
  */
 export function PwaSetupTile() {
   const [state, setState] = useState<PwaState>('loading');
+  const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
+  const [mobile, setMobile] = useState(false);
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -66,10 +85,13 @@ export function PwaSetupTile() {
       window.matchMedia('(display-mode: standalone)').matches ||
       (navigator as { standalone?: boolean }).standalone === true;
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    setMobile(/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent));
     if ('Notification' in window) {
       if (Notification.permission === 'granted') {
         setState('done');
         void syncPushSubscription();
+      } else if (Notification.permission === 'denied') {
+        setState('blocked');
       } else {
         setState('enable');
       }
@@ -78,6 +100,18 @@ export function PwaSetupTile() {
     } else {
       setState('install');
     }
+    // 「+ アプリを追加」用のネイティブイベント(Android Chrome系のみ発火。インストール済みなら発火しない)
+    const onPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallEvent(e as BeforeInstallPromptEvent);
+    };
+    const onInstalled = () => setInstallEvent(null);
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
   }, []);
 
   async function enable() {
@@ -85,10 +119,31 @@ export function PwaSetupTile() {
     if (result === 'granted') {
       setState('done');
       void syncPushSubscription();
+    } else if (result === 'denied') {
+      setState('blocked');
     }
   }
 
+  async function install() {
+    const ev = installEvent;
+    if (!ev) return;
+    setInstallEvent(null); // prompt()は1回しか呼べない
+    await ev.prompt();
+  }
+
   if (state === 'loading') return null;
+
+  // 通知ON完了後のモバイルにだけ出す控えめなインストール導線(PCは出さない)
+  const installOffer =
+    installEvent && mobile && (state === 'done' || state === 'install') ? (
+      <div className={s.pwaInstallRow}>
+        <span className={s.pwaHint}>ホーム画面に追加するとワンタップで開けます。</span>
+        <button type="button" className={s.pwaGhostBtn} onClick={() => void install()}>
+          + アプリを追加
+        </button>
+      </div>
+    ) : null;
+
   return (
     <section className={s.pwa}>
       <div className={s.pwaRow}>
@@ -105,20 +160,40 @@ export function PwaSetupTile() {
               通知をONにする
             </button>
           </>
+        ) : state === 'blocked' ? (
+          <span className={s.pwaText}>通知は現在ブロック中です。ブラウザの設定で許可すると再開できます。</span>
+        ) : state === 'ios-install' ? (
+          <span className={s.pwaText}>ホーム画面に追加すると発走通知が届きます。</span>
         ) : (
-          <span className={s.pwaText}>Seven Days Derby をアプリとしてホーム画面に追加できます。</span>
+          <span className={s.pwaText}>ホーム画面に追加すると、アプリとして使えます。</span>
         )}
       </div>
       {state === 'ios-install' ? (
-        <div className={s.pwaSteps}>
-          ① Safariの共有ボタン(□↑)を押す → ②「ホーム画面に追加」を選ぶ → ③ 追加されたアプリから開くと、ここで通知をONにできます。
+        <div className={s.pwaFlow}>
+          <span className={s.pwaStep}>
+            <span className={s.pwaStepNum}>1</span>
+            共有ボタン
+            <ShareIcon />
+            をタップ
+          </span>
+          <span className={s.pwaArrow}>→</span>
+          <span className={s.pwaStep}>
+            <span className={s.pwaStepNum}>2</span>
+            「ホーム画面に追加」
+          </span>
+          <span className={s.pwaArrow}>→</span>
+          <span className={s.pwaStep}>
+            <span className={s.pwaStepNum}>3</span>
+            アプリを開いて通知ON
+          </span>
         </div>
       ) : null}
-      {state === 'install' ? (
+      {state === 'install' && !installOffer ? (
         <div className={s.pwaSteps}>
-          ブラウザのメニューから「アプリをインストール」/「ホーム画面に追加」を選ぶと、アプリとして起動できます。
+          ブラウザのメニューから「ホーム画面に追加」/「アプリをインストール」を選ぶと、アプリとして起動できます。
         </div>
       ) : null}
+      {installOffer}
     </section>
   );
 }
