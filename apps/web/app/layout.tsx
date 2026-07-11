@@ -9,8 +9,9 @@ export const metadata: Metadata = {
   // PWA(ホーム画面追加)対応。SWは /sw.js(キャッシュなし・プッシュ受け皿のみ)。
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
-    apple: [{ url: '/icons/icon-180.png', sizes: '180x180', type: 'image/png' }],
+    // ?v=2: アイコンを馬アート→ブランドロゴに差し替え(Safariのキャッシュ対策)
+    icon: [{ url: '/icons/icon-192.png?v=2', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/icons/icon-180.png?v=2', sizes: '180x180', type: 'image/png' }],
   },
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Seven Days Derby' },
 };
