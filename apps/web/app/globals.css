@@ -285,3 +285,15 @@ code { background: var(--bg); border: 1px solid var(--border); border-radius: 5p
   padding: 2px 9px;
 }
 .topnav-admin:hover { background: rgba(255, 45, 196, 0.12); }
+
+/* ============================================================
+   iOSキーボードズーム対策(オーナー指摘 2026-07-12)
+   iOS Safariは、フォーカスした入力欄の font-size が16px未満だと
+   ページ全体を自動ズームする(解除されず崩れたままになりがち)。
+   モバイル幅では全フォーム部品を16pxに固定して構造的に封じる。
+   デスクトップは各moduleの意匠(11〜15px)のまま。!important は
+   このアクセシビリティ規則をmoduleクラスより優先させる意図的使用。
+   ============================================================ */
+@media (max-width: 767px) {
+  input, select, textarea { font-size: 16px !important; }
+}
