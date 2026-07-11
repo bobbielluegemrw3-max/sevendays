@@ -18,7 +18,6 @@ import s from '../app/stable.module.css';
  * ========================================================================== */
 
 const RANK: Record<string, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
-const STATUS_ORDER: Record<string, number> = { DAY7_CLEARED: 0, MEMORIALIZED: 1, BURNED: 2 };
 const PAGE_SIZES = [24, 48, 96, 99999];
 
 /* ---- 部品 ----------------------------------------------------------------- */
@@ -55,6 +54,8 @@ function ActiveCard({ h }: { h: StableHorse }) {
         <div className={s.hrow1}>
           <span className={s.hname}>{h.name}</span>
           <span className={`${s.rar} ${rar} ${s.inlineRarity}`}>{h.rarity}</span>
+          {/* Decision 087監査: スマート出品中は走るが今夜売れる可能性がある — 事実を小さく明示 */}
+          {h.listing === 'SMART' ? <span className={s.smartTag}>出品中</span> : null}
           <span className={s.htype}>{h.horse_type}</span>
         </div>
         <DayRail day={h.current_day} />
@@ -66,6 +67,55 @@ function ActiveCard({ h }: { h: StableHorse }) {
           <span className={s.hvalue}>現在価値 <b>{horseValue(h.current_day)}</b> USDT</span>
           <span className={`${s.hcta} ${untrained ? s.hctaTrain : s.hctaDetail}`}>{untrained ? '調教する →' : '詳細 →'}</span>
           <span className={`${s.trainBadge} ${trainCls} ${s.inlineTrain}`}>{trainText}</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/**
+ * 手動出品中(Market Lock)の馬 — 「出品中」セクション専用カード(Decision 087監査)。
+ * 今夜は出走しない事実を明示し、無駄になる調教CTAは出さない。管理は/marketへ。
+ */
+export function ListedCard({ h }: { h: StableHorse }) {
+  const rar = rarClass(h.rarity);
+  return (
+    <Link href="/market" className={`${s.hcard} ${s.listedCard}`}>
+      <div className={s.hart}>
+        <StableArt horse={h} />
+        <span className={`${s.rar} ${rar} ${s.artBadge} ${s.artRarity}`}>{h.rarity}</span>
+        <span className={`${s.listedBadge} ${s.artBadge} ${s.artTrain}`}>出品中</span>
+      </div>
+      <div className={s.hbody}>
+        <div className={s.hrow1}>
+          <span className={s.hname}>{h.name}</span>
+          <span className={`${s.rar} ${rar} ${s.inlineRarity}`}>{h.rarity}</span>
+          <span className={s.htype}>{h.horse_type}</span>
+        </div>
+        <div className={s.listedNote}>今夜は出走しません(Day・価値は凍結)</div>
+        <div className={s.hfoot}>
+          <span className={s.hvalue}>出品価格 <b>{horseValue(h.current_day)}</b> USDT</span>
+          <span className={`${s.hcta} ${s.hctaDetail}`}>出品を管理 →</span>
+          <span className={`${s.listedBadge} ${s.inlineTrain}`}>出品中</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/**
+ * チャンピオンコレクション — Day7走破馬を金枠NFTとして飾るギャラリーカード。
+ */
+export function ChampionCard({ h }: { h: StableHorse }) {
+  const memorial = h.status === 'MEMORIALIZED';
+  return (
+    <Link href={`/horses/${h.id}`} className={s.champCard}>
+      <div className={s.champInner}>
+        <div className={s.champArt}><StableArt horse={h} /></div>
+        <div className={s.champName}>{h.name}</div>
+        <div className={s.champTag}>{memorial ? 'MEMORIAL NFT' : 'CHAMPION'}</div>
+        <div className={s.champSub}>
+          {memorial ? '7日完走 · 記念NFT' : '7日走破 · 報酬受取中'}
         </div>
       </div>
     </Link>
@@ -112,8 +162,8 @@ const ACTIVE_SORTS: Record<string, (a: StableHorse, b: StableHorse) => number> =
   untrained:  (a, b) => Number(a.trained_for_next_race) - Number(b.trained_for_next_race) || b.current_day - a.current_day,
   name:       (a, b) => a.name.localeCompare(b.name),
 };
+// 過去セクションはBURNED専用になった(チャンピオンは金枠ギャラリーへ、Decision 087監査)
 const PAST_SORTS: Record<string, (a: StableHorse, b: StableHorse) => number> = {
-  status: (a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9) || a.name.localeCompare(b.name),
   rarity: (a, b) => RANK[b.rarity]! - RANK[a.rarity]! || a.name.localeCompare(b.name),
   name:   (a, b) => a.name.localeCompare(b.name),
 };
@@ -121,7 +171,7 @@ const PAST_SORTS: Record<string, (a: StableHorse, b: StableHorse) => number> = {
 /* ---- 本体 ----------------------------------------------------------------- */
 export function StableBrowser({ kind, horses }: { kind: 'active' | 'past'; horses: StableHorse[] }) {
   const [q, setQ] = useState('');
-  const [sort, setSort] = useState(kind === 'active' ? 'value_desc' : 'status');
+  const [sort, setSort] = useState(kind === 'active' ? 'value_desc' : 'rarity');
   const [rar, setRar] = useState('ALL');            // active: レアリティ / past: 状態
   const [untrainedOnly, setUntrainedOnly] = useState(false);
   const [pageSize, setPageSize] = useState(24);
@@ -175,31 +225,21 @@ export function StableBrowser({ kind, horses }: { kind: 'active' | 'past'; horse
             </>
           ) : (
             <>
-              <option value="status">状態順</option>
               <option value="rarity">レアリティ順</option>
               <option value="name">名前順</option>
             </>
           )}
         </select>
-        <select className={s.select} value={rar} onChange={(e) => { setRar(e.target.value); reset(); }} aria-label={kind === 'active' ? 'レアリティ絞り込み' : '状態絞り込み'}>
-          {kind === 'active' ? (
-            <>
-              <option value="ALL">レアリティ: すべて</option>
-              <option value="LEGENDARY">LEGENDARY</option>
-              <option value="EPIC">EPIC</option>
-              <option value="RARE">RARE</option>
-              <option value="UNCOMMON">UNCOMMON</option>
-              <option value="COMMON">COMMON</option>
-            </>
-          ) : (
-            <>
-              <option value="ALL">状態: すべて</option>
-              <option value="BURNED">Burn(消滅)</option>
-              <option value="DAY7_CLEARED">チャンピオン</option>
-              <option value="MEMORIALIZED">記念馬</option>
-            </>
-          )}
-        </select>
+        {kind === 'active' ? (
+          <select className={s.select} value={rar} onChange={(e) => { setRar(e.target.value); reset(); }} aria-label="レアリティ絞り込み">
+            <option value="ALL">レアリティ: すべて</option>
+            <option value="LEGENDARY">LEGENDARY</option>
+            <option value="EPIC">EPIC</option>
+            <option value="RARE">RARE</option>
+            <option value="UNCOMMON">UNCOMMON</option>
+            <option value="COMMON">COMMON</option>
+          </select>
+        ) : null}
         {kind === 'active' ? (
           <button
             type="button"

@@ -25,7 +25,7 @@ All public APIs are versioned:
 - GET `/api/v1/wallet/history`
 - POST `/api/v1/wallet/deposit`
 - POST `/api/v1/wallet/withdraw`
-- GET `/api/v1/horses` (2026-07-05: response rows additionally carry read-only `dna_hash` and `trained_for_next_race` — the latter mirrors the POST /training effective_race_date rule — so the dashboard can render deterministic art and the trained/untrained badge without extra calls)
+- GET `/api/v1/horses` (2026-07-05: response rows additionally carry read-only `dna_hash` and `trained_for_next_race` — the latter mirrors the POST /training effective_race_date rule — so the dashboard can render deterministic art and the trained/untrained badge without extra calls; 2026-07-11 Decision 087 audit: rows also carry `listing` = 'SMART' | 'MANUAL' | null so the stable page can show the market-lock truth — a manually listed horse does not race tonight; limit raised 100 → 500 to match the show-all UI)
 - GET `/api/v1/horses/{id}`
 - POST `/api/v1/purchase`
 - POST `/api/v1/purchase/{id}/cancel`

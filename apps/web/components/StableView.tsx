@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { PURCHASE_LOCK_AMOUNT } from '@sevendays/domain';
 import { money, horseValue } from '@/components/stable-shared';
-import { StableBrowser } from '@/components/StableBrowser';
+import { ChampionCard, ListedCard, StableBrowser } from '@/components/StableBrowser';
 import s from '../app/stable.module.css';
 
 /* ============================================================================
@@ -20,6 +20,8 @@ export interface StableHorse {
   id: string; name: string; status: string; current_day: number;
   horse_type: string; rarity: string; condition: string; fatigue: string;
   dna_hash: string; trained_for_next_race: boolean;
+  /** 'SMART' | 'MANUAL' | null — 出品中の事実表示(Decision 087監査)。 */
+  listing: string | null;
 }
 // status: 'ACTIVE'(出走中) | 'BURNED'(消滅) | 'DAY7_CLEARED'(チャンピオン) | 'MEMORIALIZED'(記念馬)
 export interface StableData {
@@ -31,7 +33,11 @@ export function StableView({ data }: { data: StableData }) {
   const { horses, pendingCount } = data;
 
   const active = horses.filter((h) => h.status === 'ACTIVE');
-  const past = horses.filter((h) => h.status !== 'ACTIVE');
+  // 手動出品中(Market Lock)は今夜走らない — 「出走中」と分けて事実どおり見せる
+  const racing = active.filter((h) => h.listing !== 'MANUAL');
+  const listed = active.filter((h) => h.listing === 'MANUAL');
+  const champions = horses.filter((h) => h.status === 'DAY7_CLEARED' || h.status === 'MEMORIALIZED');
+  const burned = horses.filter((h) => h.status === 'BURNED');
   const stableValue = active.reduce((sum, h) => sum + Number(horseValue(h.current_day)), 0);
 
   return (
@@ -40,7 +46,9 @@ export function StableView({ data }: { data: StableData }) {
       <div className={s.header}>
         <div>
           <div className={s.headTitle}>マイ厩舎</div>
-          <div className={s.headSub}>現役 {active.length}頭 · 過去 {past.length}頭</div>
+          <div className={s.headSub}>
+            現役 {active.length}頭{champions.length > 0 ? ` · チャンピオン ${champions.length}頭` : ''} · 消滅 {burned.length}頭
+          </div>
         </div>
         <div className={s.headStats}>
           <div className={`${s.stat} ${s.statCount}`}>
@@ -66,15 +74,15 @@ export function StableView({ data }: { data: StableData }) {
         <Link href="/market" className={s.welcomeCta}>馬を迎える ▶</Link>
       </section>
 
-      {/* ===== 出走中(検索/ソート/絞り込み/ページング) ===== */}
+      {/* ===== 出走中(手動出品中を除く実数・検索/ソート/絞り込み/ページング) ===== */}
       <section>
         <div className={s.secHead}>
           <span className={`${s.secLabel} ${s.secLabelActive}`}>出走中 · TONIGHT&apos;S RUNNERS</span>
-          <span className={s.secCount}>{active.length}</span>
+          <span className={s.secCount}>{racing.length}</span>
           <span className={s.secNote}><span className={s.live}>●</span> 今夜20:00 一斉発走</span>
         </div>
-        {active.length > 0 ? (
-          <StableBrowser kind="active" horses={active} />
+        {racing.length > 0 ? (
+          <StableBrowser kind="active" horses={racing} />
         ) : (
           <div className={s.emptyBox}>
             {pendingCount > 0
@@ -84,15 +92,43 @@ export function StableView({ data }: { data: StableData }) {
         )}
       </section>
 
-      {/* ===== 過去の馬(検索/ソート/絞り込み/ページング) ===== */}
-      {past.length > 0 ? (
+      {/* ===== 出品中(Market Lock=今夜走らない・調教CTAなし) ===== */}
+      {listed.length > 0 ? (
         <section>
           <div className={s.secHead}>
-            <span className={`${s.secLabel} ${s.secLabelPast}`}>過去の馬 · HISTORY</span>
-            <span className={s.secCount}>{past.length}</span>
-            <span className={s.secNote}>Burn=消滅 · Day7走破=チャンピオン報酬 / 記念NFT</span>
+            <span className={`${s.secLabel} ${s.secLabelListed}`}>出品中 · ON THE MARKET</span>
+            <span className={s.secCount}>{listed.length}</span>
+            <span className={s.secNote}>今夜は出走しません(Day・価値は凍結)· 管理は<Link href="/market" className={s.secLink}>マーケット</Link></span>
           </div>
-          <StableBrowser kind="past" horses={past} />
+          <div className={s.gallery}>
+            {listed.map((h) => <ListedCard key={h.id} h={h} />)}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ===== チャンピオンコレクション(金枠NFTギャラリー) ===== */}
+      {champions.length > 0 ? (
+        <section>
+          <div className={s.secHead}>
+            <span className={`${s.secLabel} ${s.secLabelChamp}`}>チャンピオンコレクション · MY NFTS</span>
+            <span className={s.secCount}>{champions.length}</span>
+            <span className={s.secNote}>Day7走破の栄光 — 200 USDT報酬+記念NFT</span>
+          </div>
+          <div className={s.champGrid}>
+            {champions.map((h) => <ChampionCard key={h.id} h={h} />)}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ===== BURNED(消滅の記録・検索/ソート/ページング) ===== */}
+      {burned.length > 0 ? (
+        <section>
+          <div className={s.secHead}>
+            <span className={`${s.secLabel} ${s.secLabelPast}`}>消滅の記録 · BURNED</span>
+            <span className={s.secCount}>{burned.length}</span>
+            <span className={s.secNote}>レースで消滅した馬たち</span>
+          </div>
+          <StableBrowser kind="past" horses={burned} />
         </section>
       ) : null}
     </div>

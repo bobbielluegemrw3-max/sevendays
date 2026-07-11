@@ -5,10 +5,12 @@ import { StableView, type StableHorse } from '@/components/StableView';
 const H = (
   id: string, name: string, rarity: string, type: string, day: number,
   cond: number, ftg: number, trained: boolean, status = 'ACTIVE',
+  listing: string | null = null,
 ): StableHorse => ({
   id, name, status, current_day: day, horse_type: type, rarity,
   condition: String(cond), fatigue: String(ftg),
   dna_hash: `0x${id.repeat(10).slice(0, 64)}`, trained_for_next_race: trained,
+  listing,
 });
 
 const NAMES = [
@@ -24,12 +26,18 @@ const TYPES = ['SPRINTER', 'POWER', 'BALANCED', 'ENDURANCE', 'LUCK'];
 const HORSES: StableHorse[] = [
   ...NAMES.map((n, i) =>
     H(`a${i.toString(16).padStart(3, '0')}`, n, RAR[i % RAR.length]!, TYPES[i % TYPES.length]!,
-      i % 7, 40 + ((i * 13) % 60), (i * 17) % 80, i % 3 !== 0),
+      i % 7, 40 + ((i * 13) % 60), (i * 17) % 80, i % 3 !== 0,
+      // 1頭はスマート出品中(走る)、Decision 087監査の表示確認用
+      'ACTIVE', i === 1 ? 'SMART' : null),
   ),
+  // 手動出品中(Market Lock=今夜走らない)
+  H('m001', 'Velvet Storm', 'RARE', 'SPRINTER', 5, 70, 20, false, 'ACTIVE', 'MANUAL'),
+  H('m002', 'Quiet Ember', 'COMMON', 'BALANCED', 2, 55, 33, false, 'ACTIVE', 'MANUAL'),
   H('f001', 'Burning Meteor', 'RARE', 'POWER', 4, 0, 0, false, 'BURNED'),
   H('f002', 'Falling Falcon', 'COMMON', 'LUCK', 3, 0, 0, false, 'BURNED'),
   H('f003', 'Grand Victory', 'EPIC', 'ENDURANCE', 7, 0, 0, false, 'DAY7_CLEARED'),
   H('f004', 'Lucky Legend', 'LEGENDARY', 'BALANCED', 7, 0, 0, false, 'MEMORIALIZED'),
+  H('f005', 'Aurora Crown', 'RARE', 'SPRINTER', 7, 0, 0, false, 'MEMORIALIZED'),
 ];
 
 export default function StablePreview() {

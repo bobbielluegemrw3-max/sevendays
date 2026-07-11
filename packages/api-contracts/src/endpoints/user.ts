@@ -146,6 +146,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         [today],
       );
       const effectiveRaceDate = completedToday.rows[0] ? addDays(today, 1) : today;
+      // listing: 'SMART' | 'MANUAL' | null — 厩舎UIが「出品中(手動=今夜走らない)」を
+      // 事実どおり表示するため(Decision 087監査)。limitは100→500(全件表示UIと整合)。
       const rows = await ctx.client.query(
         `select h.id, h.name, h.status::text as status, h.current_day, h.horse_type::text as horse_type,
                 h.rarity::text as rarity, h.condition::text as condition, h.fatigue::text as fatigue,
@@ -153,8 +155,10 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
                 exists(
                   select 1 from training_sessions t
                   where t.horse_id = h.id and t.effective_race_date = $2
-                ) as trained_for_next_race
-         from horses h where h.owner_user_id = $1 order by h.created_at desc limit 100`,
+                ) as trained_for_next_race,
+                (select l.source::text from market_listings l
+                 where l.horse_id = h.id and l.status = 'LISTED' limit 1) as listing
+         from horses h where h.owner_user_id = $1 order by h.created_at desc limit 500`,
         [ctx.userId, effectiveRaceDate],
       );
       return { horses: rows.rows };

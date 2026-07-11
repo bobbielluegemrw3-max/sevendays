@@ -38,6 +38,50 @@
   .stat { flex: none; }
 }
 
+/* ---- 出品中/チャンピオンセクション(Decision 087監査) ------------------------ */
+.secLabelListed { color: var(--warn); }
+.secLabelChamp { color: var(--gold-bright); }
+.secLink { color: var(--cyan); text-decoration: none; }
+.secLink:hover { text-decoration: underline; }
+.smartTag {
+  font-family: var(--font-display); font-size: 8.5px; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--cyan); border: 1px solid rgba(0, 234, 255, 0.4); border-radius: 5px;
+  padding: 1px 6px; white-space: nowrap; background: rgba(0, 234, 255, 0.07); flex: none;
+}
+.listedCard { border-color: rgba(230, 178, 74, 0.35); }
+.listedBadge {
+  display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px;
+  font-family: var(--font-display); font-size: 8.5px; font-weight: 700; letter-spacing: 0.08em;
+  white-space: nowrap; color: var(--warn); border: 1px solid rgba(230, 178, 74, 0.5);
+  background: rgba(230, 178, 74, 0.1);
+}
+.listedNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--warn); }
+
+/* チャンピオンNFTギャラリー — 金のグラデ枠(マイフォルダ) */
+.champGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+.champCard {
+  display: block; text-decoration: none; border-radius: 15px; padding: 2px;
+  background: linear-gradient(160deg, var(--gold), #f7eccb 45%, #7d6234);
+  box-shadow: 0 10px 28px -10px rgba(201, 168, 106, 0.45);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.champCard:hover { transform: translateY(-3px); box-shadow: 0 14px 34px -10px rgba(201, 168, 106, 0.6); }
+.champInner {
+  border-radius: 13px; background: linear-gradient(180deg, #16132a, #0a0714);
+  padding: 14px 10px 13px; text-align: center;
+}
+.champArt { width: 112px; height: 112px; margin: 0 auto; filter: drop-shadow(0 0 14px rgba(201, 168, 106, 0.35)); }
+.champName {
+  font-family: var(--font-display); font-weight: 800; font-size: 12.5px; color: var(--gold-bright);
+  margin-top: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.champTag {
+  display: inline-flex; margin-top: 7px; font-family: var(--font-display); font-size: 8px;
+  font-weight: 700; letter-spacing: 0.14em; color: #0a0813;
+  background: linear-gradient(92deg, var(--gold), #f7eccb); border-radius: 5px; padding: 2px 8px;
+}
+.champSub { font-family: var(--font-mono); font-size: 8.5px; color: var(--muted); margin-top: 6px; }
+
 /* ---- 「馬を迎える」CTA ------------------------------------------------------ */
 .welcome {
   border: 1px solid rgba(0, 234, 255, 0.3); border-radius: 16px; padding: 16px 20px;

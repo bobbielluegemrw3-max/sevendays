@@ -1151,6 +1151,12 @@ describe('manual marketplace (Decision 076)', () => {
     expect(placeBody.my_listings.some((l) => l.horse_id === horse)).toBe(true);
     expect(typeof placeBody.pending_buy_count).toBe('number');
 
+    // GET /horses が出品状態を返す(厩舎ページの事実表示、Decision 087監査)
+    const myHorses = await call('GET', '/api/v1/horses', asUser(seller));
+    const rows = (myHorses.body as { horses: { id: string; listing: string | null }[] }).horses;
+    expect(rows.find((h) => h.id === horse)?.listing).toBe('MANUAL');
+    expect(rows.find((h) => h.id === day0)?.listing).toBeNull();
+
     // Unlist the SAME day -> blocked by the one-action-per-day rule.
     const sameDay = await call('POST', '/api/v1/market/unlist', asUser(seller), {
       body: { horse_id: horse },
