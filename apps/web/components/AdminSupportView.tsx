@@ -46,6 +46,7 @@ export function AdminSupportView() {
   const [bcTargets, setBcTargets] = useState<number | null>(null);
   const [bcBusy, setBcBusy] = useState(false);
   const [bcResult, setBcResult] = useState<string | null>(null);
+  const [bcPush, setBcPush] = useState(false);
 
   const load = useCallback(async () => {
     const result = await apiFetch<{ messages: CsMessage[] }>('/api/v1/admin/cs/queue', { method: 'GET' });
@@ -117,15 +118,23 @@ export function AdminSupportView() {
     setError(null);
     const result = await apiFetch<{ sent: number; failed: number; total: number }>(
       '/api/v1/admin/cs/broadcast',
-      { method: 'POST', body: { subject: bcSubject, body: bcBody, mode }, idempotencyKey: crypto.randomUUID() },
+      { method: 'POST', body: { subject: bcSubject, body: bcBody, mode, push: bcPush }, idempotencyKey: crypto.randomUUID() },
     );
     setBcBusy(false);
     if (result.status !== 200) {
       setError(errorMessage(result.body) ?? '一斉送信に失敗しました');
       return;
     }
-    const r = result.body as { sent: number; failed: number; total: number };
-    setBcResult(`${mode === 'TEST' ? 'テスト送信' : '一斉送信'}完了: ${r.sent}/${r.total} 件送信${r.failed > 0 ? ` / 失敗 ${r.failed}` : ''}`);
+    const r = result.body as {
+      sent: number; failed: number; total: number;
+      push?: { configured: boolean; sent: number } | null;
+    };
+    const pushNote = r.push
+      ? r.push.configured
+        ? ` / プッシュ ${r.push.sent}件`
+        : ' / プッシュ未設定(VAPID)'
+      : '';
+    setBcResult(`${mode === 'TEST' ? 'テスト送信' : '一斉送信'}完了: ${r.sent}/${r.total} 件送信${r.failed > 0 ? ` / 失敗 ${r.failed}` : ''}${pushNote}`);
     await loadSent();
   }
 
@@ -412,6 +421,12 @@ export function AdminSupportView() {
             placeholder={'English text first...\n\n----------------------------------------\n\n日本語は区切り線の下に...\n\nSeven Days Derby Support\nSeven Days Derby サポート'}
             onChange={(e) => setBcBody(e.target.value)}
           />
+          <div className={s.controls} style={{ marginTop: 8 }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={bcPush} onChange={(e) => setBcPush(e.target.checked)} />
+              プッシュ通知も同時に送る(タイトル=件名。TESTは自分の端末のみ)
+            </label>
+          </div>
           <div className={s.controls} style={{ marginTop: 8 }}>
             <button
               type="button"

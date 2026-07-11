@@ -7,6 +7,7 @@ import { registerItemEndpoints } from './endpoints/items.js';
 import { registerDerbyEndpoints } from './endpoints/derby.js';
 import { registerInternalEndpoints } from './endpoints/internal.js';
 import { registerCsEndpoints } from './endpoints/cs.js';
+import { registerPushEndpoints } from './endpoints/push.js';
 
 export * from './errors.js';
 export * from './forbidden.js';
@@ -24,6 +25,7 @@ export function buildApiRegistry(): ApiRegistry {
   registerAdminEndpoints(registry);
   registerCsEndpoints(registry);
   registerInternalEndpoints(registry);
+  registerPushEndpoints(registry);
   return registry;
 }
 
@@ -31,3 +33,20 @@ export function buildApiRegistry(): ApiRegistry {
 export { generateCsReply, type CsAiContext, type CsAiResult } from './cs/ai.js';
 export { sendCsEmail, CsMailError } from './cs/mail.js';
 export { CS_KNOWLEDGE } from './cs/knowledge.js';
+
+// Webプッシュ(Decision 084)
+export {
+  sendNightlyBroadcast,
+  raceStartMessage,
+  raceReminderMessage,
+  hasBroadcast,
+  type BroadcastResult,
+} from './push/broadcast.js';
+export {
+  buildWebPushTransport,
+  vapidPublicKey,
+  type PushTransport,
+  type PushMessage,
+  type PushSendResult,
+  type PushSubscriptionRow,
+} from './push/webpush.js';

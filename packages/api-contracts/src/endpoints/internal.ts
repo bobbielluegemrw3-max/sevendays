@@ -13,6 +13,8 @@ import { computeEconomyMetrics, runAllStressScenarios } from '@sevendays/economy
 import { batchDateFor } from '@sevendays/shared';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry } from '../router.js';
+import { buildWebPushTransport } from '../push/webpush.js';
+import { hasBroadcast, raceReminderMessage, raceStartMessage, sendNightlyBroadcast } from '../push/broadcast.js';
 
 /**
  * Internal APIs (07_API.md) — Cloud Run service authentication ONLY.
@@ -41,11 +43,49 @@ export function registerInternalEndpoints(registry: ApiRegistry): void {
     auth: 'internal',
     input: schedulableDateInput,
     handler: async (ctx, input) => {
+      const batchDate = input.batch_date ?? batchDateFor(new Date());
+      // 「レース開始」プッシュ(Decision 084)— 主経路は5分前リマインド
+      // (/internal/push/race-reminder)。ここはワーカーが窓を逃した夜のフォールバック。
+      // broadcast_keyで冪等(再実行でも1晩1回)、VAPID未設定ではスキップ、
+      // いかなる失敗もバッチを止めない。
+      const transport = buildWebPushTransport();
+      if (transport) {
+        try {
+          if (!(await hasBroadcast(ctx.client, `race-soon:${batchDate}`))) {
+            await sendNightlyBroadcast(ctx.client, {
+              broadcastKey: `race-start:${batchDate}`,
+              message: raceStartMessage(),
+              transport,
+            });
+          }
+        } catch {
+          // 通知はベストエフォート — 精算バッチの成否に関与させない
+        }
+      }
       const result = await runBatch(ctx.client, {
-        batchDate: input.batch_date ?? batchDateFor(new Date()),
+        batchDate,
         handlers: buildProductionHandlers(),
       });
       return result;
+    },
+  });
+
+  // 発走5分前リマインド(Decision 084)。ワーカーのスケジューラーが
+  // 19:55 MYT の窓で叩く。ブロードキャストの一意クレームが冪等性を担保。
+  registry.register({
+    method: 'POST',
+    path: '/internal/push/race-reminder',
+    auth: 'internal',
+    input: schedulableDateInput,
+    handler: async (ctx, input) => {
+      const batchDate = input.batch_date ?? batchDateFor(new Date());
+      const transport = buildWebPushTransport();
+      if (!transport) return { skipped: true, reason: 'VAPID not configured' };
+      return sendNightlyBroadcast(ctx.client, {
+        broadcastKey: `race-soon:${batchDate}`,
+        message: raceReminderMessage(),
+        transport,
+      });
     },
   });
 

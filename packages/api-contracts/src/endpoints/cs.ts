@@ -3,6 +3,8 @@ import { ApiError } from '../errors.js';
 import type { ApiRegistry, HandlerContext } from '../router.js';
 import { sendCsEmail, CsMailError } from '../cs/mail.js';
 import { generateCsReply } from '../cs/ai.js';
+import { buildWebPushTransport } from '../push/webpush.js';
+import { sendNightlyBroadcast, type BroadcastResult } from '../push/broadcast.js';
 
 /** AIカスタマーサービス(2026-07-09): 承認キューの閲覧・承認送信・却下。 */
 
@@ -231,6 +233,8 @@ export function registerCsEndpoints(registry: ApiRegistry): void {
       body: z.string().min(1).max(50000),
       // TEST=自分(呼び出した管理者)宛てのみ / ALL=全ACTIVEユーザー
       mode: z.enum(['TEST', 'ALL']),
+      // true でプッシュ通知も同時配信(Decision 084)。TESTは自分の購読端末のみ。
+      push: z.boolean().optional(),
     }),
     handler: async (ctx, input) => {
       requireAdminRole(ctx);
@@ -299,8 +303,39 @@ export function registerCsEndpoints(registry: ApiRegistry): void {
         `update cs_broadcasts set status = $2, completed_at = now() where id = $1`,
         [broadcastId, failedCount === recipients.length && recipients.length > 0 ? 'FAILED' : 'DONE'],
       );
-      await audit(ctx, `CS_BROADCAST:${input.mode}:${sentCount}/${recipients.length}`, broadcastId);
-      return { id: broadcastId, status: 'DONE', total: recipients.length, sent: sentCount, failed: failedCount };
+
+      // プッシュ同時配信(Decision 084)。broadcast_key=cs:{ジョブID}で冪等、
+      // TESTは自分の購読端末のみ。失敗してもメルマガの成否には関与させない。
+      let push: (BroadcastResult & { configured: boolean }) | null = null;
+      if (input.push) {
+        const transport = buildWebPushTransport();
+        if (!transport) {
+          push = { configured: false, skipped: true, sent: 0, disabled: 0, failed: 0 };
+        } else {
+          try {
+            const pushResult = await sendNightlyBroadcast(ctx.client, {
+              broadcastKey: `cs:${broadcastId}`,
+              message: {
+                title: input.subject.slice(0, 60),
+                body: 'お知らせが届きました。メールをご確認ください。 / A new announcement has arrived — check your email.',
+                url: '/dashboard',
+              },
+              transport,
+              ...(input.mode === 'TEST' ? { onlyUserId: ctx.userId } : {}),
+            });
+            push = { configured: true, ...pushResult };
+          } catch {
+            push = { configured: true, skipped: false, sent: 0, disabled: 0, failed: -1 };
+          }
+        }
+      }
+
+      await audit(
+        ctx,
+        `CS_BROADCAST:${input.mode}:${sentCount}/${recipients.length}${push ? `:push${push.sent}` : ''}`,
+        broadcastId,
+      );
+      return { id: broadcastId, status: 'DONE', total: recipients.length, sent: sentCount, failed: failedCount, push };
     },
   });
 
