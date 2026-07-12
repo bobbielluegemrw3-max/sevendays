@@ -1656,8 +1656,9 @@ describe('admin user operations (items, freeze, dual-approved USDT grants)', () 
       body: { status: 'ACTIVE' },
     });
 
-    // 運営準備金に原資を用意(残高不足の付与はDBトリガーが
-    // NEGATIVE_BALANCE_FORBIDDEN で拒否する — それ自体が仕様)
+    // 運営準備金に原資を用意 — 2026-07-13からグラント原資はテストネット暫定で
+    // PLATFORM_DEPOSIT_CLEARING(マイナス許容)のためこの積み立ては必須ではないが、
+    // メインネット移行で OPERATING_RESERVE に戻した時もこのテストが通るよう残す。
     const clearing = await getPlatformAccountId(client, 'PLATFORM_DEPOSIT_CLEARING');
     const operating = await getPlatformAccountId(client, 'PLATFORM_OPERATING_RESERVE');
     await postTransaction(client, {

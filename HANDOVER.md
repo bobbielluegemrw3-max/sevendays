@@ -103,6 +103,7 @@ M5 リリース判定 ✅ **全システム本番稼働**(2026-07-04): Web=seven
 - **残(実デプロイ)**: オーナーのGCPプロジェクト作成→`infra/cloudrun/README.md`の手順(Secret 6本、SA 2本、スクリプト4本)。QuickNodeキーが揃えばchain-workerも同時に本稼働
 - **積み残しの技術負債(診断で記録済み)**: ①カバレッジ計測導入 ②スナップショット/割当ループのN+1集合SQL化(10万頭で顕在化) ③admin retryの非同期化 ④CIグリーンの確認(**ユーザーにActionsタブ確認を4回依頼済み・未回答**)
 - ローンチ前: Supabaseキーローテーション(チャット経由でファイル共有したため)・チェーン最終確認(Polygon or BSC)・E18 KYC要否
+- **メインネット移行時(必須)**: admin fund-grant の原資を `PLATFORM_DEPOSIT_CLEARING` → `PLATFORM_OPERATING_RESERVE` に戻す(2026-07-13 テストネットのデバッグ体験用にテストUSDT付与のため暫定変更・`endpoints/admin.ts` の approve ハンドラ)
 
 ### 未確定事項(オーナー確認待ち)
 - E14: 大口出金のAdmin Review閾値

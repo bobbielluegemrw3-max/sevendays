@@ -729,7 +729,12 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
         throw new ApiError('FORBIDDEN', 'Dual approval requires a different admin');
       }
       const user = await ensureUserAccounts(ctx.client, g.user_id);
-      const operating = await getPlatformAccountId(ctx.client, 'PLATFORM_OPERATING_RESERVE');
+      // ⚠️ テストネット(Amoy)運用中の暫定原資(2026-07-13): デバッグ体験用の
+      // テストUSDT付与のため、マイナス許容の入金クリアリング勘定から出す
+      // (2026-07-03のbobbi宛500付与と同じ仕訳)。運営準備金(残9.40)では枯渇する。
+      // メインネット移行時に必ず PLATFORM_OPERATING_RESERVE へ戻すこと
+      // (HANDOVER.md メインネット移行チェックリストに記載)。
+      const source = await getPlatformAccountId(ctx.client, 'PLATFORM_DEPOSIT_CLEARING');
       const amount = Money.of(g.amount);
       // postAdminAdjustment が二重承認(FINANCE_ADMIN+SUPER_ADMIN の合算)と
       // 監査ログをアトミックに強制する。
@@ -742,7 +747,7 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
         approvedBy1: g.requested_by,
         approvedBy2: ctx.userId,
         entries: [
-          { accountId: operating, direction: 'DEBIT', amount },
+          { accountId: source, direction: 'DEBIT', amount },
           { accountId: user.available, direction: 'CREDIT', amount },
         ],
       });
