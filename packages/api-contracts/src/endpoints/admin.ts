@@ -811,7 +811,8 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
       );
       return {
         races: races.rows,
-        daily_derby_live: process.env.DAILY_DERBY_LIVE === '1',
+        // 2026-07-12: /races は本番モード固定(旧 DAILY_DERBY_LIVE env 廃止)
+        daily_derby_live: true,
       };
     },
   });

@@ -21,6 +21,9 @@ const LINKS: { href: string; label: string }[] = [
   { href: '/admin/withdrawals', label: '出金レビュー' },
   { href: '/admin/recovery', label: 'リカバリ' },
   { href: '/admin/audit', label: '監査ログ' },
+  // デモ上映(2026-07-12): 20:00を待たずにダービー演出を見せるための上映室。
+  // /dev/* は requireDevPreviewAccess で管理者のみ閲覧可(一般ユーザーは404)。
+  { href: '/dev/derby-preview', label: 'デモ上映' },
 ];
 
 export function AdminNav() {

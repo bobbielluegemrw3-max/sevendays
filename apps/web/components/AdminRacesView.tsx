@@ -30,7 +30,7 @@ export function AdminRacesView({ data }: { data: AdminRaces }) {
         <div className={s.metric}>
           <div className={s.metricK}>Daily Derby 表示モード</div>
           <div className={s.metricV}>{data.daily_derby_live ? 'LIVE(実データ)' : 'プロトタイプ'}</div>
-          <div className={s.metricJson}>環境変数 DAILY_DERBY_LIVE で切替(Render)</div>
+          <div className={s.metricJson}>本番モード固定(2026-07-12〜)・演出確認は「デモ上映」</div>
         </div>
         <div className={s.metric}>
           <div className={s.metricK}>直近レース数(表示分)</div>
