@@ -1670,12 +1670,28 @@ describe('admin user operations (items, freeze, dual-approved USDT grants)', () 
       ],
     });
 
-    // ---- USDT grant: request (PENDING) -> requester cannot approve -> 2nd admin approves
+    // ---- USDT grant (Decision 089): ≤1,000 は1名で即時付与(監査ログあり)
+    const instant = await call('POST', `/api/v1/admin/users/${target}/fund-grant`, asAdmin1, {
+      body: { amount: 25, reason: 'debug session test USDT' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(instant.status).toBe(200);
+    expect((instant.body as { status: string }).status).toBe('APPROVED');
+    const balanceAfterInstant = await client.query<{ balance: string }>(
+      `select b.balance::text as balance
+       from ledger_accounts a join ledger_account_balances b on b.account_id = a.id
+       where a.owner_id = $1 and a.account_type = 'USER_AVAILABLE'`,
+      [target],
+    );
+    expect(Number(balanceAfterInstant.rows[0]!.balance)).toBe(25);
+
+    // ---- USDT grant >1,000: request (PENDING) -> requester cannot approve -> 2nd admin approves
     const requested = await call('POST', `/api/v1/admin/users/${target}/fund-grant`, asAdmin1, {
-      body: { amount: 25, reason: 'compensation test' },
+      body: { amount: 2000, reason: 'compensation test' },
       idempotencyKey: randomUUID(),
     });
     expect(requested.status).toBe(200);
+    expect((requested.body as { status: string }).status).toBe('PENDING');
     const grantId = (requested.body as { id: string }).id;
 
     const selfApprove = await call('POST', `/api/v1/admin/fund-grants/${grantId}/approve`, asAdmin1);
@@ -1690,7 +1706,7 @@ describe('admin user operations (items, freeze, dual-approved USDT grants)', () 
        where a.owner_id = $1 and a.account_type = 'USER_AVAILABLE'`,
       [target],
     );
-    expect(Number(balance.rows[0]!.balance)).toBe(25);
+    expect(Number(balance.rows[0]!.balance)).toBe(2025);
 
     const again = await call('POST', `/api/v1/admin/fund-grants/${grantId}/approve`, asAdmin2);
     expect(again.status).toBe(409);

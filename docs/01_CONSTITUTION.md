@@ -78,7 +78,7 @@ Ledger SHALL be the single source of truth.
 
 Every balance change SHALL be recorded through double-entry bookkeeping. Direct balance updates are forbidden. Posted ledger transactions are immutable. Every financial transaction SHALL include an idempotency key. Settlement Clearing account SHALL return to zero after every successful batch.
 
-Admin adjustments require audit records and dual approval.
+Admin adjustments require audit records and dual approval. (Amended by Decision 089, 2026-07-13: adjustments of 1,000 USDT or less MAY be posted with a single active FINANCE_ADMIN/SUPER_ADMIN approval; the audit record remains mandatory in all cases. Larger adjustments keep dual approval.)
 
 ## Deposit and Withdrawal Rules
 

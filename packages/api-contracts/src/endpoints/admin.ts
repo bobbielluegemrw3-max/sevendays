@@ -11,7 +11,13 @@ import {
   runBatch,
   buildProductionHandlers,
 } from '@sevendays/settlement-engine';
-import { ensureUserAccounts, getPlatformAccountId, postAdminAdjustment } from '@sevendays/ledger';
+import {
+  ensureUserAccounts,
+  getPlatformAccountId,
+  postAdminAdjustment,
+  postSingleApproverAdjustment,
+  SINGLE_APPROVAL_ADJUSTMENT_LIMIT_USDT,
+} from '@sevendays/ledger';
 import { Money } from '@sevendays/shared';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry, HandlerContext } from '../router.js';
@@ -675,7 +681,6 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
       requireAdminRole(ctx);
       const target = await ctx.client.query(`select id from users where id = $1`, [ctx.params.id]);
       if (target.rows.length === 0) throw new ApiError('NOT_FOUND', 'User not found');
-      // 憲法: Admin adjustments require dual approval — まず申請(PENDING)を作る。
       const row = await ctx.client.query<{ id: string }>(
         `insert into admin_fund_grants (user_id, amount, reason, requested_by, idempotency_key)
          values ($1, $2, $3, $4, $5)
@@ -683,8 +688,42 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
          returning id`,
         [ctx.params.id, input.amount, input.reason, ctx.userId, ctx.idempotencyKey],
       );
-      await audit(ctx, 'ADMIN_FUND_GRANT_REQUESTED', 'admin_fund_grant', row.rows[0]!.id);
-      return { id: row.rows[0]!.id, status: 'PENDING' };
+      const grantId = row.rows[0]!.id;
+
+      // Decision 089 (2026-07-13): 小口(≤1,000 USDT)は1名で即時付与 —
+      // 出金レビューの閾値思想(Decision 060-064)と同じく、大口だけ二重承認。
+      // 台帳レイヤー(postSingleApproverAdjustment)が上限とロールを再強制する。
+      if (input.amount <= SINGLE_APPROVAL_ADJUSTMENT_LIMIT_USDT) {
+        const user = await ensureUserAccounts(ctx.client, ctx.params.id!);
+        // ⚠️ テストネット(Amoy)運用中の暫定原資 — メインネット移行時に
+        // PLATFORM_OPERATING_RESERVE へ戻すこと(HANDOVER.md チェックリスト)。
+        const source = await getPlatformAccountId(ctx.client, 'PLATFORM_DEPOSIT_CLEARING');
+        const amount = Money.of(input.amount);
+        const posted = await postSingleApproverAdjustment(ctx.client, {
+          type: 'ADMIN_ADJUSTMENT',
+          idempotencyKey: `admin-fund-grant:${grantId}`,
+          referenceType: 'admin_fund_grant',
+          referenceId: grantId,
+          reason: input.reason,
+          approvedBy: ctx.userId,
+          entries: [
+            { accountId: source, direction: 'DEBIT', amount },
+            { accountId: user.available, direction: 'CREDIT', amount },
+          ],
+        });
+        await ctx.client.query(
+          `update admin_fund_grants
+           set status = 'APPROVED', approved_by = $2, approved_at = now(), ledger_transaction_id = $3
+           where id = $1`,
+          [grantId, ctx.userId, posted.transactionId],
+        );
+        await audit(ctx, 'ADMIN_FUND_GRANT_INSTANT', 'admin_fund_grant', grantId);
+        return { id: grantId, status: 'APPROVED', instant: true };
+      }
+
+      // 憲法: 大口のAdmin adjustmentsは二重承認 — 申請(PENDING)を作る。
+      await audit(ctx, 'ADMIN_FUND_GRANT_REQUESTED', 'admin_fund_grant', grantId);
+      return { id: grantId, status: 'PENDING' };
     },
   });
 

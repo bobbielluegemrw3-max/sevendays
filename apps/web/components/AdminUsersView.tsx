@@ -447,9 +447,9 @@ export function AdminUsersView() {
                           disabled={!(Number(fundAmount) > 0) || fundReason.trim() === ''}
                           onClick={() => void act(`/api/v1/admin/users/${u.id}/fund-grant`, { amount: Number(fundAmount), reason: fundReason.trim() }, true)}
                         >
-                          USDT付与を申請
+                          USDT付与
                         </button>
-                        <span className={s.cnt}>※別の管理者の承認で送金されます</span>
+                        <span className={s.cnt}>※1,000以下は即時反映・1,000超は別の管理者の承認が必要です</span>
                       </div>
                       <div className={s.controls}>
                         {dossier.user.status === 'ACTIVE' ? (
