@@ -14,6 +14,8 @@ import {
 } from '../src/index.js';
 
 let client: SqlClient;
+// derby status のプロセス内キャッシュはテスト間で状態が漏れるため無効化
+process.env.DERBY_STATUS_CACHE_MS = '0';
 const registry = buildApiRegistry();
 
 beforeAll(async () => {
@@ -730,6 +732,11 @@ describe('training (Decision 066)', () => {
     const afterRead = await call('GET', '/api/v1/notifications', asUser(owner));
     const mine = (afterRead.body as { notifications: { read_at: string | null; is_broadcast: boolean }[] }).notifications;
     expect(mine.filter((n) => !n.is_broadcast).every((n) => n.read_at != null)).toBe(true);
+
+    // ナビバッジ用の軽量カウント(スパイク対策 2026-07-12)
+    const count = await call('GET', '/api/v1/notifications/unread-count', asUser(owner));
+    expect(count.status).toBe(200);
+    expect((count.body as { unread: number }).unread).toBe(0);
 
     // Second training for the same effective race date is rejected.
     const duplicate = await call('POST', `/api/v1/horses/${horseId}/training`, asUser(owner), {
@@ -1533,6 +1540,20 @@ describe('daily derby status (ADR-008 R1)', () => {
     await client.query(`update batch_runs set status = 'FAILED' where id = $1`, [batch.rows[0]!.id]);
     const failed = await call('GET', '/api/v1/daily-derby/status', asUser(user));
     expect((failed.body as { phase: string }).phase).toBe('FAILED_SAFE_MODE');
+
+    // 共有部分キャッシュ(スパイク対策 2026-07-12): TTL内はDB変化を映さない=キャッシュ命中
+    process.env.DERBY_STATUS_CACHE_MS = '60000';
+    try {
+      const seeded = await call('GET', '/api/v1/daily-derby/status', asUser(user));
+      expect((seeded.body as { phase: string }).phase).toBe('FAILED_SAFE_MODE');
+      await client.query(`update batch_runs set status = 'COMPLETED' where id = $1`, [batch.rows[0]!.id]);
+      const cached = await call('GET', '/api/v1/daily-derby/status', asUser(user));
+      expect((cached.body as { phase: string }).phase).toBe('FAILED_SAFE_MODE'); // まだキャッシュ
+      // 個人部分(my_horse_names)はキャッシュ外=常に本人のもの
+      expect((cached.body as { my_horse_names: string[] }).my_horse_names).toContain('Derby Status Horse');
+    } finally {
+      process.env.DERBY_STATUS_CACHE_MS = '0';
+    }
 
     // cleanup so other tests see no batch for today
     await client.query(`delete from batch_runs where id = $1`, [batch.rows[0]!.id]);

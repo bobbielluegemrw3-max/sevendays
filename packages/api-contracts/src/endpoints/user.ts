@@ -673,17 +673,33 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     },
   });
 
+  // レース結果はDBトリガーで不変(race_results immutable)なので、ショー直後の
+  // 集中閲覧(1回=最大1000行)をプロセス内キャッシュで吸収する(2026-07-12)。
+  const raceResultsCache = new Map<string, { at: number; body: unknown }>();
+  const RESULTS_CACHE_CAP = 40;
   registry.register({
     method: 'GET',
     path: '/api/v1/races/:id/results',
     auth: 'user',
     handler: async (ctx) => {
+      const raceId = ctx.params.id!;
+      const ttl = Number(process.env.RACE_RESULTS_CACHE_MS ?? 60000);
+      const hit = raceResultsCache.get(raceId);
+      if (hit && Date.now() - hit.at < ttl) return hit.body as Record<string, unknown>;
       const rows = await ctx.client.query(
         `select horse_id, final_score::text as final_score, final_rank, is_burned
          from race_results where race_id = $1 order by final_rank limit 1000`,
         [ctx.params.id],
       );
-      return { results: rows.rows };
+      const body = { results: rows.rows };
+      if (rows.rows.length > 0) {
+        raceResultsCache.set(raceId, { at: Date.now(), body });
+        if (raceResultsCache.size > RESULTS_CACHE_CAP) {
+          const oldest = raceResultsCache.keys().next().value;
+          if (oldest) raceResultsCache.delete(oldest);
+        }
+      }
+      return body;
     },
   });
 
@@ -783,6 +799,22 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         [ctx.userId],
       );
       return { notifications: rows.rows };
+    },
+  });
+
+  // ナビバッジ専用の軽量カウント(2026-07-12 スパイク対策)。従来は全ページ遷移の
+  // たびに通知50件(JSON本文込み)を取得してクライアントで数えていた — COUNT 1本
+  // (部分インデックス idx_notifications_unread が効く)に置換。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/notifications/unread-count',
+    auth: 'user',
+    handler: async (ctx) => {
+      const r = await ctx.client.query<{ n: number }>(
+        `select count(*)::int as n from notifications where user_id = $1 and read_at is null`,
+        [ctx.userId],
+      );
+      return { unread: r.rows[0]?.n ?? 0 };
     },
   });
 

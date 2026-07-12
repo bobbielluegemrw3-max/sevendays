@@ -1,5 +1,6 @@
 import { raceNightNameV2 } from '@sevendays/domain';
 import { batchDateFor } from '@sevendays/shared';
+import type { SqlClient } from '@sevendays/shared';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry } from '../router.js';
 
@@ -67,6 +68,162 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
     },
   });
 
+  // ---- 20時スパイク対策(2026-07-12) --------------------------------------
+  // status はショー窓(±10分)で全視聴者が5秒間隔でポーリングする最ホットパス。
+  //  - 共有部分(バッチ状態・レース・集計・ティッカー・予報)は全ユーザー共通なので
+  //    プロセス内キャッシュ(既定2秒 TTL・env DERBY_STATUS_CACHE_MS で調整/テストは0)。
+  //    毎秒何百リクエスト来てもDBへは約2秒に1回になる。
+  //  - 旧 `personal`(完了後の個人結果・毎ポーリング4〜5クエリ)はクライアント未使用
+  //    だったため撤去(互換のため常に null を返す)。個人の夜結果は
+  //    /daily-derby/my-results/:date が担う(ショー完了時に1回だけ取得される)。
+  //  - 個人依存で残るのは YOUハイライト用の my_horses のみ(インデックス1クエリ)。
+  //  - 日付絞りは created_at::date=… (非サージャブル) をやめ、範囲条件に変更。
+  let statusShared: { key: string; at: number; body: Record<string, unknown> } | null = null;
+
+  async function computeSharedStatus(
+    client: SqlClient,
+    now: Date,
+    today: string,
+  ): Promise<Record<string, unknown>> {
+    const batch = await client.query<{
+      id: string;
+      status: string;
+      created_at: string;
+    }>(
+      `select id, status::text as status, created_at::text as created_at
+       from batch_runs where batch_date = $1`,
+      [today],
+    );
+    const batchRow = batch.rows[0] ?? null;
+    const phase = !batchRow
+      ? 'WAITING'
+      : batchRow.status === 'COMPLETED'
+        ? 'COMPLETED'
+        : batchRow.status === 'FAILED' || batchRow.status === 'PARTIAL_FAILED'
+          ? 'FAILED_SAFE_MODE'
+          : 'LIVE';
+
+    // Tonight's race (if the batch exists).
+    const race = batchRow
+      ? await client.query<{
+          id: string;
+          participant_count: number | null;
+          weather: string | null; track_condition: string | null; surface: string | null;
+          status: string;
+        }>(
+          `select id, participant_count, weather::text as weather,
+                  track_condition::text as track_condition, surface::text as surface,
+                  status::text as status
+           from races where batch_run_id = $1 limit 1`,
+          [batchRow.id],
+        )
+      : null;
+    const raceRow = race?.rows[0] ?? null;
+
+    let counts = null;
+    let ticker: string[] = [];
+
+    if (raceRow) {
+      const agg = await client.query<{
+        burns: number;
+        listed: number;
+        assignments: number;
+        mints: number;
+      }>(
+        `select
+           (select count(*)::int from horse_burns where race_id = $1) as burns,
+           (select count(*)::int from market_listings where batch_run_id = $2
+              or (source = 'MANUAL'
+                  and created_at >= $3::date and created_at < $3::date + interval '1 day')) as listed,
+           (select count(*)::int from ownership_assignments
+              where status = 'SETTLED'
+                and created_at >= $3::date and created_at < $3::date + interval '1 day') as assignments,
+           (select count(*)::int from horses
+              where created_at >= $3::date and created_at < $3::date + interval '1 day') as mints`,
+        [raceRow.id, batchRow!.id, today],
+      );
+      const a = agg.rows[0]!;
+      counts = {
+        horses: raceRow.participant_count ?? 0,
+        burns: a.burns,
+        buffs: a.burns,
+        listed: a.listed,
+        assignments: a.assignments,
+        mints: a.mints,
+      };
+
+      // Anonymized ticker: recent settled matches / burns / day7 clears.
+      const tick = await client.query<{ line: string; at: string }>(
+        `(
+          select 'SOLD — ' || h.name || ' ' || a.assigned_price::text || ' USDT' as line,
+                 a.created_at::text as at
+          from ownership_assignments a join horses h on h.id = a.horse_id
+          where a.status = 'SETTLED'
+            and a.created_at >= $2::date and a.created_at < $2::date + interval '1 day'
+          order by a.created_at desc limit 8
+        )
+        union all
+        (
+          select 'BURN — ' || h.name, hb.created_at::text
+          from horse_burns hb join horses h on h.id = hb.horse_id
+          where hb.race_id = $1
+          order by hb.created_at desc limit 6
+        )
+        union all
+        (
+          select 'DAY7 — ' || h.name || ' CLEARED', s.created_at::text
+          from race_participant_snapshots s join horses h on h.id = s.horse_id
+          where s.race_id = $1 and h.status = 'DAY7_CLEARED'
+          limit 4
+        )
+        order by at desc limit 14`,
+        [raceRow.id, today],
+      );
+      ticker = tick.rows.map((r) => r.line);
+    }
+
+    // ADR-012: ショー最終幕で発表する「明日の予報」(今夜のバッチがコミット済みの場合)。
+    const fc = await client.query<{
+      forecast_weather: string;
+      forecast_track: string;
+      forecast_surface: string;
+    }>(
+      `select forecast_weather::text as forecast_weather,
+              forecast_track::text as forecast_track,
+              forecast_surface::text as forecast_surface
+       from night_forecasts where forecast_date = $1::date + 1`,
+      [today],
+    );
+    const tomorrowForecast = fc.rows[0]
+      ? {
+          weather: fc.rows[0].forecast_weather,
+          track: fc.rows[0].forecast_track,
+          surface: fc.rows[0].forecast_surface,
+        }
+      : null;
+
+    return {
+      next_derby_at: nextDerbyAt(now),
+      phase,
+      live_started_at: batchRow?.created_at ?? null,
+      conditions: raceRow?.surface
+        ? {
+            weather: raceRow.weather,
+            track: raceRow.track_condition,
+            surface: raceRow.surface,
+            night_name: raceNightNameV2({
+              weather: raceRow.weather as never,
+              track: raceRow.track_condition as never,
+              surface: raceRow.surface as never,
+            }),
+          }
+        : null,
+      counts,
+      ticker,
+      tomorrow_forecast: tomorrowForecast,
+    };
+  }
+
   registry.register({
     method: 'GET',
     path: '/api/v1/daily-derby/status',
@@ -75,248 +232,28 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       const now = new Date();
       const today = batchDateFor(now);
 
-      const batch = await ctx.client.query<{
-        id: string;
-        status: string;
-        created_at: string;
-      }>(
-        `select id, status::text as status, created_at::text as created_at
-         from batch_runs where batch_date = $1`,
-        [today],
-      );
-      const batchRow = batch.rows[0] ?? null;
-      const phase = !batchRow
-        ? 'WAITING'
-        : batchRow.status === 'COMPLETED'
-          ? 'COMPLETED'
-          : batchRow.status === 'FAILED' || batchRow.status === 'PARTIAL_FAILED'
-            ? 'FAILED_SAFE_MODE'
-            : 'LIVE';
-
-      // Tonight's race (if the batch exists).
-      const race = batchRow
-        ? await ctx.client.query<{
-            id: string;
-            participant_count: number | null;
-            weather: string | null; track_condition: string | null; surface: string | null;
-            status: string;
-          }>(
-            `select id, participant_count, weather::text as weather,
-                    track_condition::text as track_condition, surface::text as surface,
-                    status::text as status
-             from races where batch_run_id = $1 limit 1`,
-            [batchRow.id],
-          )
-        : null;
-      const raceRow = race?.rows[0] ?? null;
-
-      let counts = null;
-      let ticker: string[] = [];
-      let personal: Record<string, unknown> | null = null;
-
-      if (raceRow) {
-        const agg = await ctx.client.query<{
-          burns: number;
-          listed: number;
-          assignments: number;
-          mints: number;
-        }>(
-          `select
-             (select count(*)::int from horse_burns where race_id = $1) as burns,
-             (select count(*)::int from market_listings where batch_run_id = $2
-                or (source = 'MANUAL' and created_at::date = $3::date)) as listed,
-             (select count(*)::int from ownership_assignments
-                where status = 'SETTLED' and created_at::date = $3::date) as assignments,
-             (select count(*)::int from horses where created_at::date = $3::date) as mints`,
-          [raceRow.id, batchRow!.id, today],
-        );
-        const a = agg.rows[0]!;
-        counts = {
-          horses: raceRow.participant_count ?? 0,
-          burns: a.burns,
-          buffs: a.burns,
-          listed: a.listed,
-          assignments: a.assignments,
-          mints: a.mints,
-        };
-
-        // Anonymized ticker: recent settled matches / burns / day7 clears.
-        const tick = await ctx.client.query<{ line: string; at: string }>(
-          `(
-            select 'SOLD — ' || h.name || ' ' || a.assigned_price::text || ' USDT' as line,
-                   a.created_at::text as at
-            from ownership_assignments a join horses h on h.id = a.horse_id
-            where a.status = 'SETTLED' and a.created_at::date = $2::date
-            order by a.created_at desc limit 8
-          )
-          union all
-          (
-            select 'BURN — ' || h.name, hb.created_at::text
-            from horse_burns hb join horses h on h.id = hb.horse_id
-            where hb.race_id = $1
-            order by hb.created_at desc limit 6
-          )
-          union all
-          (
-            select 'DAY7 — ' || h.name || ' CLEARED', s.created_at::text
-            from race_participant_snapshots s join horses h on h.id = s.horse_id
-            where s.race_id = $1 and h.status = 'DAY7_CLEARED'
-            limit 4
-          )
-          order by at desc limit 14`,
-          [raceRow.id, today],
-        );
-        ticker = tick.rows.map((r) => r.line);
-
-        // Personal result — priority DAY7 > SOLD > BURNED > SURVIVED.
-        if (phase === 'COMPLETED') {
-          const day7 = await ctx.client.query<{ name: string; dna_hash: string }>(
-            `select h.name, h.dna_hash
-             from race_participant_snapshots s join horses h on h.id = s.horse_id
-             where s.race_id = $2 and s.owner_user_id = $1 and h.status = 'DAY7_CLEARED'
-             limit 1`,
-            [ctx.userId, raceRow.id],
-          );
-          const sold = await ctx.client.query<{
-            name: string;
-            dna_hash: string;
-            current_day: number;
-            price: string;
-          }>(
-            `select h.name, h.dna_hash, l.current_day, a.assigned_price::text as price
-             from ownership_assignments a
-             join market_listings l on l.id = a.market_listing_id
-             join horses h on h.id = a.horse_id
-             where l.seller_user_id = $1 and a.status = 'SETTLED' and a.created_at::date = $2::date
-             limit 1`,
-            [ctx.userId, today],
-          );
-          const bought = await ctx.client.query<{
-            name: string;
-            dna_hash: string;
-            current_day: number;
-          }>(
-            `select h.name, h.dna_hash, h.current_day
-             from ownership_assignments a join horses h on h.id = a.horse_id
-             where a.buyer_user_id = $1 and a.status = 'SETTLED' and a.created_at::date = $2::date
-             limit 1`,
-            [ctx.userId, today],
-          );
-          const burned = await ctx.client.query<{
-            name: string;
-            dna_hash: string;
-            buff: string | null;
-          }>(
-            `select h.name, h.dna_hash,
-                    (select rb.buff_rarity::text from revenge_buffs rb
-                      where rb.user_id = $1 and rb.status in ('ACTIVE','APPLIED')
-                      limit 1) as buff
-             from horse_burns hb join horses h on h.id = hb.horse_id
-             where hb.owner_user_id_at_snapshot = $1 and hb.race_id = $2
-             limit 1`,
-            [ctx.userId, raceRow.id],
-          );
-          const survived = await ctx.client.query<{
-            name: string;
-            dna_hash: string;
-            current_day: number;
-          }>(
-            `select h.name, h.dna_hash, h.current_day
-             from race_participant_snapshots s
-             join horses h on h.id = s.horse_id
-             where s.race_id = $2 and s.owner_user_id = $1 and h.status = 'ACTIVE'
-             order by h.current_day desc limit 1`,
-            [ctx.userId, raceRow.id],
-          );
-          if (day7.rows[0]) {
-            personal = {
-              kind: 'DAY7',
-              horseName: day7.rows[0].name,
-              buybackTotal: '200.00',
-              dnaHash: day7.rows[0].dna_hash,
-            };
-          } else if (sold.rows[0]) {
-            personal = {
-              kind: 'SOLD',
-              horseName: sold.rows[0].name,
-              fromDay: sold.rows[0].current_day,
-              soldPrice: sold.rows[0].price,
-              dnaHash: sold.rows[0].dna_hash,
-              ...(bought.rows[0]
-                ? {
-                    newHorseName: bought.rows[0].name,
-                    newHorseDay: bought.rows[0].current_day,
-                    newDnaHash: bought.rows[0].dna_hash,
-                  }
-                : { newHorseName: '', newHorseDay: 0 }),
-            };
-          } else if (burned.rows[0]) {
-            personal = {
-              kind: 'BURNED',
-              horseName: burned.rows[0].name,
-              buffRarity: burned.rows[0].buff ?? 'N',
-              dnaHash: burned.rows[0].dna_hash,
-            };
-          } else if (survived.rows[0]) {
-            personal = {
-              kind: 'SURVIVED',
-              horseName: survived.rows[0].name,
-              fromDay: Math.max(0, survived.rows[0].current_day - 1),
-              dnaHash: survived.rows[0].dna_hash,
-            };
-          }
-        }
+      const ttl = Number(process.env.DERBY_STATUS_CACHE_MS ?? 2000);
+      let shared: Record<string, unknown>;
+      if (statusShared && statusShared.key === today && Date.now() - statusShared.at < ttl) {
+        shared = statusShared.body;
+      } else {
+        shared = await computeSharedStatus(ctx.client, now, today);
+        statusShared = { key: today, at: Date.now(), body: shared };
       }
 
-      // ADR-012: ショー最終幕で発表する「明日の予報」(今夜のバッチがコミット済みの場合)。
-      const fc = await ctx.client.query<{
-        forecast_weather: string;
-        forecast_track: string;
-        forecast_surface: string;
-      }>(
-        `select forecast_weather::text as forecast_weather,
-                forecast_track::text as forecast_track,
-                forecast_surface::text as forecast_surface
-         from night_forecasts where forecast_date = $1::date + 1`,
-        [today],
-      );
-      const tomorrowForecast = fc.rows[0]
-        ? {
-            weather: fc.rows[0].forecast_weather,
-            track: fc.rows[0].forecast_track,
-            surface: fc.rows[0].forecast_surface,
-          }
-        : null;
-
-      // For the YOU-highlight in the log flood (owner plan A).
+      // For the YOU-highlight in the log flood (owner plan A). 個人依存はこの1クエリのみ。
       const myHorses = await ctx.client.query<{ name: string; dna_hash: string; current_day: number }>(
         `select name, dna_hash, current_day from horses where owner_user_id = $1 and status = 'ACTIVE' limit 200`,
         [ctx.userId],
       );
 
       return {
+        ...shared,
         server_time: now.toISOString(),
-        next_derby_at: nextDerbyAt(now),
-        phase,
-        live_started_at: batchRow?.created_at ?? null,
-        conditions: raceRow?.surface
-          ? {
-              weather: raceRow.weather,
-              track: raceRow.track_condition,
-              surface: raceRow.surface,
-              night_name: raceNightNameV2({
-                weather: raceRow.weather as never,
-                track: raceRow.track_condition as never,
-                surface: raceRow.surface as never,
-              }),
-            }
-          : null,
-        counts,
-        ticker,
-        personal,
+        next_derby_at: nextDerbyAt(now), // server_timeと同時刻基準(キャッシュより新鮮に)
+        personal: null, // 旧フィールド互換(2026-07-12撤去 — 実個人結果は my-results/:date)
         my_horse_names: myHorses.rows.map((r) => r.name),
         my_horses: myHorses.rows,
-        tomorrow_forecast: tomorrowForecast,
       };
     },
   });

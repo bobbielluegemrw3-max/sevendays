@@ -30,12 +30,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   if (authed) {
     const [me, notif] = await Promise.all([
       serverApi<{ is_admin?: boolean }>('/api/v1/me'),
-      serverApi<{ notifications: { read_at: string | null; is_broadcast?: boolean }[] }>('/api/v1/notifications'),
+      // スパイク対策(2026-07-12): バッジは軽量COUNT専用API(従来は50件全文取得)
+      serverApi<{ unread: number }>('/api/v1/notifications/unread-count'),
     ]);
     isAdmin = me.status === 200 && me.body.is_admin === true;
-    // ブロードキャスト(共有行)は既読化できないため未読バッジから除外
-    if (notif.status === 200)
-      unread = notif.body.notifications.filter((n) => !n.read_at && !n.is_broadcast).length;
+    if (notif.status === 200) unread = notif.body.unread;
   }
   return (
     <html lang="ja">

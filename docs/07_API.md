@@ -41,6 +41,8 @@ All public APIs are versioned:
 - GET `/api/v1/buybacks/{id}`
 - GET `/api/v1/notifications` (2026-07-12: rows carry `is_broadcast` — broadcast rows are shared and cannot be per-user read-marked, so unread badges count personal rows only)
 - POST `/api/v1/notifications/read` (2026-07-12: marks ALL of the caller's unread personal notifications read; the notifications page fires it on open — resolves the long-standing "no read_at API" debt)
+- GET `/api/v1/notifications/unread-count` (2026-07-12 spike hardening: badge-only COUNT via the partial unread index — the nav layout uses this instead of fetching 50 full rows on every page render)
+- GET `/api/v1/daily-derby/status` (2026-07-12 spike hardening: the shared part — batch/race/counts/ticker/forecast — is process-cached ~2s via `DERBY_STATUS_CACHE_MS` because every show viewer polls at 5s; per-user data is one indexed my_horses query; the old always-computed-never-consumed `personal` block was removed and the field is now always null — personal night results live in `/daily-derby/my-results/:date`; date filters rewritten sargable with supporting indexes, migration 20260712130000)
 - POST `/api/v1/horses/{id}/training` (Decision 066)
 - POST `/api/v1/market/list` (Decision 076)
 - POST `/api/v1/market/unlist` (Decision 076)

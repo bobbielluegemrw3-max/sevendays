@@ -16,7 +16,9 @@ function getPool(): Pool {
     if (!connectionString) throw new Error('DATABASE_URL is not configured');
     // Dashboard-style pages fan out several dispatches per render, each on
     // its own dedicated connection.
-    pool = new Pool({ connectionString, max: 10 });
+    // スパイク対策(2026-07-12): インスタンスのプラン/台数に合わせて環境変数で調整
+    // (Supabaseプーラー側の上限と合わせること)。既定10。
+    pool = new Pool({ connectionString, max: Number(process.env.WEB_DB_POOL_MAX ?? 10) });
   }
   return pool;
 }
