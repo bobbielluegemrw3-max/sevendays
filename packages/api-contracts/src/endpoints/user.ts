@@ -772,14 +772,33 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     path: '/api/v1/notifications',
     auth: 'user',
     handler: async (ctx) => {
+      // is_broadcast: 全員宛(user_id null)の行は既読管理できない(行が共有のため)。
+      // 未読カウント・既読化は個人宛のみを対象にする(2026-07-12 通知ページ改修)。
       const rows = await ctx.client.query(
-        `select id, notification_type, payload_json, read_at::text as read_at, created_at::text as created_at
+        `select id, notification_type, payload_json, read_at::text as read_at, created_at::text as created_at,
+                (user_id is null) as is_broadcast
          from notifications
          where user_id = $1 or user_id is null -- broadcasts (Decision 065)
          order by created_at desc limit 50`,
         [ctx.userId],
       );
       return { notifications: rows.rows };
+    },
+  });
+
+  // 既読化(2026-07-12)— 通知ページを開いたら自分宛の未読をまとめて既読にする。
+  // ブロードキャスト行(user_id null)は共有行のため対象外。冪等。
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/notifications/read',
+    auth: 'user',
+    handler: async (ctx) => {
+      const r = await ctx.client.query(
+        `update notifications set read_at = now()
+         where user_id = $1 and read_at is null`,
+        [ctx.userId],
+      );
+      return { marked: r.affectedRows ?? 0 };
     },
   });
 }

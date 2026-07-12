@@ -39,7 +39,8 @@ All public APIs are versioned:
 - GET `/api/v1/revenge-buffs/current`
 - GET `/api/v1/buybacks`
 - GET `/api/v1/buybacks/{id}`
-- GET `/api/v1/notifications`
+- GET `/api/v1/notifications` (2026-07-12: rows carry `is_broadcast` — broadcast rows are shared and cannot be per-user read-marked, so unread badges count personal rows only)
+- POST `/api/v1/notifications/read` (2026-07-12: marks ALL of the caller's unread personal notifications read; the notifications page fires it on open — resolves the long-standing "no read_at API" debt)
 - POST `/api/v1/horses/{id}/training` (Decision 066)
 - POST `/api/v1/market/list` (Decision 076)
 - POST `/api/v1/market/unlist` (Decision 076)

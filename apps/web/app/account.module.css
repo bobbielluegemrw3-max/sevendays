@@ -31,3 +31,44 @@
   letter-spacing: 0.06em; color: var(--cyan); border: 1px solid rgba(0, 234, 255, 0.45); border-radius: 10px;
   padding: 10px 16px; text-decoration: none; }
 .supportBtn:hover { background: rgba(0, 234, 255, 0.1); }
+
+/* ---- ハブ化(2026-07-12): プロフィール・記録・設定・サポート ---- */
+.profileCard {
+  display: flex; align-items: center; gap: 16px;
+  border: 1px solid rgba(0, 234, 255, 0.28); border-radius: 16px; padding: 16px 20px;
+  background: linear-gradient(120deg, rgba(0, 234, 255, 0.06), transparent 70%);
+}
+.avatar {
+  flex: none; width: 56px; height: 56px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 24px; color: #0a0813;
+  box-shadow: 0 8px 20px -8px rgba(0, 234, 255, 0.4);
+}
+.profileBody { min-width: 0; }
+.profileEmail { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+.profileMeta { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+.profileId { font-family: var(--font-mono); font-size: 9px; color: var(--faint); margin-top: 3px; word-break: break-all; }
+
+.statGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 9px; }
+.statCell {
+  text-decoration: none; border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 10px; text-align: center; display: flex; flex-direction: column; gap: 2px;
+  background: rgba(10, 8, 22, 0.5); transition: border-color 0.15s ease;
+}
+.statCell:hover { border-color: var(--border-strong); }
+.statV { font-family: var(--font-display); font-weight: 800; font-size: 24px; }
+.statK { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); letter-spacing: 0.08em; }
+.stCyan .statV { color: #a9f6ff; } .stGold .statV { color: var(--gold-bright); }
+.stMag .statV { color: var(--magenta-soft); } .stWarn .statV { color: var(--warn); }
+.statNote { font-family: var(--font-mono); font-size: 10px; color: var(--faint); margin-top: 10px; line-height: 1.7; }
+.inlineLink { color: var(--cyan); text-decoration: none; }
+.inlineLink:hover { text-decoration: underline; }
+
+.settingsStack { display: flex; flex-direction: column; gap: 12px; }
+.supportRow { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.supportGhost {
+  text-decoration: none; white-space: nowrap;
+  font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--muted);
+  border: 1px solid var(--border-strong); padding: 9px 16px; border-radius: 10px;
+}
+.supportGhost:hover { color: var(--cyan); border-color: var(--cyan); }

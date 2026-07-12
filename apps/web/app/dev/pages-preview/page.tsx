@@ -181,6 +181,7 @@ export default async function PagesPreview() {
 
       {sect('/notifications 通知')}
       <NotificationsView
+        preview
         notifications={[
           { id: 'n1', notification_type: 'RACE_RESULT_READY', payload_json: { title: '本日のレース結果が確定しました。', body: 'Crimson Tiger の結果を確認してください。' }, read_at: null, created_at: iso(35) },
           { id: 'n2', notification_type: 'HORSE_BURNED', payload_json: { title: 'Burning Meteor は本日のレースでBurnされました。', body: 'Revenge Buffが付与されました。' }, read_at: null, created_at: iso(36) },
@@ -214,6 +215,8 @@ export default async function PagesPreview() {
       {sect('/account アカウント')}
       <AccountView
         me={{ id: 'e54dd629-0000-4444-8888-abcdefabcdef', email: 'owner@example.com', created_at: iso(20000) }}
+        stats={{ racing: 5, listed: 2, champions: 3, burned: 4, pendingReservations: 1 }}
+        trade={{ chosen: true, auto_list: true, auto_reserve: true, auto_reserve_max: null }}
         wallets={[{ wallet_address: '0x9f8e7d6c5b4a39281706f5e4d3c2b1a098765432', created_at: iso(10000) }]}
       />
     </div>

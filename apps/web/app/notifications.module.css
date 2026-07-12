@@ -58,3 +58,39 @@
 .empty { border: 1px dashed var(--border); border-radius: 14px; padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.7; }
 
 @media (max-width: 560px) { .search { flex-basis: 100%; } .select { flex: 1; } }
+
+/* ---- 通知ページ改修(2026-07-12): ダイジェスト・チップ・日付見出し・行リンク ---- */
+.digest {
+  border: 1px solid rgba(0, 234, 255, 0.3); border-radius: 14px; padding: 13px 16px;
+  background: linear-gradient(120deg, rgba(0, 234, 255, 0.07), transparent 70%);
+  display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px;
+}
+.digestHead { display: flex; align-items: baseline; gap: 10px; }
+.digestTitle { font-family: var(--font-display); font-weight: 800; font-size: 13px; letter-spacing: 0.06em; color: var(--cyan); }
+.digestCount { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+.digestParts { display: flex; flex-wrap: wrap; gap: 7px; }
+.digestChip {
+  display: inline-flex; align-items: baseline; gap: 5px; border: 1px solid transparent;
+  border-radius: 999px; padding: 3px 11px; font-size: 11.5px;
+}
+.digestChip b { font-family: var(--font-display); font-size: 13px; }
+.digestLinks { display: flex; gap: 16px; flex-wrap: wrap; }
+.digestLink { color: var(--cyan); text-decoration: none; font-family: var(--font-display); font-weight: 700; font-size: 11px; }
+.digestLink:hover { text-decoration: underline; }
+
+.catChips { display: flex; flex-wrap: wrap; gap: 6px; }
+.catChip {
+  cursor: pointer; font-size: 11.5px; color: var(--muted); font-family: inherit;
+  border: 1px solid var(--border-strong); border-radius: 999px; padding: 7px 12px;
+  background: transparent; box-shadow: none; white-space: nowrap;
+}
+.catChip:hover { color: var(--text); filter: none; }
+.catChipOn { color: #04141a; font-weight: 700; background: linear-gradient(100deg, var(--cyan), #5ff5ff); border-color: transparent; }
+
+.dateHead { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; color: var(--faint); margin: 12px 2px 7px; }
+.list .row { text-decoration: none; color: inherit; transition: border-color 0.15s ease; }
+.list .row:hover { border-color: var(--border-strong); }
+.rowRight { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+.openArrow { color: var(--faint); font-size: 12px; }
+.list .row:hover .openArrow { color: var(--cyan); }
+.readNote { margin-left: auto; font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); }

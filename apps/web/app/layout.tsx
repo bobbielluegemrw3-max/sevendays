@@ -30,10 +30,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   if (authed) {
     const [me, notif] = await Promise.all([
       serverApi<{ is_admin?: boolean }>('/api/v1/me'),
-      serverApi<{ notifications: { read_at: string | null }[] }>('/api/v1/notifications'),
+      serverApi<{ notifications: { read_at: string | null; is_broadcast?: boolean }[] }>('/api/v1/notifications'),
     ]);
     isAdmin = me.status === 200 && me.body.is_admin === true;
-    if (notif.status === 200) unread = notif.body.notifications.filter((n) => !n.read_at).length;
+    // ブロードキャスト(共有行)は既読化できないため未読バッジから除外
+    if (notif.status === 200)
+      unread = notif.body.notifications.filter((n) => !n.read_at && !n.is_broadcast).length;
   }
   return (
     <html lang="ja">

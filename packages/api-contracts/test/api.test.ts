@@ -723,6 +723,14 @@ describe('training (Decision 066)', () => {
     const list = (notifications.body as { notifications: { notification_type: string }[] }).notifications;
     expect(list.some((n) => n.notification_type === 'TRAINING_COMPLETED')).toBe(true);
 
+    // 既読化(2026-07-12): 自分宛の未読をまとめて既読に(ブロードキャストは対象外)
+    const markRead = await call('POST', '/api/v1/notifications/read', asUser(owner), { body: {} });
+    expect(markRead.status).toBe(200);
+    expect((markRead.body as { marked: number }).marked).toBeGreaterThanOrEqual(1);
+    const afterRead = await call('GET', '/api/v1/notifications', asUser(owner));
+    const mine = (afterRead.body as { notifications: { read_at: string | null; is_broadcast: boolean }[] }).notifications;
+    expect(mine.filter((n) => !n.is_broadcast).every((n) => n.read_at != null)).toBe(true);
+
     // Second training for the same effective race date is rejected.
     const duplicate = await call('POST', `/api/v1/horses/${horseId}/training`, asUser(owner), {
       body: { training_type: 'POWER_TRAINING' },
