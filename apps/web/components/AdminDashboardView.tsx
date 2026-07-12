@@ -2,9 +2,9 @@ import Link from 'next/link';
 import s from '../app/admin.module.css';
 
 /* ============================================================================
- * /admin(管理ダッシュボード)再設計 — 1c 部品言語 + ADMINアクセント。内部向け。
+ * /admin(管理ダッシュボード)— Ops Consoleリデザイン(2026-07-13ハンドオフ)。
+ * 状態を最初の一目で(statBigの左3pxバー)。メニューは絵文字なしの整列グリッド。
  * 純粋な表示コンポーネント。表示は AdminDashboard の値のみ(架空値なし)。
- * データ取得層 page.tsx は依頼側で結線。
  * ========================================================================== */
 
 export interface AdminDashboard {
@@ -13,31 +13,38 @@ export interface AdminDashboard {
   metrics: Record<string, unknown> | null;
 }
 
-function ecoMeta(status: string): { card: string; dot: string; val: string; note: string } {
+function ecoMeta(status: string): { bar: string; val: string; note: string } {
   const u = (status || '').toUpperCase();
-  if (['HEALTHY', 'OK', 'NORMAL'].includes(u)) return { card: s.ecoGood!, dot: s.ecoDotGood!, val: s.ecoValGood!, note: 'バーン率・チャンピオン報酬プールは正常範囲' };
-  if (['WARNING', 'DEGRADED', 'CAUTION'].includes(u)) return { card: s.ecoWarn!, dot: s.ecoDotWarn!, val: s.ecoValWarn!, note: '一部指標が閾値に接近しています' };
-  if (['CRITICAL', 'HALTED', 'ERROR'].includes(u)) return { card: s.ecoBad!, dot: s.ecoDotBad!, val: s.ecoValBad!, note: '要対応: 経済指標が異常です' };
-  return { card: s.ecoDefault!, dot: s.ecoDotDefault!, val: s.ecoValDefault!, note: '' };
+  if (['HEALTHY', 'OK', 'NORMAL'].includes(u)) return { bar: s.ok!, val: s.gd!, note: 'バーン率・チャンピオン報酬プールは正常範囲' };
+  if (['WARNING', 'DEGRADED', 'CAUTION'].includes(u)) return { bar: s.warn!, val: '', note: '一部指標が閾値に接近しています' };
+  if (['CRITICAL', 'HALTED', 'ERROR'].includes(u)) return { bar: s.bad!, val: '', note: '要対応: 経済指標が異常です' };
+  return { bar: '', val: '', note: '' };
 }
 
-function fmtVal(v: unknown): { text: string; isJson: boolean } {
-  if (typeof v === 'number') return { text: v.toLocaleString('en-US'), isJson: false };
-  if (typeof v === 'string') return { text: v, isJson: false };
-  if (typeof v === 'boolean') return { text: v ? 'true' : 'false', isJson: false };
-  return { text: JSON.stringify(v), isJson: true };
+function batchSt(status: string): string {
+  const u = (status || '').toUpperCase();
+  if (u === 'COMPLETED') return s.stGood!;
+  if (u === 'FAILED') return s.stBad!;
+  return s.stWarn!;
+}
+
+function fmtVal(v: unknown): string {
+  if (typeof v === 'number') return v.toLocaleString('en-US');
+  if (typeof v === 'string') return v;
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  return JSON.stringify(v);
 }
 
 const MENU = [
-  { href: '/admin/economy', icon: '💰', title: '経済・準備金', desc: 'プラットフォーム勘定残高 / ユーザー資産総額 / 直近の取引種別' },
-  { href: '/admin/users', icon: '👤', title: 'ユーザー', desc: 'メール検索 / 残高・馬・BURN・アイテム / 組織(直紹介)' },
-  { href: '/admin/items', icon: '🎒', title: 'アイテム', desc: 'カタログ別の販売数・売上 / ドロップ・ギフト / アイテム設定の分布' },
-  { href: '/admin/races', icon: '🏇', title: 'レース', desc: '直近レースの頭数・BURN数・アイテム設定 / Daily Derbyモード' },
-  { href: '/admin/support', icon: '💬', title: 'サポート(AIメール)', desc: '受信メールのAI下書きを承認して送信 / 全件承認制' },
-  { href: '/admin/batches', icon: '⚙️', title: 'バッチ運行', desc: '毎晩20:00 MYTの一斉精算 / ステップ状況 / 失敗リトライ' },
-  { href: '/admin/withdrawals', icon: '🏧', title: '出金レビュー', desc: '大口出金(1,000 USDT以上)の2名承認' },
-  { href: '/admin/recovery', icon: '🛟', title: 'リカバリ', desc: '障害時の復旧案件 / 承認 → 実行の2段階' },
-  { href: '/admin/audit', icon: '📜', title: '監査ログ', desc: '管理操作・システム操作の全記録(直近200件)' },
+  { href: '/admin/economy', glyph: '経', title: '経済・準備金', desc: 'プラットフォーム勘定残高 / ユーザー資産総額 / 直近の取引種別' },
+  { href: '/admin/users', glyph: 'U', title: 'ユーザー', desc: 'メール検索 / 残高・馬・BURN・アイテム / 組織(直紹介)' },
+  { href: '/admin/items', glyph: '物', title: 'アイテム', desc: 'カタログ別の販売数・売上 / ドロップ・ギフト / アイテム設定の分布' },
+  { href: '/admin/races', glyph: '走', title: 'レース', desc: '直近レースの頭数・BURN数・アイテム設定 / Daily Derbyモード' },
+  { href: '/admin/support', glyph: 'C', title: 'サポート(AIメール)', desc: '受信メールのAI下書きを承認して送信 / 全件承認制' },
+  { href: '/admin/batches', glyph: '批', title: 'バッチ運行', desc: '毎晩20:00 MYTの一斉精算 / ステップ状況 / 失敗リトライ' },
+  { href: '/admin/withdrawals', glyph: '出', title: '出金レビュー', desc: '大口出金(1,000 USDT以上)の2名承認' },
+  { href: '/admin/recovery', glyph: '復', title: 'リカバリ', desc: '障害時の復旧案件 / 承認 → 実行の2段階' },
+  { href: '/admin/audit', glyph: '監', title: '監査ログ', desc: '管理操作・システム操作の全記録(直近200件)' },
 ] as const;
 
 export function AdminDashboardView({ data }: { data: AdminDashboard }) {
@@ -47,64 +54,66 @@ export function AdminDashboardView({ data }: { data: AdminDashboard }) {
 
   return (
     <div className={s.wrap}>
-      <div className={s.h1}>管理ダッシュボード</div>
-
-      {/* 経済ステータス + 最新バッチ */}
-      <div className={s.top}>
-        <div className={`${s.eco} ${eco.card}`}>
-          <div className={s.ecoK}>ECONOMY STATUS</div>
-          <div className={s.ecoRow}>
-            <span className={`${s.ecoDot} ${eco.dot}`} />
-            <span className={`${s.ecoVal} ${eco.val}`}>{economy_status}</span>
-          </div>
-          {eco.note ? <div className={s.ecoNote}>{eco.note}</div> : null}
-        </div>
-        <div className={s.batch}>
-          <div className={s.batchK}>最新バッチ · LATEST BATCH</div>
-          <div className={s.batchRow}>
-            <span className={s.batchDate}>{latest_batch ? latest_batch.batch_date : 'なし'}</span>
-            {latest_batch ? <span className={s.badge}>{latest_batch.status}</span> : null}
-          </div>
-          <div className={s.batchNote}>毎晩20:00 MYT の一斉精算</div>
+      <div className={s.ph}>
+        <div>
+          <h1 className={s.phTitle}>管理ダッシュボード</h1>
+          <div className={s.phSub}>運営の入口。異常があればここで気づける状態を最優先。</div>
         </div>
       </div>
 
-      {/* メニュー(ハブ型: 各運営ページへ) */}
-      <div>
-        <div className={s.secLabel}>MENU · 運営メニュー</div>
-        <div className={s.menuGrid}>
-          {MENU.map((m) => (
-            <Link key={m.href} href={m.href} className={s.menuCard}>
-              <span className={s.menuHead}>
-                <span className={s.menuIcon} aria-hidden="true">{m.icon}</span>
-                <span className={s.menuTitle}>{m.title}</span>
+      {/* 状態ストリップ: 経済 + 最新バッチ + 先頭メトリクス2件 */}
+      <div className={s.statRow}>
+        <div className={`${s.stat} ${s.statBig} ${eco.bar}`}>
+          <div className={s.statK}>ECONOMY STATUS · 経済状態</div>
+          <div className={`${s.statV} ${eco.val}`}>{economy_status}</div>
+          {eco.note ? <div className={s.statSub}>{eco.note}</div> : null}
+        </div>
+        <div className={`${s.stat} ${s.statBig}`}>
+          <div className={s.statK}>LATEST BATCH · 最新バッチ</div>
+          <div className={s.statV} style={{ fontSize: 19 }}>
+            {latest_batch ? latest_batch.batch_date : 'なし'}{' '}
+            {latest_batch ? (
+              <span className={`${s.st} ${batchSt(latest_batch.status)}`} style={{ verticalAlign: 3 }}>
+                {latest_batch.status}
               </span>
-              <span className={s.menuDesc}>{m.desc}</span>
-              <span className={s.menuArrow}>OPEN →</span>
-            </Link>
+            ) : null}
+          </div>
+          <div className={s.statSub}>毎晩20:00 MYT の一斉精算</div>
+        </div>
+        {entries.slice(0, 2).map(([key, value]) => (
+          <div key={key} className={s.stat}>
+            <div className={s.statK}>{key}</div>
+            <div className={s.statV}>{fmtVal(value)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className={s.sec}>MENU · 運営メニュー</div>
+      <div className={s.menu}>
+        {MENU.map((m) => (
+          <Link key={m.href} href={m.href} className={s.mCard}>
+            <span className={s.mTop}>
+              <span className={s.mGlyph} aria-hidden="true">{m.glyph}</span>
+              <span className={s.mTitle}>{m.title}</span>
+            </span>
+            <span className={s.mDesc}>{m.desc}</span>
+          </Link>
+        ))}
+      </div>
+
+      <div className={s.sec}>経済メトリクス · ECONOMY METRICS</div>
+      {entries.length > 0 ? (
+        <div className={s.statRow}>
+          {entries.map(([key, value]) => (
+            <div key={key} className={s.stat}>
+              <div className={s.statK}>{key}</div>
+              <div className={s.statV} style={{ fontSize: 16, overflowWrap: 'anywhere' }}>{fmtVal(value)}</div>
+            </div>
           ))}
         </div>
-      </div>
-
-      {/* 経済メトリクス */}
-      <div>
-        <div className={s.secLabel}>経済メトリクス · ECONOMY METRICS</div>
-        {entries.length > 0 ? (
-          <div className={s.metrics}>
-            {entries.map(([key, value]) => {
-              const f = fmtVal(value);
-              return (
-                <div key={key} className={s.metric}>
-                  <div className={s.metricK}>{key}</div>
-                  <div className={f.isJson ? s.metricJson : s.metricV}>{f.text}</div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className={s.empty}>バッチ実行前のためメトリクスはありません。今夜20:00の精算後に集計されます。</div>
-        )}
-      </div>
+      ) : (
+        <div className={s.empty}>バッチ実行前のためメトリクスはありません。今夜20:00の精算後に集計されます。</div>
+      )}
     </div>
   );
 }

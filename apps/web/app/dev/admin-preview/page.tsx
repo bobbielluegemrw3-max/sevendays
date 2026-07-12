@@ -3,6 +3,11 @@ import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { AdminEconomyView } from '@/components/AdminEconomyView';
 import { AdminItemsView } from '@/components/AdminItemsView';
 import { AdminRacesView } from '@/components/AdminRacesView';
+import { AdminBatchesView } from '@/components/AdminBatchesView';
+import { AdminWithdrawalsView } from '@/components/AdminWithdrawalsView';
+import { AdminRecoveryView } from '@/components/AdminRecoveryView';
+import { AdminAuditLog } from '@/components/AdminAuditLog';
+import { AdminNav } from '@/components/AdminNav';
 
 /* 視覚QA専用(仮データ)。本番挙動は /admin(要admin権限)。 */
 
@@ -10,6 +15,7 @@ export default async function AdminPreviewPage() {
   await requireDevPreviewAccess();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
+      <AdminNav />
       <AdminDashboardView
         data={{
           latest_batch: { id: 'b1', batch_date: '2026-07-08', status: 'COMPLETED' },
@@ -55,6 +61,40 @@ export default async function AdminPreviewPage() {
           ],
           daily_derby_live: false,
         }}
+      />
+      <AdminBatchesView
+        batches={[
+          { id: 'b1', batch_date: '2026-07-08', status: 'COMPLETED', completed_at: '2026-07-08T20:05:00', failed_at: null, completed_steps: 37 },
+          { id: 'b2', batch_date: '2026-07-07', status: 'PARTIAL_FAILED', completed_at: null, failed_at: '2026-07-07T20:06:12', completed_steps: 34 },
+          { id: 'b3', batch_date: '2026-07-06', status: 'COMPLETED', completed_at: '2026-07-06T20:04:41', failed_at: null, completed_steps: 37 },
+          { id: 'b4', batch_date: '2026-07-05', status: 'FAILED', completed_at: null, failed_at: '2026-07-05T20:03:09', completed_steps: 21 },
+        ]}
+      />
+      <AdminWithdrawalsView
+        withdrawals={[
+          {
+            id: 'w1', user_id: 'u1', chain_id: '137', to_address: '0x9a11bb22cc33dd44ee55ff66aa77bb88cc99dde1',
+            requested_amount: '1520.00', status: 'REVIEW', requested_at: '2026-07-08T18:12:44',
+            approvals: [{ admin_user_id: 'a1', role: 'FINANCE_ADMIN' }],
+          },
+        ]}
+      />
+      <AdminRecoveryView
+        recoveries={[
+          {
+            id: 'r1', batch_date: '2026-07-05', batch_status: 'FAILED', recovery_reason: 'RUN_RACE_ENGINE step crashed (engine mismatch)',
+            approval_status: 'PENDING_APPROVAL', approved_by_1: 'a1', approved_by_2: null,
+            created_at: '2026-07-05T21:00:00', completed_at: null,
+          },
+        ]}
+      />
+      <AdminAuditLog
+        audit={[
+          { actor_type: 'SYSTEM', actor_id: null, action: 'BATCH_SETTLED', reference_type: 'batch', reference_id: '2026-07-08', created_at: '2026-07-08T20:05:02' },
+          { actor_type: 'ADMIN', actor_id: 'fin-02', action: 'FUND_GRANT_APPROVED', reference_type: 'grant', reference_id: '8831', created_at: '2026-07-08T19:41:18' },
+          { actor_type: 'ADMIN', actor_id: 'sup-01', action: 'USER_SUSPENDED', reference_type: 'user', reference_id: '3f6a9c', created_at: '2026-07-08T19:38:55' },
+          { actor_type: 'SYSTEM', actor_id: null, action: 'DEPOSIT_DETECTED', reference_type: 'tx', reference_id: '0x9ae1', created_at: '2026-07-08T18:22:07' },
+        ]}
       />
     </div>
   );

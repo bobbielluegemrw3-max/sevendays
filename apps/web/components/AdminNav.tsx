@@ -1,15 +1,11 @@
 'use client';
-
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import s from '../app/admin.module.css';
 
-/* ============================================================================
- * Admin ナビ(client) — アクティブ強調 + モバイル横スクロール帯。
- * 権限境界は API 層(JWT + role)で強制。レイアウトの probe は layout.tsx が行い、
- * このコンポーネントはナビ描画とアクティブ判定だけを担う。
- * ========================================================================== */
-
+/* 管理ナビ(Ops Consoleリデザイン 2026-07-13) — 絵文字を廃し、単色ラベル+
+   現在地の下線ハイライトのみ。href/順序は既存ルーティング準拠。
+   「デモ上映」= /dev/derby-preview(管理者のみ・20:00を待たない演出上映室)。 */
 const LINKS: { href: string; label: string }[] = [
   { href: '/admin', label: 'ダッシュボード' },
   { href: '/admin/economy', label: '経済' },
@@ -21,23 +17,24 @@ const LINKS: { href: string; label: string }[] = [
   { href: '/admin/withdrawals', label: '出金レビュー' },
   { href: '/admin/recovery', label: 'リカバリ' },
   { href: '/admin/audit', label: '監査ログ' },
-  // デモ上映(2026-07-12): 20:00を待たずにダービー演出を見せるための上映室。
-  // /dev/* は requireDevPreviewAccess で管理者のみ閲覧可(一般ユーザーは404)。
   { href: '/dev/derby-preview', label: 'デモ上映' },
 ];
 
 export function AdminNav() {
-  const pathname = usePathname();
+  const path = usePathname();
   return (
     <nav className={s.nav} aria-label="管理メニュー">
-      <span className={s.brand}><span className={s.brandDot} />ADMIN</span>
+      <span className={s.navBrand}>
+        <span className={s.navBar} />
+        <span className={s.navBrandT}>ADMIN</span>
+      </span>
       {LINKS.map((l) => {
-        const active = l.href === '/admin' ? pathname === '/admin' : pathname.startsWith(l.href);
+        const active = l.href === '/admin' ? path === '/admin' : path?.startsWith(l.href);
         return (
           <Link
             key={l.href}
             href={l.href}
-            className={`${s.navLink} ${active ? s.navActive : ''}`}
+            className={active ? `${s.navLink} ${s.navActive}` : s.navLink}
             aria-current={active ? 'page' : undefined}
           >
             {l.label}

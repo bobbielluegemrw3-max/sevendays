@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Seven Days Derby — 管理画面リデザイン提案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#050409; --bg-2:#0a0714; --panel:#12101d; --panel-2:#16132a;
+  --border:rgba(255,255,255,0.08); --border-strong:rgba(0,234,255,0.28);
+  --text:#eae7ff; --muted:#8f8ac2; --faint:#5a5580;
+  --cyan:#00eaff; --magenta:#ff2dc4; --magenta-soft:#ff8fe4; --gold:#c9a86a; --gold-bright:#f2e4bf;
+  --good:#35d07f; --bad:#ff5c5c; --warn:#e6b24a;
+  --font-display:'Orbitron',system-ui,sans-serif;
+  --font-sans:'Space Grotesk','Zen Kaku Gothic New',system-ui,sans-serif;
+  --font-jp:'Zen Kaku Gothic New',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+
+  /* --- NEW ops-console tokens (提案) --- */
+  --c-surface:#0e0c17;         /* フラットな面。グラデ廃止 */
+  --c-surface-2:#131120;       /* 一段上げ(ヘッダ行/展開) */
+  --c-line:rgba(255,255,255,0.09);
+  --c-line-soft:rgba(255,255,255,0.055);
+  --c-ink:#e9e7f5;             /* 主テキスト(高コントラスト) */
+  --c-ink-2:#b7b3d0;           /* 副テキスト */
+  --c-ink-3:#7d7aa0;           /* キャプション */
+  --c-accent:#ff4dcf;          /* ADMIN識別色。使うのは操作面だけ */
+  --c-zebra:rgba(255,255,255,0.018);
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--bg); color:var(--c-ink);
+  font-family:var(--font-sans); line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  background:radial-gradient(900px 480px at 50% -10%, #140a24 0%, #0a0714 52%, var(--bg) 100%), var(--bg);
+  background-attachment:fixed;
+}
+.page{max-width:1180px; margin:0 auto; padding:26px 20px 120px;}
+
+/* ---------- proposal banner ---------- */
+.pbanner{border:1px solid rgba(255,77,207,0.3); border-radius:16px; padding:20px 22px;
+  background:linear-gradient(160deg, rgba(255,77,207,0.07), transparent 70%); margin-bottom:14px;}
+.pbTag{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; color:var(--magenta-soft);}
+.pbH{font-family:var(--font-display); font-weight:800; font-size:23px; letter-spacing:0.02em; margin:8px 0 4px; color:#fff;}
+.pbSub{font-family:var(--font-jp); font-size:13.5px; color:var(--c-ink-2); line-height:1.75; max-width:820px;}
+.pbGrid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px;}
+@media(max-width:760px){.pbGrid{grid-template-columns:1fr;}}
+.pbCol{border:1px solid var(--c-line); border-radius:12px; padding:13px 15px; background:var(--c-surface);}
+.pbColH{font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.1em; margin-bottom:8px;}
+.pbBefore .pbColH{color:var(--bad);}
+.pbAfter .pbColH{color:var(--good);}
+.pbList{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px;}
+.pbList li{font-family:var(--font-jp); font-size:12px; color:var(--c-ink-2); line-height:1.55; padding-left:16px; position:relative;}
+.pbList li::before{content:''; position:absolute; left:0; top:7px; width:6px; height:6px; border-radius:2px;}
+.pbBefore .pbList li::before{background:var(--bad);}
+.pbAfter .pbList li::before{background:var(--good);}
+
+/* ---------- screen frame ---------- */
+.frameLabel{display:flex; align-items:baseline; gap:12px; margin:38px 0 12px;}
+.frameLabel .n{font-family:var(--font-mono); font-size:11px; color:var(--magenta-soft); letter-spacing:0.12em;}
+.frameLabel .t{font-family:var(--font-display); font-weight:700; font-size:15px; letter-spacing:0.04em; color:#fff;}
+.frameLabel .d{font-family:var(--font-jp); font-size:12px; color:var(--c-ink-3);}
+.screen{border:1px solid var(--c-line); border-radius:16px; background:var(--bg-2); overflow:hidden;}
+.screenBody{padding:20px 20px 22px;}
+
+/* ---------- NEW: admin nav (calm) ---------- */
+.anav{display:flex; align-items:center; gap:2px; overflow-x:auto; padding:9px 12px;
+  border-bottom:1px solid var(--c-line); background:var(--c-surface-2); scrollbar-width:none;}
+.anav::-webkit-scrollbar{display:none;}
+.anavBrand{display:inline-flex; align-items:center; gap:8px; flex:none; padding:0 14px 0 4px; margin-right:6px;}
+.anavBar{width:4px; height:17px; border-radius:2px; background:var(--c-accent);}
+.anavBrandT{font-family:var(--font-display); font-weight:800; font-size:12.5px; letter-spacing:0.16em; color:#fff;}
+.anavLink{flex:none; white-space:nowrap; font-family:var(--font-jp); font-size:12.5px; color:var(--c-ink-2);
+  text-decoration:none; padding:8px 13px; border-radius:8px; letter-spacing:0.01em;}
+.anavLink:hover{color:#fff; background:rgba(255,255,255,0.04);}
+.anavActive{color:#fff; background:rgba(255,77,207,0.14); box-shadow:inset 0 -2px 0 var(--c-accent);}
+
+/* ---------- page head ---------- */
+.ph{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap;}
+.phTitle{font-family:var(--font-display); font-weight:700; font-size:19px; letter-spacing:0.02em; color:#fff; margin:0;}
+.phSub{font-family:var(--font-jp); font-size:12px; color:var(--c-ink-3); margin-top:3px;}
+
+/* ---------- stat strip ---------- */
+.statRow{display:grid; grid-template-columns:repeat(4,1fr); gap:10px;}
+@media(max-width:820px){.statRow{grid-template-columns:repeat(2,1fr);}}
+.stat{border:1px solid var(--c-line); border-radius:12px; padding:13px 15px; background:var(--c-surface); min-width:0;}
+.statK{font-family:var(--font-mono); font-size:10px; letter-spacing:0.04em; color:var(--c-ink-3);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.statV{font-family:var(--font-mono); font-weight:600; font-size:22px; color:var(--c-ink); margin-top:6px;
+  font-variant-numeric:tabular-nums; letter-spacing:-0.01em;}
+.statV .u{font-size:12px; color:var(--c-ink-3); margin-left:3px; font-weight:400;}
+.statV.gd{color:#7ff0b0;}
+.statSub{font-family:var(--font-mono); font-size:10px; color:var(--faint); margin-top:5px;}
+.statBig{border-left:3px solid var(--c-line);}
+.statBig.ok{border-left-color:var(--good);} .statBig.warn{border-left-color:var(--warn);} .statBig.bad{border-left-color:var(--bad);}
+
+/* ---------- section label ---------- */
+.sec{font-family:var(--font-mono); font-size:11px; letter-spacing:0.08em; color:var(--c-ink-3);
+  margin:22px 0 9px; display:flex; align-items:center; gap:9px;}
+.sec::after{content:''; flex:1; height:1px; background:var(--c-line-soft);}
+
+/* ---------- menu grid (no emoji) ---------- */
+.menu{display:grid; grid-template-columns:repeat(3,1fr); gap:9px;}
+@media(max-width:820px){.menu{grid-template-columns:1fr 1fr;}}
+@media(max-width:520px){.menu{grid-template-columns:1fr;}}
+.mCard{display:flex; flex-direction:column; gap:5px; border:1px solid var(--c-line); border-radius:11px;
+  padding:13px 14px; background:var(--c-surface); text-decoration:none; transition:border-color .12s, background .12s;}
+.mCard:hover{border-color:rgba(255,77,207,0.4); background:var(--c-surface-2);}
+.mTop{display:flex; align-items:center; gap:9px;}
+.mGlyph{width:22px; height:22px; border-radius:6px; border:1px solid var(--c-line); flex:none;
+  display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:11px; color:var(--c-ink-2); background:var(--bg);}
+.mTitle{font-family:var(--font-jp); font-weight:700; font-size:13.5px; color:#fff;}
+.mDesc{font-family:var(--font-jp); font-size:11px; color:var(--c-ink-3); line-height:1.55;}
+
+/* ---------- DATA TABLE (核心) ---------- */
+.tableWrap{border:1px solid var(--c-line); border-radius:12px; overflow:hidden; background:var(--c-surface);}
+.tbl{width:100%; border-collapse:collapse; font-size:13px;}
+.tbl thead th{font-family:var(--font-mono); font-size:10px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase;
+  color:var(--c-ink-3); text-align:left; padding:10px 14px; background:var(--c-surface-2);
+  border-bottom:1px solid var(--c-line); white-space:nowrap; position:sticky; top:0;}
+.tbl tbody td{padding:11px 14px; border-bottom:1px solid var(--c-line-soft); vertical-align:middle; color:var(--c-ink-2);}
+.tbl tbody tr:last-child td{border-bottom:none;}
+.tbl tbody tr:hover{background:rgba(255,255,255,0.025);}
+.tbl tbody tr:nth-child(even){background:var(--c-zebra);}
+.tbl tbody tr:nth-child(even):hover{background:rgba(255,255,255,0.03);}
+.num{text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; color:var(--c-ink); white-space:nowrap;}
+.num .u{color:var(--c-ink-3); font-size:11px; margin-left:2px;}
+.mono{font-family:var(--font-mono); font-size:11.5px; color:var(--c-ink-3);}
+.strong{font-family:var(--font-jp); font-weight:600; color:#fff;}
+.date{font-family:var(--font-mono); font-size:11.5px; color:var(--c-ink-3); white-space:nowrap;}
+.tRight{text-align:right;}
+.ell{max-width:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+/* status pills — 意味だけに色 */
+.st{display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:6px; font-family:var(--font-mono);
+  font-size:10.5px; font-weight:500; letter-spacing:0.02em; white-space:nowrap; border:1px solid transparent;}
+.st::before{content:''; width:6px; height:6px; border-radius:50%;}
+.stGood{color:#8fe9b8; background:rgba(53,208,127,0.1); border-color:rgba(53,208,127,0.3);} .stGood::before{background:var(--good);}
+.stWarn{color:#f0cf8f; background:rgba(230,178,74,0.1); border-color:rgba(230,178,74,0.3);} .stWarn::before{background:var(--warn);}
+.stBad{color:#ff9d9d; background:rgba(255,92,92,0.1); border-color:rgba(255,92,92,0.32);} .stBad::before{background:var(--bad);}
+.stNeutral{color:var(--c-ink-2); background:rgba(255,255,255,0.04); border-color:var(--c-line);} .stNeutral::before{background:var(--faint);}
+.tag{display:inline-block; padding:2px 8px; border-radius:5px; font-family:var(--font-mono); font-size:10px;
+  color:var(--c-ink-2); border:1px solid var(--c-line); background:var(--bg); white-space:nowrap;}
+
+/* buttons */
+.btn{appearance:none; font-family:var(--font-jp); font-weight:600; font-size:12px; border-radius:8px; padding:7px 13px;
+  cursor:pointer; border:1px solid var(--c-line); background:rgba(255,255,255,0.04); color:var(--c-ink); white-space:nowrap;}
+.btn:hover{background:rgba(255,255,255,0.08);}
+.btnPrimary{border-color:rgba(255,77,207,0.5); background:rgba(255,77,207,0.14); color:#ffd9f4;}
+.btnPrimary:hover{background:rgba(255,77,207,0.22);}
+.btnDanger{border-color:rgba(255,92,92,0.5); background:rgba(255,92,92,0.1); color:#ff9d9d;}
+
+/* controls */
+.controls{display:flex; gap:9px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
+.inp{flex:1; min-width:180px; background:var(--bg); border:1px solid var(--c-line); border-radius:9px;
+  padding:9px 12px; font-family:var(--font-mono); font-size:12.5px; color:var(--c-ink); outline:none;}
+.inp:focus{border-color:var(--c-accent);}
+.sel{background:var(--bg); border:1px solid var(--c-line); border-radius:9px; padding:9px 12px;
+  font-family:var(--font-jp); font-size:12.5px; color:var(--c-ink); outline:none; cursor:pointer;}
+.cnt{font-family:var(--font-mono); font-size:11px; color:var(--faint);}
+
+/* note */
+.note{border:1px solid rgba(230,178,74,0.28); border-left:3px solid var(--warn); border-radius:9px; padding:10px 14px;
+  background:rgba(230,178,74,0.05); font-family:var(--font-jp); font-size:12px; color:#d8c79a; line-height:1.65; margin-top:12px;}
+.note b{color:var(--warn);}
+
+/* dossier expand */
+.dossier{border:1px solid rgba(255,77,207,0.22); border-top:none; border-radius:0 0 12px 12px;
+  margin:0 2px; padding:16px; background:rgba(255,77,207,0.03); display:flex; flex-direction:column; gap:14px;}
+.badges{display:flex; flex-wrap:wrap; gap:7px;}
+
+/* mobile card table */
+.mcard{display:none;}
+@media(max-width:720px){
+  .statRow{grid-template-columns:1fr 1fr;}
+  .desktopTable{display:none;}
+  .mcard{display:flex; flex-direction:column; gap:8px;}
+  .mc{border:1px solid var(--c-line); border-radius:11px; padding:12px 13px; background:var(--c-surface);
+    display:flex; flex-direction:column; gap:7px;}
+  .mcTop{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .mcName{font-family:var(--font-jp); font-weight:600; font-size:13.5px; color:#fff; min-width:0; overflow-wrap:anywhere;}
+  .mcGrid{display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;}
+  .mcCell{display:flex; justify-content:space-between; gap:8px; font-size:11.5px;}
+  .mcCell .k{font-family:var(--font-mono); font-size:10px; color:var(--c-ink-3);}
+  .mcCell .v{font-family:var(--font-mono); color:var(--c-ink); font-variant-numeric:tabular-nums;}
+}
+.legend{font-family:var(--font-jp); font-size:11px; color:var(--c-ink-3); margin-top:8px; text-align:center;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ===== PROPOSAL BANNER ===== -->
+  <div class="pbanner">
+    <div class="pbTag">REDESIGN PROPOSAL · 管理画面(/admin)</div>
+    <div class="pbH">「魅せるゲームUI」から「静かな運用コンソール」へ</div>
+    <div class="pbSub">
+      ゲーム本編（ダッシュボード・レース・LP）はネオン/サイバーで正解です。しかし <b>/admin は運営が毎日“作業”する社内ツール</b>。
+      前回はその管理画面にも消費者向けの1cネオン言語を当ててしまい、装飾がデータの視認性を奪っていました。
+      今回は<b>可読性・一覧性・走査性</b>を最優先に、ダーク基調はそのままで“落ち着いた業務ダッシュボード（Linear / Stripe 系）”へ作り替える提案です。
+      機能・データ・API・型は一切変更しません。
+    </div>
+    <div class="pbGrid">
+      <div class="pbCol pbBefore">
+        <div class="pbColH">■ 現行の問題（実測）</div>
+        <ul class="pbList">
+          <li>全行・全カードに装飾グラデ+ネオングロー → データより装飾が目立つ</li>
+          <li>ラベル8.5〜11px+広い字間、見出し用Orbitronをデータに使用 → 読みにくい</li>
+          <li>行が“カード”で <b>列が揃わない</b>（flex-wrap）→ 金額/日付を縦に走査できない</li>
+          <li>絵文字メニュー（💰👤🎒…）→ 業務ツールに見えない</li>
+          <li>低コントラスト（faint多用・薄いalpha）</li>
+        </ul>
+      </div>
+      <div class="pbCol pbAfter">
+        <div class="pbColH">■ 提案の変更点</div>
+        <ul class="pbList">
+          <li>装飾グラデ/グロー廃止 → フラット面+1本の境界線。色は<b>状態表現だけ</b></li>
+          <li>データは等幅数字+日本語サンス、字間を詰め可読サイズへ（Orbitronは見出しのみ）</li>
+          <li>一覧は<b>列見出し付きの本物のテーブル</b>。数値は右揃え・等幅で縦に揃う</li>
+          <li>絵文字を廃し、単色グリフ+明快なラベル</li>
+          <li>高コントラスト化・行の余白を詰めて1画面の情報量UP</li>
+        </ul>
+      </div>
+    </div>
+    <div class="legend">↓ 以下は実データ（プレビュー用フィクスチャ）で描いた新方向の代表画面。承認いただければ全10画面へCSS主体で展開します。</div>
+  </div>
+
+  <!-- ===== NAV ===== -->
+  <div class="frameLabel">
+    <span class="n">NAV</span><span class="t">管理ナビ</span>
+    <span class="d">グロー廃止・現在地は下線+淡いフィルで明快に</span>
+  </div>
+  <div class="screen">
+    <div class="anav">
+      <span class="anavBrand"><span class="anavBar"></span><span class="anavBrandT">ADMIN</span></span>
+      <a class="anavLink anavActive" href="#">ダッシュボード</a>
+      <a class="anavLink" href="#">経済</a>
+      <a class="anavLink" href="#">ユーザー</a>
+      <a class="anavLink" href="#">アイテム</a>
+      <a class="anavLink" href="#">レース</a>
+      <a class="anavLink" href="#">サポート</a>
+      <a class="anavLink" href="#">バッチ</a>
+      <a class="anavLink" href="#">出金レビュー</a>
+      <a class="anavLink" href="#">リカバリ</a>
+      <a class="anavLink" href="#">監査ログ</a>
+      <a class="anavLink" href="#">デモ上映</a>
+    </div>
+  </div>
+
+  <!-- ===== 1. DASHBOARD ===== -->
+  <div class="frameLabel">
+    <span class="n">01</span><span class="t">管理ダッシュボード</span>
+    <span class="d">状態を最初の一目で。メニューは絵文字なしの整列グリッド</span>
+  </div>
+  <div class="screen"><div class="screenBody">
+    <div class="ph">
+      <div>
+        <h1 class="phTitle">管理ダッシュボード</h1>
+        <div class="phSub">運営の入口。異常があればここで気づける状態を最優先。</div>
+      </div>
+    </div>
+
+    <div class="statRow">
+      <div class="stat statBig ok">
+        <div class="statK">ECONOMY STATUS · 経済状態</div>
+        <div class="statV gd">NORMAL</div>
+        <div class="statSub">バーン率・報酬プールは正常範囲</div>
+      </div>
+      <div class="stat statBig">
+        <div class="statK">LATEST BATCH · 最新バッチ</div>
+        <div class="statV" style="font-size:19px;">2026-07-08 <span class="st stGood" style="vertical-align:3px;">COMPLETED</span></div>
+        <div class="statSub">毎晩20:00 MYT の一斉精算</div>
+      </div>
+      <div class="stat">
+        <div class="statK">burn_rate</div>
+        <div class="statV">0.42</div>
+      </div>
+      <div class="stat">
+        <div class="statK">prize_pool_days</div>
+        <div class="statV">12</div>
+      </div>
+    </div>
+
+    <div class="sec">MENU · 運営メニュー</div>
+    <div class="menu">
+      <a class="mCard" href="#"><span class="mTop"><span class="mGlyph">経</span><span class="mTitle">経済・準備金</span></span><span class="mDesc">プラットフォーム勘定残高 / ユーザー資産総額 / 直近の取引種別</span></a>
+      <a class="mCard" href="#"><span class="mTop"><span class="mGlyph">U</span><span class="mTitle">ユーザー</span></span><span class="mDesc">メール検索 / 残高・馬・BURN・アイテム / 組織(直紹介)</span></a>
+      <a class="mCard" href="#"><span class="mTop"><span class="mGlyph">物</span><span class="mTitle">アイテム</span></span><span class="mDesc">カタログ別の販売数・売上 / ドロップ・ギフト / 設定分布</span></a>
+      <a class="mCard" href="#"><span class="mTop"><span class="mGlyph">走</span><span class="mTitle">レース</span></span><span class="mDesc">直近レースの頭数・BURN数・アイテム設定 / Derbyモード</span></a>
+      <a class="mCard" href="#"><span class="mTop"><span class="mGlyph">C</span><span class="mTitle">サポート(AIメール)</span></span><span class="mDesc">受信メールのAI下書きを承認して送信 / 全件承認制</span></a>
+      <a class="mCard" href="#"><span class="mTop"><span class="mGlyph">批</span><span class="mTitle">バッチ運行</span></span><span class="mDesc">毎晩20:00の一斉精算 / ステップ状況 / 失敗リトライ</span></a>
+      <a class="mCard" href="#"><span class="mTop"><span class="mGlyph">出</span><span class="mTitle">出金レビュー</span></span><span class="mDesc">大口出金(1,000 USDT以上)の2名承認</span></a>
+      <a class="mCard" href="#"><span class="mTop"><span class="mGlyph">復</span><span class="mTitle">リカバリ</span></span><span class="mDesc">障害時の復旧案件 / 承認 → 実行の2段階</span></a>
+      <a class="mCard" href="#"><span class="mTop"><span class="mGlyph">監</span><span class="mTitle">監査ログ</span></span><span class="mDesc">管理操作・システム操作の全記録(直近200件)</span></a>
+    </div>
+  </div></div>
+
+  <!-- ===== 2. BATCHES (table) ===== -->
+  <div class="frameLabel">
+    <span class="n">02</span><span class="t">日次バッチ</span>
+    <span class="d">列見出し付きテーブル。ステータス色は意味のみ・数値は右揃え</span>
+  </div>
+  <div class="screen"><div class="screenBody">
+    <div class="ph"><div><h1 class="phTitle">日次バッチ（37ステップ）</h1><div class="phSub">失敗行は左に赤帯。FAILEDはリトライ不可 → リカバリ手続きへ。</div></div></div>
+    <div class="tableWrap desktopTable">
+      <table class="tbl">
+        <thead><tr><th>batch date</th><th>状態</th><th class="tRight">ステップ</th><th>完了/失敗時刻</th><th class="tRight">操作</th></tr></thead>
+        <tbody>
+          <tr><td class="date">2026-07-08</td><td><span class="st stGood">COMPLETED</span></td><td class="num">37<span class="u">/37</span></td><td class="date">2026-07-08 20:05:00</td><td class="tRight">—</td></tr>
+          <tr><td class="date">2026-07-07</td><td><span class="st stWarn">PARTIAL_FAILED</span></td><td class="num">34<span class="u">/37</span></td><td class="date">2026-07-07 20:06:12</td><td class="tRight"><button class="btn">リトライ</button></td></tr>
+          <tr><td class="date">2026-07-06</td><td><span class="st stGood">COMPLETED</span></td><td class="num">37<span class="u">/37</span></td><td class="date">2026-07-06 20:04:41</td><td class="tRight">—</td></tr>
+          <tr><td class="date">2026-07-05</td><td><span class="st stBad">FAILED</span></td><td class="num">21<span class="u">/37</span></td><td class="date">2026-07-05 20:03:09</td><td class="tRight">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mcard">
+      <div class="mc"><div class="mcTop"><span class="mcName">2026-07-08</span><span class="st stGood">COMPLETED</span></div><div class="mcGrid"><div class="mcCell"><span class="k">ステップ</span><span class="v">37/37</span></div><div class="mcCell"><span class="k">完了</span><span class="v">20:05</span></div></div></div>
+      <div class="mc"><div class="mcTop"><span class="mcName">2026-07-07</span><span class="st stWarn">PARTIAL_FAILED</span></div><div class="mcGrid"><div class="mcCell"><span class="k">ステップ</span><span class="v">34/37</span></div><div class="mcCell"><span class="k">失敗</span><span class="v">20:06</span></div></div><button class="btn" style="width:100%">リトライ</button></div>
+    </div>
+    <div class="note"><b>FAILED</b>（非リトライ可能ステップの失敗）はリトライできません — リカバリ手続き（二重承認）が必要です。</div>
+  </div></div>
+
+  <!-- ===== 3. ECONOMY ===== -->
+  <div class="frameLabel">
+    <span class="n">03</span><span class="t">経済・準備金</span>
+    <span class="d">勘定は残高を右揃えテーブルで比較しやすく</span>
+  </div>
+  <div class="screen"><div class="screenBody">
+    <div class="ph"><div><h1 class="phTitle">経済・準備金</h1></div></div>
+    <div class="sec">USER FUNDS · ユーザー資産(サマリー)</div>
+    <div class="statRow">
+      <div class="stat"><div class="statK">利用可能残高 合計</div><div class="statV">48,211.90<span class="u">USDT</span></div><div class="statSub">132 アカウント</div></div>
+      <div class="stat"><div class="statK">ユーザー(稼働/総数)</div><div class="statV">132<span class="u">/ 140</span></div></div>
+      <div class="stat"><div class="statK">馬(稼働/総数)</div><div class="statV">118<span class="u">/ 260</span></div></div>
+      <div class="stat"><div class="statK">直近7日 取引</div><div class="statV">52<span class="u">件</span></div></div>
+    </div>
+    <div class="sec">PLATFORM ACCOUNTS · プラットフォーム勘定</div>
+    <div class="tableWrap desktopTable">
+      <table class="tbl">
+        <thead><tr><th>勘定</th><th class="tRight">残高</th><th>account_type</th></tr></thead>
+        <tbody>
+          <tr><td class="strong">サポートボーナス準備金</td><td class="num">10,234.55<span class="u">USDT</span></td><td class="mono">MLM_RESERVE</td></tr>
+          <tr><td class="strong">運営準備金</td><td class="num">20,991.02<span class="u">USDT</span></td><td class="mono">OPERATING</td></tr>
+          <tr><td class="strong">買戻準備金(チャンピオン報酬)</td><td class="num">5,410.00<span class="u">USDT</span></td><td class="mono">PRIZE_POOL</td></tr>
+          <tr><td class="strong">アイテム精算クリアリング</td><td class="num">0.00<span class="u">USDT</span></td><td class="mono">PLATFORM_ITEM_CLEARING</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mcard">
+      <div class="mc"><div class="mcTop"><span class="mcName">サポートボーナス準備金</span></div><div class="mcCell"><span class="k">MLM_RESERVE</span><span class="v">10,234.55 USDT</span></div></div>
+      <div class="mc"><div class="mcTop"><span class="mcName">運営準備金</span></div><div class="mcCell"><span class="k">OPERATING</span><span class="v">20,991.02 USDT</span></div></div>
+    </div>
+  </div></div>
+
+  <!-- ===== 4. USERS ===== -->
+  <div class="frameLabel">
+    <span class="n">04</span><span class="t">ユーザー</span>
+    <span class="d">検索→表で走査→行クリックで台帳を展開（最も作業が多い画面）</span>
+  </div>
+  <div class="screen"><div class="screenBody">
+    <div class="ph"><div><h1 class="phTitle">ユーザー</h1></div></div>
+    <div class="controls">
+      <input class="inp" placeholder="メールアドレスで検索(部分一致)" value="" />
+      <button class="btnPrimary btn">検索</button>
+      <span class="cnt">3件(最新順・最大50件)</span>
+    </div>
+    <div class="tableWrap desktopTable">
+      <table class="tbl">
+        <thead><tr><th>メール</th><th>状態</th><th class="tRight">残高</th><th class="tRight">馬</th><th class="tRight">BURN</th><th class="tRight">所持品</th><th class="tRight">直紹介</th><th>登録日</th></tr></thead>
+        <tbody>
+          <tr style="background:rgba(255,77,207,0.06);"><td class="strong">ab***@gmail.com</td><td><span class="st stGood">ACTIVE</span></td><td class="num">1,204.50<span class="u">USDT</span></td><td class="num">3</td><td class="num">1</td><td class="num">5</td><td class="num">4</td><td class="date">2026-05-30</td></tr>
+        </tbody>
+      </table>
+      <div class="dossier">
+        <div class="badges">
+          <span class="st stGood">● オンライン(5分以内)</span>
+          <span class="tag">最終ログイン 2026-07-08 19:40</span>
+          <span class="tag">最終アクセス 2026-07-08 19:58</span>
+        </div>
+        <div class="statRow">
+          <div class="stat"><div class="statK">利用可能残高</div><div class="statV">1,204.50<span class="u">USDT</span></div></div>
+          <div class="stat"><div class="statK">ロック中残高</div><div class="statV">177.16<span class="u">USDT</span></div></div>
+          <div class="stat"><div class="statK">組織人数(7段まで)</div><div class="statV">28<span class="u">人</span></div></div>
+          <div class="stat"><div class="statK">ユーザーID</div><div class="statV" style="font-size:12px; color:var(--c-ink-3);">3f6a…0001</div></div>
+        </div>
+        <div class="sec">馬の保有(3)</div>
+        <div class="tableWrap">
+          <table class="tbl">
+            <thead><tr><th>名前</th><th>状態</th><th class="tRight">Day</th><th>レアリティ</th><th>type</th></tr></thead>
+            <tbody>
+              <tr><td class="strong">Azure Comet</td><td><span class="st stGood">ACTIVE</span></td><td class="num">4</td><td><span class="tag">RARE</span></td><td class="mono">sprinter</td></tr>
+              <tr><td class="strong">Crimson Nova</td><td><span class="st stNeutral">BURNED</span></td><td class="num">2</td><td><span class="tag">COMMON</span></td><td class="mono">stayer</td></tr>
+              <tr><td class="strong">Golden Wind</td><td><span class="st stGood">ACTIVE</span></td><td class="num">6</td><td><span class="tag">EPIC</span></td><td class="mono">miler</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="sec">ADMIN ACTIONS · 管理アクション</div>
+        <div class="controls">
+          <select class="sel"><option>アイテムを選択…</option></select>
+          <select class="sel"><option>1個</option></select>
+          <button class="btn">アイテムを付与</button>
+          <button class="btnDanger btn">アカウントを凍結</button>
+        </div>
+      </div>
+    </div>
+    <div class="mcard">
+      <div class="mc"><div class="mcTop"><span class="mcName">ab***@gmail.com</span><span class="st stGood">ACTIVE</span></div><div class="mcGrid"><div class="mcCell"><span class="k">残高</span><span class="v">1,204.50</span></div><div class="mcCell"><span class="k">馬</span><span class="v">3</span></div><div class="mcCell"><span class="k">BURN</span><span class="v">1</span></div><div class="mcCell"><span class="k">直紹介</span><span class="v">4</span></div></div></div>
+    </div>
+  </div></div>
+
+  <!-- ===== 5. AUDIT ===== -->
+  <div class="frameLabel">
+    <span class="n">05</span><span class="t">監査ログ</span>
+    <span class="d">検索+ページング。時系列を等幅で縦に走査できる</span>
+  </div>
+  <div class="screen"><div class="screenBody">
+    <div class="ph"><div><h1 class="phTitle">監査ログ</h1></div></div>
+    <div class="controls">
+      <input class="inp" placeholder="アクション・対象で検索…" />
+      <select class="sel"><option>すべてのアクター</option></select>
+      <span class="cnt">全 212 件</span>
+    </div>
+    <div class="tableWrap desktopTable">
+      <table class="tbl">
+        <thead><tr><th>時刻</th><th>アクター</th><th>アクター ID</th><th>アクション</th><th>対象</th></tr></thead>
+        <tbody>
+          <tr><td class="date">2026-07-08 20:05:02</td><td><span class="st stNeutral">SYSTEM</span></td><td class="mono">—</td><td class="strong" style="font-weight:500;">BATCH_SETTLED</td><td class="mono">batch:2026-07-08</td></tr>
+          <tr><td class="date">2026-07-08 19:41:18</td><td><span class="st stWarn">ADMIN</span></td><td class="mono">fin-02</td><td class="strong" style="font-weight:500;">FUND_GRANT_APPROVED</td><td class="mono">grant:8831</td></tr>
+          <tr><td class="date">2026-07-08 19:38:55</td><td><span class="st stWarn">ADMIN</span></td><td class="mono">sup-01</td><td class="strong" style="font-weight:500;">USER_SUSPENDED</td><td class="mono">user:3f6a…9c</td></tr>
+          <tr><td class="date">2026-07-08 18:22:07</td><td><span class="st stNeutral">SYSTEM</span></td><td class="mono">—</td><td class="strong" style="font-weight:500;">DEPOSIT_DETECTED</td><td class="mono">tx:0x9a…e1</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mcard">
+      <div class="mc"><div class="mcTop"><span class="mcName" style="font-size:12.5px;">BATCH_SETTLED</span><span class="st stNeutral">SYSTEM</span></div><div class="mcCell"><span class="k">2026-07-08 20:05</span><span class="v">batch:2026-07-08</span></div></div>
+      <div class="mc"><div class="mcTop"><span class="mcName" style="font-size:12.5px;">FUND_GRANT_APPROVED</span><span class="st stWarn">ADMIN</span></div><div class="mcCell"><span class="k">2026-07-08 19:41 · fin-02</span><span class="v">grant:8831</span></div></div>
+    </div>
+  </div></div>
+
+</div>
+</body>
+</html>

@@ -4,8 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import s from '../app/admin.module.css';
 
-/* /admin/users — 検索 → 行クリックで完全なユーザー台帳(dossier)を展開。
- * 管理アクション: アイテム付与 / USDT付与申請(二重承認) / 凍結・解除。 */
+/* /admin/users — Ops Consoleリデザイン(2026-07-13ハンドオフ)。
+ * 検索 → 表で走査 → 行クリックで台帳(dossier)を展開(最も作業が多い画面)。
+ * 管理アクション: アイテム付与 / USDT付与(≤1,000即時・超は二重承認) / 凍結・解除。
+ * データ・API・ロジックは旧版と同一 — 変更はマークアップ(テーブル化)とCSSのみ。
+ * 台帳内サブテーブルはモバイルでは .scrollX(コンテナ内横スクロール)で退避。 */
 
 interface AdminUserRow {
   id: string; email: string; status: string; created_at: string;
@@ -129,35 +132,422 @@ export function AdminUsersView() {
   }
 
   const pending = grants.filter((g) => g.status === 'PENDING');
+  const openUser = openId ? rows.find((u) => u.id === openId) ?? null : null;
+
+  /* 台帳(dossier)本体 — デスクトップはテーブル直下、モバイルはカード直下に出す */
+  function renderDossier(u: AdminUserRow) {
+    return (
+      <div className={s.dossier}>
+        {dossier && dossier.user.id === u.id ? (
+          <>
+            {/* プレゼンス */}
+            <div className={s.badges}>
+              {dossier.user.online
+                ? <span className={`${s.st} ${s.stGood}`}>● オンライン(5分以内にアクセス)</span>
+                : <span className={`${s.st} ${s.stNeutral}`}>オフライン</span>}
+              <span className={s.tag}>最終ログイン {ts(dossier.user.last_sign_in_at)}</span>
+              <span className={s.tag}>最終アクセス {ts(dossier.user.last_seen_at)}</span>
+            </div>
+
+            <div className={s.statRow}>
+              <div className={s.stat}>
+                <div className={s.statK}>利用可能残高</div>
+                <div className={s.statV}>{money(dossier.user.balance_available)}<span className={s.u}>USDT</span></div>
+              </div>
+              <div className={s.stat}>
+                <div className={s.statK}>ロック中残高</div>
+                <div className={s.statV}>{money(dossier.user.balance_locked)}<span className={s.u}>USDT</span></div>
+              </div>
+              <div className={s.stat}>
+                <div className={s.statK}>組織人数(7段まで)</div>
+                <div className={s.statV}>{dossier.org_size.toLocaleString()}<span className={s.u}>人</span></div>
+              </div>
+              <div className={s.stat}>
+                <div className={s.statK}>ユーザーID</div>
+                <div className={s.statV} style={{ fontSize: 12, color: 'var(--c-ink-3)', overflowWrap: 'anywhere' }}>{dossier.user.id}</div>
+              </div>
+            </div>
+
+            {/* MLM位置 */}
+            <div className={s.sec}>MLM · MAP位置(上位チェーン)</div>
+            <div style={{ fontSize: 12.5 }}>
+              {dossier.upline.length > 0
+                ? ['本人', ...dossier.upline.map((p) => p.email)].join(' ← ')
+                : '本人がルート(紹介者なし)'}
+            </div>
+            {dossier.direct_referrals.length > 0 && (
+              <div className={s.badges}>
+                {dossier.direct_referrals.map((c) => (
+                  <span key={c.id} className={s.tag}>{c.email}</span>
+                ))}
+              </div>
+            )}
+
+            {/* 入出金 */}
+            <div className={s.sec}>USDT入金({dossier.deposits.length})/ 出金({dossier.withdrawals.length})</div>
+            {dossier.deposits.length + dossier.withdrawals.length > 0 ? (
+              <div className={`${s.tableWrap} ${s.scrollX}`}>
+                <table className={s.tbl}>
+                  <thead>
+                    <tr><th>種別</th><th className={s.tRight}>金額</th><th>状態</th><th>時刻</th><th>tx / 宛先</th></tr>
+                  </thead>
+                  <tbody>
+                    {dossier.deposits.map((d, i) => (
+                      <tr key={`d${i}`}>
+                        <td><span className={`${s.st} ${s.stGood}`}>入金</span></td>
+                        <td className={s.num}>{money(d.amount)}<span className={s.u}>USDT</span></td>
+                        <td><span className={s.tag}>{d.status}</span></td>
+                        <td className={s.date}>{ts(d.detected_at)}</td>
+                        <td className={`${s.mono} ${s.ell}`}>{d.tx_hash}</td>
+                      </tr>
+                    ))}
+                    {dossier.withdrawals.map((w, i) => (
+                      <tr key={`w${i}`}>
+                        <td><span className={`${s.st} ${s.stWarn}`}>出金</span></td>
+                        <td className={s.num}>{money(w.requested_amount)}<span className={s.u}>USDT</span></td>
+                        <td><span className={s.tag}>{w.status}</span></td>
+                        <td className={s.date}>{ts(w.requested_at)}</td>
+                        <td className={`${s.mono} ${s.ell}`}>{w.to_address}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className={s.empty}>入出金はまだありません</div>}
+
+            {/* 購入・利確・売却 */}
+            <div className={s.sec}>馬の購入({dossier.purchases.length})</div>
+            {dossier.purchases.length > 0 ? (
+              <div className={`${s.tableWrap} ${s.scrollX}`}>
+                <table className={s.tbl}>
+                  <thead>
+                    <tr><th>時刻</th><th className={s.tRight}>金額</th><th>状態</th><th className={s.tRight}>返金</th></tr>
+                  </thead>
+                  <tbody>
+                    {dossier.purchases.map((p, i) => (
+                      <tr key={i}>
+                        <td className={s.date}>{ts(p.created_at)}</td>
+                        <td className={s.num}>{money(p.assigned_price ?? p.locked_amount)}<span className={s.u}>USDT</span></td>
+                        <td><span className={s.tag}>{p.status}</span></td>
+                        <td className={s.num}>{p.refund_amount && Number(p.refund_amount) > 0 ? money(p.refund_amount) : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className={s.empty}>購入履歴なし</div>}
+
+            <div className={s.sec}>利確(Day7走破の買戻し)({dossier.buybacks.length})</div>
+            {dossier.buybacks.length > 0 ? (
+              <div className={`${s.tableWrap} ${s.scrollX}`}>
+                <table className={s.tbl}>
+                  <thead>
+                    <tr><th>馬</th><th className={s.tRight}>支払/総額</th><th className={s.tRight}>回数</th><th>状態</th><th>Day7達成日</th></tr>
+                  </thead>
+                  <tbody>
+                    {dossier.buybacks.map((b) => (
+                      <tr key={b.id}>
+                        <td className={s.strong}>{b.horse_name}</td>
+                        <td className={s.num}>{money(b.paid_amount)} / {money(b.total_amount)}<span className={s.u}>USDT</span></td>
+                        <td className={s.num}>{b.paid_count}<span className={s.u}>/7</span></td>
+                        <td><span className={s.tag}>{b.status}</span></td>
+                        <td className={s.date}>{b.day7_clear_date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className={s.empty}>利確履歴なし</div>}
+
+            <div className={s.sec}>マーケット出品({dossier.sales.length})</div>
+            {dossier.sales.length > 0 ? (
+              <div className={`${s.tableWrap} ${s.scrollX}`}>
+                <table className={s.tbl}>
+                  <thead>
+                    <tr><th>馬</th><th className={s.tRight}>価格</th><th>状態</th><th className={s.tRight}>Day</th><th>出品時刻</th></tr>
+                  </thead>
+                  <tbody>
+                    {dossier.sales.map((m, i) => (
+                      <tr key={i}>
+                        <td className={s.strong}>{m.horse_name}</td>
+                        <td className={s.num}>{money(m.listing_price)}<span className={s.u}>USDT</span></td>
+                        <td>
+                          {m.status === 'ASSIGNED'
+                            ? <span className={`${s.st} ${s.stGood}`}>売却成立</span>
+                            : <span className={`${s.st} ${s.stNeutral}`}>{m.status}</span>}
+                        </td>
+                        <td className={s.num}>{m.current_day}</td>
+                        <td className={s.date}>{ts(m.listed_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className={s.empty}>出品履歴なし</div>}
+
+            {/* 馬・アイテム */}
+            <div className={s.sec}>馬の保有({dossier.horses.length})</div>
+            {dossier.horses.length > 0 ? (
+              <div className={`${s.tableWrap} ${s.scrollX}`}>
+                <table className={s.tbl}>
+                  <thead>
+                    <tr><th>名前</th><th>状態</th><th className={s.tRight}>Day</th><th>レアリティ</th><th>type</th><th>取得</th></tr>
+                  </thead>
+                  <tbody>
+                    {dossier.horses.map((h) => (
+                      <tr key={h.id}>
+                        <td className={s.strong}>{h.name}</td>
+                        <td>
+                          {h.status === 'ACTIVE'
+                            ? <span className={`${s.st} ${s.stGood}`}>ACTIVE</span>
+                            : <span className={`${s.st} ${s.stNeutral}`}>{h.status}</span>}
+                        </td>
+                        <td className={s.num}>{h.current_day}</td>
+                        <td><span className={s.tag}>{h.rarity}</span></td>
+                        <td className={s.mono}>{h.horse_type}</td>
+                        <td className={s.date}>{ts(h.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className={s.empty}>馬なし</div>}
+
+            <div className={s.sec}>アイテム取得履歴({dossier.item_acquisitions.length})</div>
+            {dossier.item_acquisitions.length > 0 ? (
+              <div className={`${s.tableWrap} ${s.scrollX}`}>
+                <table className={s.tbl}>
+                  <thead>
+                    <tr><th>時刻</th><th>アイテム</th><th>入手経路</th><th className={s.tRight}>価格</th><th>状態</th></tr>
+                  </thead>
+                  <tbody>
+                    {dossier.item_acquisitions.map((a, i) => (
+                      <tr key={i}>
+                        <td className={s.date}>{ts(a.acquired_at)}</td>
+                        <td className={s.mono} style={{ color: 'var(--c-ink)' }}>{a.item_key}</td>
+                        <td>
+                          <span className={`${s.st} ${a.source === 'PURCHASE' ? s.stGood : a.source === 'BURN_DROP' ? s.stWarn : s.stNeutral}`}>
+                            {a.source === 'PURCHASE' ? '購入' : a.source === 'BURN_DROP' ? 'BURNドロップ' : 'ギフト/付与'}
+                          </span>
+                        </td>
+                        <td className={s.num}>{Number(a.unit_price) > 0 ? money(a.unit_price) : '—'}</td>
+                        <td><span className={s.tag}>{a.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className={s.empty}>アイテム取得なし</div>}
+
+            <div className={s.sec}>アイテム使用履歴({dossier.item_usages.length})</div>
+            {dossier.item_usages.length > 0 ? (
+              <div className={`${s.tableWrap} ${s.scrollX}`}>
+                <table className={s.tbl}>
+                  <thead>
+                    <tr><th>レース日</th><th>アイテム</th><th>状態</th><th>結果</th></tr>
+                  </thead>
+                  <tbody>
+                    {dossier.item_usages.map((uu, i) => (
+                      <tr key={i}>
+                        <td className={s.date}>{uu.effective_race_date}</td>
+                        <td className={s.mono} style={{ color: 'var(--c-ink)' }}>{uu.item_key}</td>
+                        <td><span className={s.tag}>{uu.status}</span></td>
+                        <td>
+                          {uu.settled_outcome
+                            ? <span className={`${s.st} ${uu.settled_outcome === 'SURVIVED' ? s.stGood : s.stBad}`}>
+                                {uu.settled_outcome === 'SURVIVED' ? '生存' : 'BURN'}
+                              </span>
+                            : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className={s.empty}>アイテム使用なし</div>}
+
+            <div className={s.sec}>アイテム送付履歴({dossier.item_transfers.length})</div>
+            {dossier.item_transfers.length > 0 ? (
+              <div className={`${s.tableWrap} ${s.scrollX}`}>
+                <table className={s.tbl}>
+                  <thead>
+                    <tr><th>時刻</th><th>方向</th><th>アイテム</th><th>相手</th></tr>
+                  </thead>
+                  <tbody>
+                    {dossier.item_transfers.map((t, i) => (
+                      <tr key={i}>
+                        <td className={s.date}>{ts(t.created_at)}</td>
+                        <td><span className={`${s.st} ${t.is_sender ? s.stWarn : s.stGood}`}>{t.is_sender ? '送付' : '受領'}</span></td>
+                        <td className={s.mono} style={{ color: 'var(--c-ink)' }}>{t.item_key}</td>
+                        <td className={`${s.mono} ${s.ell}`}>{t.is_sender ? `→ ${t.recipient_email}` : `← ${t.sender_email}`}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className={s.empty}>送付・受領なし</div>}
+
+            <div className={s.sec}>アイテム所持({dossier.items.reduce((a, b) => a + b.count, 0)})</div>
+            {dossier.items.length > 0 ? (
+              <div className={s.badges}>
+                {dossier.items.map((it) => (
+                  <span key={`${it.item_key}:${it.status}`} className={s.tag}>
+                    {it.item_key} × {it.count}({it.status})
+                  </span>
+                ))}
+              </div>
+            ) : <div className={s.empty}>アイテムなし</div>}
+
+            {/* このユーザーへの付与履歴 */}
+            {dossier.fund_grants.length > 0 && (
+              <>
+                <div className={s.sec}>USDT付与の履歴</div>
+                <div className={s.badges}>
+                  {dossier.fund_grants.map((g) => (
+                    <span key={g.id} className={`${s.st} ${g.status === 'APPROVED' ? s.stGood : g.status === 'PENDING' ? s.stWarn : s.stNeutral}`}>
+                      {money(g.amount)} USDT · {g.status} · {g.reason}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* 管理アクション */}
+            <div className={s.sec}>ADMIN ACTIONS · 管理アクション</div>
+            <div className={s.controls}>
+              <select className={s.sel} value={grantItemKey} onChange={(e) => setGrantItemKey(e.target.value)}>
+                <option value="">アイテムを選択…</option>
+                {catalog.map((c) => (
+                  <option key={c.key} value={c.key}>{c.name_ja}({c.band})</option>
+                ))}
+              </select>
+              <select className={s.sel} value={grantQty} onChange={(e) => setGrantQty(Number(e.target.value))}>
+                {[1, 2, 3, 5, 10].map((n) => <option key={n} value={n}>{n}個</option>)}
+              </select>
+              <button
+                type="button"
+                className={s.btn}
+                disabled={!grantItemKey}
+                onClick={() => void act(`/api/v1/admin/users/${u.id}/grant-item`, { item_key: grantItemKey, quantity: grantQty })}
+              >
+                アイテムを付与
+              </button>
+            </div>
+            <div className={s.controls}>
+              <input
+                className={s.inp}
+                style={{ maxWidth: 140, flex: 'none' }}
+                value={fundAmount}
+                placeholder="金額(USDT)"
+                inputMode="decimal"
+                onChange={(e) => setFundAmount(e.target.value)}
+              />
+              <input
+                className={s.inp}
+                value={fundReason}
+                placeholder="理由(監査ログに残ります)"
+                onChange={(e) => setFundReason(e.target.value)}
+              />
+              <button
+                type="button"
+                className={`${s.btn} ${s.btnPrimary}`}
+                disabled={!(Number(fundAmount) > 0) || fundReason.trim() === ''}
+                onClick={() => void act(`/api/v1/admin/users/${u.id}/fund-grant`, { amount: Number(fundAmount), reason: fundReason.trim() }, true)}
+              >
+                USDT付与
+              </button>
+              <span className={s.cnt}>※1,000以下は即時反映・1,000超は別の管理者の承認が必要です</span>
+            </div>
+            <div className={s.controls}>
+              {dossier.user.status === 'ACTIVE' ? (
+                <button
+                  type="button"
+                  className={`${s.btn} ${s.btnDanger}`}
+                  onClick={() => {
+                    if (window.confirm(`${dossier.user.email} を凍結しますか?(全APIアクセスが遮断されます)`)) {
+                      void act(`/api/v1/admin/users/${u.id}/status`, { status: 'SUSPENDED' });
+                    }
+                  }}
+                >
+                  アカウントを凍結
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={s.btn}
+                  onClick={() => void act(`/api/v1/admin/users/${u.id}/status`, { status: 'ACTIVE' })}
+                >
+                  凍結を解除
+                </button>
+              )}
+              <span className={s.cnt}>メッセージ通知は AIカスタマーサービス(resend)導入時に追加予定</span>
+            </div>
+            {actionMsg && <p className={actionMsg === '完了しました' ? s.cnt : s.error}>{actionMsg}</p>}
+          </>
+        ) : (
+          <div className={s.cnt}>読み込み中…</div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={s.wrap}>
-      <div className={s.h1}>ユーザー</div>
+      <div className={s.ph}>
+        <div>
+          <h1 className={s.phTitle}>ユーザー</h1>
+        </div>
+      </div>
 
-      {/* 承認待ちのUSDT付与(申請者と別の管理者が承認) */}
+      {/* 承認待ちのUSDT付与(1,000超のみ・申請者と別の管理者が承認) */}
       {pending.length > 0 && (
         <div>
-          <div className={s.secLabel}>PENDING GRANTS · 承認待ちUSDT付与({pending.length})</div>
-          <div className={s.list}>
+          <div className={s.sec}>PENDING GRANTS · 承認待ちUSDT付与({pending.length})</div>
+          <div className={`${s.tableWrap} ${s.desktopTable}`}>
+            <table className={s.tbl}>
+              <thead>
+                <tr><th>メール</th><th className={s.tRight}>金額</th><th>理由</th><th>申請者</th><th className={s.tRight}>操作</th></tr>
+              </thead>
+              <tbody>
+                {pending.map((g) => (
+                  <tr key={g.id}>
+                    <td className={s.strong}>{g.user_email}</td>
+                    <td className={s.num}>{money(g.amount)}<span className={s.u}>USDT</span></td>
+                    <td>{g.reason}</td>
+                    <td className={`${s.mono} ${s.ell}`}>{g.requested_by_email}</td>
+                    <td className={s.tRight}>
+                      <button
+                        type="button"
+                        className={`${s.btn} ${s.btnPrimary}`}
+                        onClick={() => void act(`/api/v1/admin/fund-grants/${g.id}/approve`, undefined)}
+                      >
+                        承認して送金
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className={s.mcard}>
             {pending.map((g) => (
-              <div key={g.id} className={`${s.row} ${s.rowWarn}`}>
-                <span className={s.cMain}>{g.user_email}</span>
-                <span className={s.cAmount}>{money(g.amount)}<small>USDT</small></span>
-                <span className={s.cText}>{g.reason}</span>
-                <span className={s.cDate}>申請: {g.requested_by_email}</span>
-                <span className={s.cActions}>
-                  <button
-                    type="button"
-                    className={s.pagerBtn}
-                    onClick={() => void act(`/api/v1/admin/fund-grants/${g.id}/approve`, undefined)}
-                  >
-                    承認して送金
-                  </button>
-                </span>
+              <div key={g.id} className={s.mc}>
+                <div className={s.mcTop}>
+                  <span className={s.mcName}>{g.user_email}</span>
+                  <span className={`${s.st} ${s.stWarn}`}>{money(g.amount)} USDT</span>
+                </div>
+                <div className={s.mcCell}><span className={s.k}>{g.requested_by_email}</span><span className={s.v}>{g.reason}</span></div>
+                <button
+                  type="button"
+                  className={`${s.btn} ${s.btnPrimary}`}
+                  onClick={() => void act(`/api/v1/admin/fund-grants/${g.id}/approve`, undefined)}
+                >
+                  承認して送金
+                </button>
               </div>
             ))}
           </div>
-          <div className={s.note} style={{ marginTop: 8 }}>
+          <div className={s.note}>
             憲法により<b>申請した管理者自身は承認できません</b>(FINANCE_ADMIN+SUPER_ADMINの2名承認)。
           </div>
         </div>
@@ -165,13 +555,13 @@ export function AdminUsersView() {
 
       <div className={s.controls}>
         <input
-          className={s.search}
+          className={s.inp}
           value={query}
           placeholder="メールアドレスで検索(部分一致)"
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void search(query); }}
         />
-        <button type="button" className={s.pagerBtn} disabled={busy} onClick={() => void search(query)}>
+        <button type="button" className={`${s.btn} ${s.btnPrimary}`} disabled={busy} onClick={() => void search(query)}>
           {busy ? '検索中…' : '検索'}
         </button>
         <span className={s.cnt}>{rows.length}件(最新順・最大50件)</span>
@@ -180,312 +570,69 @@ export function AdminUsersView() {
       {error ? <p className={s.error}>{error}</p> : null}
 
       {rows.length > 0 ? (
-        <div className={s.list}>
-          {rows.map((u) => (
-            <div key={u.id}>
-              <button type="button" className={s.userRowBtn} onClick={() => void toggleDetail(u.id)}>
-                <div className={s.row}>
-                  <span className={s.cMain}>{u.email}</span>
-                  <span className={`${s.pill} ${u.status === 'ACTIVE' ? s.pillGood : s.pillBad}`}>{u.status}</span>
-                  <span className={s.cAmount}>{money(u.balance)}<small>USDT</small></span>
-                  <span className={s.steps}>馬 <b>{u.active_horses}</b> · BURN <b>{u.burns}</b> · 所持品 <b>{u.items_available}</b> · 直紹介 <b>{u.direct_referrals}</b></span>
-                  <span className={`${s.cDate} ${s.cSpace}`}>{u.created_at.slice(0, 10)} 登録</span>
-                </div>
-              </button>
+        <>
+          <div className={`${s.tableWrap} ${s.desktopTable}`}>
+            <table className={s.tbl}>
+              <thead>
+                <tr>
+                  <th>メール</th><th>状態</th><th className={s.tRight}>残高</th>
+                  <th className={s.tRight}>馬</th><th className={s.tRight}>BURN</th>
+                  <th className={s.tRight}>所持品</th><th className={s.tRight}>直紹介</th><th>登録日</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((u) => (
+                  <tr
+                    key={u.id}
+                    className={`${s.rowClick} ${openId === u.id ? s.rowSel : ''}`}
+                    onClick={() => void toggleDetail(u.id)}
+                  >
+                    <td className={s.strong}>{u.email}</td>
+                    <td>
+                      <span className={`${s.st} ${u.status === 'ACTIVE' ? s.stGood : s.stBad}`}>{u.status}</span>
+                    </td>
+                    <td className={s.num}>{money(u.balance)}<span className={s.u}>USDT</span></td>
+                    <td className={s.num}>{u.active_horses}</td>
+                    <td className={s.num}>{u.burns}</td>
+                    <td className={s.num}>{u.items_available}</td>
+                    <td className={s.num}>{u.direct_referrals}</td>
+                    <td className={s.date}>{u.created_at.slice(0, 10)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* 展開中の台帳(デスクトップ: テーブル直下に接続) */}
+          <div className={s.desktopTable}>
+            {openUser ? renderDossier(openUser) : null}
+          </div>
 
-              {openId === u.id && (
-                <div className={s.detailPanel}>
-                  {dossier && dossier.user.id === u.id ? (
-                    <>
-                      {/* プレゼンス */}
-                      <div className={s.cBadges}>
-                        {dossier.user.online
-                          ? <span className={`${s.pill} ${s.pillGood}`}>● オンライン(5分以内にアクセス)</span>
-                          : <span className={`${s.pill} ${s.pillMuted}`}>オフライン</span>}
-                        <span className={`${s.pill} ${s.pillCyan}`}>最終ログイン: {ts(dossier.user.last_sign_in_at)}</span>
-                        <span className={`${s.pill} ${s.pillMuted}`}>最終アクセス: {ts(dossier.user.last_seen_at)}</span>
-                      </div>
-
-                      <div className={s.kpis}>
-                        <div className={s.metric}>
-                          <div className={s.metricK}>利用可能残高</div>
-                          <div className={s.metricV}>{money(dossier.user.balance_available)}<small> USDT</small></div>
-                        </div>
-                        <div className={s.metric}>
-                          <div className={s.metricK}>ロック中残高</div>
-                          <div className={s.metricV}>{money(dossier.user.balance_locked)}<small> USDT</small></div>
-                        </div>
-                        <div className={s.metric}>
-                          <div className={s.metricK}>組織人数(7段まで)</div>
-                          <div className={s.metricV}>{dossier.org_size.toLocaleString()}<small> 人</small></div>
-                        </div>
-                        <div className={s.metric}>
-                          <div className={s.metricK}>ユーザーID</div>
-                          <div className={s.metricJson}>{dossier.user.id}</div>
-                        </div>
-                      </div>
-
-                      {/* MLM位置 */}
-                      <div className={s.secLabel}>MLM · MAP位置(上位チェーン)</div>
-                      <div className={s.cText}>
-                        {dossier.upline.length > 0
-                          ? ['本人', ...dossier.upline.map((p) => p.email)].join(' ← ')
-                          : '本人がルート(紹介者なし)'}
-                      </div>
-                      {dossier.direct_referrals.length > 0 && (
-                        <div className={s.cBadges}>
-                          {dossier.direct_referrals.map((c) => (
-                            <span key={c.id} className={`${s.pill} ${s.pillMuted}`}>{c.email}</span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* 入出金 */}
-                      <div className={s.secLabel}>USDT入金({dossier.deposits.length})/ 出金({dossier.withdrawals.length})</div>
-                      {dossier.deposits.length + dossier.withdrawals.length > 0 ? (
-                        <div className={s.list}>
-                          {dossier.deposits.map((d, i) => (
-                            <div key={`d${i}`} className={s.row}>
-                              <span className={`${s.pill} ${s.pillGood}`}>入金</span>
-                              <span className={s.cAmount}>{money(d.amount)}<small>USDT</small></span>
-                              <span className={`${s.pill} ${s.pillCyan}`}>{d.status}</span>
-                              <span className={s.cDate}>{ts(d.detected_at)}</span>
-                              <span className={`${s.cMono} ${s.cSpace}`}>{d.tx_hash}</span>
-                            </div>
-                          ))}
-                          {dossier.withdrawals.map((w, i) => (
-                            <div key={`w${i}`} className={s.row}>
-                              <span className={`${s.pill} ${s.pillWarn}`}>出金</span>
-                              <span className={s.cAmount}>{money(w.requested_amount)}<small>USDT</small></span>
-                              <span className={`${s.pill} ${s.pillCyan}`}>{w.status}</span>
-                              <span className={s.cDate}>{ts(w.requested_at)}</span>
-                              <span className={`${s.cMono} ${s.cSpace}`}>{w.to_address}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <div className={s.empty}>入出金はまだありません</div>}
-
-                      {/* 購入・利確・売却 */}
-                      <div className={s.secLabel}>馬の購入({dossier.purchases.length})</div>
-                      {dossier.purchases.length > 0 ? (
-                        <div className={s.list}>
-                          {dossier.purchases.map((p, i) => (
-                            <div key={i} className={s.row}>
-                              <span className={s.cDate}>{ts(p.created_at)}</span>
-                              <span className={s.cAmount}>{money(p.assigned_price ?? p.locked_amount)}<small>USDT</small></span>
-                              <span className={`${s.pill} ${s.pillCyan}`}>{p.status}</span>
-                              {p.refund_amount && Number(p.refund_amount) > 0 && (
-                                <span className={s.steps}>返金 <b>{money(p.refund_amount)}</b></span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : <div className={s.empty}>購入履歴なし</div>}
-
-                      <div className={s.secLabel}>利確(Day7走破の買戻し)({dossier.buybacks.length})</div>
-                      {dossier.buybacks.length > 0 ? (
-                        <div className={s.list}>
-                          {dossier.buybacks.map((b) => (
-                            <div key={b.id} className={s.row}>
-                              <span className={s.cMain}>{b.horse_name}</span>
-                              <span className={s.cAmount}>{money(b.paid_amount)} / {money(b.total_amount)}<small>USDT</small></span>
-                              <span className={s.steps}>支払 <b>{b.paid_count}</b>/7</span>
-                              <span className={`${s.pill} ${s.pillCyan}`}>{b.status}</span>
-                              <span className={s.cDate}>Day7: {b.day7_clear_date}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <div className={s.empty}>利確履歴なし</div>}
-
-                      <div className={s.secLabel}>マーケット出品({dossier.sales.length})</div>
-                      {dossier.sales.length > 0 ? (
-                        <div className={s.list}>
-                          {dossier.sales.map((m, i) => (
-                            <div key={i} className={s.row}>
-                              <span className={s.cMain}>{m.horse_name}</span>
-                              <span className={s.cAmount}>{money(m.listing_price)}<small>USDT</small></span>
-                              <span className={`${s.pill} ${m.status === 'ASSIGNED' ? s.pillGood : s.pillMuted}`}>
-                                {m.status === 'ASSIGNED' ? '売却成立' : m.status}
-                              </span>
-                              <span className={s.steps}>Day <b>{m.current_day}</b></span>
-                              <span className={s.cDate}>{ts(m.listed_at)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <div className={s.empty}>出品履歴なし</div>}
-
-                      {/* 馬・アイテム */}
-                      <div className={s.secLabel}>馬の保有({dossier.horses.length})</div>
-                      {dossier.horses.length > 0 ? (
-                        <div className={s.list}>
-                          {dossier.horses.map((h) => (
-                            <div key={h.id} className={s.row}>
-                              <span className={s.cMain}>{h.name}</span>
-                              <span className={`${s.pill} ${h.status === 'ACTIVE' ? s.pillGood : s.pillMuted}`}>{h.status}</span>
-                              <span className={s.steps}>Day <b>{h.current_day}</b></span>
-                              <span className={`${s.pill} ${s.pillCyan}`}>{h.rarity}</span>
-                              <span className={s.cMono}>{h.horse_type}</span>
-                              <span className={`${s.cDate} ${s.cSpace}`}>{ts(h.created_at)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <div className={s.empty}>馬なし</div>}
-
-                      <div className={s.secLabel}>アイテム取得履歴({dossier.item_acquisitions.length})</div>
-                      {dossier.item_acquisitions.length > 0 ? (
-                        <div className={s.list}>
-                          {dossier.item_acquisitions.map((a, i) => (
-                            <div key={i} className={s.row}>
-                              <span className={s.cDate}>{ts(a.acquired_at)}</span>
-                              <span className={s.cMain}>{a.item_key}</span>
-                              <span className={`${s.pill} ${a.source === 'PURCHASE' ? s.pillGood : a.source === 'BURN_DROP' ? s.pillWarn : s.pillCyan}`}>
-                                {a.source === 'PURCHASE' ? '購入' : a.source === 'BURN_DROP' ? 'BURNドロップ' : 'ギフト/付与'}
-                              </span>
-                              {Number(a.unit_price) > 0 && <span className={s.cAmount}>{money(a.unit_price)}<small>USDT</small></span>}
-                              <span className={`${s.pill} ${s.pillMuted}`}>{a.status}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <div className={s.empty}>アイテム取得なし</div>}
-
-                      <div className={s.secLabel}>アイテム使用履歴({dossier.item_usages.length})</div>
-                      {dossier.item_usages.length > 0 ? (
-                        <div className={s.list}>
-                          {dossier.item_usages.map((uu, i) => (
-                            <div key={i} className={s.row}>
-                              <span className={s.cDate}>{uu.effective_race_date}</span>
-                              <span className={s.cMain}>{uu.item_key}</span>
-                              <span className={`${s.pill} ${s.pillCyan}`}>{uu.status}</span>
-                              {uu.settled_outcome && (
-                                <span className={`${s.pill} ${uu.settled_outcome === 'SURVIVED' ? s.pillGood : s.pillBad}`}>
-                                  {uu.settled_outcome === 'SURVIVED' ? '生存' : 'BURN'}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : <div className={s.empty}>アイテム使用なし</div>}
-
-                      <div className={s.secLabel}>アイテム送付履歴({dossier.item_transfers.length})</div>
-                      {dossier.item_transfers.length > 0 ? (
-                        <div className={s.list}>
-                          {dossier.item_transfers.map((t, i) => (
-                            <div key={i} className={s.row}>
-                              <span className={s.cDate}>{ts(t.created_at)}</span>
-                              <span className={`${s.pill} ${t.is_sender ? s.pillWarn : s.pillGood}`}>{t.is_sender ? '送付' : '受領'}</span>
-                              <span className={s.cMain}>{t.item_key}</span>
-                              <span className={s.cText}>{t.is_sender ? `→ ${t.recipient_email}` : `← ${t.sender_email}`}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : <div className={s.empty}>送付・受領なし</div>}
-
-                      <div className={s.secLabel}>アイテム所持({dossier.items.reduce((a, b) => a + b.count, 0)})</div>
-                      {dossier.items.length > 0 ? (
-                        <div className={s.cBadges}>
-                          {dossier.items.map((it) => (
-                            <span key={`${it.item_key}:${it.status}`} className={`${s.pill} ${it.status === 'AVAILABLE' ? s.pillCyan : s.pillMuted}`}>
-                              {it.item_key} × {it.count}({it.status})
-                            </span>
-                          ))}
-                        </div>
-                      ) : <div className={s.empty}>アイテムなし</div>}
-
-                      {/* このユーザーへの付与履歴 */}
-                      {dossier.fund_grants.length > 0 && (
-                        <>
-                          <div className={s.secLabel}>USDT付与の履歴</div>
-                          <div className={s.cBadges}>
-                            {dossier.fund_grants.map((g) => (
-                              <span key={g.id} className={`${s.pill} ${g.status === 'APPROVED' ? s.pillGood : g.status === 'PENDING' ? s.pillWarn : s.pillMuted}`}>
-                                {money(g.amount)} USDT · {g.status} · {g.reason}
-                              </span>
-                            ))}
-                          </div>
-                        </>
-                      )}
-
-                      {/* 管理アクション */}
-                      <div className={s.secLabel}>ADMIN ACTIONS · 管理アクション</div>
-                      <div className={s.controls}>
-                        <select className={s.select} value={grantItemKey} onChange={(e) => setGrantItemKey(e.target.value)}>
-                          <option value="">アイテムを選択…</option>
-                          {catalog.map((c) => (
-                            <option key={c.key} value={c.key}>{c.name_ja}({c.band})</option>
-                          ))}
-                        </select>
-                        <select className={s.select} value={grantQty} onChange={(e) => setGrantQty(Number(e.target.value))}>
-                          {[1, 2, 3, 5, 10].map((n) => <option key={n} value={n}>{n}個</option>)}
-                        </select>
-                        <button
-                          type="button"
-                          className={s.pagerBtn}
-                          disabled={!grantItemKey}
-                          onClick={() => void act(`/api/v1/admin/users/${u.id}/grant-item`, { item_key: grantItemKey, quantity: grantQty })}
-                        >
-                          アイテムを付与
-                        </button>
-                      </div>
-                      <div className={s.controls}>
-                        <input
-                          className={s.search}
-                          style={{ maxWidth: 140 }}
-                          value={fundAmount}
-                          placeholder="金額(USDT)"
-                          inputMode="decimal"
-                          onChange={(e) => setFundAmount(e.target.value)}
-                        />
-                        <input
-                          className={s.search}
-                          value={fundReason}
-                          placeholder="理由(監査ログに残ります)"
-                          onChange={(e) => setFundReason(e.target.value)}
-                        />
-                        <button
-                          type="button"
-                          className={s.pagerBtn}
-                          disabled={!(Number(fundAmount) > 0) || fundReason.trim() === ''}
-                          onClick={() => void act(`/api/v1/admin/users/${u.id}/fund-grant`, { amount: Number(fundAmount), reason: fundReason.trim() }, true)}
-                        >
-                          USDT付与
-                        </button>
-                        <span className={s.cnt}>※1,000以下は即時反映・1,000超は別の管理者の承認が必要です</span>
-                      </div>
-                      <div className={s.controls}>
-                        {dossier.user.status === 'ACTIVE' ? (
-                          <button
-                            type="button"
-                            className={s.pagerBtn}
-                            style={{ borderColor: 'rgba(255,92,92,0.5)', color: 'var(--bad)', background: 'rgba(255,92,92,0.08)' }}
-                            onClick={() => {
-                              if (window.confirm(`${dossier.user.email} を凍結しますか?(全APIアクセスが遮断されます)`)) {
-                                void act(`/api/v1/admin/users/${u.id}/status`, { status: 'SUSPENDED' });
-                              }
-                            }}
-                          >
-                            アカウントを凍結
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className={s.pagerBtn}
-                            onClick={() => void act(`/api/v1/admin/users/${u.id}/status`, { status: 'ACTIVE' })}
-                          >
-                            凍結を解除
-                          </button>
-                        )}
-                        <span className={s.cnt}>メッセージ通知は AIカスタマーサービス(resend)導入時に追加予定</span>
-                      </div>
-                      {actionMsg && <p className={actionMsg === '完了しました' ? s.cnt : s.error}>{actionMsg}</p>}
-                    </>
-                  ) : (
-                    <div className={s.cnt}>読み込み中…</div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+          <div className={s.mcard}>
+            {rows.map((u) => (
+              <div key={u.id}>
+                <button
+                  type="button"
+                  onClick={() => void toggleDetail(u.id)}
+                  style={{ all: 'unset', display: 'block', width: '100%', cursor: 'pointer' }}
+                >
+                  <div className={s.mc}>
+                    <div className={s.mcTop}>
+                      <span className={s.mcName}>{u.email}</span>
+                      <span className={`${s.st} ${u.status === 'ACTIVE' ? s.stGood : s.stBad}`}>{u.status}</span>
+                    </div>
+                    <div className={s.mcGrid}>
+                      <div className={s.mcCell}><span className={s.k}>残高</span><span className={s.v}>{money(u.balance)}</span></div>
+                      <div className={s.mcCell}><span className={s.k}>馬</span><span className={s.v}>{u.active_horses}</span></div>
+                      <div className={s.mcCell}><span className={s.k}>BURN</span><span className={s.v}>{u.burns}</span></div>
+                      <div className={s.mcCell}><span className={s.k}>直紹介</span><span className={s.v}>{u.direct_referrals}</span></div>
+                    </div>
+                  </div>
+                </button>
+                {openId === u.id ? renderDossier(u) : null}
+              </div>
+            ))}
+          </div>
+        </>
       ) : !busy ? (
         <div className={s.empty}>該当するユーザーがいません。</div>
       ) : null}
