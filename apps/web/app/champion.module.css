@@ -72,6 +72,16 @@
   object-position: center 32%;
   opacity: 0.92;
 }
+/* ループ動画(2026-07-12): 16:9マスターをヒーローの横長枠にcoverで敷く。
+   馬は画面中央帯を走るのでどのアスペクトでも主役が残る。 */
+.heroVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 55%;
+}
 .heroLoading {
   position: absolute;
   inset: 0;

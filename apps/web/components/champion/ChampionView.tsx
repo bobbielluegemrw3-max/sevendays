@@ -60,7 +60,6 @@ export function ChampionView({
 }) {
   const isSample = hall.length === 0;
   const source = isSample ? SAMPLE_HALL : hall;
-  const heroHorses = source.map((c) => ({ name: c.name, dna_hash: c.dna_hash }));
 
   const [rar, setRar] = useState<(typeof RARITY_FILTER)[number]>('ALL');
   const [sort, setSort] = useState<SortKey>('recent');
@@ -82,8 +81,8 @@ export function ChampionView({
 
   return (
     <>
-      {/* ① ヒーロー(ループアニメ・不変) */}
-      <ChampionHero horses={heroHorses} demo={isSample} />
+      {/* ① ヒーロー(ループ動画 2026-07-12: WebGL描画の録画置換) */}
+      <ChampionHero />
 
       {/* 下段: 2カラム(左=報酬+殿堂 / 右=リーグ) */}
       <div className={s.lower}>
