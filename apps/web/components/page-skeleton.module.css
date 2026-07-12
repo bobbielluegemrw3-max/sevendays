@@ -6,20 +6,53 @@
   gap: 16px;
 }
 
-.title {
+/* ナビと同じブランドロックアップ(globals.cssのnav.topnav .brand-*と同スケール)
+   を淡く脈動 — 読み込み中もブランドの気配を保つ。 */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   height: 34px;
-  width: min(280px, 60%);
-  border-radius: 8px;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+.brandBar {
+  width: 9px;
+  height: 18px;
+  border-radius: 2px;
+  flex: none;
+  background: linear-gradient(180deg, var(--cyan), var(--magenta));
+  box-shadow: 0 0 12px rgba(0, 234, 255, 0.6);
+}
+
+.brandLock {
+  display: flex;
+  flex-direction: column;
+  line-height: 0.88;
+}
+
+.brandL1 {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.3em;
+  color: var(--muted);
+}
+
+.brandL2 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  background: linear-gradient(92deg, #eae7ff, var(--cyan) 50%, var(--magenta));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .panel {
   height: 150px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-}
-
-.title,
-.panel {
   background: linear-gradient(100deg, var(--panel) 40%, var(--panel-2) 50%, var(--panel) 60%);
   background-size: 200% 100%;
   animation: skeletonShimmer 1.4s ease-in-out infinite;
@@ -34,8 +67,18 @@
   }
 }
 
+@keyframes skeletonPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .title,
+  .brand,
   .panel {
     animation: none;
   }
