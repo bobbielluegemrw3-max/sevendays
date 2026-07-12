@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seven Days Derby — 弁護士レビュー資料 2026-07-13</title>
+<style>
+  /* ============================================================
+     弁護士レビュー用スライド(自己完結・オフライン動作)
+     操作: ← → キー / クリックで次へ。印刷: Ctrl+P(1スライド=1ページ)
+     ============================================================ */
+  :root {
+    --bg: #0a0714; --panel: #141122; --border: rgba(255,255,255,0.12);
+    --text: #f2f0ff; --muted: #b9b4dd; --faint: #857fae;
+    --cyan: #00eaff; --magenta: #ff2dc4; --magenta-soft: #ff8fe4;
+    --gold: #c9a86a; --gold-bright: #f2e4bf; --good: #35d07f; --warn: #e6b24a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Noto Sans JP", "Meiryo", sans-serif;
+    font-size: 18px; line-height: 1.75;
+  }
+  .deck { height: 100vh; overflow-y: auto; scroll-snap-type: y mandatory; }
+  section.slide {
+    min-height: 100vh; scroll-snap-align: start; padding: 56px 72px 72px;
+    display: flex; flex-direction: column; gap: 20px; position: relative;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(0,234,255,0.06), transparent 60%),
+      radial-gradient(800px 500px at -10% 110%, rgba(255,45,196,0.05), transparent 60%);
+  }
+  .kicker { font-family: ui-monospace, "Consolas", monospace; font-size: 13px; letter-spacing: .3em; color: var(--cyan); }
+  h1 { font-size: 46px; line-height: 1.25; letter-spacing: .01em; }
+  h2 { font-size: 34px; line-height: 1.3; }
+  h3 { font-size: 20px; color: var(--gold-bright); margin-top: 6px; }
+  p.lead { font-size: 20px; color: var(--muted); max-width: 62ch; }
+  .num { position: absolute; right: 28px; bottom: 20px; font-family: ui-monospace, monospace; font-size: 12px; color: var(--faint); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card { border: 1px solid var(--border); border-radius: 16px; padding: 18px 22px; background: var(--panel); }
+  .card h4 { font-size: 17px; color: var(--cyan); margin-bottom: 8px; letter-spacing: .04em; }
+  .card.goldc h4 { color: var(--gold-bright); } .card.magc h4 { color: var(--magenta-soft); } .card.goodc h4 { color: var(--good); }
+  .card p, .card li { font-size: 15.5px; color: var(--muted); }
+  ul { padding-left: 1.3em; } li { margin: 5px 0; }
+  li b, p b { color: var(--text); }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { color: var(--cyan); font-weight: 600; background: rgba(0,234,255,0.05); white-space: nowrap; }
+  td { color: var(--muted); }
+  .ok { color: var(--good); font-weight: 700; } .ng { color: var(--magenta-soft); font-weight: 700; } .au { color: var(--gold-bright); font-weight: 700; }
+  .tag { display: inline-block; border: 1px solid var(--border); border-radius: 6px; padding: 1px 9px; font-size: 12.5px; color: var(--muted); margin: 1px 3px 1px 0; white-space: nowrap; }
+  .tag.c { color: var(--cyan); border-color: rgba(0,234,255,.4); } .tag.m { color: var(--magenta-soft); border-color: rgba(255,45,196,.4); }
+  .tag.g { color: var(--gold-bright); border-color: rgba(201,168,106,.5); } .tag.gr { color: var(--good); border-color: rgba(53,208,127,.5); }
+  .note { font-size: 13px; color: var(--faint); }
+  .qnum { display: inline-flex; min-width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 8px; background: linear-gradient(100deg, var(--cyan), #5ff5ff); color: #04141a; font-weight: 800; margin-right: 10px; flex: none; font-size: 15px; }
+  .q { display: flex; gap: 4px; align-items: flex-start; margin: 9px 0; font-size: 16px; color: var(--text); }
+  .q small { display: block; color: var(--faint); font-size: 13px; }
+
+  /* ---- サイトの図解: 7日レール ---- */
+  .rail { display: flex; gap: 8px; margin: 10px 0 4px; }
+  .pip { flex: 1; height: 10px; border-radius: 5px; background: rgba(255,255,255,0.10); }
+  .pip.done { background: linear-gradient(90deg, var(--cyan), #5ff5ff); box-shadow: 0 0 10px rgba(0,234,255,.45); }
+  .pip.today { background: linear-gradient(90deg, var(--magenta), var(--magenta-soft)); box-shadow: 0 0 10px rgba(255,45,196,.5); }
+  .railcap { display: flex; justify-content: space-between; font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--faint); }
+
+  /* ---- サイトの図解: 価値の階段(VALUE LADDER) ---- */
+  .lad { display: flex; gap: 10px; align-items: flex-end; height: 210px; margin-top: 12px; }
+  .ladCol { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; height: 100%; }
+  .ladPrice { font-family: ui-monospace, monospace; font-size: 12.5px; color: var(--muted); }
+  .ladPrice.goldp { color: var(--gold-bright); font-weight: 700; }
+  .ladBar { width: 100%; border-radius: 8px 8px 3px 3px; background: linear-gradient(180deg, rgba(0,160,180,.85), rgba(0,90,110,.55)); position: relative; }
+  .ladBar.now { background: linear-gradient(180deg, var(--magenta), #a41b7f); box-shadow: 0 0 18px rgba(255,45,196,.4); }
+  .ladBar.champ { background: linear-gradient(180deg, var(--gold-bright), #8a6d3a); box-shadow: 0 0 18px rgba(201,168,106,.4); }
+  .ladDay { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--faint); }
+  .pin { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 700; border-radius: 5px; padding: 1px 8px; white-space: nowrap; }
+  .pin.now { background: var(--magenta); color: #fff; } .pin.champ { background: linear-gradient(92deg, var(--gold), var(--gold-bright)); color: #241a08; }
+
+  /* ---- サイトの図解: 購入予約 3ステップ / フロー図 ---- */
+  .steps { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
+  .step { flex: 1; min-width: 180px; border: 1px solid var(--border); border-radius: 12px; padding: 12px 15px; background: rgba(10,8,22,.6); }
+  .step .k { font-family: ui-monospace, monospace; font-size: 12px; letter-spacing: .12em; color: var(--cyan); }
+  .step.gk .k { color: var(--good); } .step.mk .k { color: var(--magenta-soft); } .step.auk .k { color: var(--gold-bright); }
+  .step p { font-size: 14.5px; color: var(--muted); margin-top: 4px; }
+  .arrow { align-self: center; color: var(--faint); font-size: 20px; flex: none; }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .fbox { border: 1px solid var(--border); border-radius: 10px; padding: 7px 13px; font-size: 14.5px; background: rgba(10,8,22,.6); color: var(--text); }
+  .fbox.c { border-color: rgba(0,234,255,.45); } .fbox.m { border-color: rgba(255,45,196,.45); }
+  .fbox.g { border-color: rgba(201,168,106,.55); } .fbox.gr { border-color: rgba(53,208,127,.5); }
+  .fbox small { display: block; font-size: 11.5px; color: var(--faint); }
+
+  /* ---- サイトの図解: レース条件セル / ティア表 ---- */
+  .cells { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .cell { border: 1px solid var(--border); border-radius: 10px; text-align: center; padding: 8px 4px; }
+  .cell b { display: block; font-size: 17px; } .cell span { font-size: 11.5px; color: var(--faint); }
+  .tiers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; }
+  .tier { border: 1px solid var(--border); border-radius: 10px; text-align: center; padding: 9px 4px; }
+  .tier .t { font-family: ui-monospace, monospace; font-size: 12px; color: var(--cyan); font-weight: 700; }
+  .tier .amt { font-size: 19px; font-weight: 800; color: var(--gold-bright); }
+  .tier .cond { font-size: 10.5px; color: var(--faint); line-height: 1.5; }
+
+  .hero-title { display: flex; flex-direction: column; justify-content: center; min-height: 78vh; gap: 26px; }
+  .brandbar { width: 12px; height: 26px; border-radius: 3px; display: inline-block; background: linear-gradient(180deg, var(--cyan), var(--magenta)); margin-right: 12px; vertical-align: -3px; }
+  .toc { font-size: 19px; color: var(--muted); columns: 2; column-gap: 48px; }
+  .toc li { margin: 8px 0; break-inside: avoid; }
+
+  @media print {
+    .deck { height: auto; overflow: visible; }
+    section.slide { min-height: auto; page-break-after: always; padding: 36px 44px; }
+    body { font-size: 14px; } h1 { font-size: 32px; } h2 { font-size: 24px; }
+    .lad { height: 150px; }
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- ============ 表紙 ============ -->
+<section class="slide">
+  <div class="hero-title">
+    <div class="kicker">LEGAL REVIEW · 2026-07-13</div>
+    <h1><span class="brandbar"></span>SEVEN DAYS DERBY<br>サービス概要と法務論点のご説明</h1>
+    <p class="lead">NFT競走馬 × 7日間サバイバルレース(sevendaysderby.com / 2026-07-04 本番稼働)<br>
+    本資料は実装済みコード・実測データに基づく事実のみで構成しています。</p>
+    <ol class="toc">
+      <li>① 世の中のWeb3ゲームとは(類例)</li>
+      <li>② Seven Days Derbyとは</li>
+      <li>③ 各ページの機能</li>
+      <li>④ ユーザーの体験フロー</li>
+      <li>⑤ 運営の収益とオペレーション</li>
+      <li>⑥ ご相談したい論点(質問集)</li>
+    </ol>
+    <p class="note">操作: ←→キーまたはクリックでページ送り / Ctrl+P でPDF化(1枚=1ページ)</p>
+  </div>
+  <div class="num">1</div>
+</section>
+
+<!-- ============ ① Web3ゲームとは ============ -->
+<section class="slide">
+  <div class="kicker">① MARKET CONTEXT</div>
+  <h2>世の中の「Web3ゲーム」とは</h2>
+  <p class="lead">ブロックチェーン上の資産(NFT・暗号資産)をゲーム内アイテムや報酬として用いるゲーム群。2018年頃から世界的に普及。</p>
+  <div class="grid3">
+    <div class="card">
+      <h4>Axie Infinity(2018〜)</h4>
+      <p>NFTモンスターを購入・育成・対戦させる代表作。対戦報酬として<b>独自トークン(SLP/AXS)を発行</b>し「Play-to-Earn」を流行させた。ピーク時DAU数百万。トークン価格の暴落でエコシステムが収縮した例としても知られる。</p>
+    </div>
+    <div class="card">
+      <h4>ZED RUN(2019〜)</h4>
+      <p><b>NFT競走馬</b>の購入・繁殖・レース。有料レースにエントリー費を払い、着順で賞金プールを分配する形式が中心。馬はNFTとしてユーザーが自己保有し、二次市場で売買される。</p>
+    </div>
+    <div class="card">
+      <h4>STEPN 等(2021〜)</h4>
+      <p>NFTスニーカーを購入し歩いて独自トークンを稼ぐ「Move-to-Earn」。新規参入者の購入が既存者の報酬原資になる構造が批判され、規制議論の契機に。</p>
+    </div>
+  </div>
+  <div class="card goldc">
+    <h4>この分野で一般に問題になりやすい点(当社の設計判断の背景)</h4>
+    <ul>
+      <li><b>独自トークン発行</b> → 有価証券性・価格操作・暴落リスク(Axie型)</li>
+      <li><b>他者の対象に賭ける・賞金プール分配</b> → 賭博性の議論(レースエントリー型)</li>
+      <li><b>「稼げる」訴求</b> → 投資勧誘・連鎖販売的マーケティング</li>
+      <li><b>新規流入依存の報酬原資</b> → ポンジ的構造の指摘</li>
+    </ul>
+  </div>
+  <div class="num">2</div>
+</section>
+
+<!-- ============ ② Seven Days Derbyとは ============ -->
+<section class="slide">
+  <div class="kicker">② WHAT IS SEVEN DAYS DERBY</div>
+  <h2>Seven Days Derbyとは — 「自分の馬の、7日間の生存戦」</h2>
+  <p class="lead">NFT競走馬を購入し、毎晩20:00(マレーシア時間)の全馬一斉レースを7晩生き抜くゲーム。<b>成績下位の馬は消滅(BURN)</b>し、生き残った馬は日ごとに公開の価格表で価値が上がる。7日間走破すると「チャンピオン報酬」200 USDT(7回分割)と記念NFTを獲得。</p>
+  <div class="grid2">
+    <div class="card">
+      <h4>サイトの図解: 7日レール(馬の現在地)</h4>
+      <div class="rail">
+        <span class="pip done"></span><span class="pip done"></span><span class="pip done"></span>
+        <span class="pip done"></span><span class="pip today"></span><span class="pip"></span><span class="pip"></span>
+      </div>
+      <div class="railcap"><span>Day1</span><span>Day4 生存中 · 今夜=Day5戦</span><span>Day7</span></div>
+      <ul style="margin-top:10px">
+        <li>購入(新規発行)= <b>102 USDT</b>(価格100+手数料2)</li>
+        <li>毎晩、成績下位 約1割強がBURN(消滅)— 率は経済状態に連動、全実績を台帳で公開</li>
+        <li>Day7到達率 ≈ <b>47%</b>(シミュレーション実測)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>サイトの図解: 価値の階段(公開の価格表・日次+10%)</h4>
+      <div class="lad">
+        <div class="ladCol"><div class="ladPrice">100</div><div class="ladBar" style="height:44%"></div><div class="ladDay">Day0</div></div>
+        <div class="ladCol"><div class="ladPrice">110</div><div class="ladBar" style="height:49%"></div><div class="ladDay">Day1</div></div>
+        <div class="ladCol"><div class="ladPrice">121</div><div class="ladBar" style="height:54%"></div><div class="ladDay">Day2</div></div>
+        <div class="ladCol"><div class="ladPrice">133.1</div><div class="ladBar" style="height:59%"></div><div class="ladDay">Day3</div></div>
+        <div class="ladCol"><div class="ladPrice">146.4</div><div class="ladBar now" style="height:65%"><span class="pin now">現在</span></div><div class="ladDay">Day4</div></div>
+        <div class="ladCol"><div class="ladPrice">161.1</div><div class="ladBar" style="height:72%"></div><div class="ladDay">Day5</div></div>
+        <div class="ladCol"><div class="ladPrice">177.2</div><div class="ladBar" style="height:79%"></div><div class="ladDay">Day6</div></div>
+        <div class="ladCol"><div class="ladPrice goldp">200</div><div class="ladBar champ" style="height:100%"><span class="pin champ">走破</span></div><div class="ladDay">走破</div></div>
+      </div>
+      <p class="note" style="margin-top:8px">実際の馬詳細ページに表示している図。価格はユーザー間売買(P2P)でもこの表に固定(自由価格なし)。</p>
+    </div>
+  </div>
+  <div class="card goodc">
+    <h4>類例との違い(設計で意図的に避けたもの)</h4>
+    <span class="tag gr">独自トークン発行なし(USDT建てのみ)</span>
+    <span class="tag gr">他人の馬に賭ける機能なし(賭け・オッズ・配当の概念/語彙とも不使用)</span>
+    <span class="tag gr">賞金プール分配なし(報酬は固定額)</span>
+    <span class="tag gr">価格は運営裁量でなく公開の固定表</span>
+    <span class="tag gr">報酬原資は準備金の事前積立+担保ゲート(後述)</span>
+  </div>
+  <div class="num">3</div>
+</section>
+
+<!-- ============ ②b 公正性・技術的性格 ============ -->
+<section class="slide">
+  <div class="kicker">② FAIRNESS BY CONSTRUCTION</div>
+  <h2>公正性の担保 — 「運営もレース結果を操作できない」</h2>
+  <div class="grid2">
+    <div class="card">
+      <h4>コミット・リビール方式(全レース)</h4>
+      <p>レース前に乱数シードのハッシュを公開(コミット)→ レース後にシード原文を公開(リビール)。結果は決定論計算のみで導かれ、<b>誰でも全結果を再計算・検証できる</b>。ゲーム結果へのAI/LLMの関与はゼロ(仕様で禁止)。</p>
+      <div class="flow" style="margin-top:8px">
+        <div class="fbox c">シードのハッシュを事前公開<small>改ざん不能のコミット</small></div>
+        <span class="arrow">→</span>
+        <div class="fbox">20:00 一斉レース<small>決定論エンジン</small></div>
+        <span class="arrow">→</span>
+        <div class="fbox gr">シード原文を公開<small>誰でも再計算・検証可</small></div>
+      </div>
+    </div>
+    <div class="card">
+      <h4>全記録の公開台帳(/ledger)</h4>
+      <p>毎晩の出走数・生存・BURN・売買成約・Day7走破の<b>全実データをカレンダー公開+CSVダウンロード可</b>(ユーザーは匿名ID)。BURN率は「宣言」せず、実績データそのもので開示する方針。</p>
+      <h4 style="margin-top:14px">資金管理(カストディ型)</h4>
+      <p>入出金はPolygonチェーンのUSDT。ユーザーごとの専用入金アドレス(HD導出)→ 残高は<b>複式簿記の内部台帳</b>(貸借一致・負残高禁止をDBが強制)。出金は審査制、<b>1,000 USDT以上は管理者2名承認</b>がDB制約で強制される。</p>
+    </div>
+  </div>
+  <div class="card">
+    <h4>語彙ポリシー(全UI・通知・メール・CS共通)</h4>
+    <p><span class="ng">不使用:</span> 賭け / ベット / オッズ / 配当 / ギャンブル / 予想 / MLM / コミッション / 紹介報酬 / 儲かる / 稼げる / 保証<br>
+    <span class="ok">使用:</span> 購入予約 / チャンピオン報酬 / サポートボーナス / 予報(的中率約70%の参考情報・免責付き) / チーム</p>
+  </div>
+  <div class="num">4</div>
+</section>
+
+<!-- ============ ③ ページ機能 1 ============ -->
+<section class="slide">
+  <div class="kicker">③ PAGES 1/2</div>
+  <h2>各ページの機能 — 遊ぶ(馬を持つ・育てる)</h2>
+  <div class="grid3">
+    <div class="card">
+      <h4>ダッシュボード</h4>
+      <ul>
+        <li>今夜のレースまでのカウントダウン・昨夜の自分の結果</li>
+        <li>残高・厩舎評価額・今日やること(調教)</li>
+        <li><b>売買自動化のON/OFF設定</b>(後述・全てオプトイン)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>厩舎(/horses)</h4>
+      <ul>
+        <li>保有馬の一覧: 出走中 / 出品中 / <b>チャンピオン(金枠NFTコレクション)</b> / 消滅の記録</li>
+        <li>ワンタップ一括調教(タイプ最適を自動選択)</li>
+        <li>レアリティ凡例(出現率とスコア加点を実定数から表示)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>馬詳細(/horses/[id])</h4>
+      <ul>
+        <li>価値の階段・7日レール・能力・全戦績(日別順位/条件)</li>
+        <li><b>調教(無料・1日1回)</b>: 加点+3〜5と疲労コストを明示</li>
+        <li>検証情報(DNAハッシュ・シード=決定論生成の証跡)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <h4>サイトの図解: 今日の調教(3枚カード — 数値はすべて公開ルール)</h4>
+    <div class="steps">
+      <div class="step"><span class="k">スピード調教</span><p>今夜のスコア <b>+3〜5</b>(馬タイプ相性)/ 疲労が溜まる(+8)</p></div>
+      <div class="step"><span class="k">パワー調教</span><p>今夜のスコア <b>+3〜5</b>(馬タイプ相性)/ 疲労が溜まる(+8)</p></div>
+      <div class="step gk"><span class="k">回復調教</span><p>今夜のスコア <b>+4</b> / 疲労を癒す(−4)— 攻めと回復の采配がゲーム性</p></div>
+    </div>
+  </div>
+  <div class="card">
+    <h4>レース(/races)— 毎晩20:00の「ショー」</h4>
+    <p>約100秒のライブ演出(カウントダウン→高速ログ→自分の馬の結果)。発走5分前にプッシュ通知。結果ページで順位・スコア・レース条件(天候×馬場×コース)と検証パネル(コミット/リビール)を公開。</p>
+  </div>
+  <div class="num">5</div>
+</section>
+
+<!-- ============ ③ ページ機能 2 ============ -->
+<section class="slide">
+  <div class="kicker">③ PAGES 2/2</div>
+  <h2>各ページの機能 — 売買・アイテム・チーム・資金</h2>
+  <div class="grid2">
+    <div class="card">
+      <h4>マーケットプレイス(/market)— 購入の唯一の入口</h4>
+      <ul>
+        <li>SHOWCASE棚: 出品中の馬+<b>実際に成約した馬のSOLDカード</b>(架空の表示は置かない)</li>
+        <li><b>指名購入は存在しない</b>: 全取引は毎晩20:00の一斉マッチング(先着順キュー・人為的優先の禁止が仕様)</li>
+        <li>購入予約: 残高から「最大N頭」を計算表示 → 確認ダイアログ → 20:00前ならキャンセル自由(全額返金)・未成立も自動返金</li>
+        <li>手動出品: 自分のDay1〜6の馬を当日の表価格で出品(自由価格なし)。出品中はレース不参加(価値凍結)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>アイテム(/items)— 任意の課金要素</h4>
+      <ul>
+        <li>販売30種(2〜7 USDT)+Burn時ドロップ5種。<b>なくても遊べる上乗せ</b></li>
+        <li>効果はアイテムの適性×当夜のレース条件で×0.5〜×1.5(<b>期待値≈1.0の公開ルール</b>・テストで検証済み)</li>
+        <li>使った馬がBURNされた場合、<b>アイテム代金は全額サポートボーナス財源へ</b></li>
+      </ul>
+      <div class="cells" style="margin-top:10px">
+        <div class="cell" style="border-color:rgba(242,228,191,.4)"><b style="color:var(--gold-bright)">晴れ</b><span>天候 40%</span></div>
+        <div class="cell"><b style="color:var(--muted)">曇り</b><span>天候 30%</span></div>
+        <div class="cell" style="border-color:rgba(0,234,255,.4)"><b style="color:var(--cyan)">雨</b><span>天候 20%</span></div>
+        <div class="cell" style="border-color:rgba(255,45,196,.4)"><b style="color:var(--magenta-soft)">嵐</b><span>天候 10%</span></div>
+      </div>
+      <p class="note" style="margin-top:6px">サイトの図解: レース条件は事前コミットのシードから決まり、発走まで運営にも不明・事後検証可。</p>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h4>チーム(/support)— サポートボーナス</h4>
+      <p>招待した仲間の馬が<b>BURNされたときにだけ</b>、その上位7段に固定額(合計10 USDT/件)が支払われる。紹介しただけでは発生しない。組織マップで配置を自分で管理。</p>
+      <div class="tiers" style="margin-top:8px">
+        <div class="tier"><div class="t">T1</div><div class="amt">3</div><div class="cond">常時</div></div>
+        <div class="tier"><div class="t">T2</div><div class="amt">2</div><div class="cond">組織1万〜</div></div>
+        <div class="tier"><div class="t">T3</div><div class="amt">1</div><div class="cond">2万〜</div></div>
+        <div class="tier"><div class="t">T4</div><div class="amt">1</div><div class="cond">5万〜</div></div>
+        <div class="tier"><div class="t">T5</div><div class="amt">1</div><div class="cond">25万〜+直接</div></div>
+        <div class="tier"><div class="t">T6</div><div class="amt">1</div><div class="cond">40万〜+直接</div></div>
+        <div class="tier"><div class="t">T7</div><div class="amt">1</div><div class="cond">60万〜+直接</div></div>
+      </div>
+      <p class="note" style="margin-top:6px">サイトの図解: ティア表(単位USDT/件)。ティアは組織の稼働馬価値で毎晩再評価(下がれば自動降格)。</p>
+    </div>
+    <div class="card">
+      <h4>ウォレット・台帳・その他</h4>
+      <ul>
+        <li>ウォレット: USDT入金(専用アドレス・128確認)/出金(審査制・最低10)/全取引履歴</li>
+        <li>台帳(/ledger): 全夜の実績公開+CSV</li>
+        <li>お問い合わせ: メールCS(AI下書き+<b>全件人間承認制</b>・自動送信なし)</li>
+        <li>ログインはGoogleのみ(パスワード非保持)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="num">6</div>
+</section>
+
+<!-- ============ ④ ユーザー体験フロー ============ -->
+<section class="slide">
+  <div class="kicker">④ USER JOURNEY</div>
+  <h2>ユーザーの体験フロー(現行実装)</h2>
+  <div class="card">
+    <h4>はじめる〜買う</h4>
+    <div class="flow">
+      <div class="fbox">Googleログイン<small>ウェルカムメール</small></div><span class="arrow">→</span>
+      <div class="fbox g">売り方を必ず選択<small>スマート出品 or 手動出品(変更自由)</small></div><span class="arrow">→</span>
+      <div class="fbox">USDT入金<small>専用アドレス</small></div><span class="arrow">→</span>
+      <div class="fbox c">購入予約<small>最大177.16ロック·確認ダイアログ·取消自由</small></div><span class="arrow">→</span>
+      <div class="fbox">20:00マッチング<small>先着順·P2P優先→新規発行</small></div><span class="arrow">→</span>
+      <div class="fbox gr">馬が厩舎へ<small>差額は自動返金·受付メール</small></div>
+    </div>
+  </div>
+  <div class="card">
+    <h4>毎晩のループ(7日間)</h4>
+    <div class="flow">
+      <div class="fbox">日中: 調教(無料)·アイテム(任意)<small>公開ルールの采配</small></div><span class="arrow">→</span>
+      <div class="fbox m">20:00 一斉レース<small>下位≈1割強がBURN</small></div><span class="arrow">→</span>
+      <div class="fbox gr">生存: 価値+10%<small>翌日の表価格へ</small></div>
+      <span class="arrow">/</span>
+      <div class="fbox m">BURN: 馬消滅<small>チーム上位へ固定額の支援金</small></div>
+      <span class="arrow">/</span>
+      <div class="fbox">売却成立: 代金−2%を受領<small>通知+メール</small></div>
+    </div>
+    <div class="flow" style="margin-top:10px">
+      <div class="fbox g">Day7走破 → チャンピオン<small>報酬200 USDT(7回分割)+記念NFT(Polygon ERC-721)</small></div>
+    </div>
+  </div>
+  <div class="card goodc">
+    <h4>ユーザーの裁量ポイント(2026-07-11の再設計で大幅追加 — 論点C関連)</h4>
+    <ul>
+      <li><b>売り方の明示選択が必須</b>(初回ブロッキング画面・事前チェック済みデフォルトなし): スマート出品(システムが良機に自動出品・出品中も走る) / 手動出品(自分で選ぶ・出品中は不参加)</li>
+      <li>購入は明示の予約制(金額確認→実行→いつでも取消)。<b>1タップ即約定は廃止済み</b></li>
+      <li>自動購入予約・自動出品は<b>すべてオプトイン</b>。実行の都度メール通知+ワンタップOFF</li>
+      <li>調教・アイテム・出品タイミング・チーム配置 = 日々のプレイヤー判断</li>
+    </ul>
+  </div>
+  <div class="num">7</div>
+</section>
+
+<!-- ============ ⑤ 運営収益とフロー ============ -->
+<section class="slide">
+  <div class="kicker">⑤ OPERATOR ECONOMICS 1/2</div>
+  <h2>運営の収益構造(経済v1.1 · 全レート変更はシステム外から不可)</h2>
+  <div class="card">
+    <h4>サイトの図解: 1頭の購入代金102 USDTのゆくえ</h4>
+    <div class="flow">
+      <div class="fbox c">購入者 102 USDT<small>価格100+手数料2</small></div><span class="arrow">→</span>
+      <div class="fbox g">チャンピオン報酬 準備金へ 93.60<small>将来の200支払いの事前積立</small></div>
+      <div class="fbox">運営配分 6.40<small>価格100の残余</small></div>
+      <div class="fbox">手数料2の内訳: 1=運営 / 1=準備金緩衝</div>
+    </div>
+    <div class="flow" style="margin-top:10px">
+      <div class="fbox">P2P売買: 売り手から2%<small>1%=運営 / 1%=準備金緩衝(買い手は表示価格のまま)</small></div>
+      <div class="fbox">アイテム販売 2〜7 USDT<small>Burn時は代金全額をサポートボーナス財源へ</small></div>
+      <div class="fbox m">サポートボーナス: Burn1件=固定10 USDT<small>専用準備金から·未達ティア分は滞留(再分配なし)</small></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card goldc">
+      <h4>支払能力の担保(実測・再現可能なシミュレーション)</h4>
+      <table>
+        <tr><th></th><th>旧設計</th><th>現行 v1.1</th></tr>
+        <tr><td>需要が突然ゼロになるドリル</td><td class="ng">9日後に準備金枯渇・未払い279件</td><td class="ok">40日・5,404件を完済・未払いゼロ</td></tr>
+        <tr><td>全馬清算後の準備金</td><td class="ng">枯渇</td><td class="ok">+866.73 USDT(黒字)</td></tr>
+        <tr><td>運営利益</td><td>実質0</td><td class="au">総流入の約2%</td></tr>
+      </table>
+      <p class="note" style="margin-top:6px">加えて<b>ミント担保ゲート</b>: 準備金が将来支払見込みを下回る日は新規発行を自動停止(決定論・管理画面からも解除不可)。10万ユーザー×30日のフルシミュレーションで検証。</p>
+    </div>
+    <div class="card">
+      <h4>プレイヤー側の期待値(内部設計値)</h4>
+      <ul>
+        <li>Day7到達率 ≈ <b>47%</b>(生存率89.3%^7×補正)</li>
+        <li>総合RTP ≈ <b>96〜97%</b>(新規発行購入者ベース)</li>
+        <li>「約半数が2倍水準(102→200)に到達」する成功体験設計</li>
+        <li>UI上は率の宣言をせず、台帳の実データで開示</li>
+      </ul>
+    </div>
+  </div>
+  <div class="num">8</div>
+</section>
+
+<!-- ============ ⑤b 運営フロー ============ -->
+<section class="slide">
+  <div class="kicker">⑤ OPERATOR ECONOMICS 2/2</div>
+  <h2>運営のオペレーション(日々やること)</h2>
+  <div class="grid2">
+    <div class="card">
+      <h4>自動化されているもの(人手の裁量なし)</h4>
+      <ul>
+        <li>毎晩20:00の精算バッチ(37工程·冪等·クラッシュ自己修復): レース→BURN→価値更新→売買マッチング→サポートボーナス→チャンピオン報酬支払い</li>
+        <li>入金検知(128確認)・自動返金・通知/メール/プッシュ配信</li>
+        <li>経済ステータスの自動判定とBURN率連動・ミント担保ゲート</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>人間が行うもの</h4>
+      <ul>
+        <li><b>出金審査</b>(1,000 USDT以上は別人2名承認がDB強制)</li>
+        <li><b>CS対応</b>: AIが下書き→全件人間が承認して送信(自動送信なし)</li>
+        <li>障害時のリカバリ承認(2名承認)・アラート監視</li>
+        <li>コンテンツ/コミュニティ運営(お知らせ配信等)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <h4>運営が「できない」よう設計されているもの</h4>
+    <span class="tag m">レース結果の操作(コミット・リビール+決定論)</span>
+    <span class="tag m">手数料・価格表の管理画面からの変更(禁止APIとして実装)</span>
+    <span class="tag m">特定ユーザーの優遇(マッチングは先着順のみ・仕様で禁止)</span>
+    <span class="tag m">強制売却API(禁止APIリストに明記・CIで検査)</span>
+    <span class="tag m">台帳の書き換え(DBトリガーで不変・削除禁止)</span>
+  </div>
+  <div class="card goldc">
+    <h4>現在の状況</h4>
+    <p>2026-07-04 本番稼働開始(現在はクローズドな初期運用)。実績: 初期メンバーの馬2頭がDay7走破しチャンピオン報酬支払い進行中。<b>本格集客はこの法務レビューの結果を踏まえて開始したい</b>。</p>
+  </div>
+  <div class="num">9</div>
+</section>
+
+<!-- ============ ⑥ 質問集 1 ============ -->
+<section class="slide">
+  <div class="kicker">⑥ QUESTIONS 1/2</div>
+  <h2>ご相談したい論点(1) — 賭博性・金融規制</h2>
+  <h3>A. 賭博・富くじ該当性</h3>
+  <div class="q"><span class="qnum">1</span><div>本サービスは「自分が購入した資産(馬)の生存戦」であり、他人の馬への賭け・オッズ・配当・賞金プール分配は存在しません。この構造で<b>賭博罪(刑法185条)・富くじ(187条)</b>への該当リスクをどう評価されますか。<small>購入102 → 約47%がDay7の200到達 / 途中BURNで消滅、という「財物の得喪」構造の評価を含む</small></div></div>
+  <div class="q"><span class="qnum">2</span><div>アイテム(2〜7 USDT)は当夜のレース条件(事前には誰にも不明)と噛み合うと効果が増減します(期待値≈1.0の公開ルール)。この<b>偶然性への課金</b>は賭博性・ガチャ(景品表示法)の観点で問題になりますか。</div></div>
+  <div class="q"><span class="qnum">3</span><div>「明日の予報」(的中率約70%の参考情報・免責付き)の提供は、予想行為の提供等の観点で問題ないでしょうか。適切な免責文言もご指導ください。</div></div>
+  <h3>B. 資金決済・金融規制(カストディ)</h3>
+  <div class="q"><span class="qnum">4</span><div>ユーザーのUSDT(Polygon)を運営のアドレスで預かり、内部台帳で残高管理しています(出金は審査制)。この<b>カストディ構造</b>は資金決済法上の暗号資産交換業(管理業務)・電子決済手段等取引業の登録を要しますか。<small>USDTの「電子決済手段」該当性(2023年改正)を含む / 運営主体の設立地の選択肢もご相談したい</small></div></div>
+  <div class="q"><span class="qnum">5</span><div>ユーザー間で対価(USDT)が移動するのは馬のP2P売買成立時のみで、送金機能はありません(アイテムのギフトは物品のみ)。<b>為替取引・資金移動業</b>該当性の評価をお願いします。</div></div>
+  <div class="q"><span class="qnum">6</span><div><b>KYC/AMLの要否と水準</b>(現在はGoogleアカウントのみ)。入出金額に応じた本人確認の導入基準・犯収法上の位置づけをご指導ください。</div></div>
+  <div class="num">10</div>
+</section>
+
+<!-- ============ ⑥ 質問集 2 ============ -->
+<section class="slide">
+  <div class="kicker">⑥ QUESTIONS 2/2</div>
+  <h2>ご相談したい論点(2) — 投資性・連鎖販売・表示</h2>
+  <h3>C. 投資商品性(社内リスク台帳 R1)</h3>
+  <div class="q"><span class="qnum">7</span><div>「公開の価格表で日々値上がりする資産+カストディ+システムによる売買マッチング」という構造は<b>金商法の集団投資スキーム持分等</b>に該当し得ますか。当初は売買が完全自動でしたが、現在は<b>ユーザー裁量を大幅に追加</b>済みです(売り方の必須選択・手動出品・予約制購入・自動機能は全てオプトイン)。この設計で足りるか、追加すべき要素はあるか。</div></div>
+  <div class="q"><span class="qnum">8</span><div>LP等の表現で「7日間の物語」(R2)と「約半数が2倍水準」という成功体験設計をどこまで訴求してよいか。<b>利回り・投資を含意しない表現のガイドライン</b>をご指導ください。</div></div>
+  <h3>D. サポートボーナス(社内リスク台帳 R3)</h3>
+  <div class="q"><span class="qnum">9</span><div>配置型7ティアの紹介組織に、<b>Burn発生時のみ固定額(合計10 USDT/件)</b>が支払われます。紹介だけでは一切発生せず、参加への「特定負担」も馬の購入以外にありません。<b>連鎖販売取引(特商法33条)・無限連鎖講</b>への該当性と、現行の表示規範(「サポートボーナス」呼称・禁止語リスト・3点明示)の妥当性をご確認ください。</div></div>
+  <h3>E. 表示・消費者保護</h3>
+  <div class="q"><span class="qnum">10</span><div>「チャンピオン報酬」(固定200 USDT・7回分割)の呼称と表示は<b>景品表示法・優良誤認</b>の観点で問題ないでしょうか(旧称buyback=買戻しから変更済み。準備金の事前積立と担保ゲートで支払能力を担保)。</div></div>
+  <div class="q"><span class="qnum">11</span><div>利用規約・特商法表記・プライバシーポリシーの必須記載事項(現在ドラフト前)。<b>返金ポリシー</b>(未成立予約は全額自動返金/BURNは返金なし)の適法な明示方法。未成年者の参加制限の要否。</div></div>
+  <div class="q"><span class="qnum">12</span><div>海外ユーザーの受け入れ(基準時刻はマレーシア時間)と、準拠法・裁判管轄の設計。<b>記念NFT(Polygon ERC-721)</b>の法的位置づけ(景品か販売物か)。</div></div>
+  <div class="card goldc" style="margin-top:8px">
+    <h4>お願いしたいアウトプット</h4>
+    <p>① 上記の該当性評価(リスクの高低と根拠) ② ローンチ前に必須の対応リスト ③ 規約・表記類のドラフト支援 ④ 表現ガイドラインの監修</p>
+  </div>
+  <div class="num">11</div>
+</section>
+
+<!-- ============ 付録 ============ -->
+<section class="slide">
+  <div class="kicker">APPENDIX</div>
+  <h2>付録 — 実装済みのコンプライアンス対応(時系列)</h2>
+  <table>
+    <tr><th>時期</th><th>対応</th></tr>
+    <tr><td>2026-07-05</td><td>コピー正直化: 「non-custodial」等の虚偽・過大表現を全面削除。社内リスク台帳(R1〜R3)を作成し継続管理</td></tr>
+    <tr><td>2026-07-07</td><td>「buyback(買い戻し)」→「チャンピオン報酬」に全面改称 / 見えるマーケットプレイス+手動出品を導入(ユーザー裁量の第一弾)</td></tr>
+    <tr><td>2026-07-09</td><td>CSメール: AI下書き+全件人間承認制で開始(自動送信なし)/ パチスロ的「設定1〜6」を競馬の「レース条件」に置換</td></tr>
+    <tr><td>2026-07-10</td><td>透明性台帳(/ledger)公開: 率の宣言をやめ全実データ+CSVで開示</td></tr>
+    <tr><td>2026-07-11</td><td>購入を予約制ファネルに一本化(確認ダイアログ・取消自由)/ <b>売り方の必須選択</b>(スマート/手動)導入 / 自動購入予約はオプトイン+毎回メール通知 / 出品中の馬はMLMティア計算から除外(ノーリスク水増しの封鎖)/ SOLD表示は実成約のみ(架空表示なし)</td></tr>
+    <tr><td>語彙(常時)</td><td>賭け・オッズ・配当・ギャンブル・MLM・コミッション・紹介報酬・稼げる等をUI/通知/メール/CS知識ベースの全チャネルで不使用</td></tr>
+  </table>
+  <p class="note" style="margin-top:12px">本資料の数値はすべて実装コード・マイグレーション・再実行可能なシミュレーション(10万ユーザー×30日)に基づく。 sevendaysderby.com / 資料作成 2026-07-12</p>
+  <div class="num">12</div>
+</section>
+
+</div>
+<script>
+  // ←→キー / クリックでスライド送り
+  const deck = document.getElementById('deck');
+  const slides = [...document.querySelectorAll('section.slide')];
+  let idx = 0;
+  const go = (i) => { idx = Math.max(0, Math.min(slides.length - 1, i)); slides[idx].scrollIntoView({ behavior: 'smooth' }); };
+  addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(idx + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(idx - 1); }
+    if (e.key === 'Home') go(0);
+    if (e.key === 'End') go(slides.length - 1);
+  });
+  deck.addEventListener('click', (e) => { if (!e.target.closest('a')) go(idx + 1); });
+  // スクロール位置から現在ページを追従
+  deck.addEventListener('scroll', () => {
+    const y = deck.scrollTop + innerHeight / 2;
+    idx = slides.findIndex((s) => s.offsetTop <= y && y < s.offsetTop + s.offsetHeight);
+    if (idx < 0) idx = 0;
+  }, { passive: true });
+</script>
+</body>
+</html>
