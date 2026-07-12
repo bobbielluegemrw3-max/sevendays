@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
 import './globals.css';
 import { getAccessToken, serverApi } from '@/lib/server-api';
 import { TopNav } from '@/components/TopNav';
@@ -20,22 +21,24 @@ export const viewport: Viewport = {
   themeColor: '#050409',
 };
 
+// ADMINリンクは管理者ロール保持者にのみ表示(ページ自体の保護は/adminレイアウトと
+// 各adminエンドポイントの権限検証が担う — これは導線の出し分けだけ)
+// 通知の未読数はメニューのバッジ用(表示だけ・失敗しても0のまま)。
+// 遷移速度(2026-07-12): Suspenseでストリーミング — ナビのデータ取得がページ本体の
+// 描画をブロックしない(フォールバックは同じナビをバッジなしで即描画)。
+async function TopNavLoader() {
+  const [me, notif] = await Promise.all([
+    serverApi<{ is_admin?: boolean }>('/api/v1/me'),
+    // スパイク対策(2026-07-12): バッジは軽量COUNT専用API(従来は50件全文取得)
+    serverApi<{ unread: number }>('/api/v1/notifications/unread-count'),
+  ]);
+  const isAdmin = me.status === 200 && me.body.is_admin === true;
+  const unread = notif.status === 200 ? notif.body.unread : 0;
+  return <TopNav isAdmin={isAdmin} unread={unread} />;
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const authed = (await getAccessToken()) !== null;
-  // ADMINリンクは管理者ロール保持者にのみ表示(ページ自体の保護は/adminレイアウトと
-  // 各adminエンドポイントの権限検証が担う — これは導線の出し分けだけ)
-  // 通知の未読数はメニューのバッジ用(表示だけ・失敗しても0のまま)。
-  let isAdmin = false;
-  let unread = 0;
-  if (authed) {
-    const [me, notif] = await Promise.all([
-      serverApi<{ is_admin?: boolean }>('/api/v1/me'),
-      // スパイク対策(2026-07-12): バッジは軽量COUNT専用API(従来は50件全文取得)
-      serverApi<{ unread: number }>('/api/v1/notifications/unread-count'),
-    ]);
-    isAdmin = me.status === 200 && me.body.is_admin === true;
-    if (notif.status === 200) unread = notif.body.unread;
-  }
   return (
     <html lang="ja">
       <head>
@@ -50,7 +53,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         {/* Anonymous pages (landing / login) carry their own header. */}
-        {authed ? <TopNav isAdmin={isAdmin} unread={unread} /> : null}
+        {authed ? (
+          <Suspense fallback={<TopNav />}>
+            <TopNavLoader />
+          </Suspense>
+        ) : null}
         <main>{children}</main>
       </body>
     </html>

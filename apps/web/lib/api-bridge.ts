@@ -100,28 +100,33 @@ function extractWalletAddress(payload: JWTPayload): string | null {
   return null;
 }
 
-async function resolveContextFor(client: SqlClient, userId: string): Promise<AuthContext> {
-  // アカウント状態ゲート(2026-07-09): SUSPENDED/BANNED/DELETED は有効なJWTでも
-  // 認証済みとして扱わない(=全ユーザーAPIが401)。管理者凍結の実効化。
-  const status = await client.query<{ status: string }>(
-    `select status::text as status from users where id = $1`,
+/** Resolve the auth context for an EXISTING users row, or null when the row
+ *  is absent (callers then take the wallet-alias / provisioning path).
+ *  遷移速度(2026-07-12): DBがムンバイ・Webがシンガポールで1往復≈55msのため、
+ *  状態ゲート+presence更新+ロール取得を1クエリに統合(従来3往復)。 */
+async function resolveContextFor(client: SqlClient, userId: string): Promise<AuthContext | null> {
+  const result = await client.query<{ status: string; roles: string[] }>(
+    // - アカウント状態ゲート(2026-07-09): SUSPENDED/BANNED/DELETED は有効なJWTでも
+    //   認証済みとして扱わない(=全ユーザーAPIが401)。管理者凍結の実効化。
+    // - presence: 認証済みアクセスの最終時刻(60秒スロットルで書込みを抑制)。
+    //   データ変更CTEは参照されなくても必ず1回実行される(PostgreSQL保証)。
+    `with touch as (
+       update users set last_seen_at = now()
+        where id = $1 and (last_seen_at is null or last_seen_at < now() - interval '60 seconds')
+     )
+     select u.status::text as status,
+            coalesce(array_agg(g.role::text) filter (where g.role is not null), '{}') as roles
+       from users u
+       left join admin_role_grants g on g.user_id = u.id and g.revoked_at is null
+      where u.id = $1
+      group by u.status`,
     [userId],
   );
-  if (status.rows[0] && status.rows[0].status !== 'ACTIVE') {
-    return { kind: 'anonymous' };
-  }
-  // presence: 認証済みアクセスの最終時刻(60秒スロットルで書込みを抑制)
-  await client.query(
-    `update users set last_seen_at = now()
-     where id = $1 and (last_seen_at is null or last_seen_at < now() - interval '60 seconds')`,
-    [userId],
-  );
-  const grants = await client.query<{ role: string }>(
-    `select role::text as role from admin_role_grants where user_id = $1 and revoked_at is null`,
-    [userId],
-  );
-  if (grants.rows.length > 0) {
-    return { kind: 'admin', userId, roles: grants.rows.map((r) => r.role) };
+  const row = result.rows[0];
+  if (!row) return null;
+  if (row.status !== 'ACTIVE') return { kind: 'anonymous' };
+  if (row.roles.length > 0) {
+    return { kind: 'admin', userId, roles: row.roles };
   }
   return { kind: 'user', userId };
 }
@@ -139,9 +144,9 @@ export async function buildAuthContext(
   const userId = typeof payload.sub === 'string' ? payload.sub : null;
   if (!userId) return { kind: 'anonymous' };
 
-  // Existing account: fast path.
-  const existing = await client.query<{ id: string }>(`select id from users where id = $1`, [userId]);
-  if (existing.rows[0]) return resolveContextFor(client, userId);
+  // Existing account: fast path — ONE round trip per page render.
+  const existing = await resolveContextFor(client, userId);
+  if (existing) return existing;
 
   // Decision 072 aliasing: a Web3 session whose wallet is linked to an
   // existing game account resolves to THAT account (no second account is
@@ -152,7 +157,10 @@ export async function buildAuthContext(
       `select user_id from user_wallets where wallet_address = $1`,
       [walletAddress],
     );
-    if (linked.rows[0]) return resolveContextFor(client, linked.rows[0].user_id);
+    if (linked.rows[0]) {
+      const aliased = await resolveContextFor(client, linked.rows[0].user_id);
+      if (aliased) return aliased;
+    }
   }
 
   // First-login provisioning: everything downstream (RLS, ledger accounts,
@@ -240,7 +248,9 @@ export async function buildAuthContext(
     }).catch(() => undefined);
   }
 
-  return resolveContextFor(client, userId);
+  // The insert above guarantees the row exists; null here would mean the DB
+  // dropped it mid-request — treat as unauthenticated rather than crash.
+  return (await resolveContextFor(client, userId)) ?? { kind: 'anonymous' };
 }
 
 export async function dispatchBridge(

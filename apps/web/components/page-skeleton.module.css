@@ -1,0 +1,42 @@
+.wrap {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+  display: grid;
+  gap: 16px;
+}
+
+.title {
+  height: 34px;
+  width: min(280px, 60%);
+  border-radius: 8px;
+}
+
+.panel {
+  height: 150px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.title,
+.panel {
+  background: linear-gradient(100deg, var(--panel) 40%, var(--panel-2) 50%, var(--panel) 60%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title,
+  .panel {
+    animation: none;
+  }
+}
