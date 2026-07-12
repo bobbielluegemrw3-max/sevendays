@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Seven Days Derby — アカウント / 通知 / お問い合わせ リデザイン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+/* ===== tokens (globals.css) ===== */
+:root{
+  --bg:#050409; --bg-2:#0a0714; --panel:#12101d; --panel-2:#16132a;
+  --border:rgba(255,255,255,0.08); --border-strong:rgba(0,234,255,0.28);
+  --text:#eae7ff; --muted:#8f8ac2; --faint:#5a5580;
+  --cyan:#00eaff; --cyan-deep:#0088a0; --magenta:#ff2dc4; --magenta-soft:#ff8fe4;
+  --gold:#c9a86a; --gold-bright:#f2e4bf; --good:#35d07f; --bad:#ff5c5c; --warn:#e6b24a;
+  --radius:16px; --radius-sm:11px;
+  --font-display:'Orbitron',system-ui,sans-serif;
+  --font-sans:'Space Grotesk','Zen Kaku Gothic New',system-ui,sans-serif;
+  --font-jp:'Zen Kaku Gothic New',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{margin:0;color:var(--text);font-family:var(--font-sans);line-height:1.6;-webkit-font-smoothing:antialiased;
+  background:radial-gradient(900px 500px at 50% -8%,#1a0b2e 0%,#0a0714 46%,var(--bg) 100%),var(--bg);
+  background-attachment:fixed;min-height:100vh;}
+a{color:var(--cyan);text-decoration:none;} a:hover{color:var(--gold-bright);}
+
+/* ===== showcase chrome ===== */
+.dash-tabs{position:sticky;top:0;z-index:60;display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+  padding:10px 16px;background:rgba(8,6,17,0.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
+.dash-tabs .grp{display:flex;gap:6px;}
+.dash-tabs .sep{width:1px;height:22px;background:var(--border-strong);margin:0 6px;}
+.dash-tabs .lbl{font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;color:var(--faint);margin-right:2px;align-self:center;}
+.tabBtn{font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);
+  border:1px solid var(--border-strong);border-radius:999px;padding:7px 14px;cursor:pointer;background:transparent;white-space:nowrap;}
+.tabBtn:hover{color:var(--text);}
+.tabBtn.on{color:#04141a;background:linear-gradient(100deg,var(--cyan),#5ff5ff);border-color:transparent;}
+.stBtn{font-family:var(--font-mono);font-size:10px;color:var(--muted);border:1px solid var(--border);border-radius:8px;
+  padding:6px 11px;cursor:pointer;background:transparent;white-space:nowrap;}
+.stBtn:hover{color:var(--text);border-color:var(--border-strong);}
+.stBtn.on{color:var(--magenta-soft);border-color:rgba(255,45,196,0.5);background:rgba(255,45,196,0.08);}
+
+.frame{max-width:1040px;margin:0 auto;padding:26px 20px 90px;}
+.page{display:none;} .page.on{display:block;}
+
+/* ============================================================
+   ACCOUNT
+   ============================================================ */
+#account .wrap{display:flex;flex-direction:column;gap:16px;}
+#account .h1{font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--text);}
+
+/* identity band */
+#account .profileCard{position:relative;overflow:hidden;display:flex;align-items:center;gap:18px;
+  border:1px solid rgba(0,234,255,0.28);border-radius:18px;padding:20px 22px;
+  background:linear-gradient(120deg,rgba(0,234,255,0.08),transparent 62%);}
+#account .profileCard::after{content:"";position:absolute;right:-40px;top:-40px;width:200px;height:200px;
+  background:radial-gradient(circle,rgba(0,234,255,0.12),transparent 70%);pointer-events:none;}
+#account .avatar{position:relative;flex:none;width:60px;height:60px;border-radius:999px;display:flex;align-items:center;
+  justify-content:center;font-family:var(--font-display);font-weight:800;font-size:26px;color:#0a0813;
+  box-shadow:0 8px 22px -8px rgba(0,234,255,0.45);}
+#account .profileBody{min-width:0;flex:1;}
+#account .profileEmail{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;}
+#account .vUnset{font-family:var(--font-mono);font-size:12px;color:var(--faint);font-style:italic;}
+#account .profileMeta{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:5px;display:flex;gap:8px;flex-wrap:wrap;}
+#account .profileMeta .dayPill{color:var(--cyan);border:1px solid rgba(0,234,255,0.3);border-radius:999px;padding:0 8px;white-space:nowrap;}
+#account .profileId{font-family:var(--font-mono);font-size:9px;color:var(--faint);margin-top:6px;word-break:break-all;}
+
+/* section shell */
+#account .sec{border:1px solid var(--border);border-radius:16px;padding:16px 18px;
+  background:linear-gradient(180deg,rgba(20,18,34,0),var(--panel));}
+#account .sec.cy{border-color:rgba(0,234,255,0.22);background:linear-gradient(150deg,rgba(0,234,255,0.05),transparent 72%);}
+#account .secLabel{font-family:var(--font-display);font-size:11px;letter-spacing:.18em;color:var(--muted);margin-bottom:12px;
+  display:flex;align-items:baseline;gap:8px;}
+#account .secLabel .en{color:var(--faint);font-size:9px;letter-spacing:.2em;}
+#account .lead{font-size:12.5px;color:var(--muted);line-height:1.7;}
+
+/* record + settings 2-col on desktop */
+#account .recordGrid{display:grid;grid-template-columns:1fr;gap:16px;}
+@media(min-width:900px){#account .recordGrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;}}
+
+#account .statGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:9px;}
+#account .statCell{position:relative;text-decoration:none;border:1px solid var(--border);border-radius:13px;
+  padding:14px 10px 12px;text-align:center;display:flex;flex-direction:column;gap:3px;align-items:center;
+  background:rgba(10,8,22,0.5);transition:border-color .15s ease,transform .15s ease;}
+#account .statCell:hover{border-color:var(--border-strong);transform:translateY(-2px);}
+#account .statGlyph{font-size:14px;line-height:1;opacity:.9;}
+#account .statV{font-family:var(--font-display);font-weight:800;font-size:26px;line-height:1;font-variant-numeric:tabular-nums;}
+#account .statK{font-family:var(--font-mono);font-size:9px;color:var(--faint);letter-spacing:.06em;}
+#account .stCyan .statV,#account .stCyan .statGlyph{color:#a9f6ff;}
+#account .stGold .statV,#account .stGold .statGlyph{color:var(--gold-bright);}
+#account .stMag .statV,#account .stMag .statGlyph{color:var(--magenta-soft);}
+#account .stWarn .statV,#account .stWarn .statGlyph{color:var(--warn);}
+#account .statNote{font-family:var(--font-mono);font-size:10px;color:var(--faint);margin-top:11px;line-height:1.7;}
+#account .inlineLink{color:var(--cyan);} #account .inlineLink:hover{text-decoration:underline;}
+
+/* settings tiles (visual approximation of dashboard tiles — unchanged in drop-in) */
+#account .settingsStack{display:flex;flex-direction:column;gap:12px;}
+#account .tile{border:1px solid var(--border);border-radius:13px;padding:13px 15px;background:rgba(10,8,22,0.45);}
+#account .tileHead{display:flex;align-items:baseline;gap:9px;margin-bottom:10px;}
+#account .tileLabel{font-family:var(--font-display);font-size:10px;letter-spacing:.12em;color:var(--cyan);}
+#account .tileNote{font-family:var(--font-mono);font-size:9px;color:var(--faint);margin-left:auto;}
+#account .togRow{display:flex;align-items:center;gap:11px;padding:7px 0;}
+#account .togRow+.togRow{border-top:1px solid rgba(255,255,255,0.05);}
+#account .tog{flex:none;width:38px;height:22px;border-radius:999px;border:1px solid var(--border-strong);
+  background:rgba(255,255,255,0.06);position:relative;cursor:pointer;transition:background .15s;}
+#account .tog.on{background:linear-gradient(100deg,var(--cyan),#5ff5ff);border-color:transparent;}
+#account .togKnob{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:999px;background:#0a0813;transition:left .15s;}
+#account .tog.on .togKnob{left:18px;}
+#account .togName{font-family:var(--font-sans);font-size:12.5px;font-weight:600;color:var(--text);flex:none;}
+#account .togDesc{font-size:10.5px;color:var(--muted);line-height:1.5;}
+#account .tileDisabled{opacity:.5;}
+#account .pwaText{font-size:12px;color:var(--muted);line-height:1.6;}
+#account .pwaDone{font-family:var(--font-display);font-size:10px;font-weight:700;color:var(--good);border:1px solid rgba(53,208,127,0.4);
+  border-radius:7px;padding:2px 8px;margin-left:8px;background:rgba(53,208,127,0.08);white-space:nowrap;}
+
+/* linking — restyle of AccountLinking's raw global markup via scoped :global() */
+#account .linkBody{margin-top:2px;}
+#account .linkBody .stack{display:flex;flex-direction:column;gap:16px;}
+#account .linkBody h3{font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 2px;}
+#account .linkBody .lkTable{display:flex;flex-direction:column;gap:7px;}
+#account .lkRow{display:flex;align-items:center;gap:11px;border:1px solid var(--border);border-radius:11px;padding:10px 13px;
+  background:rgba(10,8,22,0.5);}
+#account .lkRow .prov{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-display);font-size:10px;font-weight:700;
+  letter-spacing:.06em;color:var(--cyan);border:1px solid rgba(0,234,255,0.3);border-radius:7px;padding:3px 9px;text-transform:uppercase;
+  background:rgba(0,234,255,0.06);white-space:nowrap;}
+#account .lkRow .prov.wal{color:var(--gold-bright);border-color:rgba(201,168,106,0.4);background:rgba(201,168,106,0.1);}
+#account .lkRow .lkMail{font-family:var(--font-mono);font-size:11px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+#account .lkRow code{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);background:var(--bg);border:1px solid var(--border);
+  border-radius:5px;padding:2px 7px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;word-break:break-all;}
+#account .lkRow .unlink{font-family:var(--font-display);font-size:10px;font-weight:700;color:var(--magenta-soft);
+  border:1px solid rgba(255,45,196,0.45);border-radius:8px;padding:6px 12px;cursor:pointer;background:rgba(255,45,196,0.08);flex:none;}
+#account .lkRow .unlink:hover{border-color:var(--magenta);}
+#account .lkRow .lkLast{font-family:var(--font-mono);font-size:9.5px;color:var(--faint);flex:none;}
+#account .linkBody .addBtn{align-self:flex-start;font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:.06em;
+  color:#04141a;border:none;border-radius:10px;padding:9px 15px;cursor:pointer;
+  background:linear-gradient(100deg,var(--cyan),#5ff5ff);}
+#account .linkBody .addBtn.wal{color:var(--text);background:rgba(201,168,106,0.14);border:1px solid rgba(201,168,106,0.5);}
+#account .linkBody .empty{font-family:var(--font-mono);font-size:11px;color:var(--faint);}
+
+/* support */
+#account .supportRow{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:12px;}
+#account .supportGhost{text-decoration:none;white-space:nowrap;font-family:var(--font-display);font-weight:700;font-size:12px;
+  color:var(--muted);border:1px solid var(--border-strong);padding:10px 16px;border-radius:10px;}
+#account .supportGhost:hover{color:var(--cyan);border-color:var(--cyan);}
+#account .supportBtn{text-decoration:none;font-family:var(--font-display);font-weight:700;font-size:12.5px;letter-spacing:.06em;
+  color:#04141a;border-radius:10px;padding:11px 17px;background:linear-gradient(120deg,var(--cyan),#4dd7ff);}
+
+/* ============================================================
+   NOTIFICATIONS
+   ============================================================ */
+#notifications .wrap{display:flex;flex-direction:column;gap:16px;}
+#notifications .head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+#notifications .h1{font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--text);}
+#notifications .unreadPill{font-family:var(--font-mono);font-size:11px;color:#150410;background:var(--magenta);border-radius:999px;padding:2px 9px;}
+#notifications .readNote{margin-left:auto;font-family:var(--font-mono);font-size:9.5px;color:var(--faint);}
+
+#notifications .digest{border:1px solid rgba(0,234,255,0.3);border-radius:15px;padding:14px 17px;
+  background:linear-gradient(120deg,rgba(0,234,255,0.08),transparent 72%);display:flex;flex-direction:column;gap:11px;}
+#notifications .digestHead{display:flex;align-items:baseline;gap:10px;}
+#notifications .digestTitle{font-family:var(--font-display);font-weight:800;font-size:14px;letter-spacing:.05em;color:var(--cyan);}
+#notifications .digestCount{margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--faint);}
+#notifications .digestParts{display:flex;flex-wrap:wrap;gap:7px;}
+#notifications .digestChip{display:inline-flex;align-items:baseline;gap:5px;border:1px solid transparent;border-radius:999px;
+  padding:4px 12px;font-size:11.5px;white-space:nowrap;}
+#notifications .digestChip b{font-family:var(--font-display);font-size:13px;}
+#notifications .digestLinks{display:flex;gap:16px;flex-wrap:wrap;}
+#notifications .digestLink{color:var(--cyan);font-family:var(--font-display);font-weight:700;font-size:11px;}
+#notifications .digestLink:hover{text-decoration:underline;}
+
+#notifications .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+#notifications .search{flex:1;min-width:150px;background:var(--bg);color:var(--text);border:1px solid var(--border-strong);
+  border-radius:10px;padding:9px 12px;font-size:12.5px;font-family:inherit;outline:none;}
+#notifications .search:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,234,255,0.15);}
+#notifications .catChips{display:flex;flex-wrap:wrap;gap:6px;}
+#notifications .catChip{cursor:pointer;font-size:11.5px;color:var(--muted);font-family:inherit;border:1px solid var(--border-strong);
+  border-radius:999px;padding:7px 12px;background:transparent;white-space:nowrap;}
+#notifications .catChip:hover{color:var(--text);}
+#notifications .catChip.on{color:#04141a;font-weight:700;background:linear-gradient(100deg,var(--cyan),#5ff5ff);border-color:transparent;}
+#notifications .toggleBtn{font-family:var(--font-display);font-size:10.5px;font-weight:700;border:1px solid rgba(255,45,196,0.4);
+  border-radius:9px;padding:9px 12px;cursor:pointer;color:var(--magenta-soft);background:rgba(255,45,196,0.08);white-space:nowrap;}
+#notifications .toggleBtn.on{border-color:var(--magenta);color:#150410;background:linear-gradient(100deg,var(--magenta),var(--magenta-soft));}
+#notifications .count{font-family:var(--font-mono);font-size:10px;color:var(--faint);}
+
+#notifications .dateHead{font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;color:var(--faint);margin:14px 2px 8px;}
+#notifications .list{display:flex;flex-direction:column;gap:7px;}
+#notifications .row{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--border);border-radius:12px;padding:12px 14px;
+  background:linear-gradient(120deg,rgba(0,234,255,0.025),transparent 65%);text-decoration:none;color:inherit;transition:border-color .15s ease;}
+#notifications .row:hover{border-color:var(--border-strong);}
+#notifications .rowUnread{border-color:rgba(255,45,196,0.22);background:linear-gradient(120deg,rgba(255,45,196,0.05),transparent 65%);}
+#notifications .icon{flex:none;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;border:1px solid transparent;}
+#notifications .body{flex:1;min-width:0;}
+#notifications .topLine{display:flex;align-items:center;gap:8px;}
+#notifications .typeBadge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:5px;font-family:var(--font-display);
+  font-size:8px;font-weight:700;letter-spacing:.06em;white-space:nowrap;border:1px solid transparent;}
+#notifications .dot{width:7px;height:7px;border-radius:999px;background:var(--magenta);box-shadow:0 0 7px var(--magenta);flex:none;}
+#notifications .title{font-size:13px;margin-top:5px;line-height:1.4;color:var(--muted);}
+#notifications .titleUnread{color:var(--text);font-weight:600;}
+#notifications .sub{font-family:var(--font-mono);font-size:9.5px;color:var(--faint);margin-top:4px;line-height:1.5;}
+#notifications .rowRight{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none;}
+#notifications .time{font-family:var(--font-mono);font-size:9.5px;color:var(--faint);white-space:nowrap;}
+#notifications .openArrow{color:var(--faint);font-size:12px;}
+#notifications .row:hover .openArrow{color:var(--cyan);}
+/* type colors */
+#notifications .tRace{color:var(--cyan);border-color:rgba(0,234,255,0.3);background:rgba(0,234,255,0.1);}
+#notifications .tBurn{color:var(--magenta-soft);border-color:rgba(255,45,196,0.4);background:rgba(255,45,196,0.12);}
+#notifications .tBuyback{color:var(--gold-bright);border-color:rgba(201,168,106,0.4);background:rgba(201,168,106,0.12);}
+#notifications .tTraining{color:#9dffc4;border-color:rgba(53,208,127,0.4);background:rgba(53,208,127,0.1);}
+#notifications .tDeposit{color:var(--gold-bright);border-color:rgba(201,168,106,0.4);background:rgba(201,168,106,0.1);}
+#notifications .tAssignment{color:#a9f6ff;border-color:rgba(0,234,255,0.3);background:rgba(0,234,255,0.08);}
+#notifications .tDefault{color:var(--muted);border-color:var(--border);background:rgba(255,255,255,0.04);}
+#notifications .pager{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:16px;flex-wrap:wrap;}
+#notifications .pagerBtn{font-family:var(--font-display);font-size:11px;font-weight:700;border:1px solid rgba(0,234,255,0.4);
+  border-radius:9px;padding:8px 14px;cursor:pointer;color:var(--cyan);background:rgba(0,234,255,0.08);}
+#notifications .pagerBtn:disabled{opacity:.4;cursor:not-allowed;}
+#notifications .pageLabel{font-family:var(--font-mono);font-size:12px;color:var(--muted);}
+#notifications .empty{border:1px dashed var(--border);border-radius:14px;padding:44px 20px;text-align:center;color:var(--muted);
+  font-size:13px;line-height:1.8;}
+
+/* ============================================================
+   CONTACT
+   ============================================================ */
+#contact .wrap{display:flex;flex-direction:column;gap:16px;max-width:920px;margin:0 auto;}
+#contact .h1{font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--text);}
+#contact .lead{font-size:13px;color:var(--muted);line-height:1.8;}
+#contact .faq{border:1px solid var(--border);border-radius:14px;padding:13px 16px;
+  background:linear-gradient(180deg,rgba(20,18,34,0),var(--panel));display:flex;flex-direction:column;gap:9px;}
+#contact .faqLabel{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.14em;color:var(--faint);}
+#contact .faqChips{display:flex;flex-wrap:wrap;gap:7px;}
+#contact .faqChip{text-decoration:none;font-size:12px;color:var(--cyan);border:1px solid rgba(0,234,255,0.35);border-radius:999px;
+  padding:6px 13px;background:rgba(0,234,255,0.05);white-space:nowrap;}
+#contact .faqChip:hover{background:rgba(0,234,255,0.12);}
+#contact .cols{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;}
+@media(min-width:900px){#contact .cols{grid-template-columns:1fr 300px;}}
+#contact .form{display:flex;flex-direction:column;gap:8px;border:1px solid var(--border);border-radius:16px;padding:18px;
+  background:linear-gradient(150deg,rgba(0,234,255,0.04),transparent 70%);}
+#contact .label{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:var(--muted);margin-top:6px;}
+#contact .catChips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px;}
+#contact .catChip{cursor:pointer;font-size:12px;color:var(--muted);font-family:inherit;border:1px solid var(--border-strong);
+  border-radius:999px;padding:6px 13px;background:transparent;white-space:nowrap;}
+#contact .catChip:hover{color:var(--text);}
+#contact .catChip.on{color:#04141a;font-weight:700;background:linear-gradient(100deg,var(--cyan),#5ff5ff);border-color:transparent;}
+#contact .input,#contact .textarea{background:var(--bg);color:var(--text);border:1px solid var(--border-strong);border-radius:10px;
+  padding:11px 13px;font-size:13px;font-family:inherit;outline:none;width:100%;}
+#contact .textarea{resize:vertical;line-height:1.7;}
+#contact .input:focus,#contact .textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,234,255,0.15);}
+#contact .submit{margin-top:10px;font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.08em;
+  border:none;border-radius:11px;padding:13px 18px;cursor:pointer;color:#04141a;background:linear-gradient(120deg,var(--cyan),#4dd7ff);}
+#contact .submit:disabled{opacity:.45;cursor:not-allowed;}
+#contact .aside{display:flex;flex-direction:column;gap:12px;}
+#contact .asideCard{border:1px solid var(--border);border-radius:14px;padding:15px 16px;
+  background:linear-gradient(180deg,rgba(20,18,34,0),var(--panel));}
+#contact .asideTitle{font-family:var(--font-display);font-weight:700;font-size:12.5px;color:var(--gold-bright);margin-bottom:9px;letter-spacing:.04em;}
+#contact .asideList{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:7px;}
+#contact .asideList li{font-size:12px;color:var(--muted);line-height:1.7;}
+#contact .asideList b{color:var(--text);}
+#contact .mailLink{color:var(--cyan);font-family:var(--font-mono);font-size:12px;word-break:break-all;}
+#contact .doneCard{border:1px solid rgba(53,208,127,0.35);border-radius:16px;padding:34px 22px;text-align:center;
+  background:linear-gradient(150deg,rgba(53,208,127,0.07),transparent 70%);}
+#contact .doneMark{font-size:32px;color:var(--good);}
+#contact .doneTitle{font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--text);margin-top:8px;}
+#contact .doneText{font-size:13px;color:var(--muted);line-height:1.8;margin-top:10px;}
+#contact .doneLinks{display:flex;justify-content:center;gap:20px;margin-top:16px;flex-wrap:wrap;}
+#contact .doneLink{color:var(--cyan);font-family:var(--font-display);font-weight:700;font-size:12.5px;}
+</style>
+</head>
+<body>
+
+<div class="dash-tabs">
+  <span class="lbl">PAGE</span>
+  <div class="grp">
+    <button class="tabBtn on" data-page="account">アカウント</button>
+    <button class="tabBtn" data-page="notifications">通知</button>
+    <button class="tabBtn" data-page="contact">お問い合わせ</button>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">STATE</span>
+  <div class="grp" id="stateGrp"></div>
+</div>
+
+<div class="frame">
+  <!-- ============ ACCOUNT ============ -->
+  <section class="page on" id="account">
+    <div class="wrap">
+      <div class="h1">アカウント</div>
+
+      <div class="profileCard">
+        <span class="avatar" id="acAvatar">A</span>
+        <div class="profileBody">
+          <div class="profileEmail" id="acEmail">alex.tanaka@gmail.com</div>
+          <div class="profileMeta">
+            <span>登録 2026-05-30</span>
+            <span class="dayPill" id="acDays">プレイ 44日目</span>
+          </div>
+          <div class="profileId">ID 8f3a1c9e-4d21-4b0a-bf18-3de5b1c1a254</div>
+        </div>
+      </div>
+
+      <div class="recordGrid">
+        <section class="sec cy">
+          <div class="secLabel">あなたの記録 <span class="en">· RECORD</span></div>
+          <div class="statGrid" id="acStats"></div>
+          <div class="statNote">数字をタップすると各ページへ移動します。報酬の受け取りは <a class="inlineLink" href="#">CHAMPION</a>、入出金の履歴は <a class="inlineLink" href="#">WALLET</a> で確認できます。</div>
+        </section>
+
+        <section class="sec">
+          <div class="secLabel">設定 <span class="en">· SETTINGS</span></div>
+          <div class="settingsStack">
+            <div class="tile">
+              <div class="tileHead"><span class="tileLabel">AUTO · 売買の自動化</span><span class="tileNote">いつでも変更できます</span></div>
+              <div class="togRow"><span class="tog on"><span class="togKnob"></span></span><span class="togName">スマート出品</span><span class="togDesc">経済エンジンが自動で出品(出品中もレースに出走)</span></div>
+              <div class="togRow"><span class="tog on"><span class="togKnob"></span></span><span class="togName">自動購入予約</span><span class="togDesc">毎晩のバッチ後、残高の範囲で予約を自動作成</span></div>
+            </div>
+            <div class="tile">
+              <div class="tileHead"><span class="tileLabel">APP &amp; 通知</span><span class="pwaDone">✓ READY</span></div>
+              <div class="pwaText">通知はONです。毎晩20:00、発走をお知らせします。</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="sec">
+        <div class="secLabel">ログイン方法の連携 <span class="en">· LINKING</span></div>
+        <div class="lead">連携すると、どのログイン方法でも同じアカウント(残高・馬)にアクセスできます。1つのウォレットは1つのアカウントにのみ紐づけできます。</div>
+        <div class="linkBody">
+          <div class="stack">
+            <div>
+              <h3>ログインID</h3>
+              <div class="lkTable">
+                <div class="lkRow"><span class="prov">google</span><span class="lkMail">alex.tanaka@gmail.com</span><span class="lkLast">最後のIDは解除不可</span></div>
+              </div>
+            </div>
+            <button class="addBtn" type="button">+ Google を紐づけ</button>
+            <div>
+              <h3>ウォレット</h3>
+              <div class="lkTable" id="acWallets">
+                <div class="lkRow"><span class="prov wal">wallet</span><code>0x9fe3c4a2b1d8e7f60a5b4c3d2e1f00998877ff11</code><button class="unlink" type="button">解除</button></div>
+              </div>
+            </div>
+            <button class="addBtn wal" type="button">MetaMask を紐づけ</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <div class="secLabel">サポート <span class="en">· SUPPORT</span></div>
+        <div class="lead">ゲームのルール・アカウント・入出金など、お困りのことがあればお気軽にご連絡ください。ご登録のメールアドレスへ返信します。</div>
+        <div class="supportRow">
+          <a class="supportGhost" href="#">使い方を見る →</a>
+          <a class="supportBtn" href="#">お問い合わせフォームへ →</a>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ============ NOTIFICATIONS ============ -->
+  <section class="page" id="notifications">
+    <div class="wrap">
+      <div class="head">
+        <span class="h1">通知</span>
+        <span class="unreadPill" id="nUnread">未読 5</span>
+        <span class="readNote">開くと既読になります · タップで関連ページへ</span>
+      </div>
+      <div id="nDigest"></div>
+      <div class="controls">
+        <input class="search" id="nSearch" placeholder="通知を検索…" aria-label="通知を検索" />
+        <div class="catChips" id="nCats"></div>
+        <button class="toggleBtn" id="nUnreadOnly" type="button">未読のみ</button>
+        <span class="count" id="nCount"></span>
+      </div>
+      <div id="nList"></div>
+      <div class="pager" id="nPager"></div>
+    </div>
+  </section>
+
+  <!-- ============ CONTACT ============ -->
+  <section class="page" id="contact">
+    <div class="wrap" id="contactWrap"></div>
+  </section>
+</div>
+
+<script>
+/* ============ tab + state switching ============ */
+var STATES={
+  account:[{k:'normal',label:'通常(メール+ウォレット)'},{k:'wallet',label:'ウォレットのみ(メール未設定)'},{k:'fresh',label:'初日・馬なし'}],
+  notifications:[{k:'normal',label:'通常'},{k:'empty',label:'通知ゼロ'}],
+  contact:[{k:'form',label:'フォーム'},{k:'done',label:'送信完了'}]
+};
+var cur={account:'normal',notifications:'normal',contact:'form'};
+var page='account';
+
+function renderStateGrp(){
+  var g=document.getElementById('stateGrp');g.innerHTML='';
+  STATES[page].forEach(function(st){
+    var b=document.createElement('button');b.className='stBtn'+(cur[page]===st.k?' on':'');
+    b.textContent=st.label;b.onclick=function(){cur[page]=st.k;renderStateGrp();renderPage();};
+    g.appendChild(b);
+  });
+}
+document.querySelectorAll('.tabBtn').forEach(function(b){
+  b.onclick=function(){
+    page=b.dataset.page;
+    document.querySelectorAll('.tabBtn').forEach(function(x){x.classList.toggle('on',x===b);});
+    document.querySelectorAll('.page').forEach(function(p){p.classList.toggle('on',p.id===page);});
+    renderStateGrp();renderPage();window.scrollTo(0,0);
+  };
+});
+
+function renderPage(){
+  if(page==='account')renderAccount();
+  if(page==='notifications')renderNotifs();
+  if(page==='contact')renderContact();
+}
+
+/* ============ ACCOUNT ============ */
+function avatarHue(email){var h=0;for(var i=0;i<email.length;i++)h=(h*31+email.charCodeAt(i))%360;return h;}
+function renderAccount(){
+  var st=cur.account;
+  var email=st==='wallet'?null:'alex.tanaka@gmail.com';
+  var hue=avatarHue(email||'0x9fe3');
+  var av=document.getElementById('acAvatar');
+  av.textContent=(email?email[0]:'W').toUpperCase();
+  av.style.background='linear-gradient(135deg,hsl('+hue+' 70% 55%),hsl('+((hue+40)%360)+' 70% 40%))';
+  document.getElementById('acEmail').innerHTML=email?email:'<span class="vUnset">(メール未設定 — ウォレットログイン)</span>';
+  document.getElementById('acDays').textContent='プレイ '+(st==='fresh'?1:44)+'日目';
+  // stats
+  var s=st==='fresh'?{racing:0,listed:0,champions:0,burned:0,pending:1}:{racing:5,listed:2,champions:3,burned:4,pending:1};
+  var cells=[
+    {v:s.racing,k:'出走中',cls:'stCyan',g:'◈'},
+    {v:s.listed,k:'出品中',cls:'stWarn',g:'↗'},
+    {v:s.champions,k:'チャンピオン',cls:'stGold',g:'◆'},
+    {v:s.burned,k:'消滅',cls:'stMag',g:'✕'},
+    {v:s.pending,k:'割当待ち予約',cls:'stCyan',g:'⟳'}
+  ];
+  document.getElementById('acStats').innerHTML=cells.map(function(c){
+    return '<a class="statCell '+c.cls+'" href="#"><span class="statGlyph">'+c.g+'</span><span class="statV">'+c.v+'</span><span class="statK">'+c.k+'</span></a>';
+  }).join('');
+  // wallets
+  var wal=document.getElementById('acWallets');
+  if(st==='wallet'){
+    wal.innerHTML='<div class="lkRow"><span class="prov wal">wallet</span><code>0x9fe3c4a2b1d8e7f60a5b4c3d2e1f00998877ff11</code><span class="lkLast">最後のIDは解除不可</span></div>';
+  }else if(st==='fresh'){
+    wal.innerHTML='<div class="empty">紐づけ済みのウォレットはありません。</div>';
+  }else{
+    wal.innerHTML='<div class="lkRow"><span class="prov wal">wallet</span><code>0x9fe3c4a2b1d8e7f60a5b4c3d2e1f00998877ff11</code><button class="unlink" type="button">解除</button></div>';
+  }
+}
+
+/* ============ NOTIFICATIONS ============ */
+var TYPE_META={
+  RACE_RESULT_READY:{cls:'tRace',glyph:'◈',label:'レース結果',cat:'レース',lane:'rgba(0,234,255,0.65)'},
+  HORSE_BURNED:{cls:'tBurn',glyph:'✕',label:'Burn',cat:'レース',lane:'rgba(255,45,196,0.7)'},
+  REVENGE_BUFF_GENERATED:{cls:'tBurn',glyph:'↺',label:'Revenge Buff',cat:'レース',lane:'rgba(255,45,196,0.5)'},
+  BUYBACK_PAYMENT_PAID:{cls:'tBuyback',glyph:'◆',label:'チャンピオン報酬',cat:'報酬',lane:'rgba(201,168,106,0.7)'},
+  MEMORIAL_NFT_MINTED:{cls:'tBuyback',glyph:'❖',label:'記念NFT',cat:'報酬',lane:'rgba(201,168,106,0.7)'},
+  SUPPORT_BONUS_PAID:{cls:'tBuyback',glyph:'♥',label:'サポートボーナス',cat:'報酬',lane:'rgba(201,168,106,0.55)'},
+  ASSIGNMENT_COMPLETED:{cls:'tAssignment',glyph:'✦',label:'馬の割当',cat:'売買',lane:'rgba(0,234,255,0.5)'},
+  HORSE_SOLD:{cls:'tAssignment',glyph:'↗',label:'売却成立',cat:'売買',lane:'rgba(0,234,255,0.5)'},
+  AUTO_LISTED:{cls:'tAssignment',glyph:'⇱',label:'自動出品',cat:'売買',lane:'rgba(0,234,255,0.4)'},
+  DEPOSIT_CONFIRMED:{cls:'tDeposit',glyph:'↓',label:'入金',cat:'入出金',lane:'rgba(201,168,106,0.6)'},
+  WITHDRAWAL_COMPLETED:{cls:'tDeposit',glyph:'↑',label:'出金',cat:'入出金',lane:'rgba(201,168,106,0.6)'},
+  TRAINING_COMPLETED:{cls:'tTraining',glyph:'⤴',label:'調教',cat:'その他',lane:'rgba(53,208,127,0.55)'},
+  ITEM_DROPPED:{cls:'tTraining',glyph:'✧',label:'アイテム',cat:'その他',lane:'rgba(53,208,127,0.45)'}
+};
+var CATS=['ALL','レース','売買','報酬','入出金','その他'];
+function meta(t){return TYPE_META[t]||{cls:'tDefault',glyph:'•',label:'お知らせ',cat:'その他',lane:'rgba(255,255,255,0.18)'};}
+function mkN(type,title,body,minsAgo,read){return{type:type,title:title,body:body,ts:Date.now()-minsAgo*60000,read:!!read};}
+var NOTIFS=[
+  mkN('RACE_RESULT_READY','本日のレース結果が確定しました。','出走 5頭 · 最高順位 12位',35,false),
+  mkN('HORSE_BURNED','Burning Meteor は本日のレースでBurnされました。','下位10.7%に入り消滅。Revenge Buff を獲得しました。',36,false),
+  mkN('BUYBACK_PAYMENT_PAID','チャンピオン報酬が支払われました。','Golden Wolf · Day7 買い戻し 3/7 回目',37,false),
+  mkN('HORSE_SOLD','Azure Comet の売却が成立しました。','133.10 USDT が残高に加算されました。',52,false),
+  mkN('TRAINING_COMPLETED','トレーニングが完了しました。','Crimson Tiger · CONDが上昇',95,false),
+  mkN('DEPOSIT_CONFIRMED','入金が確認されました。','200.00 USDT · Polygon',180,true),
+  mkN('ASSIGNMENT_COMPLETED','馬の割当が完了しました。','新しい馬が厩舎に加わりました。',1520,true),
+  mkN('ITEM_DROPPED','アイテムを獲得しました。','スピードチャーム × 1',1580,true),
+  mkN('AUTO_LISTED','スマート出品で1頭を出品しました。','Phantom Frost · 当日価格',1600,true),
+  mkN('SUPPORT_BONUS_PAID','サポートボーナスが支払われました。','仲間の復帰を支えた手当',2900,true),
+  mkN('WITHDRAWAL_COMPLETED','出金が完了しました。','120.00 USDT',2950,true),
+  mkN('MEMORIAL_NFT_MINTED','記念NFTが発行されました。','7日間走り切った証',3000,true),
+  mkN('REVENGE_BUFF_GENERATED','Revenge Buff が発生しました。','次の馬に引き継がれます。',4400,true),
+  mkN('TRAINING_COMPLETED','トレーニングが完了しました。','Emerald Storm · FATIGUE回復',4500,true),
+  mkN('DEPOSIT_CONFIRMED','入金が確認されました。','50.00 USDT · Polygon',5900,true),
+  mkN('RACE_RESULT_READY','レース結果が確定しました。','出走 4頭 · 全頭生存',7300,true),
+  mkN('ITEM_DROPPED','アイテムを獲得しました。','スタミナオイル × 2',7400,true)
+];
+var nState={q:'',cat:'ALL',unreadOnly:false,page:0};
+var N_PAGE=8;
+function dateOf(ts){return new Date(ts).toISOString().slice(0,10);}
+function dateLabel(ts){var d=new Date(ts);return (d.getMonth()+1)+'/'+d.getDate();}
+function timeAgo(ts){var m=Math.max(0,Math.floor((Date.now()-ts)/60000));if(m<60)return m+'分前';if(m<1440)return Math.floor(m/60)+'時間前';return Math.floor(m/1440)+'日前';}
+
+function renderNotifs(){
+  var empty=cur.notifications==='empty';
+  var data=empty?[]:NOTIFS;
+  var unread=data.filter(function(n){return !n.read;}).length;
+  document.getElementById('nUnread').style.display=unread>0?'':'none';
+  document.getElementById('nUnread').textContent='未読 '+unread;
+  // digest (latest day)
+  var dg=document.getElementById('nDigest');
+  if(!empty){
+    var latest=dateOf(data[0].ts);var day=data.filter(function(n){return dateOf(n.ts)===latest;});
+    function cnt(types){return day.filter(function(n){return types.indexOf(n.type)>=0;}).length;}
+    var parts=[
+      {label:'レース結果',n:cnt(['RACE_RESULT_READY']),cls:'tRace'},
+      {label:'Burn',n:cnt(['HORSE_BURNED']),cls:'tBurn'},
+      {label:'報酬',n:cnt(['BUYBACK_PAYMENT_PAID','SUPPORT_BONUS_PAID','MEMORIAL_NFT_MINTED']),cls:'tBuyback'},
+      {label:'売買',n:cnt(['ASSIGNMENT_COMPLETED','HORSE_SOLD','AUTO_LISTED']),cls:'tAssignment'},
+      {label:'入出金',n:cnt(['DEPOSIT_CONFIRMED','WITHDRAWAL_COMPLETED']),cls:'tDeposit'}
+    ].filter(function(p){return p.n>0;});
+    dg.innerHTML='<div class="digest"><div class="digestHead"><span class="digestTitle">'+dateLabel(data[0].ts)+' のダイジェスト</span><span class="digestCount">'+day.length+'件</span></div>'+
+      '<div class="digestParts">'+parts.map(function(p){return '<span class="digestChip '+p.cls+'">'+p.label+' <b>'+p.n+'</b></span>';}).join('')+'</div>'+
+      '<div class="digestLinks"><a class="digestLink" href="#">結果を見る →</a><a class="digestLink" href="#">取引履歴 →</a></div></div>';
+  }else dg.innerHTML='';
+  // cat chips
+  document.getElementById('nCats').innerHTML=CATS.map(function(c){
+    return '<button class="catChip'+(nState.cat===c?' on':'')+'" data-cat="'+c+'">'+(c==='ALL'?'すべて':c)+'</button>';
+  }).join('');
+  document.querySelectorAll('#nCats .catChip').forEach(function(b){b.onclick=function(){nState.cat=b.dataset.cat;nState.page=0;renderNotifs();};});
+  document.getElementById('nUnreadOnly').classList.toggle('on',nState.unreadOnly);
+  // filter
+  var needle=nState.q.trim().toLowerCase();
+  var filtered=data.filter(function(n){var m=meta(n.type);
+    if(nState.cat!=='ALL'&&m.cat!==nState.cat)return false;
+    if(nState.unreadOnly&&n.read)return false;
+    if(needle&&(n.title+' '+m.label).toLowerCase().indexOf(needle)<0)return false;
+    return true;});
+  document.getElementById('nCount').textContent=filtered.length===data.length?('全'+data.length+'件'):(data.length+'件中 '+filtered.length+'件');
+  var list=document.getElementById('nList');
+  if(data.length===0){list.innerHTML='<div class="empty">通知はまだありません。<br>レース結果・Burn・チャンピオン報酬・売買などがここに届きます。</div>';document.getElementById('nPager').innerHTML='';return;}
+  if(filtered.length===0){list.innerHTML='<div class="empty">条件に一致する通知がありません。</div>';document.getElementById('nPager').innerHTML='';return;}
+  var pc=Math.max(1,Math.ceil(filtered.length/N_PAGE));var sp=Math.min(nState.page,pc-1);
+  var slice=filtered.slice(sp*N_PAGE,sp*N_PAGE+N_PAGE);
+  var html='<div class="list">';var prev=null;
+  slice.forEach(function(n){var m=meta(n.type);var d=dateOf(n.ts);
+    if(d!==prev){html+='</div><div class="dateHead">── '+dateLabel(n.ts)+' ──</div><div class="list">';prev=d;}
+    html+='<a class="row'+(n.read?'':' rowUnread')+'" href="#" style="border-left:3px solid '+m.lane+'">'+
+      '<span class="icon '+m.cls+'">'+m.glyph+'</span><div class="body"><div class="topLine">'+
+      '<span class="typeBadge '+m.cls+'">'+m.label+'</span>'+(n.read?'':'<span class="dot"></span>')+'</div>'+
+      '<div class="title'+(n.read?'':' titleUnread')+'">'+n.title+'</div>'+(n.body?'<div class="sub">'+n.body+'</div>':'')+'</div>'+
+      '<span class="rowRight"><span class="time">'+timeAgo(n.ts)+'</span><span class="openArrow">→</span></span></a>';
+  });
+  html+='</div>';list.innerHTML=html;
+  var pg=document.getElementById('nPager');
+  if(pc>1){pg.innerHTML='<button class="pagerBtn" id="nPrev"'+(sp===0?' disabled':'')+'>← 前へ</button><span class="pageLabel">'+(sp+1)+' / '+pc+'</span><button class="pagerBtn" id="nNext"'+(sp>=pc-1?' disabled':'')+'>次へ →</button>';
+    var pv=document.getElementById('nPrev'),nx=document.getElementById('nNext');
+    if(pv)pv.onclick=function(){nState.page=Math.max(0,sp-1);renderNotifs();};
+    if(nx)nx.onclick=function(){nState.page=Math.min(pc-1,sp+1);renderNotifs();};
+  }else pg.innerHTML='';
+}
+document.getElementById('nSearch').oninput=function(e){nState.q=e.target.value;nState.page=0;renderNotifs();};
+document.getElementById('nUnreadOnly').onclick=function(){nState.unreadOnly=!nState.unreadOnly;nState.page=0;renderNotifs();};
+
+/* ============ CONTACT ============ */
+var FAQS=[{q:'BURNとは?'},{q:'購入・売却のしくみ'},{q:'入金が反映されない'},{q:'チャンピオン報酬はいつ?'},{q:'チーム(サポートボーナス)'}];
+var CCATS=['ゲームのルール','入出金','購入・売却','チーム','その他'];
+var cState={cat:'',subject:'',body:''};
+function renderContact(){
+  var w=document.getElementById('contactWrap');
+  if(cur.contact==='done'){
+    w.innerHTML='<div class="h1">お問い合わせ</div><div class="doneCard"><div class="doneMark">✓</div>'+
+      '<div class="doneTitle">送信しました</div><p class="doneText">お問い合わせありがとうございます。サポートチームが確認のうえ、<b>ご登録のメールアドレス</b>へ返信いたします。</p>'+
+      '<div class="doneLinks"><a class="doneLink" href="#">使い方を見る →</a><a class="doneLink" href="#">ダッシュボードへ →</a></div></div>';
+    return;
+  }
+  w.innerHTML='<div class="h1">お問い合わせ</div>'+
+    '<p class="lead">ゲームのルール・アカウント・入出金など、なんでもお気軽にどうぞ。サポートチームが確認し、ご登録のメールアドレスへ返信します。</p>'+
+    '<div class="faq"><span class="faqLabel">よくある質問</span><div class="faqChips">'+FAQS.map(function(f){return '<a class="faqChip" href="#">'+f.q+'</a>';}).join('')+'</div></div>'+
+    '<div class="cols"><div class="form">'+
+      '<div class="label">カテゴリ(任意)</div><div class="catChips" id="cCats">'+CCATS.map(function(c){return '<button class="catChip'+(cState.cat===c?' on':'')+'" data-cat="'+c+'">'+c+'</button>';}).join('')+'</div>'+
+      '<label class="label" for="cSub">件名</label><input class="input" id="cSub" placeholder="例: BURNについて教えてください" value="'+cState.subject.replace(/"/g,'&quot;')+'" />'+
+      '<label class="label" for="cBody">お問い合わせ内容</label><textarea class="textarea" id="cBody" rows="9" placeholder="できるだけ具体的にお書きいただくと、正確なご案内ができます">'+cState.body+'</textarea>'+
+      '<button class="submit" id="cSubmit"'+((cState.subject.trim()&&cState.body.trim())?'':' disabled')+'>送信する</button>'+
+    '</div><aside class="aside">'+
+      '<div class="asideCard"><div class="asideTitle">返信について</div><ul class="asideList">'+
+        '<li><b>ご登録のメールアドレス</b>宛に返信します(このページでの返信表示はありません)</li>'+
+        '<li>内容により確認へお時間をいただく場合があります</li>'+
+        '<li>残高・取引の具体的な数字は、サイト内の各ページでご確認いただけます</li></ul></div>'+
+      '<div class="asideCard"><div class="asideTitle">メールでも受け付けています</div><a class="mailLink" href="#">support@sevendaysderby.com</a></div>'+
+    '</aside></div>';
+  document.querySelectorAll('#cCats .catChip').forEach(function(b){b.onclick=function(){cState.cat=cState.cat===b.dataset.cat?'':b.dataset.cat;renderContact();};});
+  var sub=document.getElementById('cSub'),bod=document.getElementById('cBody'),btn=document.getElementById('cSubmit');
+  sub.oninput=function(){cState.subject=sub.value;btn.disabled=!(cState.subject.trim()&&cState.body.trim());};
+  bod.oninput=function(){cState.body=bod.value;btn.disabled=!(cState.subject.trim()&&cState.body.trim());};
+  btn.onclick=function(){if(!btn.disabled){cur.contact='done';renderStateGrp();renderContact();}};
+}
+
+renderStateGrp();renderPage();
+</script>
+
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#0a0714"/><g fill="none" stroke="#00eaff" stroke-width="3"><circle cx="50" cy="34" r="13"/><path d="M28 72c0-12 10-20 22-20s22 8 22 20"/></g><rect x="30" y="82" width="40" height="5" rx="2.5" fill="#ff2dc4"/></svg>
+</template>
+</body>
+</html>
