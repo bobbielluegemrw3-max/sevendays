@@ -822,23 +822,7 @@
 
 /* ---------- 待機パドック(2026-07-13) ---------- */
 /* 「ただの時計」→出走前の待合室。背景=チャンピオン動画ループを薄く。 */
-/* stageInner(padding 2.2/1.2/3.4rem・中央寄せ)いっぱいに背景を敷くため、
-   同量の負マージンで枠まで届かせる。 */
-.waitStage {
-  position: relative; overflow: hidden;
-  width: calc(100% + 2.4rem);
-  margin: -2.2rem -1.2rem -3.4rem;
-  padding: 2.6rem 1.4rem 3.6rem;
-}
-.waitVideo {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; object-position: center 55%;
-  opacity: 0.22; pointer-events: none;
-}
-.waitShade {
-  position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(180deg, rgba(5, 4, 9, 0.55), rgba(5, 4, 9, 0.2) 40%, rgba(5, 4, 9, 0.75));
-}
+.waitStage { position: relative; width: 100%; max-width: 860px; }
 .waitInner { position: relative; display: flex; flex-direction: column; gap: 10px; }
 
 .waitLabelSoon { color: var(--gold-bright); }

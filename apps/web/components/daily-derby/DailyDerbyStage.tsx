@@ -490,23 +490,9 @@ function Waiting({
     : null;
   const hasDigest = digest !== null && digest.burned + digest.survived + digest.sold + digest.bought > 0;
 
+  // 背景動画はオーナー判断で撤去(2026-07-13): パドックは情報系のみで構成。
   return (
     <div className={s.waitStage}>
-      {/* ⑤ アリーナの空気: チャンピオン動画ループを薄く敷く(装飾・autoplay不可はポスター) */}
-      <video
-        className={s.waitVideo}
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        poster="/champions/hero-poster.webp"
-        aria-hidden="true"
-      >
-        <source src="/champions/hero-loop.mp4" type="video/mp4" />
-      </video>
-      <div className={s.waitShade} aria-hidden="true" />
-
       <div className={s.waitInner}>
         <div className={`${s.waitLabel} ${soon ? s.waitLabelSoon : ''}`}>{label}</div>
         <div className={`${s.waitClock} ${finalHour ? s.waitClockFinal : ''}`}>{`${pad(h)}:${pad(m)}:${pad(sec)}`}</div>
