@@ -833,7 +833,7 @@
 .waitVideo {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: center 55%;
-  opacity: 0.16; pointer-events: none;
+  opacity: 0.22; pointer-events: none;
 }
 .waitShade {
   position: absolute; inset: 0; pointer-events: none;
@@ -885,3 +885,15 @@
 .waitChipGood { color: var(--good); border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.07); }
 .waitChipBad { color: var(--bad); border-color: rgba(255, 92, 92, 0.4); background: rgba(255, 92, 92, 0.07); }
 .waitChipGold { color: var(--gold-bright); border-color: rgba(201, 168, 106, 0.5); background: rgba(201, 168, 106, 0.09); }
+
+/* 馬ゼロの招待カード */
+.waitInvite {
+  display: flex; flex-direction: column; gap: 6px;
+  border: 1px dashed rgba(0, 234, 255, 0.35); border-radius: 12px;
+  padding: 14px 16px; background: rgba(0, 234, 255, 0.04);
+  text-decoration: none;
+}
+.waitInvite:hover { background: rgba(0, 234, 255, 0.08); }
+.waitInviteT { font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; color: var(--text); }
+.waitInviteD { font-size: 0.78rem; color: var(--muted); line-height: 1.7; }
+.waitInviteA { font-family: var(--font-mono); font-size: 0.72rem; color: var(--cyan); }

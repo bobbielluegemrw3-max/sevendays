@@ -182,25 +182,32 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       ticker = tick.rows.map((r) => r.line);
     }
 
-    // ADR-012: ショー最終幕で発表する「明日の予報」(今夜のバッチがコミット済みの場合)。
+    // ADR-012の予報を1クエリで2つ拾う:
+    //  - 今夜分(=today)… 日中の待機パドックの掲示板用(2026-07-13追加。前夜の
+    //    バッチが発表済みの「今夜の予報」— 従来は誰にも見えていなかった)
+    //  - 明日分(=today+1)… ショー最終幕の「明日の予報」発表用
     const fc = await client.query<{
+      forecast_date: string;
       forecast_weather: string;
       forecast_track: string;
       forecast_surface: string;
     }>(
-      `select forecast_weather::text as forecast_weather,
+      `select forecast_date::text as forecast_date,
+              forecast_weather::text as forecast_weather,
               forecast_track::text as forecast_track,
               forecast_surface::text as forecast_surface
-       from night_forecasts where forecast_date = $1::date + 1`,
+       from night_forecasts
+       where forecast_date in ($1::date, $1::date + 1)`,
       [today],
     );
-    const tomorrowForecast = fc.rows[0]
-      ? {
-          weather: fc.rows[0].forecast_weather,
-          track: fc.rows[0].forecast_track,
-          surface: fc.rows[0].forecast_surface,
-        }
-      : null;
+    const forecastOf = (date: string) => {
+      const row = fc.rows.find((r) => r.forecast_date === date);
+      return row
+        ? { weather: row.forecast_weather, track: row.forecast_track, surface: row.forecast_surface }
+        : null;
+    };
+    const tonightForecast = forecastOf(today);
+    const tomorrowForecast = forecastOf(addDays(today, 1));
 
     return {
       next_derby_at: nextDerbyAt(now),
@@ -220,6 +227,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         : null,
       counts,
       ticker,
+      tonight_forecast: tonightForecast,
       tomorrow_forecast: tomorrowForecast,
     };
   }

@@ -65,6 +65,8 @@ export interface DailyDerbyStageProps {
   myHorses?: readonly MyDerbyHorse[];
   /** 当夜のレース条件(Decision 082)。タイトル直後に一瞬テキスト表示する。 */
   conditions?: DerbyConditionsView | null;
+  /** 今夜の予報(日中の待機パドック掲示板用・確定条件が出るまでの代役) */
+  tonightForecast?: DerbyConditionsView | null;
   /** 明日の予報(ADR-012)。ショー最終幕(YOUR RESULTSの後)で発表する。 */
   tomorrowForecast?: DerbyConditionsView | null;
   /** 視覚QA専用: マウント時に審判を強制表示(プレビューのみ使用)。 */
@@ -120,6 +122,7 @@ export function DailyDerbyStage({
   hoofbeatsSrc = '/sounds/hoofbeats.mp3',
   myHorses = [],
   conditions = null,
+  tonightForecast = null,
   tomorrowForecast = null,
   debugVerdict,
   tonightVariant = 1,
@@ -416,7 +419,7 @@ export function DailyDerbyStage({
             secondsToStart={secondsToStart}
             myHorses={myHorses}
             conditions={conditions}
-            forecast={tomorrowForecast}
+            forecast={tonightForecast}
             night={nightResults}
           />
         ) : secondsToStart > 0 ? (
@@ -516,11 +519,24 @@ function Waiting({
           </Link>
         )}
 
-        {/* ① 今夜の出走(自分の馬・実NFTアート+DAY進行+価格ステップ) */}
-        {myHorses.length > 0 && (
+        {/* ① 今夜の出走(自分の馬・実NFTアート+DAY進行+価格ステップ)。
+            馬ゼロの空状態はマーケットへの招待カード(2026-07-13)。 */}
+        {myHorses.length > 0 ? (
           <>
             <div className={s.waitSec}>TONIGHT&apos;S ENTRIES · 今夜の出走({myHorses.length})</div>
             <TonightEntryCards myHorses={myHorses} />
+          </>
+        ) : (
+          <>
+            <div className={s.waitSec}>TONIGHT&apos;S ENTRIES · 今夜の出走</div>
+            <Link href="/market" className={s.waitInvite}>
+              <span className={s.waitInviteT}>出走馬がいません</span>
+              <span className={s.waitInviteD}>
+                マーケットプレイスで馬を迎えると、ここに出走カードが並びます。
+                今夜20:00までの購入予約はマッチング後、明晩から出走します。
+              </span>
+              <span className={s.waitInviteA}>マーケットプレイスへ →</span>
+            </Link>
           </>
         )}
 
