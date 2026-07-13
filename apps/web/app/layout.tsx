@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import './globals.css';
 import { getAccessToken, serverApi } from '@/lib/server-api';
 import { TopNav } from '@/components/TopNav';
+import { Splash } from '@/components/Splash';
 
 export const metadata: Metadata = {
   title: 'Seven Days Derby',
@@ -56,6 +57,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
+        {/* 起動スプラッシュ(セッション初回のみ・全ページ共通) */}
+        <Splash />
         {/* Anonymous pages (landing / login) carry their own header. */}
         {authed ? (
           <Suspense fallback={<TopNav />}>
