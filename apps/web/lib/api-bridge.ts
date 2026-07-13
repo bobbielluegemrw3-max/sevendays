@@ -180,6 +180,26 @@ export async function buildAuthContext(
     if (referrerId === userId) referrerId = null;
   }
 
+  // Decision 090 (2026-07-13): 紹介URLなしの登録は運営ルート(既定スポンサー=
+  // goldbenchan本体・env DEFAULT_SPONSOR_EMAIL で変更可)へ自動帰属し、配置も
+  // 直下に即確定する — 無帰属ユーザーの上位7ティア分ボーナスを運営チェーン
+  // (+7〜+2エイリアス+本体)が受け止める。招待経由の登録は従来どおり
+  // スポンサーが手動で配置する(自動配置しない)。
+  // 既定スポンサーが存在しない環境(テストDB等)は従来どおり無所属ルート。
+  let autoPlace = false;
+  if (!referrerId) {
+    const sponsorEmail = process.env.DEFAULT_SPONSOR_EMAIL ?? 'goldbenchan@gmail.com';
+    const fallback = await client.query<{ id: string }>(
+      `select id from users where email = $1`,
+      [sponsorEmail],
+    );
+    const fallbackId = fallback.rows[0]?.id ?? null;
+    if (fallbackId && fallbackId !== userId) {
+      referrerId = fallbackId;
+      autoPlace = true;
+    }
+  }
+
   try {
     await client.query(
       `insert into users (id, email, direct_referrer_user_id) values ($1, $2, $3) on conflict (id) do nothing`,
@@ -199,6 +219,23 @@ export async function buildAuthContext(
       `insert into users (id, email, direct_referrer_user_id) values ($1, $2, $3) on conflict (id) do nothing`,
       [userId, email, referrerId],
     );
+  }
+
+  // Decision 090: 自動帰属時は配置も既定スポンサー直下で即確定(監査痕跡つき)。
+  // 配置トリガーが placed_at 設定と循環検出を担う。既配置(並行実行)は無変更。
+  if (autoPlace && referrerId) {
+    const placed = await client.query(
+      `update users set placement_parent_user_id = $2
+       where id = $1 and placement_parent_user_id is null`,
+      [userId, referrerId],
+    );
+    if ((placed.affectedRows ?? 0) > 0) {
+      await client.query(
+        `insert into placement_audit (user_id, old_parent_user_id, new_parent_user_id, actor_user_id, action, reason)
+         values ($1, null, $2, $2, 'PLACE', 'Decision 090: auto-attach (no referral URL)')`,
+        [userId, referrerId],
+      );
+    }
   }
 
   // A Web3-first account claims its wallet immediately — this is what makes

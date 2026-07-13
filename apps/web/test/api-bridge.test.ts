@@ -88,6 +88,46 @@ describe('buildAuthContext', () => {
     expect(auth2.kind).toBe('user');
   });
 
+  it('auto-attaches no-referral signups to the default sponsor with immediate placement (Decision 090)', async () => {
+    const sponsor = randomUUID();
+    const sponsorEmail = `${randomUUID()}@sponsor.dev`;
+    await client.query(`insert into users (id, email) values ($1, $2)`, [sponsor, sponsorEmail]);
+    process.env.DEFAULT_SPONSOR_EMAIL = sponsorEmail;
+    try {
+      const uid = randomUUID();
+      const token = await signToken(uid, `${randomUUID()}@organic.dev`);
+      const auth = await buildAuthContext(client, token, JWT_SECRET, {});
+      expect(auth).toEqual({ kind: 'user', userId: uid });
+      const row = await client.query<{ ref: string | null; placed: string | null }>(
+        `select direct_referrer_user_id::text as ref, placement_parent_user_id::text as placed
+         from users where id = $1`,
+        [uid],
+      );
+      expect(row.rows[0]!.ref).toBe(sponsor);
+      expect(row.rows[0]!.placed).toBe(sponsor);
+      const audit = await client.query(
+        `select 1 from placement_audit where user_id = $1 and new_parent_user_id = $2 and action = 'PLACE'`,
+        [uid, sponsor],
+      );
+      expect(audit.rows.length).toBe(1);
+
+      // 招待コード経由の登録は自動配置されない(スポンサーが手動配置する)。
+      const invited = randomUUID();
+      const code = (
+        await client.query<{ referral_code: string }>(`select referral_code from users where id = $1`, [sponsor])
+      ).rows[0]!.referral_code;
+      const token2 = await signToken(invited, `${randomUUID()}@invited3.dev`);
+      await buildAuthContext(client, token2, JWT_SECRET, { referralCode: code });
+      const row2 = await client.query<{ placed: string | null }>(
+        `select placement_parent_user_id::text as placed from users where id = $1`,
+        [invited],
+      );
+      expect(row2.rows[0]!.placed).toBeNull();
+    } finally {
+      delete process.env.DEFAULT_SPONSOR_EMAIL;
+    }
+  });
+
   it('resolves a Web3 session for a LINKED wallet to the linked game account (Decision 072)', async () => {
     // Existing game account with a linked wallet.
     const gameUser = randomUUID();
