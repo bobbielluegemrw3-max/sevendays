@@ -561,7 +561,7 @@ function Waiting({
                 <span className={`${s.waitFieldTag} ${s.waitFieldTagFixed}`}>確定</span>
               ) : null}
               <span className={s.waitFieldNote}>
-                公開ルール floor(出走頭数 × 夜間率8.0〜13.5%) による枠。対象馬は発走まで誰にも分かりません。
+                枠は公開ルールにより出走頭数から定まる上限です。対象馬は発走まで誰にも分かりません。
               </span>
             </div>
           </>
