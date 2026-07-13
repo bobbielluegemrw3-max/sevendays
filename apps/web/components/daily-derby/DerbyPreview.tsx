@@ -222,6 +222,7 @@ export function DerbyPreview() {
         debugVerdict={debugVerdict}
         conditions={fixtureConditions(new Date().toISOString().slice(0, 10))}
         tomorrowForecast={fixtureForecast(new Date().toISOString().slice(0, 10))}
+        tonightField={{ entrants: 14, burnSlotsMin: 1, burnSlotsMax: 1 }}
       />
 
       <p className="faint" style={{ fontSize: '0.78rem', marginTop: '0.8rem' }}>

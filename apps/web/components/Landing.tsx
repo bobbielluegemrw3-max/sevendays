@@ -45,7 +45,13 @@ function CheckIcon() {
   );
 }
 
-export function Landing() {
+export interface LandingTonightField {
+  entrants: number;
+  min: number;
+  max: number;
+}
+
+export function Landing({ tonightField = null }: { tonightField?: LandingTonightField | null }) {
   // ショーケース: 名前/価格/レアリティは決定論エンジン、アートは承認済みNFTルック空間。
   const horses = pickShowcase(8, () => (Math.random() * 0xffffffff) >>> 0);
   const looks = pickNftShowcase(8, () => (Math.random() * 0xffffffff) >>> 0);
@@ -778,6 +784,22 @@ export function Landing() {
                 <span className={s.gtl}>{'// GATE OPENS IN'}</span>
                 <Countdown className={s.gtv} />
               </div>
+              {/* 今夜の出走枠(実データ・Decision 093)。少頭数の夜ほどBURN枠が
+                  小さいことが一目で分かる — floor則の帰結なので誇張なし。 */}
+              {tonightField && (
+                <div className={s.gateField}>
+                  <span>
+                    出走予定 <b>{tonightField.entrants}</b>頭
+                  </span>
+                  <span className={s.gfBurn}>
+                    BURN枠 <b>{tonightField.min === tonightField.max ? tonightField.max : `${tonightField.min}〜${tonightField.max}`}</b>頭
+                  </span>
+                  <span className={s.gfLive}>
+                    <span className={s.gfDot} />
+                    LIVE DATA
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

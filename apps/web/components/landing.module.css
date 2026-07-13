@@ -424,6 +424,14 @@
 .gateTimer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.07); background: linear-gradient(90deg, rgba(0, 234, 255, 0.06), transparent); }
 .gateTimer .gtl { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.2em; color: #8f8ac2; }
+/* 今夜の出走枠(実データ・Decision 093)— タイマー下の実況ライン */
+.gateField { display: flex; align-items: center; gap: 14px; padding: 10px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: #8f8ac2; }
+.gateField b { font-family: var(--font-display); font-size: 14px; color: #eae7ff; font-weight: 800; }
+.gateField .gfBurn b { color: #ff8fe4; }
+.gateField .gfLive { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: #c9a86a; font-size: 9.5px; letter-spacing: 0.18em; }
+.gateField .gfDot { width: 5px; height: 5px; border-radius: 50%; background: #c9a86a; animation: lpGlow 2.2s ease-in-out infinite; }
 .gtv { font-family: var(--font-display); font-weight: 800; font-size: clamp(24px, 4vw, 34px); line-height: 1; color: #00eaff;
   font-variant-numeric: tabular-nums; animation: lpGlow 3s ease-in-out infinite; }
 @media (max-width: 860px) {

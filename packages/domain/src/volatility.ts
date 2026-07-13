@@ -48,6 +48,20 @@ export function seedUnit(seedHex: string, channel: string): number {
 }
 
 /**
+ * BURN枠(公開表示用): 出走頭数から、当夜あり得るBURN数の下限〜上限。
+ * 率の「器」[8.0%, 13.5%] と floor則(憲法)だけから導く — 経済ステータスや
+ * ポリシーの如何にかかわらず、実際のBURN数は必ずこの範囲に収まる。
+ * 少頭数では min=max に潰れ、「今夜のBURN枠 N頭(確定)」と掲示できる。
+ */
+export function burnSlotRangeV1(entrants: number): { min: number; max: number } {
+  const n = Math.max(0, Math.floor(entrants));
+  return {
+    min: Math.floor(n * Number(BURN_JITTER_ENVELOPE_V1.min)),
+    max: Math.floor(n * Number(BURN_JITTER_ENVELOPE_V1.max)),
+  };
+}
+
+/**
  * 夜間BURN率(小数文字列・4桁)。対称ジッターで平均=基準率を厳守。
  * amplitude は器と基準率から自動縮小されるため常に器の内側に収まる。
  */

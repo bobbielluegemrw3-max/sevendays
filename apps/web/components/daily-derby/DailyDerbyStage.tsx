@@ -67,6 +67,8 @@ export interface DailyDerbyStageProps {
   conditions?: DerbyConditionsView | null;
   /** 今夜の予報(日中の待機パドック掲示板用・確定条件が出るまでの代役) */
   tonightForecast?: DerbyConditionsView | null;
+  /** 次のレースの全体出走枠(Decision 093: 少頭数有利の可視化・実データ)。 */
+  tonightField?: { entrants: number; burnSlotsMin: number; burnSlotsMax: number } | null;
   /** 明日の予報(ADR-012)。ショー最終幕(YOUR RESULTSの後)で発表する。 */
   tomorrowForecast?: DerbyConditionsView | null;
   /** 視覚QA専用: マウント時に審判を強制表示(プレビューのみ使用)。 */
@@ -123,6 +125,7 @@ export function DailyDerbyStage({
   myHorses = [],
   conditions = null,
   tonightForecast = null,
+  tonightField = null,
   tomorrowForecast = null,
   debugVerdict,
   tonightVariant = 1,
@@ -420,6 +423,7 @@ export function DailyDerbyStage({
             myHorses={myHorses}
             conditions={conditions}
             forecast={tonightForecast}
+            field={tonightField}
             night={nightResults}
           />
         ) : secondsToStart > 0 ? (
@@ -464,12 +468,14 @@ function Waiting({
   myHorses,
   conditions,
   forecast,
+  field,
   night,
 }: {
   secondsToStart: number;
   myHorses: readonly MyDerbyHorse[];
   conditions: DerbyConditionsView | null;
   forecast: DerbyConditionsView | null;
+  field: { entrants: number; burnSlotsMin: number; burnSlotsMax: number } | null;
   night: DerbyNightResults | null;
 }) {
   const total = Math.max(0, Math.floor(secondsToStart));
@@ -523,6 +529,41 @@ function Waiting({
               </span>
               <span className={s.waitInviteA}>マーケットプレイスへ →</span>
             </Link>
+          </>
+        )}
+
+        {/* ①.5 今夜の出走枠(全体・実データ) — BURN数は floor(頭数×率) で率の器は
+            8.0〜13.5%固定(公開ルール)なので、枠は事前に「確定 or 狭い範囲」で
+            掲示できる。少頭数ほど枠が小さい=生き残りやすい夜(Decision 093)。 */}
+        {field && field.entrants > 0 && (
+          <>
+            <div className={s.waitSec}>TONIGHT&apos;S FIELD · 今夜の出走枠</div>
+            <div className={s.waitField}>
+              <span className={s.waitFieldStat}>
+                <span className={s.waitFieldK}>出走予定</span>
+                <span className={s.waitFieldV}>
+                  {field.entrants}
+                  <span className="unit">頭</span>
+                </span>
+              </span>
+              <span className={`${s.waitFieldStat} ${s.waitFieldBurn}`}>
+                <span className={s.waitFieldK}>BURN枠</span>
+                <span className={s.waitFieldV}>
+                  {field.burnSlotsMin === field.burnSlotsMax
+                    ? field.burnSlotsMax
+                    : `${field.burnSlotsMin}〜${field.burnSlotsMax}`}
+                  <span className="unit">頭</span>
+                </span>
+              </span>
+              {field.burnSlotsMax === 0 ? (
+                <span className={`${s.waitFieldTag} ${s.waitFieldTagSafe}`}>全馬生還の夜</span>
+              ) : field.burnSlotsMin === field.burnSlotsMax ? (
+                <span className={`${s.waitFieldTag} ${s.waitFieldTagFixed}`}>確定</span>
+              ) : null}
+              <span className={s.waitFieldNote}>
+                公開ルール floor(出走頭数 × 夜間率8.0〜13.5%) による枠。対象馬は発走まで誰にも分かりません。
+              </span>
+            </div>
           </>
         )}
 

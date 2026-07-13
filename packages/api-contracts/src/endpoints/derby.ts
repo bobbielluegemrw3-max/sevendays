@@ -1,4 +1,4 @@
-import { raceNightNameV2 } from '@sevendays/domain';
+import { burnSlotRangeV1, raceNightNameV2 } from '@sevendays/domain';
 import { addDays, batchDateFor } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
 import { ApiError } from '../errors.js';
@@ -209,7 +209,21 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
     const tonightForecast = forecastOf(today);
     const tomorrowForecast = forecastOf(addDays(today, 1));
 
+    // 次のレースの「全体の出走枠」(Decision 093候補・少頭数有利の可視化):
+    // ACTIVE馬 − 手動出品中(Market Lockは欠場)。今夜の購入予約で生まれる馬は
+    // 明晩からの出走なので、この数は日中に増えない(減るのは手動出品のみ)。
+    // BURN枠は憲法のfloor則と率の器[8.0%,13.5%]だけから導く(常に真の上限)。
+    const field = await client.query<{ entrants: number }>(
+      `select count(*)::int as entrants from horses h
+       where h.status = 'ACTIVE'
+         and not exists (select 1 from market_listings ml
+                         where ml.horse_id = h.id and ml.status = 'LISTED' and ml.source = 'MANUAL')`,
+    );
+    const entrants = field.rows[0]!.entrants;
+    const slots = burnSlotRangeV1(entrants);
+
     return {
+      tonight_field: { entrants, burn_slots_min: slots.min, burn_slots_max: slots.max },
       next_derby_at: nextDerbyAt(now),
       phase,
       live_started_at: batchRow?.created_at ?? null,
