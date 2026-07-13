@@ -32,7 +32,7 @@ interface DerbyStatus {
   ticker: string[];
   personal: unknown;
   my_horse_names: string[];
-  my_horses?: { name: string; dna_hash: string; current_day: number }[];
+  my_horses?: { name: string; dna_hash: string; current_day: number; trained_for_next_race?: boolean }[];
   tomorrow_forecast?: { weather: string; track: string; surface: string } | null;
 }
 
@@ -61,9 +61,10 @@ export function DerbyLive() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [poll]);
 
-  // バッチ完了後に当夜の全結果を取得(最新の確定日 = 今夜)。
+  // 当夜/前夜の結果を取得: ショー完了後は「今夜」、日中の待機画面では
+  // 「昨夜のダイジェスト」(待機パドック 2026-07-13)として同じAPIを1回だけ叩く。
   useEffect(() => {
-    if (status?.phase !== 'COMPLETED' || nightResults) return;
+    if ((status?.phase !== 'COMPLETED' && status?.phase !== 'WAITING') || nightResults) return;
     let cancelled = false;
     void apiFetch<DerbyNightResults>('/api/v1/daily-derby/my-results/latest').then((r) => {
       if (!cancelled && r.status === 200) setNightResults(r.body as DerbyNightResults);
@@ -130,6 +131,7 @@ export function DerbyLive() {
         name: h.name,
         dnaHash: h.dna_hash,
         currentDay: h.current_day,
+        trainedForNextRace: h.trained_for_next_race,
       }))}
       conditions={status.conditions ? conditionsView(status.conditions) : null}
       tomorrowForecast={

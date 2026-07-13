@@ -1,5 +1,5 @@
 import { raceNightNameV2 } from '@sevendays/domain';
-import { batchDateFor } from '@sevendays/shared';
+import { addDays, batchDateFor } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry } from '../router.js';
@@ -242,9 +242,20 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       }
 
       // For the YOU-highlight in the log flood (owner plan A). 個人依存はこの1クエリのみ。
-      const myHorses = await ctx.client.query<{ name: string; dna_hash: string; current_day: number }>(
-        `select name, dna_hash, current_day from horses where owner_user_id = $1 and status = 'ACTIVE' limit 200`,
-        [ctx.userId],
+      // trained_for_next_race(2026-07-13 待機パドック): 追加往復なしのEXISTSで
+      // 「次のレースに向けて調教済みか」を同じ1クエリに載せる。効力日は
+      // GET /horses と同じ規則(当日バッチ完了後は翌日扱い)— sharedのphaseで判定。
+      const effectiveRaceDate = shared.phase === 'COMPLETED' ? addDays(today, 1) : today;
+      const myHorses = await ctx.client.query<{
+        name: string; dna_hash: string; current_day: number; trained_for_next_race: boolean;
+      }>(
+        `select h.name, h.dna_hash, h.current_day,
+                exists(
+                  select 1 from training_sessions t
+                  where t.horse_id = h.id and t.effective_race_date = $2
+                ) as trained_for_next_race
+         from horses h where h.owner_user_id = $1 and h.status = 'ACTIVE' limit 200`,
+        [ctx.userId, effectiveRaceDate],
       );
 
       return {

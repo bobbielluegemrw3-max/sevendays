@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   OPENING_STEPS,
@@ -411,7 +412,13 @@ export function DailyDerbyStage({
         {failed && secondsToStart <= 0 ? (
           <DailyDerbyFailureState />
         ) : secondsToStart > PRE_SHOW_SECONDS ? (
-          <Waiting secondsToStart={secondsToStart} />
+          <Waiting
+            secondsToStart={secondsToStart}
+            myHorses={myHorses}
+            conditions={conditions}
+            forecast={tomorrowForecast}
+            night={nightResults}
+          />
         ) : secondsToStart > 0 ? (
           <PreShowCountdown secondsToStart={secondsToStart} myHorses={myHorses} variant={tonightVariant} />
         ) : elapsed < SHOW_TOTAL ? (
@@ -445,17 +452,109 @@ export function DailyDerbyStage({
 
 /* ---------------------------------------------------------------- WAITING */
 
-function Waiting({ secondsToStart }: { secondsToStart: number }) {
+/* 待機パドック(2026-07-13): 「ただの時計」→出走前の待合室。
+   全て実データ(自分の馬・確定条件/70%予報・昨夜の自分の結果)と既存部品
+   (TonightEntryCards)の再配置 — 架空値なし・追加ポーリングなし。
+   背景にはチャンピオン動画ループ(hero-loop.mp4・CDNキャッシュ済4MB)を薄く敷く。 */
+function Waiting({
+  secondsToStart,
+  myHorses,
+  conditions,
+  forecast,
+  night,
+}: {
+  secondsToStart: number;
+  myHorses: readonly MyDerbyHorse[];
+  conditions: DerbyConditionsView | null;
+  forecast: DerbyConditionsView | null;
+  night: DerbyNightResults | null;
+}) {
   const total = Math.max(0, Math.floor(secondsToStart));
   const pad = (n: number) => String(n).padStart(2, '0');
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const sec = total % 60;
+  // 段階ラベル: 1時間前から色味が変わり、10分前は開門予告。
+  const finalHour = total <= 3600;
+  const soon = total <= 600;
+  const label = soon ? 'GATES OPENING SOON' : finalHour ? 'FINAL HOUR' : 'Next Daily Derby';
+  const untrained = myHorses.filter((x) => x.trainedForNextRace === false);
+  const board = conditions ?? forecast;
+  const boardIsForecast = !conditions && !!forecast;
+  const day7 = night ? night.survived.filter((r) => r.day7).length : 0;
+  const digest = night
+    ? { burned: night.burned.length, survived: night.survived.length, sold: night.sold.length, bought: night.bought.length, day7 }
+    : null;
+  const hasDigest = digest !== null && digest.burned + digest.survived + digest.sold + digest.bought > 0;
+
   return (
-    <div>
-      <div className={s.waitLabel}>Next Daily Derby</div>
-      <div className={s.waitClock}>{`${pad(h)}:${pad(m)}:${pad(sec)}`}</div>
-      <div className={s.waitNote}>20:00 (GMT+8) — One Race. One World. Every Day.</div>
+    <div className={s.waitStage}>
+      {/* ⑤ アリーナの空気: チャンピオン動画ループを薄く敷く(装飾・autoplay不可はポスター) */}
+      <video
+        className={s.waitVideo}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        poster="/champions/hero-poster.webp"
+        aria-hidden="true"
+      >
+        <source src="/champions/hero-loop.mp4" type="video/mp4" />
+      </video>
+      <div className={s.waitShade} aria-hidden="true" />
+
+      <div className={s.waitInner}>
+        <div className={`${s.waitLabel} ${soon ? s.waitLabelSoon : ''}`}>{label}</div>
+        <div className={`${s.waitClock} ${finalHour ? s.waitClockFinal : ''}`}>{`${pad(h)}:${pad(m)}:${pad(sec)}`}</div>
+        <div className={s.waitNote}>20:00 (GMT+8) — One Race. One World. Every Day.</div>
+
+        {/* ③ 調教リマインド(実データ: 次レースの調教が未記録の馬) */}
+        {untrained.length > 0 && (
+          <Link href="/horses" className={s.waitTrain}>
+            ⚡ 調教がまだの馬が <b>{untrained.length}頭</b> います — 厩舎で調教する →
+          </Link>
+        )}
+
+        {/* ① 今夜の出走(自分の馬・実NFTアート+DAY進行+価格ステップ) */}
+        {myHorses.length > 0 && (
+          <>
+            <div className={s.waitSec}>TONIGHT&apos;S ENTRIES · 今夜の出走({myHorses.length})</div>
+            <TonightEntryCards myHorses={myHorses} />
+          </>
+        )}
+
+        {/* ② 今夜の条件(確定)/ 予報(的中率70%)の掲示板 */}
+        {board && (
+          <>
+            <div className={s.waitSec}>
+              {boardIsForecast ? 'TONIGHT FORECAST · 今夜の予報(的中率70%)' : 'TONIGHT · 今夜のレース条件'}
+            </div>
+            <div className={s.waitBoard}>
+              <b style={{ color: CONDITION_COLORS[board.weather] }}>{board.weather_ja}</b>
+              <span className={s.waitBoardSep}>×</span>
+              <b style={{ color: CONDITION_COLORS[board.track] }}>{board.track_ja}</b>
+              <span className={s.waitBoardSep}>×</span>
+              <b style={{ color: CONDITION_COLORS[board.surface] }}>{board.surface_ja}</b>
+              <Link href="/items" className={s.waitBoardLink}>条件に備える(アイテム)→</Link>
+            </div>
+          </>
+        )}
+
+        {/* ④ 昨夜のダイジェスト(自分の結果・実数のみ) */}
+        {hasDigest && digest && (
+          <>
+            <div className={s.waitSec}>LAST NIGHT · 昨夜のあなたの結果</div>
+            <div className={s.waitDigest}>
+              {digest.day7 > 0 && <span className={`${s.waitChip} ${s.waitChipGold}`}>👑 CHAMPION {digest.day7}</span>}
+              {digest.survived > 0 && <span className={`${s.waitChip} ${s.waitChipGood}`}>生還 {digest.survived}</span>}
+              {digest.burned > 0 && <span className={`${s.waitChip} ${s.waitChipBad}`}>BURN {digest.burned}</span>}
+              {digest.sold > 0 && <span className={s.waitChip}>売却 {digest.sold}</span>}
+              {digest.bought > 0 && <span className={s.waitChip}>購入 {digest.bought}</span>}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

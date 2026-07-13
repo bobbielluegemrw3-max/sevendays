@@ -346,6 +346,8 @@ export interface MyDerbyHorse {
   name: string;
   dnaHash?: string;
   currentDay?: number;
+  /** 次のレースに向けて調教済みか(待機パドックのリマインド用・不明はundefined) */
+  trainedForNextRace?: boolean | undefined;
 }
 
 export function conditionsView(c: {

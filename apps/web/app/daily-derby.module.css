@@ -819,3 +819,69 @@
 .fcRow { margin-top: 10px; font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.14em; }
 .fcRow b { font-weight: 700; margin: 0 10px 0 7px; font-size: 17px; text-shadow: 0 0 14px currentColor; }
 .fcNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 9px; }
+
+/* ---------- 待機パドック(2026-07-13) ---------- */
+/* 「ただの時計」→出走前の待合室。背景=チャンピオン動画ループを薄く。 */
+/* stageInner(padding 2.2/1.2/3.4rem・中央寄せ)いっぱいに背景を敷くため、
+   同量の負マージンで枠まで届かせる。 */
+.waitStage {
+  position: relative; overflow: hidden;
+  width: calc(100% + 2.4rem);
+  margin: -2.2rem -1.2rem -3.4rem;
+  padding: 2.6rem 1.4rem 3.6rem;
+}
+.waitVideo {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center 55%;
+  opacity: 0.16; pointer-events: none;
+}
+.waitShade {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(5, 4, 9, 0.55), rgba(5, 4, 9, 0.2) 40%, rgba(5, 4, 9, 0.75));
+}
+.waitInner { position: relative; display: flex; flex-direction: column; gap: 10px; }
+
+.waitLabelSoon { color: var(--gold-bright); }
+.waitClockFinal { color: var(--gold-bright); text-shadow: 0 0 26px rgba(242, 228, 191, 0.35); }
+
+.waitSec {
+  margin-top: 14px;
+  font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.22em;
+  color: var(--faint); display: flex; align-items: center; gap: 9px;
+}
+.waitSec::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ③ 調教リマインド */
+.waitTrain {
+  display: block; margin-top: 12px; padding: 10px 14px;
+  border: 1px solid rgba(230, 178, 74, 0.4); border-radius: 11px;
+  background: rgba(230, 178, 74, 0.07);
+  color: var(--warn); font-size: 0.82rem; text-decoration: none;
+}
+.waitTrain b { font-family: var(--font-display); }
+.waitTrain:hover { background: rgba(230, 178, 74, 0.14); }
+
+/* ② 条件/予報の掲示板 */
+.waitBoard {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  border: 1px solid var(--border); border-radius: 11px; padding: 11px 14px;
+  background: rgba(10, 8, 22, 0.6);
+  font-family: var(--font-display); font-size: 0.98rem;
+}
+.waitBoardSep { color: var(--faint); font-size: 0.8rem; }
+.waitBoardLink {
+  margin-left: auto; font-family: var(--font-jp); font-size: 0.74rem;
+  color: var(--cyan); text-decoration: none;
+}
+.waitBoardLink:hover { text-decoration: underline; }
+
+/* ④ 昨夜のダイジェスト */
+.waitDigest { display: flex; gap: 7px; flex-wrap: wrap; }
+.waitChip {
+  display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 999px;
+  border: 1px solid var(--border); background: rgba(255, 255, 255, 0.03);
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted);
+}
+.waitChipGood { color: var(--good); border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.07); }
+.waitChipBad { color: var(--bad); border-color: rgba(255, 92, 92, 0.4); background: rgba(255, 92, 92, 0.07); }
+.waitChipGold { color: var(--gold-bright); border-color: rgba(201, 168, 106, 0.5); background: rgba(201, 168, 106, 0.09); }
