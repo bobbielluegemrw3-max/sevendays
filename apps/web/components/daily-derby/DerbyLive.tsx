@@ -11,6 +11,7 @@ import {
   type DerbyNightResults,
 } from '@/lib/daily-derby';
 import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
+import { PageSkeleton } from '@/components/PageSkeleton';
 
 /**
  * /races 本番モード(ADR-008, DAILY_DERBY_HANDOVER R2)。
@@ -96,11 +97,9 @@ export function DerbyLive() {
   }, [status, poll]);
 
   if (!status) {
-    return (
-      <div className="panel">
-        <p className="faint">THE DAILY DERBY に接続中…</p>
-      </div>
-    );
+    // 初回status取得までの一瞬はブランドスケルトン(ページ遷移のloading.tsxと
+    // 同じ意匠)で埋める — 素のテキストのチラつきを出さない(オーナー指摘 2026-07-13)。
+    return <PageSkeleton rows={2} />;
   }
 
   // 開始までの残り秒: バッチが走り出していれば started_at 基準の経過(負値)、
