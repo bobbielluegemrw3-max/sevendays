@@ -63,10 +63,10 @@ All public APIs are versioned:
 
 `POST /horses/{id}/training` (Decision 066) selects the daily training (SPEED_TRAINING / POWER_TRAINING / RECOVERY_TRAINING). One training per horse per effective_race_date; owner only; rejected with MARKETPLACE_LOCKED after Batch Lock (the day's intake closes); while open it applies to the next race to run. Errors: HORSE_NOT_FOUND, NOT_HORSE_OWNER, TRAINING_ALREADY_EXISTS, RACE_SNAPSHOT_ALREADY_CREATED, INVALID_TRAINING_TYPE, MARKETPLACE_LOCKED.
 
-Support Bonus (Decision 074; user-facing name サポートボーナス — never "MLM"):
+Support Bonus (Decision 074, payout trigger amended by Decision 092 to champion celebrations; user-facing name サポートボーナス — never "MLM"):
 - Invite capture: a visit with `?ref={referral_code}` stores the code (first-touch cookie); the first authenticated provisioning binds `direct_referrer_user_id` (immutable; unknown codes never block signup).
 - GET `/support/summary` returns the caller's referral_code, unlocked_tiers (1..7), volume (direct referrals' ACTIVE-horse current value), tier amounts/thresholds, pool_count and lifetime bonuses received.
-- GET `/support/pool` lists unplaced direct referrals (masked display names). GET `/support/network` returns the placement subtree down to tier 7 (max 500 nodes). GET `/support/bonuses` lists received payments (amount, tier, burn_event_id).
+- GET `/support/pool` lists unplaced direct referrals (masked display names). GET `/support/network` returns the placement subtree down to tier 7 (max 500 nodes). GET `/support/bonuses` lists received payments (amount, tier, burn_event_id — since Decision 092 the reference id points at the celebration row; the field name stays for compatibility).
 - POST `/support/place` `{user_id, parent_user_id}` places a pooled referral either directly under the sponsor (unlimited width) or under any node inside the sponsor's own placement subtree. ONE-SHOT: replaying the identical placement succeeds quietly; any different placement is refused. Errors: SUPPORT_NOT_YOUR_REFERRAL, SUPPORT_ALREADY_PLACED, SUPPORT_PARENT_OUT_OF_SCOPE, SUPPORT_PLACEMENT_CYCLE.
 - POST `/admin/support/replace` `{user_id, new_parent_user_id|null, reason}` is the audited SUPER_ADMIN-only exception path (placement_audit ADMIN_OVERRIDE + audit_logs).
 

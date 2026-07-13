@@ -277,6 +277,9 @@
 .tNode.center .disc { width: 76px; height: 76px; border-color: rgba(0, 234, 255, 0.5); box-shadow: 0 0 22px -6px rgba(0, 234, 255, 0.6); }
 .tNode.burned .disc { border-color: rgba(255, 92, 122, 0.5); }
 .tNode.burned .disc canvas { filter: saturate(0.4) brightness(0.7); }
+/* Decision 092: TEAM図の主役はチャンピオン(祝い金トリガー) */
+.tNode.champ .disc { border-color: rgba(201, 168, 106, 0.65); box-shadow: 0 0 22px -6px rgba(201, 168, 106, 0.55); }
+.tNode.champ .lbl { color: #f2e4bf; }
 .tNode .lbl { font-family: var(--font-mono); font-size: 9.5px; color: #8f8ac2; }
 .supportBadge { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; font-family: var(--font-display); font-size: 11px; letter-spacing: 0.08em;
   color: #ff8fe4; border: 1px solid rgba(255, 45, 196, 0.45); border-radius: 999px; padding: 7px 14px; background: rgba(255, 45, 196, 0.08); }

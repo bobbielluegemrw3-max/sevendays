@@ -238,10 +238,10 @@ function makeLine(section: LogSection, i: number): LogLine {
       return { id, tone: 'mint', name, text: `${tag('MINT')}${pad(name, NAME_W)}  DAY0 → ${userId(i, 8)}` };
     }
     case 'MLM': {
-      // サポートボーナス(Decision 074): T1=3 / T2=2 / T3-7=1 USDT
+      // サポートボーナス(Decision 092): チャンピオン誕生のお祝い金 T1=3 / T2=2 / T3-7=1 USDT
       const tiers = ['3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00'] as const;
       const t = 1 + (mix(i, 41) % 7);
-      return { id, tone: 'mlm', text: `${tag('BONUS')}T${t}  +${tiers[t - 1]!} USDT → ${userId(i, 9)}` };
+      return { id, tone: 'mlm', text: `${tag('CELEB')}T${t}  +${tiers[t - 1]!} USDT → ${userId(i, 9)}` };
     }
     case 'ITEM': {
       const rarities = ['N', 'N', 'N', 'R', 'R', 'SR'] as const;

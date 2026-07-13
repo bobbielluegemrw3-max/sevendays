@@ -16,12 +16,13 @@ import {
   unitFromParts,
 } from '@sevendays/race-engine';
 import { itemSettlement } from '@sevendays/ledger';
-import { paySupportBonusesForBurns, type SupportBonusBurn } from './support-bonus.js';
 
 /**
  * Batch Steps 11-16 — Finalize rankings, calculate burn target count,
- * select and execute burns, generate/refresh revenge buffs, pay Support
- * Bonuses (Decision 074).
+ * select and execute burns, generate/refresh revenge buffs.
+ * (Decision 092: support bonuses are no longer paid per burn — the payout
+ * trigger moved to champion celebrations, see champion/celebration.ts.
+ * Burns still FUND the pool via item settlement below.)
  *
  * Everything here is deterministic given (snapshots, race_seed, policy):
  *   - ranking: final_score desc -> tiebreak desc -> uuid asc
@@ -29,9 +30,8 @@ import { paySupportBonusesForBurns, type SupportBonusBurn } from './support-bonu
  *   - burn targets: bottom `count` ranks, ties resolved by the total order
  *   - burn_event_id: hash-derived, stable across retries
  *   - buff rarity: SHA-256 roll per spec
- * Idempotent: race_results / horse_burns inserts are conflict-guarded, the
- * support bonus uses ledger idempotency keys, buffs refresh rather than
- * duplicate.
+ * Idempotent: race_results / horse_burns inserts are conflict-guarded,
+ * buffs refresh rather than duplicate.
  */
 
 export interface FinalizeAndBurnInput {
@@ -52,7 +52,6 @@ export interface FinalizeAndBurnResult {
   burnedHorseIds: string[];
   buffsGenerated: number;
   buffsRefreshed: number;
-  supportBonusPayments: number;
   itemDrops: number;
   itemSettlements: number;
 }
@@ -113,12 +112,10 @@ export async function finalizeAndBurn(
     );
   }
 
-  // 5. Execute burns + buffs; support bonuses are paid AFTER the whole
-  //    loop so tier volumes see one consistent post-burn snapshot.
+  // 5. Execute burns + buffs.
   let buffsGenerated = 0;
   let buffsRefreshed = 0;
   const burnedHorseIds: string[] = [];
-  const supportBonusBurns: SupportBonusBurn[] = [];
 
   for (const horseId of burnTargets) {
     const ownerId = ownerByHorse.get(horseId)!;
@@ -167,8 +164,6 @@ export async function finalizeAndBurn(
       );
       buffsGenerated += 1;
     }
-
-    supportBonusBurns.push({ burnedOwnerUserId: ownerId, burnEventId });
   }
 
   // Burn drops (Decision 078): alongside the Revenge Buff, every burn grants
@@ -238,10 +233,6 @@ export async function finalizeAndBurn(
     itemSettlements += 1;
   }
 
-  // Support Bonus (Decision 074): up to 7 placement tiers per burn, all of
-  // tonight's burns evaluated against the same post-burn state.
-  const supportBonusPayments = await paySupportBonusesForBurns(client, supportBonusBurns);
-
   // In-App notifications (Decision 065): results per participant, burn +
   // buff per burned owner. Deterministic dedupe keys — retries converge.
   const names = await client.query<{ id: string; name: string }>(
@@ -292,7 +283,6 @@ export async function finalizeAndBurn(
     burnedHorseIds,
     buffsGenerated,
     buffsRefreshed,
-    supportBonusPayments,
     itemDrops,
     itemSettlements,
   };

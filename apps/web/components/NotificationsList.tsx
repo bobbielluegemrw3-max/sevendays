@@ -32,6 +32,7 @@ const TYPE_META: Record<string, TypeMeta> = {
   BUYBACK_COMPLETED:      { cls: 'tBuyback', glyph: '◆', label: 'チャンピオン報酬', cat: '報酬', lane: 'rgba(201,168,106,0.7)' },
   MEMORIAL_NFT_MINTED:    { cls: 'tBuyback', glyph: '❖', label: '記念NFT', cat: '報酬', lane: 'rgba(201,168,106,0.7)' },
   SUPPORT_BONUS_PAID:     { cls: 'tBuyback', glyph: '♥', label: 'サポートボーナス', cat: '報酬', lane: 'rgba(201,168,106,0.55)' },
+  SUPPORT_CELEBRATION_PAID: { cls: 'tBuyback', glyph: '♥', label: 'お祝い金', cat: '報酬', lane: 'rgba(201,168,106,0.55)' },
   ASSIGNMENT_COMPLETED:   { cls: 'tAssignment', glyph: '✦', label: '馬の割当', cat: '売買', lane: 'rgba(0,234,255,0.5)' },
   HORSE_SOLD:             { cls: 'tAssignment', glyph: '↗', label: '売却成立', cat: '売買', lane: 'rgba(0,234,255,0.5)' },
   AUTO_LISTED:            { cls: 'tAssignment', glyph: '⇱', label: '自動出品', cat: '売買', lane: 'rgba(0,234,255,0.4)' },
@@ -69,7 +70,8 @@ function hrefOf(n: Notification): string {
     case 'REVENGE_BUFF_GENERATED': return '/races';
     case 'BUYBACK_PAYMENT_PAID':
     case 'BUYBACK_COMPLETED': return '/champion';
-    case 'SUPPORT_BONUS_PAID': return '/support';
+    case 'SUPPORT_BONUS_PAID':
+    case 'SUPPORT_CELEBRATION_PAID': return '/support';
     case 'MEMORIAL_NFT_MINTED':
     case 'ASSIGNMENT_COMPLETED':
     case 'TRAINING_COMPLETED': return horseId ? `/horses/${horseId}` : '/horses';

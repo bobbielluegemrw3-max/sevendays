@@ -24,6 +24,7 @@ import {
 import { createParticipantSnapshots } from '../race/snapshots.js';
 import { runRaceScores } from '../race/scores.js';
 import { finalizeAndBurn } from '../burn/execute.js';
+import { payPendingCelebrations } from '../champion/celebration.js';
 import { processSurvivorsAndDay7 } from '../buyback/day7.js';
 import { processDueBuybackPayments } from '../buyback/payments.js';
 import { createMemorialNfts } from '../buyback/memorial.js';
@@ -271,7 +272,9 @@ export function buildProductionHandlers(): StepHandlers {
       await verifyBurnOutcome(ctx, 'buffs');
     },
     // Step 16 (PAY_MLM_REWARDS) is retryable: re-invoking finalizeAndBurn is
-    // idempotent and completes any MLM payment the first pass missed.
+    // idempotent. Decision 092: support bonuses are champion celebrations —
+    // this step drains the carried-over celebration queue (funded by tonight's
+    // burns/item settlements); tonight's NEW champions enqueue+pay in step 17.
     PAY_MLM_REWARDS: async (ctx) => {
       const raceId = await raceForBatch(ctx.client, ctx.batchRunId);
       await finalizeAndBurn(ctx.client, {
@@ -282,6 +285,7 @@ export function buildProductionHandlers(): StepHandlers {
         liquidityPolicyVersion: lockedVersion(ctx, 'liquidity_policies'),
         buffPolicyVersion: lockedVersion(ctx, 'buff_policies'),
       });
+      await payPendingCelebrations(ctx.client);
     },
 
     // Steps 17-19 — survivors advance, Day7 clears, buyback schedules.

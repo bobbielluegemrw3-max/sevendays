@@ -133,16 +133,17 @@ export const BUFF_TABLE_V1: Readonly<
 };
 
 // ---------------------------------------------------------------------------
-// Support Bonus v2 (Decision 074; supersedes the Decision 021 payout rule)
+// Support Bonus v2 (Decision 074; supersedes the Decision 021 payout rule.
+// Decision 092: the payout trigger is CHAMPION celebrations, not burns.)
 // User-facing name: サポートボーナス (Support Bonus) — never "MLM"/"commission".
 // ---------------------------------------------------------------------------
 
-/** Total paid per burn (cap; unpaid tiers stay in PLATFORM_MLM_RESERVE). */
+/** Total paid per champion (cap; unpaid tiers stay in PLATFORM_MLM_RESERVE). */
 export const MLM_REWARD_AMOUNT = '10.00';
 /** Valid recipient = ACTIVE only (Decision 041 semantics carry over). */
 export const VALID_REFERRER_STATUS = 'ACTIVE';
 export const SUPPORT_BONUS_MAX_TIERS_V1 = 7;
-/** Payout per tier; index 0 = Tier 1 (the burned owner's placement parent). */
+/** Payout per tier; index 0 = Tier 1 (the champion owner's placement parent). */
 export const SUPPORT_BONUS_TIER_AMOUNTS_V1: readonly string[] = [
   '3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00',
 ];

@@ -28,6 +28,8 @@ export const NOTIFICATION_TYPES_V1 = [
   'HORSE_SOLD',
   'AUTO_LISTED',
   'AUTO_RESERVED',
+  // Decision 092: サポートボーナスはチャンピオン誕生時のお祝い金に
+  'SUPPORT_CELEBRATION_PAID',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES_V1)[number];
@@ -113,6 +115,10 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   AUTO_RESERVED: {
     title: '自動購入予約を作成しました。',
     body: '{count}頭(最大ロック {total} USDT)。今夜20:00に処理されます。設定はダッシュボードから変更できます。',
+  },
+  SUPPORT_CELEBRATION_PAID: {
+    title: 'あなたの組織からチャンピオンが誕生しました。',
+    body: 'お祝い金 {amount} USDT がウォレットに反映されました。({horse_name} / Tier {tier})',
   },
 };
 

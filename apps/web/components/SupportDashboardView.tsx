@@ -59,8 +59,8 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
         <Link href="/support/map" className={s.mapCta}>組織マップを開く →</Link>
       </div>
       <p className={s.lead}>
-        仲間の馬がBurnから立ち直るとき、支えたネットワークにサポートボーナスが支払われます。
-        紹介しただけでは発生しません。
+        あなたの組織からチャンピオン(7日間走破)が誕生したとき、支えたネットワークに
+        お祝い金が支払われます。紹介しただけでは発生しません。
       </p>
 
       {/* ---- ① ヒーロー: ティア状態 + 次のアクション ---- */}
@@ -123,7 +123,7 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
       {/* ---- ③ ティアと支払額 ---- */}
       <section className="panel">
         <h2>ティアと支払額</h2>
-        <div className={s.tierMeta}>1件のBurnで合計10 USDT が上位7ティアに配られます。</div>
+        <div className={s.tierMeta}>チャンピオン1頭の誕生で、お祝い金 合計10 USDT が上位7ティアに配られます。</div>
         <div className={s.tierTable}>
           {summary.tier_amounts.map((amount, i) => {
             const open = i < summary.unlocked_tiers;
@@ -163,7 +163,8 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
         </div>
         <p className={s.inviteNote}>
           招待しただけではボーナスは発生しません。サポートボーナスは、あなたのネットワーク内で
-          Burnが起きたときにだけ、固定額(合計10 USDT/件)の範囲で支払われます。金額・頻度の保証はありません。
+          チャンピオン(7日間走破)が誕生したときにだけ、固定額(合計10 USDT/頭)の範囲で
+          お祝い金として支払われます。金額・頻度の保証はありません。
         </p>
       </section>
 
@@ -180,7 +181,7 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
                   {b.tier ? `T${b.tier}` : '—'}
                 </span>
                 <span className={s.histDate}>{b.created_at.slice(0, 16).replace('T', ' ')}</span>
-                <span className={s.histWhy}>仲間の復帰を支援</span>
+                <span className={s.histWhy}>組織のチャンピオン誕生</span>
                 <span className={s.histAmt}>+{fmtUsdt(b.amount)}<span className="unit">USDT</span></span>
               </div>
             ))}

@@ -6,6 +6,7 @@ export * from './race/snapshots.js';
 export * from './race/scores.js';
 export * from './burn/execute.js';
 export * from './burn/support-bonus.js';
+export * from './champion/celebration.js';
 export * from './buyback/day7.js';
 export * from './buyback/payments.js';
 export * from './buyback/memorial.js';

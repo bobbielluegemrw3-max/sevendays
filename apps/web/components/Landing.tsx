@@ -538,13 +538,13 @@ export function Landing() {
             TEAM — SUPPORT BONUS
           </span>
           <h2 className={s.h2} style={{ marginTop: 14 }}>
-            負けた夜こそ、チームの出番だ。
+            仲間の栄光は、チームの祝福だ。
           </h2>
         </div>
         <div className={s.featureRow}>
           <div className={s.panelCard}>
             <p className={s.p} style={{ margin: 0 }}>
-              あなたの厩舎は、仲間を招いてチームを作れる。仲間の馬が夜のレースでBURNされたとき、チームには<b style={{ color: '#ff8fe4' }}>サポートボーナス</b>が配られる。誰かの敗北が、チーム全体の支えになる仕組みだ。仲間がBURNされても、そこで終わりじゃない — チームの中から、次のチャンピオンを送り出そう。
+              あなたの厩舎は、仲間を招いてチームを作れる。チームの中からチャンピオン(7日間走破)が誕生したとき、支えたチームには<b style={{ color: '#ff8fe4' }}>サポートボーナス</b>がお祝い金として配られる。誰かの栄光が、チーム全体の実りになる仕組みだ。だから仲間の馬を応援しよう — チームの中から、次のチャンピオンを送り出そう。
             </p>
           </div>
           <div className={s.teamDiag}>
@@ -555,11 +555,11 @@ export function Landing() {
                 </div>
                 <div className={s.lbl}>仲間</div>
               </div>
-              <div className={`${s.tNode} ${s.burned}`}>
+              <div className={`${s.tNode} ${s.champ}`}>
                 <div className={s.disc}>
                   <NftHorseArt look={stableLooks[1]!} />
                 </div>
-                <div className={s.lbl}>BURN</div>
+                <div className={s.lbl}>CHAMPION</div>
               </div>
               <div className={`${s.tNode} ${s.center}`}>
                 <div className={s.disc}>

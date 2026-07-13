@@ -6,13 +6,19 @@ import {
   BUYBACK_PAYMENT_COUNT,
   BUYBACK_TOTAL,
 } from '@sevendays/domain';
+import {
+  enqueueChampionCelebrations,
+  payPendingCelebrations,
+} from '../champion/celebration.js';
 
 /**
  * Batch Steps 17-19 (05_SETTLEMENT_ENGINE.md, Decisions 014/022/042):
  *   17. Increment current_day for survivors — the ONLY way current_day
  *       ever increases. Idempotent: increments once per race via the
  *       snapshot day guard.
- *   18. Day7 Clear: survivors reaching day 7 exit P2P forever.
+ *   18. Day7 Clear: survivors reaching day 7 exit P2P forever. Each new
+ *       champion enqueues 7 celebration payouts and the queue is drained
+ *       immediately while the support pool covers it (Decision 092).
  *   19. Buyback Schedules: 200 USDT over 7 daily payments, due D+1..D+7.
  */
 
@@ -20,6 +26,8 @@ export interface Day7Result {
   survivorsAdvanced: number;
   day7ClearedHorseIds: string[];
   schedulesCreated: number;
+  celebrationsPaid: number;
+  celebrationsCarriedOver: number;
 }
 
 export async function processSurvivorsAndDay7(
@@ -76,9 +84,16 @@ export async function processSurvivorsAndDay7(
     }
   }
 
+  // Decision 092: champion celebrations — enqueue tonight's champions and
+  // pay the queue (FIFO, capped by the pool balance; shortfall carries).
+  await enqueueChampionCelebrations(client, { batchDate: input.batchDate });
+  const celebrations = await payPendingCelebrations(client);
+
   return {
     survivorsAdvanced: advanced.affectedRows ?? 0,
     day7ClearedHorseIds: cleared.rows.map((r) => r.id),
     schedulesCreated,
+    celebrationsPaid: celebrations.paid,
+    celebrationsCarriedOver: celebrations.carriedOver,
   };
 }

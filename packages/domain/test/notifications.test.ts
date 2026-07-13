@@ -19,9 +19,10 @@ describe('recommended training (Decision 088)', () => {
 });
 
 describe('notification templates (Decision 065)', () => {
-  it('defines the owner-adopted types + support bonus + item types (074/078/079) + trade automation (086)', () => {
-    expect(NOTIFICATION_TYPES_V1).toHaveLength(19);
+  it('defines the owner-adopted types + support bonus + item types (074/078/079) + trade automation (086) + celebration (092)', () => {
+    expect(NOTIFICATION_TYPES_V1).toHaveLength(20);
     expect(NOTIFICATION_TYPES_V1).toContain('SUPPORT_BONUS_PAID');
+    expect(NOTIFICATION_TYPES_V1).toContain('SUPPORT_CELEBRATION_PAID');
     expect(NOTIFICATION_TYPES_V1).toContain('ITEM_DROPPED');
     expect(NOTIFICATION_TYPES_V1).toContain('ITEM_GIFT_RECEIVED');
     expect(NOTIFICATION_TYPES_V1).toContain('HORSE_SOLD');
@@ -34,6 +35,17 @@ describe('notification templates (Decision 065)', () => {
     const rendered = renderNotification('SUPPORT_BONUS_PAID', { amount: '3.00', tier: 1 });
     expect(rendered.title).toBe('サポートボーナスを受け取りました。');
     expect(`${rendered.title}${rendered.body}`).not.toMatch(/MLM|コミッション|紹介報酬/);
+  });
+
+  it('the celebration copy (Decision 092) follows R3 and never mentions burns', () => {
+    const rendered = renderNotification('SUPPORT_CELEBRATION_PAID', {
+      amount: '3.00',
+      tier: 1,
+      horse_name: 'テスト号',
+    });
+    expect(rendered.title).toBe('あなたの組織からチャンピオンが誕生しました。');
+    expect(rendered.body).toContain('お祝い金 3.00 USDT');
+    expect(`${rendered.title}${rendered.body}`).not.toMatch(/MLM|コミッション|紹介報酬|BURN|Burn/);
   });
 
   it('renders placeholders with params', () => {

@@ -199,12 +199,10 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
       expect(Number(buff.rows[0]!.buff_bonus_score)).toBe(expected.bonusScore);
     }
 
-    // Support Bonus: every burned owner is placed under ACTIVE refA (Tier 1,
-    // unconditional) -> 2 payments of 3.00; tiers 2-7 have no ancestors and
-    // stay in the reserve.
-    expect(result.supportBonusPayments).toBe(2);
+    // Decision 092: burns no longer pay support bonuses directly — the
+    // placement parent's balance is untouched (celebrations pay on champions).
     const refAccounts = await ensureUserAccounts(client, refA);
-    expect(await getBalance(client, refAccounts.available)).toBe('6.00000000');
+    expect(await getBalance(client, refAccounts.available)).toBe('0');
 
     // idempotency: re-running changes nothing financially
     const rerun = await finalizeAndBurn(client, {
@@ -216,8 +214,7 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
       buffPolicyVersion: 'buff_policy_v1.0',
     });
     expect(rerun.burnedHorseIds.sort()).toEqual(result.burnedHorseIds.sort());
-    expect(rerun.supportBonusPayments).toBe(0); // ledger idempotency absorbed the replay
-    expect(await getBalance(client, refAccounts.available)).toBe('6.00000000');
+    expect(await getBalance(client, refAccounts.available)).toBe('0');
     const buffCount = await client.query<{ count: string }>(
       `select count(*)::text as count from revenge_buffs`,
     );
@@ -225,7 +222,7 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
     expect(Number(buffCount.rows[0]!.count)).toBe(2);
   });
 
-  it('no support bonus for BANNED ancestors; existing buff is refreshed, not duplicated', async () => {
+  it('existing buff is refreshed, not duplicated', async () => {
     const refB = await newUser();
     const setup = await buildScoredRace(10, () => refB); // NORMAL: floor(10*0.1)=1 burn
     for (const owner of setup.owners) await placeUnder(owner, refB);
@@ -253,8 +250,7 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
     });
 
     expect(result.burnTargetCount).toBe(1);
-    expect(result.supportBonusPayments).toBe(0); // BANNED ancestor receives nothing
-    expect(await getBalance(client, refBAccounts.available)).toBe(before);
+    expect(await getBalance(client, refBAccounts.available)).toBe(before); // burns never pay (092)
     expect(result.buffsGenerated).toBe(0);
     expect(result.buffsRefreshed).toBe(1); // refreshed the pre-existing buff
 
@@ -268,78 +264,6 @@ describe('snapshot -> score -> finalize -> burn pipeline', () => {
     );
     expect(buffs.rows).toHaveLength(1);
     expect(buffs.rows[0]!.refreshed_at).not.toBeNull();
-  });
-
-  it('pays tiers along the placement chain gated by ORG volume (Decision 077)', async () => {
-    // Chain (top to bottom): A <- B <- C <- every race owner.
-    // C: Tier 1 is unconditional. B: needs T2 (org >= 10,000).
-    // A: needs T3 (org >= 20,000).
-    const a = await newUser();
-    const b = await newUser();
-    const c = await newUser();
-    await placeUnder(b, a);
-    await placeUnder(c, b);
-
-    const setup = await buildScoredRace(10, () => c); // NORMAL: 1 burn
-    for (const owner of setup.owners) await placeUnder(owner, c);
-
-    // Volume horses are created AFTER the race snapshot, so they are not
-    // race participants — they only count toward the point-in-time volume.
-    // B's PLACED member holds 95 Day0 horses = 9,500; plus the 9 surviving
-    // race owners under C (900) -> B org = 10,400 >= 10,000 -> T2 open.
-    // A org = the same 10,400 (B/C hold no horses) < 20,000 -> T3 locked.
-    const bMember = await newUser(b);
-    await placeUnder(bMember, b);
-    for (let i = 0; i < 95; i += 1) await newHorse(bMember, i);
-
-    const [accA, accB, accC] = await Promise.all([
-      ensureUserAccounts(client, a),
-      ensureUserAccounts(client, b),
-      ensureUserAccounts(client, c),
-    ]);
-
-    const result = await finalizeAndBurn(client, {
-      raceId: setup.raceId,
-      raceSeed: setup.raceSeed,
-      raceEngineVersion: VERSION,
-      economyStatus: 'NORMAL',
-      liquidityPolicyVersion: 'liquidity_policy_v1.0',
-      buffPolicyVersion: 'buff_policy_v1.0',
-    });
-
-    expect(result.burnTargetCount).toBe(1);
-    // C: T1 3.00 (unconditional) / B: T2 2.00 (org 10,400) / A: T3 locked.
-    expect(result.supportBonusPayments).toBe(2);
-    expect(await getBalance(client, accC.available)).toBe('3.00000000');
-    expect(await getBalance(client, accB.available)).toBe('2.00000000');
-    expect(await getBalance(client, accA.available)).toBe('0');
-
-    // The paid ancestors were notified with the R3-compliant copy.
-    const notif = await client.query<{ user_id: string; payload_json: { title: string } }>(
-      `select user_id, payload_json from notifications
-       where notification_type = 'SUPPORT_BONUS_PAID' and user_id = any($1)`,
-      [[a, b, c]],
-    );
-    expect(notif.rows.map((r) => r.user_id).sort()).toEqual([b, c].sort());
-    expect(notif.rows[0]!.payload_json.title).toBe('サポートボーナスを受け取りました。');
-
-    // Volume is a point-in-time stock: the next race's setup sweep retires
-    // bMember's horses (all ACTIVE horses), so B's org collapses to the new
-    // owners' 900 -> downgrade to T1-only coverage (tier 2 goes unpaid).
-    const setup2 = await buildScoredRace(10, () => c);
-    for (const owner of setup2.owners) await placeUnder(owner, c);
-    const result2 = await finalizeAndBurn(client, {
-      raceId: setup2.raceId,
-      raceSeed: setup2.raceSeed,
-      raceEngineVersion: VERSION,
-      economyStatus: 'NORMAL',
-      liquidityPolicyVersion: 'liquidity_policy_v1.0',
-      buffPolicyVersion: 'buff_policy_v1.0',
-    });
-    expect(result2.burnTargetCount).toBe(1);
-    expect(result2.supportBonusPayments).toBe(1); // C only
-    expect(await getBalance(client, accC.available)).toBe('6.00000000');
-    expect(await getBalance(client, accB.available)).toBe('2.00000000'); // unchanged
   });
 
   it('APPLIED buff boosts exactly one race, then is CONSUMED (Decision 057)', async () => {
