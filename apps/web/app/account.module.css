@@ -80,9 +80,14 @@
 .linkBody :global(table) { width: 100%; border-collapse: collapse; font-size: inherit;
   border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
   background: rgba(10, 8, 22, 0.5); }
-.linkBody :global(td) { border: none; border-bottom: 1px solid var(--border); padding: 11px 13px; vertical-align: middle; }
+.linkBody :global(td) { border: none; border-bottom: 1px solid var(--border); padding: 11px 13px; vertical-align: middle;
+  overflow-wrap: anywhere; }
 .linkBody :global(tr):last-child :global(td) { border-bottom: none; }
-.linkBody :global(td):last-child { text-align: right; white-space: nowrap; width: 1%; }
+/* 末尾セル: ボタンは折り返さないが、注記テキスト(「最後のログインIDは…」)は
+   折り返す — nowrap固定だとGoogle唯一ID時にモバイルで画面幅を突き破る
+   (オーナー報告 2026-07-13)。 */
+.linkBody :global(td):last-child { text-align: right; }
+.linkBody :global(td):last-child :global(button) { white-space: nowrap; }
 
 /* provider バッジ */
 .linkBody :global(.badge) { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-display);
