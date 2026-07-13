@@ -794,7 +794,7 @@ export function Landing() {
         </div>
         <div className={s.links}>
           <span>Whitepaper</span>
-          <span>Docs</span>
+          <Link href="/docs">Docs</Link>
           <span>Discord</span>
           <span>X</span>
           <span>Contract</span>

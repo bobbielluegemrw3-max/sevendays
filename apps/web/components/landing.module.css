@@ -439,4 +439,7 @@
 .foot .fb .l1 { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.3em; color: #8f8ac2; }
 .foot .fb .l2 { font-family: var(--font-display); font-weight: 800; font-size: 15px; letter-spacing: 0.1em; color: #eae7ff; }
 .foot .links { display: flex; gap: 26px; font-family: var(--font-mono); font-size: 12px; color: #8f8ac2; flex-wrap: wrap; }
+/* live links keep the footer's muted tone (the neighbouring spans are placeholders) */
+.foot .links a { color: #8f8ac2; }
+.foot .links a:hover { color: #eae7ff; }
 .foot .cpy { font-family: var(--font-mono); font-size: 10px; color: #4a4670; }
