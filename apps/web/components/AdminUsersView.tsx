@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { localDate, localDateTimeSec } from '@/lib/format-time';
 import s from '../app/admin.module.css';
 
 /* /admin/users — Ops Consoleリデザイン(2026-07-13ハンドオフ)。
@@ -53,7 +54,7 @@ function money(v: string): string {
 }
 
 function ts(v: string | null): string {
-  return v ? v.slice(0, 19).replace('T', ' ') : '—';
+  return v ? localDateTimeSec(v) : '—';
 }
 
 export function AdminUsersView() {
@@ -596,7 +597,7 @@ export function AdminUsersView() {
                     <td className={s.num}>{u.burns}</td>
                     <td className={s.num}>{u.items_available}</td>
                     <td className={s.num}>{u.direct_referrals}</td>
-                    <td className={s.date}>{u.created_at.slice(0, 10)}</td>
+                    <td className={s.date}>{localDate(u.created_at)}</td>
                   </tr>
                 ))}
               </tbody>

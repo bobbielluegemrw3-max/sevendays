@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { statusKind } from '@/components/admin-shared';
+import { localDateTime, localDateTimeSec } from '@/lib/format-time';
 import s from '../app/admin.module.css';
 
 /* /admin/audit — Ops Consoleリデザイン(2026-07-13ハンドオフ)。
@@ -70,7 +71,7 @@ export function AdminAuditLog({ audit }: { audit: AuditRow[] }) {
                   <tbody>
                     {slice.map((r, i) => (
                       <tr key={`${r.created_at}-${i}`}>
-                        <td className={s.date}>{r.created_at.slice(0, 19).replace('T', ' ')}</td>
+                        <td className={s.date}>{localDateTimeSec(r.created_at)}</td>
                         <td><span className={`${s.st} ${actorSt(r.actor_type)}`}>{r.actor_type}</span></td>
                         <td className={s.mono}>{r.actor_id ?? '—'}</td>
                         <td className={s.strong} style={{ fontWeight: 500 }}>{r.action}</td>
@@ -88,7 +89,7 @@ export function AdminAuditLog({ audit }: { audit: AuditRow[] }) {
                       <span className={`${s.st} ${actorSt(r.actor_type)}`}>{r.actor_type}</span>
                     </div>
                     <div className={s.mcCell}>
-                      <span className={s.k}>{r.created_at.slice(0, 16).replace('T', ' ')}{r.actor_id ? ` · ${r.actor_id.slice(0, 8)}` : ''}</span>
+                      <span className={s.k}>{localDateTime(r.created_at)}{r.actor_id ? ` · ${r.actor_id.slice(0, 8)}` : ''}</span>
                       <span className={s.v}>{r.reference_type ? `${r.reference_type}:${(r.reference_id ?? '').slice(0, 12)}` : '—'}</span>
                     </div>
                   </div>

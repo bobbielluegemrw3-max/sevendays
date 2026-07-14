@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { localDateTime } from '@/lib/format-time';
 import s from '../app/wallet.module.css';
 
 /* ============================================================================
@@ -32,15 +33,6 @@ interface HumanRow {
 
 const fmt = (v: string): string =>
   Math.abs(Number(v)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-/** UTCのDB時刻文字列を現地時刻 "YYYY-MM-DD HH:mm" に。 */
-function localTime(created: string): string {
-  const iso = created.replace(' ', 'T');
-  const d = new Date(/[+Z]/.test(iso.slice(10)) ? iso : `${iso}Z`);
-  if (Number.isNaN(d.getTime())) return created.slice(0, 16);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
 
 /**
  * 台帳エントリ→人間の1行。null は「鏡側なので表示しない」。
@@ -228,7 +220,7 @@ export function WalletHistory({ entries }: { entries: HistoryEntry[] }) {
                   <span className={`${s.hDot} ${kind === 'in' ? s.hDotCredit : s.hDotDebit}`} />
                   <div className={s.hBody}>
                     <div className={s.hLabel}>{e.type}</div>
-                    <div className={s.hSub}>{localTime(e.created_at)} · {e.account}</div>
+                    <div className={s.hSub}>{localDateTime(e.created_at)} · {e.account}</div>
                   </div>
                   <span className={`${s.hAmt} ${kind === 'in' ? s.hAmtCredit : s.hAmtDebit}`}>
                     {kind === 'in' ? '+' : '−'}{fmt(e.amount)}
@@ -247,7 +239,7 @@ export function WalletHistory({ entries }: { entries: HistoryEntry[] }) {
                     </span>
                   </div>
                   <div className={s.hSub}>{h.sub}</div>
-                  <div className={s.hSub}>{localTime(e.created_at)}</div>
+                  <div className={s.hSub}>{localDateTime(e.created_at)}</div>
                 </div>
                 <span className={`${s.hAmt} ${h.tone === 'in' ? s.hAmtCredit : h.tone === 'out' ? s.hAmtDebit : s.hAmtNeutral}`}>
                   {h.signed}

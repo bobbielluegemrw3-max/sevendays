@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { localDate } from '@/lib/format-time';
 import s from '../app/admin.module.css';
 
 /* /admin/promo — セミナー特典馬(Decision 095)。
@@ -204,7 +205,7 @@ export function AdminPromoView({ data }: { data: AdminPromo }) {
                     </td>
                     <td className={s.mono}>{c.redeemed_email ?? '—'}</td>
                     <td>{c.horse_name ?? '—'}</td>
-                    <td className={s.mono}>{c.expires_at ? c.expires_at.slice(0, 10) : '無期限'}</td>
+                    <td className={s.mono}>{c.expires_at ? localDate(c.expires_at) : '無期限'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -223,7 +224,7 @@ export function AdminPromoView({ data }: { data: AdminPromo }) {
                   <div className={s.mcCell}><span className={s.k}>CAMPAIGN</span><span className={s.v}>{c.campaign}</span></div>
                   <div className={s.mcCell}><span className={s.k}>配布馬</span><span className={s.v}>{c.horse_name ?? '—'}</span></div>
                   <div className={s.mcCell}><span className={s.k}>引換者</span><span className={s.v}>{c.redeemed_email ?? '—'}</span></div>
-                  <div className={s.mcCell}><span className={s.k}>期限</span><span className={s.v}>{c.expires_at ? c.expires_at.slice(0, 10) : '無期限'}</span></div>
+                  <div className={s.mcCell}><span className={s.k}>期限</span><span className={s.v}>{c.expires_at ? localDate(c.expires_at) : '無期限'}</span></div>
                 </div>
               </div>
             ))}

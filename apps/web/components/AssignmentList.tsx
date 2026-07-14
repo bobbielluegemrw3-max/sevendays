@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { localDate } from '@/lib/format-time';
 import s from '../app/purchase.module.css';
 
 /* ============================================================================
@@ -76,7 +77,7 @@ export function AssignmentList({ assignments }: { assignments: Assignment[] }) {
                 <span className={s.aId}>{a.horse_name ?? a.horse_id}</span>
                 <span className={`${s.badge} ${sell ? s.kP2P : a.was_day0_mint ? s.kDay0 : s.kP2P}`}>{label}</span>
                 <span className={s.aPrice}>{sell ? '+' : '−'}{realAmount(a)}<small>USDT</small></span>
-                <span className={s.aDate}>{a.created_at.slice(0, 10)}</span>
+                <span className={s.aDate}>{localDate(a.created_at)}</span>
               </Link>
             );
           })}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { localDateTime, localDateTimeSec } from '@/lib/format-time';
 import s from '../app/admin.module.css';
 
 /* /admin/support — Ops Consoleリデザイン(2026-07-13ハンドオフ)。
@@ -215,7 +216,7 @@ export function AdminSupportView() {
                     AI自信度 {Math.round(Number(msg.ai_confidence) * 100)}%
                   </span>
                 )}
-                <span className={s.date} style={{ marginLeft: 'auto' }}>{msg.created_at.slice(0, 19).replace('T', ' ')}</span>
+                <span className={s.date} style={{ marginLeft: 'auto' }}>{localDateTimeSec(msg.created_at)}</span>
               </div>
               <div style={{ fontSize: 12.5 }}>
                 <b>件名:</b> {msg.subject ?? '(なし)'}
@@ -277,7 +278,7 @@ export function AdminSupportView() {
               <tbody>
                 {handled.map((msg) => (
                   <tr key={msg.id}>
-                    <td className={s.date}>{msg.created_at.slice(0, 16).replace('T', ' ')}</td>
+                    <td className={s.date}>{localDateTime(msg.created_at)}</td>
                     <td className={s.strong}>{msg.email}</td>
                     <td className={s.ell}>{msg.subject ?? '(件名なし)'}</td>
                     <td>
@@ -299,7 +300,7 @@ export function AdminSupportView() {
                     {msg.status === 'SENT' ? '返信済み' : msg.status === 'REJECTED' ? '却下' : msg.status}
                   </span>
                 </div>
-                <div className={s.mcCell}><span className={s.k}>{msg.created_at.slice(0, 16).replace('T', ' ')}</span><span className={s.v}>{msg.subject ?? '(件名なし)'}</span></div>
+                <div className={s.mcCell}><span className={s.k}>{localDateTime(msg.created_at)}</span><span className={s.v}>{msg.subject ?? '(件名なし)'}</span></div>
               </div>
             ))}
           </div>
@@ -322,7 +323,7 @@ export function AdminSupportView() {
                   <tbody>
                     {broadcasts.map((b) => (
                       <tr key={b.id}>
-                        <td className={s.date}>{b.created_at.slice(0, 16).replace('T', ' ')}</td>
+                        <td className={s.date}>{localDateTime(b.created_at)}</td>
                         <td className={s.strong}>{b.subject}</td>
                         <td><span className={`${s.st} ${b.mode === 'ALL' ? s.stWarn : s.stNeutral}`}>{b.mode === 'ALL' ? '全員' : 'テスト'}</span></td>
                         <td><span className={`${s.st} ${b.status === 'DONE' ? s.stGood : b.status === 'FAILED' ? s.stBad : s.stNeutral}`}>{b.status}</span></td>
@@ -339,7 +340,7 @@ export function AdminSupportView() {
                       <span className={s.mcName}>{b.subject}</span>
                       <span className={`${s.st} ${b.status === 'DONE' ? s.stGood : b.status === 'FAILED' ? s.stBad : s.stNeutral}`}>{b.status}</span>
                     </div>
-                    <div className={s.mcCell}><span className={s.k}>{b.created_at.slice(0, 16).replace('T', ' ')} · {b.mode === 'ALL' ? '全員' : 'テスト'}</span><span className={s.v}>{b.sent}/{b.total}</span></div>
+                    <div className={s.mcCell}><span className={s.k}>{localDateTime(b.created_at)} · {b.mode === 'ALL' ? '全員' : 'テスト'}</span><span className={s.v}>{b.sent}/{b.total}</span></div>
                   </div>
                 ))}
               </div>
@@ -357,7 +358,7 @@ export function AdminSupportView() {
                   <tbody>
                     {sentRows.map((m) => (
                       <tr key={m.id}>
-                        <td className={s.date}>{m.created_at.slice(0, 16).replace('T', ' ')}</td>
+                        <td className={s.date}>{localDateTime(m.created_at)}</td>
                         <td className={s.strong}>{m.email}</td>
                         <td className={s.ell}>{m.subject ?? '(件名なし)'}</td>
                         <td>
@@ -379,7 +380,7 @@ export function AdminSupportView() {
                         {m.kind === 'REPLY' ? '返信' : m.kind === 'BROADCAST' ? '一斉' : '個別'}
                       </span>
                     </div>
-                    <div className={s.mcCell}><span className={s.k}>{m.created_at.slice(0, 16).replace('T', ' ')}</span><span className={s.v}>{m.subject ?? '(件名なし)'}</span></div>
+                    <div className={s.mcCell}><span className={s.k}>{localDateTime(m.created_at)}</span><span className={s.v}>{m.subject ?? '(件名なし)'}</span></div>
                   </div>
                 ))}
               </div>
@@ -424,7 +425,7 @@ export function AdminSupportView() {
                           {m.direction === 'RECEIVED' ? '← 受信' : '→ 送信'}
                         </span>
                         <span className={s.strong} style={{ fontSize: 12.5 }}>{m.subject ?? '(件名なし)'}</span>
-                        <span className={s.date} style={{ marginLeft: 'auto' }}>{m.created_at.slice(0, 16).replace('T', ' ')}</span>
+                        <span className={s.date} style={{ marginLeft: 'auto' }}>{localDateTime(m.created_at)}</span>
                       </div>
                       <div className={s.csBody}>{m.body}</div>
                     </div>

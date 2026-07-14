@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { localDateTime } from '@/lib/format-time';
 import s from '../app/buybacks.module.css';
 
 /* ============================================================================
@@ -66,7 +67,7 @@ export function BuybackDetailView({ buyback }: { buyback: BuybackDetail }) {
                 <span className={`${s.pNum} ${isPaid ? s.pNumPaid : ''}`}>{p.payment_number}</span>
                 <div className={s.pBody}>
                   <div className={s.pAmt}>{money(p.amount)} <small>USDT</small></div>
-                  <div className={s.pDue}>予定 {p.due_date}{p.paid_at ? ` · 支払 ${p.paid_at.slice(0, 19)}` : ''}</div>
+                  <div className={s.pDue}>予定 {p.due_date}{p.paid_at ? ` · 支払 ${localDateTime(p.paid_at)}` : ''}</div>
                 </div>
                 <span className={`${s.pStatus} ${isPaid ? s.pStatusPaid : isNext ? s.pStatusNext : s.pStatusPending}`}>
                   {isPaid ? 'PAID · 支払済' : isNext ? '次回' : p.status === 'PENDING' ? '予定' : p.status}

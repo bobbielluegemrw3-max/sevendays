@@ -1,4 +1,5 @@
 import { WithdrawalReviewActions } from '@/components/WithdrawalReviewActions';
+import { localDateTime, localDateTimeSec } from '@/lib/format-time';
 import s from '../app/admin.module.css';
 
 /* /admin/withdrawals — Ops Consoleリデザイン(2026-07-13ハンドオフ)。
@@ -54,7 +55,7 @@ export function AdminWithdrawalsView({ withdrawals }: { withdrawals: ReviewWithd
               <tbody>
                 {withdrawals.map((w) => (
                   <tr key={w.id}>
-                    <td className={s.date}>{w.requested_at.slice(0, 19).replace('T', ' ')}</td>
+                    <td className={s.date}>{localDateTimeSec(w.requested_at)}</td>
                     <td className={s.num}>{money(w.requested_amount)}<span className={s.u}>USDT</span></td>
                     <td className={`${s.mono} ${s.ell}`}>{w.to_address}</td>
                     <td><Approvals w={w} /></td>
@@ -71,7 +72,7 @@ export function AdminWithdrawalsView({ withdrawals }: { withdrawals: ReviewWithd
                   <span className={s.mcName}>{money(w.requested_amount)} USDT</span>
                   <Approvals w={w} />
                 </div>
-                <div className={s.mcCell}><span className={s.k}>{w.requested_at.slice(0, 16).replace('T', ' ')}</span><span className={s.v}>{w.to_address.slice(0, 10)}…{w.to_address.slice(-6)}</span></div>
+                <div className={s.mcCell}><span className={s.k}>{localDateTime(w.requested_at)}</span><span className={s.v}>{w.to_address.slice(0, 10)}…{w.to_address.slice(-6)}</span></div>
                 <WithdrawalReviewActions withdrawalId={w.id} />
               </div>
             ))}

@@ -1,5 +1,6 @@
 import { AssignmentList, type Assignment } from '@/components/AssignmentList';
 import { CancelSessionButton } from '@/components/PurchasePanel';
+import { localDateTime } from '@/lib/format-time';
 import s from '../app/purchase.module.css';
 
 /* ============================================================================
@@ -19,14 +20,6 @@ function money(v: string | null): string {
   if (v == null) return '—';
   const n = Number(v);
   return Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v;
-}
-/** UTCのDB時刻を現地時刻 "YYYY-MM-DD HH:mm" に。 */
-function localTime(created: string): string {
-  const iso = created.replace(' ', 'T');
-  const d = new Date(/[+Z]/.test(iso.slice(10)) ? iso : `${iso}Z`);
-  if (Number.isNaN(d.getTime())) return created.slice(0, 16);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 function sessionMeta(status: string): { cls: string; label: string; pending: boolean } {
   switch (status) {
@@ -77,7 +70,7 @@ export function PurchaseView({ sessions, assignments }: { sessions: Session[]; a
                 <div key={ss.id} className={`${s.sCard} ${m.pending ? s.sPending : ''}`}>
                   <div className={s.sTop}>
                     <span className={`${s.badge} ${m.cls}`}>{m.label}</span>
-                    <span className={s.sCreated}>{localTime(ss.created_at)}</span>
+                    <span className={s.sCreated}>{localDateTime(ss.created_at)}</span>
                     {m.pending ? <span className={s.sCancel}><CancelSessionButton sessionId={ss.id} /></span> : null}
                   </div>
                   <div className={s.sStory}>{sessionStory(ss)}</div>

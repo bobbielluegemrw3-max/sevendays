@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { BonusRow, SupportSummary } from '@/components/SupportView';
+import { localDateTime } from '@/lib/format-time';
 import s from '../app/support.module.css';
 
 /**
@@ -226,7 +227,7 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
                 <span className={s.histTier} style={{ color: b.tier ? tierColor(b.tier) : 'var(--muted)' }}>
                   {b.tier ? `T${b.tier}` : '—'}
                 </span>
-                <span className={s.histDate}>{b.created_at.slice(0, 16).replace('T', ' ')}</span>
+                <span className={s.histDate}>{localDateTime(b.created_at)}</span>
                 <span className={s.histWhy}>組織のチャンピオン誕生</span>
                 <span className={s.histAmt}>+{fmtUsdt(b.amount)}<span className="unit">USDT</span></span>
               </div>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/client-api';
+import { localDate } from '@/lib/format-time';
 import s from '../app/notifications.module.css';
 
 /* ============================================================================
@@ -88,13 +89,16 @@ function hrefOf(n: Notification): string {
     default: return '/dashboard';
   }
 }
-function timeAgo(iso: string): string {
-  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+function timeAgo(value: string): string {
+  // Zなしのナイーブ文字列はUTC扱い(ブラウザ差で相対時刻がズレるのを防ぐ)。
+  const iso = value.replace(' ', 'T');
+  const hasTz = /[+Z]|[+-]\d{2}:?\d{2}$/.test(iso.slice(10));
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(hasTz ? iso : `${iso}Z`).getTime()) / 60000));
   if (mins < 60) return `${mins}分前`;
   if (mins < 1440) return `${Math.floor(mins / 60)}時間前`;
   return `${Math.floor(mins / 1440)}日前`;
 }
-const dateOf = (iso: string): string => iso.slice(0, 10);
+const dateOf = (iso: string): string => localDate(iso); // 現地日でグルーピング(2026-07-14)
 const dateLabel = (d: string): string => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 
 export function NotificationsList({ notifications, preview = false }: { notifications: Notification[]; preview?: boolean }) {

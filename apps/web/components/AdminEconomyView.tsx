@@ -1,3 +1,4 @@
+import { localDateTime, localDateTimeSec } from '@/lib/format-time';
 import s from '../app/admin.module.css';
 
 /* /admin/economy — Ops Consoleリデザイン(2026-07-13ハンドオフ)。
@@ -108,7 +109,7 @@ export function AdminEconomyView({ data }: { data: AdminEconomy }) {
                   <tr key={t.transaction_type}>
                     <td className={s.mono} style={{ color: 'var(--c-ink)' }}>{t.transaction_type}</td>
                     <td className={s.num}>{t.count.toLocaleString()}<span className={s.u}>件</span></td>
-                    <td className={s.date}>{t.last_at.slice(0, 19).replace('T', ' ')}</td>
+                    <td className={s.date}>{localDateTimeSec(t.last_at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -118,7 +119,7 @@ export function AdminEconomyView({ data }: { data: AdminEconomy }) {
             {data.recent_transactions.map((t) => (
               <div key={t.transaction_type} className={s.mc}>
                 <div className={s.mcTop}><span className={s.mcName} style={{ fontSize: 12.5 }}>{t.transaction_type}</span></div>
-                <div className={s.mcCell}><span className={s.k}>{t.last_at.slice(0, 16).replace('T', ' ')}</span><span className={s.v}>{t.count.toLocaleString()} 件</span></div>
+                <div className={s.mcCell}><span className={s.k}>{localDateTime(t.last_at)}</span><span className={s.v}>{t.count.toLocaleString()} 件</span></div>
               </div>
             ))}
           </div>

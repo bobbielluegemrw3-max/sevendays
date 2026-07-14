@@ -20,6 +20,7 @@ import {
   WEATHER_JA,
   WEATHER_PROBABILITY_V1,
 } from '@sevendays/domain';
+import { localDateTime } from '@/lib/format-time';
 import s from '../app/items.module.css';
 
 /**
@@ -480,7 +481,7 @@ export function ItemsView({
                     <span className={s.txnDetail}>{detail}</span>
                   </span>
                   <span className={`${s.txnQty} ${s[`txn${t.kind}`] ?? ''}`}>{meta.sign}{t.quantity}</span>
-                  <span className={s.txnTime}>{t.created_at.slice(0, 16).replace('T', ' ')}</span>
+                  <span className={s.txnTime}>{localDateTime(t.created_at)}</span>
                 </div>
               );
             })}

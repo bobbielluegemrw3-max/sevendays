@@ -6,6 +6,7 @@ import { apiFetch, errorMessage } from '@/lib/client-api';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { RarityLegend } from '@/components/RarityLegend';
+import { localDate, localDateTime } from '@/lib/format-time';
 import s from '../app/market.module.css';
 import d from '../app/support.module.css';
 
@@ -224,7 +225,7 @@ export function MarketPlaceView({
                 <NftHorseArt look={deriveNftLook(m.dna_hash, m.horse_name)} className={`${s.shelfArt} ${s.soldArt}`} />
                 <div className={s.shelfName}>{m.horse_name}</div>
                 <div className={s.shelfRar}><span className={`${s.rar} ${s[`rar${rarClass(m.rarity)}`]}`}>{m.rarity}</span></div>
-                <div className={s.shelfMeta}>{m.matched_at.slice(5, 10)} 成約 → {m.buyer}</div>
+                <div className={s.shelfMeta}>{localDate(m.matched_at).slice(5)} 成約 → {m.buyer}</div>
                 <div className={`${s.shelfPrice} ${s.soldPrice}`}>{fmt(m.price)} USDT</div>
               </div>
             ))}
@@ -259,7 +260,7 @@ export function MarketPlaceView({
               <span className={`${s.srcBadge} ${l.source === 'SMART' ? s.srcSmart : ''}`}>
                 {l.source === 'SMART' ? 'スマート出品' : '手動出品'}
               </span>
-              <span className={s.myMeta}>Day {l.current_day} · {fmt(l.price)} USDT · 出品 {l.listed_at.slice(0, 10)}</span>
+              <span className={s.myMeta}>Day {l.current_day} · {fmt(l.price)} USDT · 出品 {localDate(l.listed_at)}</span>
               <span className={s.mySpacer} />
               {l.cancel_after_batch ? (
                 <span className={s.pendingBadge}>取り下げ予約済(今夜のバッチ後)</span>
@@ -290,7 +291,7 @@ export function MarketPlaceView({
               <span className={s.matchHorse}>{m.horse_name}</span>
               <span className={s.matchPrice}>{fmt(m.price)} USDT</span>
               <span className={s.matchBuyer}>→ {m.buyer}</span>
-              <span className={s.matchTime}>{m.matched_at.slice(5, 16).replace('T', ' ')}</span>
+              <span className={s.matchTime}>{localDateTime(m.matched_at).slice(5)}</span>
             </div>
           ))
         )}
