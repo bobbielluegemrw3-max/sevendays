@@ -1,8 +1,13 @@
 import { Money, insertNotification } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import { SUPPORT_BONUS_TIER_AMOUNTS_V1, renderNotification } from '@sevendays/domain';
+import { STARTER_RATE_MIN_USDT, SUPPORT_BONUS_TIER_AMOUNTS_V1, renderNotification } from '@sevendays/domain';
 import { getBalance, getPlatformAccountId, supportBonusPayment } from '@sevendays/ledger';
-import { resolveAncestorChains, resolveUnlockedTiers } from '../burn/support-bonus.js';
+import {
+  computeStarterT1Rate,
+  orgVolumes,
+  resolveAncestorChains,
+  resolveUnlockedTiers,
+} from '../burn/support-bonus.js';
 
 /**
  * チャンピオン祝い金 (Decision 092) — サポートボーナスの支払いトリガーを
@@ -30,6 +35,12 @@ export interface CelebrationEnqueueResult {
  * DAY7_CLEAREDでまだキューにないチャンピオンを起票する(7行/頭)。
  * リトライではUPDATE...RETURNINGが空でも取りこぼさないよう、馬のステータス
  * から導出する(テストネットリセット後はレガシーDAY7_CLEAREDは存在しない)。
+ *
+ * Decision 099(スターターレート): ティア1の額は固定3.00ではなく、その夜の
+ * ティア1祖先(配置親)の組織ボリュームから clamp(150000/組織, 3, 8) で確定
+ * する。キュー行は不変なので、プール不足で繰越されても「誕生夜の単価」の
+ * まま支払われる。祖先不在(運営直下等)は下限3.00で起票(どうせUNCLAIMED —
+ * 後から管理者が配置替えしても保守側の額しか払われない)。ティア2〜7は不変。
  */
 export async function enqueueChampionCelebrations(
   client: SqlClient,
@@ -41,13 +52,32 @@ export async function enqueueChampionCelebrations(
        and not exists (select 1 from support_celebrations c where c.horse_id = h.id)
      order by h.id`,
   );
+  if (champions.rows.length === 0) return { championsEnqueued: 0 };
+
+  // その夜のティア1祖先の組織ボリューム → スターターレート(ティア解放と同じ物差し)
+  const ownerIds = [...new Set(champions.rows.map((r) => r.owner_user_id))];
+  const chains = await resolveAncestorChains(client, ownerIds);
+  const t1Ids = [
+    ...new Set(
+      ownerIds
+        .map((id) => (chains.get(id) ?? []).find((a) => a.tier === 1)?.id)
+        .filter((id): id is string => id !== undefined),
+    ),
+  ];
+  const orgById = t1Ids.length > 0 ? await orgVolumes(client, t1Ids) : new Map<string, string>();
+
   for (const horse of champions.rows) {
+    const t1 = (chains.get(horse.owner_user_id) ?? []).find((a) => a.tier === 1);
+    const t1Amount = t1
+      ? computeStarterT1Rate(orgById.get(t1.id) ?? '0')
+      : STARTER_RATE_MIN_USDT;
     for (let tier = 1; tier <= SUPPORT_BONUS_TIER_AMOUNTS_V1.length; tier += 1) {
+      const amount = tier === 1 ? t1Amount : SUPPORT_BONUS_TIER_AMOUNTS_V1[tier - 1];
       await client.query(
         `insert into support_celebrations (horse_id, champion_user_id, tier, amount, champion_date)
          values ($1, $2, $3, $4, $5)
          on conflict (horse_id, tier) do nothing`,
-        [horse.id, horse.owner_user_id, tier, SUPPORT_BONUS_TIER_AMOUNTS_V1[tier - 1], input.batchDate],
+        [horse.id, horse.owner_user_id, tier, amount, input.batchDate],
       );
     }
   }

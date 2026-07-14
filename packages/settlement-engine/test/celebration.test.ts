@@ -12,7 +12,7 @@ import {
   getBalance,
   getPlatformAccountId,
 } from '@sevendays/ledger';
-import { enqueueChampionCelebrations, payPendingCelebrations } from '../src/index.js';
+import { computeStarterT1Rate, enqueueChampionCelebrations, payPendingCelebrations } from '../src/index.js';
 
 /**
  * チャンピオン祝い金 (Decision 092)。
@@ -128,10 +128,12 @@ describe('champion celebrations (Decision 092)', () => {
       [champion],
     );
     expect(rows.rows.map((r) => r.tier)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(rows.rows.map((r) => Number(r.amount))).toEqual([3, 2, 1, 1, 1, 1, 1]);
+    // Decision 099: C's org volume is 0 (the champion is not ACTIVE), so the
+    // tier-1 amount is the starter-rate MAX 8.00; tiers 2-7 are unchanged.
+    expect(rows.rows.map((r) => Number(r.amount))).toEqual([8, 2, 1, 1, 1, 1, 1]);
 
     const result = await payPendingCelebrations(client);
-    // C: T1 3.00 / B: T2 2.00 paid; T3 has ancestor A but org < 20,000 ->
+    // C: T1 8.00 / B: T2 2.00 paid; T3 has ancestor A but org < 20,000 ->
     // UNCLAIMED; T4-7 have no ancestors -> UNCLAIMED. Nothing carries over.
     expect(result.paid).toBe(2);
     expect(result.unclaimed).toBe(5);
@@ -142,10 +144,10 @@ describe('champion celebrations (Decision 092)', () => {
       ensureUserAccounts(client, b),
       ensureUserAccounts(client, c),
     ]);
-    expect(await getBalance(client, accC.available)).toBe('3.00000000');
+    expect(await getBalance(client, accC.available)).toBe('8.00000000');
     expect(await getBalance(client, accB.available)).toBe('2.00000000');
     expect(await getBalance(client, accA.available)).toBe('0');
-    expect(await poolBalance()).toBe('16.60000000'); // 21.60 - 5.00
+    expect(await poolBalance()).toBe('11.60000000'); // 21.60 - 10.00
 
     // The celebration copy reached the paid ancestors (R3-compliant).
     const notif = await client.query<{ user_id: string; payload_json: { title: string } }>(
@@ -161,48 +163,80 @@ describe('champion celebrations (Decision 092)', () => {
     expect(replayEnq.championsEnqueued).toBe(0);
     const replay = await payPendingCelebrations(client);
     expect(replay.paid).toBe(0);
-    expect(await getBalance(client, accC.available)).toBe('3.00000000');
-    expect(await poolBalance()).toBe('16.60000000');
+    expect(await getBalance(client, accC.available)).toBe('8.00000000');
+    expect(await poolBalance()).toBe('11.60000000');
   });
 
   it('carries over FIFO when the pool cannot cover, then pays after refunding', async () => {
-    // Drain the pool to 0 for this scenario by paying it out via a synthetic
-    // celebration chain? Simpler: compute what's left and consume it exactly.
-    // Current pool = 16.60 (from the previous test). Build a chain that can
-    // absorb it: sponsor S with T1 (3.00 per champion).
+    // Current pool = 11.60 (from the previous test). Build a chain that can
+    // absorb it: sponsor S at the starter-rate FLOOR — a placed member holding
+    // 500 Day0 horses gives S org volume 50,000, so T1 = 3.00 (Decision 099
+    // floor = the pre-099 amount; also pins this test's arithmetic).
     const s = await newUser();
     const owner = await newUser(s);
     await placeUnder(owner, s);
+    const sMember = await newUser(s);
+    await placeUnder(sMember, s);
+    for (let i = 0; i < 500; i += 1) await newHorse(sMember, i);
 
-    // 6 champions -> 6 x T1(3.00) = 18.00 > 16.60. Tiers 2-7 are UNCLAIMED
-    // (no ancestors). FIFO pays 5 T1s (15.00); the 6th T1 halts the run, so
-    // it AND the 6th champion's remaining tiers carry over unjudged (order
-    // preservation: nothing after the halt is settled).
+    // 6 champions -> 6 x T1(3.00) = 18.00 > 11.60. Tiers 2-7 are UNCLAIMED
+    // (no ancestors). FIFO pays 3 T1s (9.00); the 4th T1 halts the run, so
+    // it AND everything behind it carries over unjudged (order preservation).
     for (let i = 0; i < 6; i += 1) await newChampion(owner);
     await enqueueChampionCelebrations(client, { batchDate: '2033-02-03' });
     const result = await payPendingCelebrations(client);
-    expect(result.paid).toBe(5);
-    expect(result.unclaimed).toBe(30); // champions 1-5 x tiers 2-7
-    expect(result.carriedOver).toBe(7); // champion 6: t1 (no funds) + t2-7 (behind the halt)
-    expect(await poolBalance()).toBe('1.60000000');
+    expect(result.paid).toBe(3);
+    expect(result.unclaimed).toBe(18); // champions 1-3 x tiers 2-7
+    expect(result.carriedOver).toBe(21); // champions 4-6: everything behind the halt
+    expect(await poolBalance()).toBe('2.60000000');
 
     const accS = await ensureUserAccounts(client, s);
-    expect(await getBalance(client, accS.available)).toBe('15.00000000');
+    expect(await getBalance(client, accS.available)).toBe('9.00000000');
 
-    // Pool refills (one mint flow = +5.40) -> the carried-over T1 pays and
-    // the champion's remaining tiers settle as UNCLAIMED.
-    await fundPool(1);
+    // Pool refills (two mint flows = +10.80) -> the carried-over T1s pay and
+    // the champions' remaining tiers settle as UNCLAIMED.
+    await fundPool(2);
     const drained = await payPendingCelebrations(client);
-    expect(drained.paid).toBe(1);
-    expect(drained.unclaimed).toBe(6);
+    expect(drained.paid).toBe(3);
+    expect(drained.unclaimed).toBe(18);
     expect(drained.carriedOver).toBe(0);
     expect(await getBalance(client, accS.available)).toBe('18.00000000');
-    expect(await poolBalance()).toBe('4.00000000'); // 1.60 + 5.40 - 3.00
+    expect(await poolBalance()).toBe('4.40000000'); // 2.60 + 10.80 - 9.00
 
     const pending = await client.query<{ n: string }>(
       `select count(*)::text as n from support_celebrations where status = 'PENDING'`,
     );
     expect(pending.rows[0]!.n).toBe('0');
+  });
+
+  it('starter rate (Decision 099): the tier-1 amount follows the ancestor org volume', async () => {
+    // P's org: a placed member holding 200 Day0 horses = 20,000 -> 150000/20000 = 7.50.
+    const p = await newUser();
+    const owner = await newUser(p);
+    await placeUnder(owner, p);
+    const pMember = await newUser(p);
+    await placeUnder(pMember, p);
+    for (let i = 0; i < 200; i += 1) await newHorse(pMember, i);
+
+    const champion = await newChampion(owner);
+    await enqueueChampionCelebrations(client, { batchDate: '2033-02-05' });
+    const row = await client.query<{ amount: string }>(
+      `select amount::text as amount from support_celebrations where horse_id = $1 and tier = 1`,
+      [champion],
+    );
+    expect(Number(row.rows[0]!.amount)).toBe(7.5);
+    // 額は起票時に確定 — 後から組織が変わっても行は不変(DBガードで担保)。
+  });
+
+  it('computeStarterT1Rate: clamp(150000/org, 3, 8) in exact cents math', () => {
+    expect(computeStarterT1Rate('0')).toBe('8.00');
+    expect(computeStarterT1Rate('100.00')).toBe('8.00');
+    expect(computeStarterT1Rate('18750.00')).toBe('8.00'); // 150000/18750 = 8 ちょうど
+    expect(computeStarterT1Rate('20000.00')).toBe('7.50');
+    expect(computeStarterT1Rate('40000.00')).toBe('3.75');
+    expect(computeStarterT1Rate('43000.00')).toBe('3.49'); // 3.4883… → half-up
+    expect(computeStarterT1Rate('50000.00')).toBe('3.00'); // 下限到達
+    expect(computeStarterT1Rate('600000.00')).toBe('3.00'); // 下限で固定
   });
 
   it('BANNED ancestors are UNCLAIMED and the money stays in the pool', async () => {

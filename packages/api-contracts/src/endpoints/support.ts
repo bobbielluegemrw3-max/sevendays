@@ -7,7 +7,7 @@ import {
   SUPPORT_BONUS_TIER_AMOUNTS_V1,
   SUPPORT_BONUS_TIER_THRESHOLDS_V1,
 } from '@sevendays/domain';
-import { supportTierStatus } from '@sevendays/settlement-engine';
+import { computeStarterT1Rate, supportTierStatus } from '@sevendays/settlement-engine';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry, HandlerContext } from '../router.js';
 
@@ -135,6 +135,8 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
         unlocked_tiers: tier.unlockedTiers,
         org_volume: tier.orgVolume,
         direct_volume: tier.directVolume,
+        // Decision 099: 現在のティア1単価(スターターレート)。表示・目標UI用。
+        starter_rate: computeStarterT1Rate(tier.orgVolume),
         max_tiers: SUPPORT_BONUS_MAX_TIERS_V1,
         tier_amounts: SUPPORT_BONUS_TIER_AMOUNTS_V1,
         org_thresholds: SUPPORT_BONUS_ORG_THRESHOLDS_V1,

@@ -52,6 +52,12 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
 
   const hasPool = summary.pool_count > 0;
 
+  // Decision 099 スターターレート: 8.00(新人)→3.00(リーダー)への旅をゲージで表示。
+  // ゲージ位置 = (8 − 現在単価) / (8 − 3)。ブースト表記 = 現在単価 ÷ 標準3.00。
+  const rate = Number(summary.starter_rate);
+  const ratePos = Math.min(100, Math.max(0, Math.round(((8 - rate) / 5) * 100)));
+  const boost = rate / 3;
+
   return (
     <>
       <div className="section-head">
@@ -62,6 +68,42 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
         あなたの組織からチャンピオン(7日間走破)が誕生したとき、支えたネットワークに
         お祝い金が支払われます。紹介しただけでは発生しません。
       </p>
+
+      {/* ---- ⓪ あなたの紹介単価(Decision 099 スターターレート) ---- */}
+      <section className={s.rateCard}>
+        <div className={s.rateLeft}>
+          <div className={s.rateK}>STARTER RATE · あなたの紹介単価</div>
+          <div className={s.rateV}>
+            {fmtUsdt(summary.starter_rate)}
+            <span className="unit">USDT</span>
+          </div>
+          <div className={s.rateWho}>直接招待した仲間のチャンピオン1頭ごとに、あなたへ</div>
+        </div>
+        <div className={s.rateMid}>
+          <div className={s.rateGaugeLabels}>
+            <span className={s.rateGaugeStart}>スターター 8.00</span>
+            <span className={s.rateGaugeEnd}>リーダー 3.00</span>
+          </div>
+          <div className={s.rateGauge}>
+            <span className={s.rateGaugeFill} style={{ width: `${ratePos}%` }} />
+            <span className={s.rateGaugeDot} style={{ left: `${ratePos}%` }} />
+          </div>
+          <div className={s.rateGaugeSub}>
+            組織が育つほど単価は 8.00 → 3.00 へ滑らかに移行します(組織 50,000 USDT で 3.00)。
+            単価×組織規模は一定になる設計 — <b>組織が育っても、直接分の収入合計は下がりません。</b>
+          </div>
+        </div>
+        <div className={s.rateRight}>
+          {boost > 1.005 ? (
+            <span className={s.ratePill}>スターターブースト ×{boost.toFixed(1)}</span>
+          ) : (
+            <span className={s.ratePillStd}>スタンダード</span>
+          )}
+          <div className={s.rateNote}>
+            単価はチャンピオン誕生の夜のものが適用され、毎日 20:00 (GMT+8) に再評価されます。
+          </div>
+        </div>
+      </section>
 
       {/* ---- ① ヒーロー: ティア状態 + 次のアクション ---- */}
       <div className={s.hero}>
@@ -123,14 +165,18 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
       {/* ---- ③ ティアと支払額 ---- */}
       <section className="panel">
         <h2>ティアと支払額</h2>
-        <div className={s.tierMeta}>チャンピオン1頭の誕生で、お祝い金 合計10 USDT が上位7ティアに配られます。</div>
+        <div className={s.tierMeta}>
+          チャンピオン1頭の誕生で、お祝い金(T1=あなたの紹介単価 3〜8 / T2=2 / T3〜7=各1 USDT)が上位7ティアに配られます。
+        </div>
         <div className={s.tierTable}>
           {summary.tier_amounts.map((amount, i) => {
             const open = i < summary.unlocked_tiers;
             return (
               <div key={i} className={`${s.tierCell} ${open ? s.tierCellOpen : ''}`}>
                 <div className={s.tierCellName}>T{i + 1}{open ? ' ✓' : ''}</div>
-                <div className={s.tierCellAmount}>{Number(amount).toFixed(0)} USDT</div>
+                <div className={s.tierCellAmount}>
+                  {i === 0 ? `${fmtUsdt(summary.starter_rate)} (3〜8)` : Number(amount).toFixed(0)} USDT
+                </div>
                 <div className={s.tierCellCond}>
                   {i === 0
                     ? '常時'
@@ -163,8 +209,8 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
         </div>
         <p className={s.inviteNote}>
           招待しただけではボーナスは発生しません。サポートボーナスは、あなたのネットワーク内で
-          チャンピオン(7日間走破)が誕生したときにだけ、固定額(合計10 USDT/頭)の範囲で
-          お祝い金として支払われます。金額・頻度の保証はありません。
+          チャンピオン(7日間走破)が誕生したときにだけ、所定の額(T1=紹介単価3〜8 / T2=2 /
+          T3〜7=各1 USDT)の範囲でお祝い金として支払われます。金額・頻度の保証はありません。
         </p>
       </section>
 

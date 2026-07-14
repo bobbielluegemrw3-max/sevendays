@@ -143,10 +143,30 @@ export const MLM_REWARD_AMOUNT = '10.00';
 /** Valid recipient = ACTIVE only (Decision 041 semantics carry over). */
 export const VALID_REFERRER_STATUS = 'ACTIVE';
 export const SUPPORT_BONUS_MAX_TIERS_V1 = 7;
-/** Payout per tier; index 0 = Tier 1 (the champion owner's placement parent). */
+/** Payout per tier; index 0 = Tier 1 (the champion owner's placement parent).
+ *  Decision 099: index 0 ('3.00') is the tier-1 FLOOR — the actual tier-1
+ *  amount is the starter rate below, fixed at enqueue (champion night).
+ *  Tiers 2-7 are flat and unchanged. */
 export const SUPPORT_BONUS_TIER_AMOUNTS_V1: readonly string[] = [
   '3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00',
 ];
+/**
+ * Starter rate (Decision 099): the tier-1 celebration amount scales down
+ * SMOOTHLY with the recipient's ORG volume:
+ *
+ *   rate = clamp(150000 / orgVolume, 3.00, 8.00)   (2dp, half-up, cents math)
+ *
+ * Properties: rate x volume is constant on the curve, so tier-1 income can
+ * NEVER decrease as an organization grows (no promotion cliff — verified in
+ * PLAYER_EV_SIMULATION.md §4.9); 8.00 flat below ~18,750 volume; reaches the
+ * 3.00 floor (= the pre-099 amount) at 50,000. Depth leaders are untouched.
+ * Evaluated with the same nightly org-volume yardstick as tier unlocking;
+ * the amount is FIXED on the champion night (queue rows are immutable, so
+ * carryover payments keep that night's rate).
+ */
+export const STARTER_RATE_NUMERATOR_USDT = '150000';
+export const STARTER_RATE_MAX_USDT = '8.00';
+export const STARTER_RATE_MIN_USDT = '3.00';
 /**
  * Tier unlocking v2 (Decision 077, amends 074): two point-in-time metrics,
  * both the combined CURRENT value (PRICE_TABLE_V1) of ACTIVE horses held by

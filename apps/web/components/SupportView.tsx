@@ -14,6 +14,8 @@ export interface SupportSummary {
   org_volume: string;
   /** 直接紹介のみの稼働馬価値(T5以上で追加要求)。 */
   direct_volume: string;
+  /** 現在のティア1単価(Decision 099 スターターレート: clamp(150000/組織, 3, 8))。 */
+  starter_rate: string;
   max_tiers: number;
   tier_amounts: readonly string[];
   org_thresholds: readonly string[];

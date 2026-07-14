@@ -1,6 +1,9 @@
 import type { SqlClient } from '@sevendays/shared';
 import {
   PRICE_TABLE_V1,
+  STARTER_RATE_MAX_USDT,
+  STARTER_RATE_MIN_USDT,
+  STARTER_RATE_NUMERATOR_USDT,
   SUPPORT_BONUS_DIRECT_REQUIRED_FROM_TIER,
   SUPPORT_BONUS_MAX_TIERS_V1,
   SUPPORT_BONUS_ORG_THRESHOLDS_V1,
@@ -56,6 +59,27 @@ export function computeUnlockedTiers(orgVolumeText: string, directVolumeText: st
   return unlocked;
 }
 
+/**
+ * Starter rate (Decision 099) — the tier-1 celebration amount for a
+ * recipient with the given ORG volume: clamp(150000/org, 3.00, 8.00).
+ * Integer-cents math with half-up rounding to 2dp (no float division —
+ * `floor((2n + d) / 2d)` is exact half-up for positive integers), so the
+ * result is bit-identical across engines like every other seeded number.
+ */
+export function computeStarterT1Rate(orgVolumeText: string): string {
+  const orgCents = usdtTextToCents(orgVolumeText);
+  const maxCents = Math.round(Number(STARTER_RATE_MAX_USDT) * 100);
+  const minCents = Math.round(Number(STARTER_RATE_MIN_USDT) * 100);
+  let rateCents = maxCents;
+  if (orgCents > 0) {
+    // rate[USDT] = NUMERATOR / org[USDT] → cents: NUMERATOR*100*100 / orgCents
+    const numerator = Number(STARTER_RATE_NUMERATOR_USDT) * 100 * 100;
+    rateCents = Math.floor((2 * numerator + orgCents) / (2 * orgCents));
+    rateCents = Math.min(maxCents, Math.max(minCents, rateCents));
+  }
+  return `${Math.floor(rateCents / 100)}.${String(rateCents % 100).padStart(2, '0')}`;
+}
+
 // Decision 087: 手動出品中(Market Lock)の馬はティアボリュームから除外する。
 // 凍結中の馬はBURNリスクを負っていないため、含めると「手動出品で駐車したまま
 // ティアを維持する」ノーリスクの水増しが可能になる。SMART出品中は走り続ける
@@ -77,8 +101,10 @@ async function directVolumes(client: SqlClient, ids: readonly string[]): Promise
   return new Map(r.rows.map((row) => [row.id, row.volume]));
 }
 
-/** ORG volumes (placement subtree, <=7 levels down) for a set of users. */
-async function orgVolumes(client: SqlClient, ids: readonly string[]): Promise<Map<string, string>> {
+/** ORG volumes (placement subtree, <=7 levels down) for a set of users.
+ *  Exported for the celebration enqueue (Decision 099: the tier-1 amount is
+ *  the ancestor's starter rate on the champion night). */
+export async function orgVolumes(client: SqlClient, ids: readonly string[]): Promise<Map<string, string>> {
   const r = await client.query<{ id: string; volume: string }>(
     `with recursive org as (
        select a.id as root_id, a.id as member_id, 0 as depth

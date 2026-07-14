@@ -19,6 +19,7 @@ export default async function SupportPreview() {
           unlocked_tiers: 3,
           org_volume: '26820.00',
           direct_volume: '6820.00',
+          starter_rate: '5.59', // 150000/26820(Decision 099)
           max_tiers: 7,
           tier_amounts: ['3.00', '2.00', '1.00', '1.00', '1.00', '1.00', '1.00'],
           org_thresholds: ['0', '10000', '20000', '50000', '250000', '400000', '600000'],
