@@ -136,15 +136,24 @@ describe('purchase sessions', () => {
     expect(sessions.rows[0]!.count).toBe('0');
   });
 
-  it('enforces the 10-session cap (Decision 051)', async () => {
+  it('allows >10 concurrent sessions; only the 1000 sanity ceiling rejects (Decision 096)', async () => {
     const user = await newUser();
     await fund(user, '2000');
-    for (let i = 0; i < 10; i += 1) {
+    // 旧Decision 051の10件上限は撤廃 — 11件目も普通に作れる
+    for (let i = 0; i < 11; i += 1) {
       await createPurchaseSession(client, { userId: user, idempotencyKey: randomUUID() });
     }
+    // 安全天井(1000)は残る: PENDING行を直接積んで境界を検証(台帳は通さない)
+    await client.query(
+      `insert into purchase_sessions (user_id, locked_amount, funds_locked, idempotency_key)
+       select $1, 177.16, true, 'cap-seed:' || g from generate_series(1, 989) g`,
+      [user],
+    );
     await expect(
       createPurchaseSession(client, { userId: user, idempotencyKey: randomUUID() }),
     ).rejects.toThrow(AssignmentError);
+    // 擬似行は台帳ロックを持たない — 後続テストの全体refundに巻き込まれる前に撤去
+    await client.query(`delete from purchase_sessions where idempotency_key like 'cap-seed:%'`);
   });
 
   it('rejects when marketplace is locked', async () => {

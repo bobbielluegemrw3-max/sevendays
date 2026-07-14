@@ -166,10 +166,10 @@ describe('user flow through the API', () => {
       idempotencyKey: randomUUID(),
     });
 
-    // count out of range -> validation error
+    // count out of range -> validation error (Decision 096: per-request max 100)
     const tooMany = await call('POST', '/api/v1/purchase', asUser(user), {
       idempotencyKey: randomUUID(),
-      body: { count: 11 },
+      body: { count: 101 },
     });
     expect(tooMany.status).toBe(400);
 
