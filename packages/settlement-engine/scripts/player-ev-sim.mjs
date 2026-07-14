@@ -57,7 +57,7 @@ function binom(rand, n, p) {
  *  payoutModel: 'celebration092'(現行: チャンピオン時に3/2/1) |
  *               'burn074'(旧: BURN時に3/2/1) |
  *               'burn021'(旧々: BURN時に直接紹介者へ10 USDT・1段のみ) */
-function simulate({ rand, days, playerSlots, tiers, burnRate, payoutModel = 'celebration092', tierAmounts = TIER_AMOUNTS }) {
+function simulate({ rand, days, playerSlots, tiers, burnRate, payoutModel = 'celebration092', tierAmounts = TIER_AMOUNTS, starterRate = false }) {
   // プレイヤー自身の馬: 日齢別の頭数(常時 playerSlots 稼働)
   let own = [playerSlots, 0, 0, 0, 0, 0, 0];
   // 組織: tier d ごとに [メンバー数 m, 1人あたり馬数 h] → 馬プール(日齢別)
@@ -85,6 +85,12 @@ function simulate({ rand, days, playerSlots, tiers, burnRate, payoutModel = 'cel
       if (orgVolume >= ORG_THRESHOLDS[t] && directVolume >= DIRECT_THRESHOLDS[t]) unlocked = t;
       else break; // 連続解放(飛ばない)
     }
+
+    // スターターレート案: 受取者(=自分)の組織が小さいうちはT1が厚く、
+    // 育つと標準率へ逓減(T2〜7は現行のまま)。8/5/3の3段・しきい値は仮置き。
+    const dayAmounts = starterRate
+      ? [0, orgVolume < 20_000 ? 8 : orgVolume < 50_000 ? 5 : 3, 2, 1, 1, 1, 1, 1]
+      : tierAmounts;
 
     // --- 今夜のレース: プレイヤー自身 ---
     const nextOwn = [0, 0, 0, 0, 0, 0, 0];
@@ -122,11 +128,11 @@ function simulate({ rand, days, playerSlots, tiers, burnRate, payoutModel = 'cel
         if (payoutModel === 'burn021') {
           if (d === 1) celebIncome += burned * 10; // 直接紹介者へ10 USDT/BURN
         } else if (payoutModel === 'burn074') {
-          if (d <= unlocked) celebIncome += burned * tierAmounts[d];
+          if (d <= unlocked) celebIncome += burned * dayAmounts[d];
         }
         if (a === 6) {
           if (payoutModel === 'celebration092' && d <= unlocked) {
-            celebIncome += survived * tierAmounts[d];
+            celebIncome += survived * dayAmounts[d];
           }
           resolved += survived;
         } else {
@@ -345,4 +351,40 @@ if (process.env.REWEIGHT_CHECK) {
     }
   }
   console.log('\n(比較基準: 旧021モデルは 24人×2頭=96.2% / 24人×3頭=99.9%)');
+}
+
+// ---- 5. スターターレート案(STARTER_CHECK=1) — 両ペルソナ検証 ----
+// ペルソナA=草の根(直紹介24人フラット) / ペルソナB=深さ型リーダー(直4人→24→48→96)
+if (process.env.STARTER_CHECK) {
+  const PERSONAS = [
+    ['A1 直紹介24人×3頭(フラット)', [[24, 3]]],
+    ['A2 A1+各自1人紹介(T2=24人×3頭)', [[24, 3], [24, 3]]],
+    ['B  深さ型リーダー(4→24→48→96・各3頭)', [[4, 3], [24, 3], [48, 3], [96, 3]]],
+    ['B小 深さ型・成長途中(2→8→16・各3頭)', [[2, 3], [8, 3], [16, 3]]],
+  ];
+  const MODELS = [
+    ['現行 3/2/1×5', { tierAmounts: [0, 3, 2, 1, 1, 1, 1, 1] }],
+    ['D案 8/2/0.2×5', { tierAmounts: [0, 8, 2, 0.2, 0.2, 0.2, 0.2, 0.2] }],
+    ['E案 10/1/0', { tierAmounts: [0, 10, 1, 0, 0, 0, 0, 0] }],
+    ['スターター案 T1=8→5→3', { starterRate: true }],
+  ];
+  console.log('');
+  console.log('=== スターターレート案: ペルソナ別 P(12週でプラス) / 12週平均 / 祝い金週平均 ===');
+  for (const [pName, tiers] of PERSONAS) {
+    console.log(`\n-- ${pName} --`);
+    for (const [mName, opts] of MODELS) {
+      const rand = rng(31);
+      let pos = 0, sum = 0, celeb = 0;
+      const trials = 2000;
+      for (let t = 0; t < trials; t++) {
+        const r = simulate({ rand, days: 84, playerSlots: 10, tiers, burnRate: 0.107, ...opts });
+        if (r.total >= 0) pos++;
+        sum += r.total;
+        celeb += r.celebIncome;
+      }
+      console.log(
+        `  ${mName.padEnd(20)} P ${pct(pos / trials).padStart(6)} | 平均 ${usd(sum / trials).padStart(7)} | 祝い金/週 ${usd(celeb / trials / 12).padStart(5)}`,
+      );
+    }
+  }
 }
