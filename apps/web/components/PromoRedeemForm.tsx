@@ -51,7 +51,7 @@ export function PromoRedeemForm() {
   if (!open) {
     return (
       <button type="button" className={s.promoToggle} onClick={() => setOpen(true)}>
-        引換コードをお持ちですか?(セミナー特典)→
+        引換コードをお持ちですか? →
       </button>
     );
   }
