@@ -819,6 +819,8 @@
 .fcRow { margin-top: 10px; font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.14em; }
 .fcRow b { font-weight: 700; margin: 0 10px 0 7px; font-size: 17px; text-shadow: 0 0 14px currentColor; }
 .fcNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 9px; }
+/* 明日の出走枠の「全馬生還の夜」タグ(2026-07-14) */
+.fcSafe { color: #35d07f; }
 
 /* ---------- 待機パドック(2026-07-13) ---------- */
 /* 「ただの時計」→出走前の待合室。背景=チャンピオン動画ループを薄く。 */

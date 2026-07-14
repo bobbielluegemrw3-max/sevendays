@@ -440,7 +440,7 @@ export function DailyDerbyStage({
             onMine={playOwnLine}
           />
         ) : (
-          <PersonalOrDone night={nightResults} forecast={tomorrowForecast} />
+          <PersonalOrDone night={nightResults} forecast={tomorrowForecast} field={tonightField} />
         )}
       </div>
 
@@ -1058,8 +1058,16 @@ function LogPhase({
    審判で1頭ずつ流れた結果を、代表1件ではなく全件のサマリーで締める。
    同じデータが /races「あなたのレース記録」に残り続ける)。 */
 /* ADR-012 ショー最終幕: 明日の予報(的中率70%の参考情報)。
-   毎晩レースを見る理由と「明日の予報なんだった?」の会話を作る(オーナー §7-4)。 */
-function TomorrowForecast({ forecast }: { forecast: DerbyConditionsView }) {
+   毎晩レースを見る理由と「明日の予報なんだった?」の会話を作る(オーナー §7-4)。
+   2026-07-14: 明日の出走枠(Decision 093)も併記 — ショー後のtonight_fieldは
+   意味的に「明日の出走」(ACTIVE馬は次のレースを走る)なのでそのまま使える。 */
+function TomorrowForecast({
+  forecast,
+  field,
+}: {
+  forecast: DerbyConditionsView;
+  field: { entrants: number; burnSlotsMin: number; burnSlotsMax: number } | null;
+}) {
   return (
     <div className={s.fcWrap}>
       <div className={s.fcK}>— 明日の予報 —</div>
@@ -1071,6 +1079,20 @@ function TomorrowForecast({ forecast }: { forecast: DerbyConditionsView }) {
         <span className={s.condK}>/ コース</span>
         <b style={{ color: CONDITION_COLORS[forecast.surface] }}>{forecast.surface_ja}</b>
       </div>
+      {field && field.entrants > 0 && (
+        <div className={s.fcRow}>
+          <span className={s.condK}>出走予定</span>
+          <b>{field.entrants}頭</b>
+          <span className={s.condK}>/ BURN枠</span>
+          <b>
+            {field.burnSlotsMin === field.burnSlotsMax
+              ? field.burnSlotsMax
+              : `${field.burnSlotsMin}〜${field.burnSlotsMax}`}
+            頭
+          </b>
+          {field.burnSlotsMax === 0 ? <b className={s.fcSafe}>— 全馬生還の夜</b> : null}
+        </div>
+      )}
       <div className={s.fcNote}>予報は参考情報です(的中率70%の演出)。結果を保証するものではありません。</div>
     </div>
   );
@@ -1079,9 +1101,11 @@ function TomorrowForecast({ forecast }: { forecast: DerbyConditionsView }) {
 function PersonalOrDone({
   night,
   forecast,
+  field,
 }: {
   night: DerbyNightResults | null;
   forecast: DerbyConditionsView | null;
+  field: { entrants: number; burnSlotsMin: number; burnSlotsMax: number } | null;
 }) {
   if (night && nightResultsCount(night) > 0) {
     return (
@@ -1093,7 +1117,7 @@ function PersonalOrDone({
         </div>
         <NightResultsList results={night} />
         <div className={s.nightSumNote}>この結果はレースページの「あなたのレース記録」でいつでも見返せます。</div>
-        {forecast && <TomorrowForecast forecast={forecast} />}
+        {forecast && <TomorrowForecast forecast={forecast} field={field} />}
       </div>
     );
   }
@@ -1104,7 +1128,7 @@ function PersonalOrDone({
         <div className={s.doneText}>TODAY RACE END</div>
         <div className={s.liveRule} />
       </div>
-      {forecast && <TomorrowForecast forecast={forecast} />}
+      {forecast && <TomorrowForecast forecast={forecast} field={field} />}
     </div>
   );
 }
