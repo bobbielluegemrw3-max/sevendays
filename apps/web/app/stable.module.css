@@ -343,3 +343,15 @@
 .artWrap { position: relative; display: block; }
 .goldenStar { position: absolute; top: 6px; right: 8px; z-index: 3; color: #ffd977;
   font-size: 15px; line-height: 1; text-shadow: 0 0 8px #ffcf4bcc, 0 0 3px #fff8; pointer-events: none; }
+
+/* 隠し演出(EASTER_EGG_PLAN.md): 原色スキン・オーラ・炎・記念 */
+.colorSkin { position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: inherit; }
+.artAura { border-radius: 12px; box-shadow: 0 0 0 1px #ffd977aa, 0 0 22px 3px #ffcf4b66; }
+.revengeFlame { position: absolute; bottom: 6px; left: 8px; z-index: 3; font-size: 12px; font-weight: 700;
+  color: #ff5a3c; text-shadow: 0 0 8px #ff5a3ccc; pointer-events: none;
+  font-family: var(--font-jp, sans-serif); }
+.revengeGold { color: #ffd977; text-shadow: 0 0 10px #ffcf4bee; }
+.milestoneMark { position: absolute; bottom: 6px; right: 8px; z-index: 3; width: 17px; height: 17px;
+  display: flex; align-items: center; justify-content: center; border-radius: 50%;
+  background: linear-gradient(135deg, #ffd977, #b0892f); color: #1a1405; font-weight: 800; font-size: 11px;
+  box-shadow: 0 0 10px #ffcf4b88; pointer-events: none; font-family: var(--font-mono, monospace); }

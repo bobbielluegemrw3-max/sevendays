@@ -36,6 +36,11 @@ import s from '../app/horse-detail.module.css';
  * page.tsx は依頼側で結線。087監査: 手動出品中は「今夜走らない」を明示し調教UIを出さない。
  * ========================================================================== */
 
+/** 隠し演出(EASTER_EGG_PLAN.md): 原色ルックの着色。 */
+const HERO_COLOR: Record<string, string> = {
+  black: 'rgba(6,6,10,0.72)', red: '#e5322d', blue: '#2f6bff', yellow: '#ffcf1f', green: '#22c55e',
+};
+
 export interface HorseRaceResult {
   batch_date: string; final_rank: number; final_score: string; is_burned: boolean;
   participant_count: number;
@@ -57,6 +62,11 @@ export interface HorseDetail {
   /** 隠し演出(EASTER_EGG_PLAN.md)。 */
   night_variant?: boolean;
   golden_star?: boolean;
+  golden_aura?: boolean;
+  revenge_flame?: boolean;
+  revenge_gold?: boolean;
+  milestone?: boolean;
+  color_variant?: 'black' | 'red' | 'blue' | 'yellow' | 'green' | null;
   /** この馬の全戦績(日付昇順)。 */
   history: HorseRaceResult[];
 }
@@ -305,11 +315,21 @@ export function HorseDetailView({ horse }: { horse: HorseDetail }) {
       <div className={s.heroRow}>
         <div className={`${s.hero} ${mode === 'BURNED' ? s.heroBurned : ''}`}>
           <div className={s.heroInner}>
-            <div className={s.artBox}>
+            <div className={`${s.artBox} ${horse.golden_aura ? s.heroAura : ''}`}>
               <NftHorseArt look={look} className={s.heroCanvas} />
               {/* 隠し演出(EASTER_EGG_PLAN.md) */}
+              {horse.color_variant ? (
+                <span
+                  className={s.heroColorSkin}
+                  style={{ background: HERO_COLOR[horse.color_variant], mixBlendMode: horse.color_variant === 'black' ? 'multiply' : 'color' }}
+                />
+              ) : null}
               {horse.golden_star ? <span className={s.heroGoldenStar} title="黄金の夜の生還馬">★</span> : null}
               {horse.night_variant ? <span className={s.heroNightTag}>MIDNIGHT</span> : null}
+              {horse.revenge_flame ? (
+                <span className={`${s.heroFlameTag} ${horse.revenge_gold ? s.heroFlameGold : ''}`}>リベンジの焔</span>
+              ) : null}
+              {horse.milestone ? <span className={s.heroMilestone}>記念の一頭</span> : null}
               <div className={s.scrim} />
               <div className={s.artCap}>
                 <div>

@@ -130,11 +130,79 @@ describe('hidden looks (EASTER_EGG_PLAN.md)', () => {
     expect(looks.get(burnedInGold)!.goldenStar).toBe(false);
   });
 
-  it('該当なしは両フラグ false・空配列は空Map', async () => {
+  it('該当なしは全フラグ空・空配列は空Map', async () => {
     const u = await newUser();
     const h = await newHorse(u);
-    const looks = await computeHiddenLooks(client, [h]);
-    expect(looks.get(h)).toEqual({ nightVariant: false, goldenStar: false });
+    const lk = (await computeHiddenLooks(client, [h])).get(h)!;
+    expect(lk.nightVariant).toBe(false);
+    expect(lk.goldenStar).toBe(false);
+    expect(lk.colorVariant).toBeNull();
     expect((await computeHiddenLooks(client, [])).size).toBe(0);
   });
+
+  it('原色ルート: 雨アイテムを雨で3回生存 → その馬が青に染まる', async () => {
+    const u = await newUser();
+    const h = await newHorse(u);
+    for (let i = 1; i <= 3; i += 1) {
+      const d = `2043-01-0${i}`;
+      const race = await raceCond(d, 'RAIN', 'SOFT', 'DIRT');
+      await useItem(u, h, 'rain_hood', race, d, 'SURVIVED');
+    }
+    expect((await computeHiddenLooks(client, [h])).get(h)!.colorVariant).toBe('blue');
+  });
+
+  it('原色ルート: 2回では未達(色なし)', async () => {
+    const u = await newUser();
+    const h = await newHorse(u);
+    for (let i = 1; i <= 2; i += 1) {
+      const d = `2043-02-0${i}`;
+      const race = await raceCond(d, 'RAIN', 'SOFT', 'DIRT');
+      await useItem(u, h, 'rain_hood', race, d, 'SURVIVED');
+    }
+    expect((await computeHiddenLooks(client, [h])).get(h)!.colorVariant).toBeNull();
+  });
+
+  it('原色ルート: Burnドロップで1回生存 → 黒(最優先)', async () => {
+    const u = await newUser();
+    const h = await newHorse(u);
+    const race = await raceCond('2043-03-01', 'SUNNY', 'GOOD', 'TURF');
+    await useItem(u, h, 'spirit_roar', race, '2043-03-01', 'SURVIVED');
+    expect((await computeHiddenLooks(client, [h])).get(h)!.colorVariant).toBe('black');
+  });
 });
+
+/* ---- 原色ルート用のヘルパー(条件つきレース + SETTLED item_usage) ---------- */
+async function raceCond(date: string, weather: string, track: string, surface: string): Promise<string> {
+  const b = await client.query<{ id: string }>(
+    `insert into batch_runs (batch_date, batch_algorithm_version) values ($1, 'batch_v1.0')
+     on conflict do nothing returning id`, [date],
+  );
+  const batchId = b.rows[0]?.id
+    ?? (await client.query<{ id: string }>(`select id from batch_runs where batch_date = $1`, [date])).rows[0]!.id;
+  const commit = await client.query<{ id: string }>(
+    `insert into randomness_commits (reference_type, reference_id, commit_hash)
+     values ('RACE', $1, $2) returning id`,
+    [randomUUID(), randomUUID().replaceAll('-', '')],
+  );
+  const r = await client.query<{ id: string }>(
+    `insert into races (batch_run_id, race_engine_version, seed_commit_id, status, weather, track_condition, surface)
+     values ($1, 'race_v1.0', $2, 'FINALIZED', $3::weather, $4::track_condition, $5::surface) returning id`,
+    [batchId, commit.rows[0]!.id, weather, track, surface],
+  );
+  return r.rows[0]!.id;
+}
+async function useItem(
+  userId: string, horseId: string, itemKey: string, raceId: string, date: string, outcome: 'SURVIVED' | 'BURNED',
+): Promise<void> {
+  const ui = await client.query<{ id: string }>(
+    `insert into user_items (user_id, item_key, unit_price, source, status)
+     values ($1, $2, 2, 'PURCHASE', 'CONSUMED') returning id`,
+    [userId, itemKey],
+  );
+  await client.query(
+    `insert into item_usages (user_item_id, horse_id, user_id, item_key, unit_price, effective_race_date,
+                              status, race_id, settled_outcome)
+     values ($1, $2, $3, $4, 2, $5, 'SETTLED', $6, $7)`,
+    [ui.rows[0]!.id, horseId, userId, itemKey, date, raceId, outcome],
+  );
+}

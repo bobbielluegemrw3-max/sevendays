@@ -25,9 +25,15 @@ export interface StableHorse {
   dna_hash: string; trained_for_next_race: boolean;
   /** 'SMART' | 'MANUAL' | null — 出品中の事実表示(Decision 087監査)。 */
   listing: string | null;
-  /** 隠し演出(EASTER_EGG_PLAN.md)— 真夜中の馬=夜色ルック / 黄金の夜=金星。 */
+  /** 隠し演出(EASTER_EGG_PLAN.md)。 */
   night_variant?: boolean;
   golden_star?: boolean;
+  golden_aura?: boolean;
+  revenge_flame?: boolean;
+  revenge_gold?: boolean;
+  milestone?: boolean;
+  /** 全身原色ルック(黒/赤/青/黄/緑・null=通常)。 */
+  color_variant?: 'black' | 'red' | 'blue' | 'yellow' | 'green' | null;
 }
 // status: 'ACTIVE'(出走中) | 'BURNED'(消滅) | 'DAY7_CLEARED'(チャンピオン) | 'MEMORIALIZED'(記念馬)
 export interface StableData {

@@ -168,11 +168,20 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
          from horses h where h.owner_user_id = $1 order by h.created_at desc limit 500`,
         [ctx.userId, effectiveRaceDate],
       );
-      // 隠し演出ルック(EASTER_EGG_PLAN.md)— 真偽フラグのみ付与。条件は秘匿。
+      // 隠し演出ルック(EASTER_EGG_PLAN.md)— 真偽フラグ/色種別のみ付与。条件は秘匿。
       const looks = await computeHiddenLooks(ctx.client, rows.rows.map((r) => r.id as string));
       const horses = rows.rows.map((r) => {
         const l = looks.get(r.id as string);
-        return { ...r, night_variant: l?.nightVariant ?? false, golden_star: l?.goldenStar ?? false };
+        return {
+          ...r,
+          night_variant: l?.nightVariant ?? false,
+          golden_star: l?.goldenStar ?? false,
+          golden_aura: l?.goldenAura ?? false,
+          revenge_flame: l?.revengeFlame ?? false,
+          revenge_gold: l?.revengeGold ?? false,
+          milestone: l?.milestone ?? false,
+          color_variant: l?.colorVariant ?? null,
+        };
       });
       return { horses };
     },
@@ -227,6 +236,11 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         ...rows.rows[0],
         night_variant: lk?.nightVariant ?? false,
         golden_star: lk?.goldenStar ?? false,
+        golden_aura: lk?.goldenAura ?? false,
+        revenge_flame: lk?.revengeFlame ?? false,
+        revenge_gold: lk?.revengeGold ?? false,
+        milestone: lk?.milestone ?? false,
+        color_variant: lk?.colorVariant ?? null,
         history: history.rows,
       };
     },

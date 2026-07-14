@@ -20,14 +20,31 @@ import s from '../app/stable.module.css';
 const RANK: Record<string, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
 const PAGE_SIZES = [24, 48, 96, 99999];
 
+/* ---- 隠し演出の原色オーバーレイ色(全身を1色に染める) ---------------------- */
+export const COLOR_OVERLAY: Record<string, string> = {
+  black: 'rgba(6,6,10,0.72)', red: '#e5322d', blue: '#2f6bff',
+  yellow: '#ffcf1f', green: '#22c55e',
+};
+
 /* ---- 部品 ----------------------------------------------------------------- */
 function StableArt({ horse }: { horse: StableHorse }) {
-  // 隠し演出(EASTER_EGG_PLAN.md): 真夜中の馬は夜色ルック、黄金の夜は金星。
+  // 隠し演出(EASTER_EGG_PLAN.md): 真夜中の馬は夜色ルック。原色ルートは全身着色。
   const look = horse.night_variant ? NIGHT_LOOK : deriveNftLook(horse.dna_hash, horse.name);
+  const color = horse.color_variant ? COLOR_OVERLAY[horse.color_variant] : null;
   return (
-    <span className={s.artWrap}>
+    <span className={`${s.artWrap} ${horse.golden_aura ? s.artAura : ''}`}>
       <NftHorseArt look={look} className={s.hartCanvas} />
+      {color ? (
+        <span
+          className={s.colorSkin}
+          style={{ background: color, mixBlendMode: horse.color_variant === 'black' ? 'multiply' : 'color' }}
+        />
+      ) : null}
       {horse.golden_star ? <span className={s.goldenStar} title="黄金の夜の生還馬">★</span> : null}
+      {horse.revenge_flame ? (
+        <span className={`${s.revengeFlame} ${horse.revenge_gold ? s.revengeGold : ''}`} title="リベンジの焔">焔</span>
+      ) : null}
+      {horse.milestone ? <span className={s.milestoneMark} title="記念の一頭">7</span> : null}
     </span>
   );
 }

@@ -281,3 +281,14 @@
 .heroNightTag { position: absolute; top: 14px; left: 14px; z-index: 4; font-family: var(--font-mono, monospace);
   font-size: 9.5px; letter-spacing: 0.22em; color: #cbb8ff; border: 1px solid #7a6bff88;
   background: #1a1440cc; border-radius: 999px; padding: 3px 9px; }
+
+/* 隠し演出(EASTER_EGG_PLAN.md): 原色スキン・オーラ・炎/記念タグ */
+.heroColorSkin { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.heroAura { box-shadow: 0 0 0 2px #ffd977cc, 0 0 34px 5px #ffcf4b55; }
+.heroFlameTag { position: absolute; bottom: 14px; left: 14px; z-index: 4; font-family: var(--font-jp, sans-serif);
+  font-size: 10px; letter-spacing: 0.12em; color: #ffb199; border: 1px solid #ff5a3c88;
+  background: #2a0f0acc; border-radius: 999px; padding: 3px 9px; }
+.heroFlameGold { color: #ffe6a3; border-color: #ffcf4b; background: #2a1f05cc; }
+.heroMilestone { position: absolute; bottom: 14px; right: 14px; z-index: 4; font-family: var(--font-mono, monospace);
+  font-size: 10px; letter-spacing: 0.14em; color: #1a1405; background: linear-gradient(135deg,#ffd977,#b0892f);
+  border-radius: 999px; padding: 3px 10px; font-weight: 800; }

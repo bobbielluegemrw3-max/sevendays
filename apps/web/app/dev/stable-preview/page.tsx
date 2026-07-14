@@ -31,9 +31,15 @@ const HORSES: StableHorse[] = [
       'ACTIVE', i === 1 ? 'SMART' : null),
   ),
   // 手動出品中(Market Lock=今夜走らない)
-  // 隠し演出の視覚確認: 真夜中の馬(夜色)+黄金の夜(金星)
+  // 隠し演出の視覚確認: 真夜中の馬/黄金の夜/原色ルート/オーラ/リベンジ/記念
   { ...H('n001', 'Midnight Veil', 'EPIC', 'LUCK', 3, 66, 22, true, 'ACTIVE'), night_variant: true, golden_star: true },
-  { ...H('g001', 'Gilded Comet', 'RARE', 'POWER', 4, 58, 30, false, 'ACTIVE'), golden_star: true },
+  { ...H('c001', 'Crimson Blaze', 'RARE', 'POWER', 4, 58, 30, false, 'ACTIVE'), color_variant: 'red' },
+  { ...H('c002', 'Azure Tide', 'UNCOMMON', 'SPRINTER', 2, 60, 25, false, 'ACTIVE'), color_variant: 'blue' },
+  { ...H('c003', 'Verdant Gale', 'COMMON', 'ENDURANCE', 3, 55, 28, false, 'ACTIVE'), color_variant: 'green' },
+  { ...H('c004', 'Sunfire Mane', 'RARE', 'LUCK', 5, 62, 20, true, 'ACTIVE'), color_variant: 'yellow' },
+  { ...H('c005', 'Obsidian Vow', 'EPIC', 'BALANCED', 4, 50, 33, false, 'ACTIVE'), color_variant: 'black' },
+  { ...H('r001', 'Ember Return', 'RARE', 'POWER', 3, 57, 31, false, 'ACTIVE'), revenge_flame: true },
+  { ...H('m777', 'Lucky Seven', 'LEGENDARY', 'LUCK', 6, 70, 15, true, 'ACTIVE'), milestone: true, golden_star: true },
   H('m001', 'Velvet Storm', 'RARE', 'SPRINTER', 5, 70, 20, false, 'ACTIVE', 'MANUAL'),
   H('m002', 'Quiet Ember', 'COMMON', 'BALANCED', 2, 55, 33, false, 'ACTIVE', 'MANUAL'),
   H('f001', 'Burning Meteor', 'RARE', 'POWER', 4, 0, 0, false, 'BURNED'),
