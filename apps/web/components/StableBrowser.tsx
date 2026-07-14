@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { NftHorseArt } from '@/components/NftHorseArt';
-import { deriveNftLook } from '@/lib/nft-visual';
+import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { pct, horseValue, rarClass } from '@/components/stable-shared';
 import type { StableHorse } from '@/components/StableView';
 import s from '../app/stable.module.css';
@@ -22,8 +22,14 @@ const PAGE_SIZES = [24, 48, 96, 99999];
 
 /* ---- 部品 ----------------------------------------------------------------- */
 function StableArt({ horse }: { horse: StableHorse }) {
-  const look = deriveNftLook(horse.dna_hash, horse.name);
-  return <NftHorseArt look={look} className={s.hartCanvas} />;
+  // 隠し演出(EASTER_EGG_PLAN.md): 真夜中の馬は夜色ルック、黄金の夜は金星。
+  const look = horse.night_variant ? NIGHT_LOOK : deriveNftLook(horse.dna_hash, horse.name);
+  return (
+    <span className={s.artWrap}>
+      <NftHorseArt look={look} className={s.hartCanvas} />
+      {horse.golden_star ? <span className={s.goldenStar} title="黄金の夜の生還馬">★</span> : null}
+    </span>
+  );
 }
 
 function DayRail({ day }: { day: number }) {

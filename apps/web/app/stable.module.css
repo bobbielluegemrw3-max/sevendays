@@ -338,3 +338,8 @@
 .badgeEmblem { width: 20px; height: 20px; border-radius: 50%; }
 .badgeName { font-family: var(--font-display, sans-serif); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.02em; }
 .badgeFlavor { font-size: 0.72rem; line-height: 1.55; color: var(--muted, #b7b3d0); }
+
+/* 隠し演出(EASTER_EGG_PLAN.md): 金星オーバーレイ */
+.artWrap { position: relative; display: block; }
+.goldenStar { position: absolute; top: 6px; right: 8px; z-index: 3; color: #ffd977;
+  font-size: 15px; line-height: 1; text-shadow: 0 0 8px #ffcf4bcc, 0 0 3px #fff8; pointer-events: none; }

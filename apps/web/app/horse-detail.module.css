@@ -274,3 +274,10 @@
   color: var(--good); font-size: 0.8rem;
 }
 .stGifted { color: var(--gold-bright); border-color: rgba(201, 168, 106, 0.5); background: rgba(201, 168, 106, 0.08); }
+
+/* 隠し演出(EASTER_EGG_PLAN.md) */
+.heroGoldenStar { position: absolute; top: 12px; right: 14px; z-index: 4; color: #ffd977;
+  font-size: 26px; line-height: 1; text-shadow: 0 0 14px #ffcf4bdd, 0 0 4px #fff; pointer-events: none; }
+.heroNightTag { position: absolute; top: 14px; left: 14px; z-index: 4; font-family: var(--font-mono, monospace);
+  font-size: 9.5px; letter-spacing: 0.22em; color: #cbb8ff; border: 1px solid #7a6bff88;
+  background: #1a1440cc; border-radius: 999px; padding: 3px 9px; }

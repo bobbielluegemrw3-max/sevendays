@@ -126,6 +126,21 @@ export function deriveNftLook(dnaHash: string, name: string): NftLook {
 }
 
 /**
+ * 「夜色」ルック(真夜中の馬・EASTER_EGG_PLAN.md)。承認済み576ルックの外にある
+ * 隠し配色 — 深い藍のたてがみ×冷たいボディ角度×ダーク。誰が獲得するかの条件は
+ * サーバーの秘密モジュール(hidden/looks.ts)にのみ存在。見た目そのものは公開。
+ * dnaHash に依らず全ての夜の馬が同じ夜色になる(「特別な一頭」の統一エンブレム性)。
+ */
+export const NIGHT_LOOK: NftLook = {
+  arch: 'v4',
+  bodyDeg: 240,
+  mane: { kind: 'mono', hue: 250 },
+  hue: 250,
+  tone: 'dark',
+  ...frameOf(250),
+};
+
+/**
  * ショーケース: アーキタイプを揃えず(3種すべて登場・同種を隣接させない)、
  * たてがみ色相を互いに離す。プレローンチは Math.random、実DB結線後は実馬。
  */

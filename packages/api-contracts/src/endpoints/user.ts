@@ -18,6 +18,7 @@ import {
 } from '@sevendays/settlement-engine';
 import { verifyWalletLink } from '@sevendays/blockchain';
 import { evaluateHiddenBadges } from '../hidden/achievements.js';
+import { computeHiddenLooks } from '../hidden/looks.js';
 import { ApiError } from '../errors.js';
 import { sendCsEmail } from '../cs/mail.js';
 import type { ApiRegistry } from '../router.js';
@@ -167,7 +168,13 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
          from horses h where h.owner_user_id = $1 order by h.created_at desc limit 500`,
         [ctx.userId, effectiveRaceDate],
       );
-      return { horses: rows.rows };
+      // 隠し演出ルック(EASTER_EGG_PLAN.md)— 真偽フラグのみ付与。条件は秘匿。
+      const looks = await computeHiddenLooks(ctx.client, rows.rows.map((r) => r.id as string));
+      const horses = rows.rows.map((r) => {
+        const l = looks.get(r.id as string);
+        return { ...r, night_variant: l?.nightVariant ?? false, golden_star: l?.goldenStar ?? false };
+      });
+      return { horses };
     },
   });
 
@@ -201,6 +208,9 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         [ctx.params.id, ctx.userId, effectiveRaceDate],
       );
       if (!rows.rows[0]) throw new ApiError('NOT_FOUND', 'Horse not found');
+      // 隠し演出ルック(EASTER_EGG_PLAN.md)— 詳細ページ用の真偽フラグ。
+      const looks = await computeHiddenLooks(ctx.client, [ctx.params.id!]);
+      const lk = looks.get(ctx.params.id!);
       const history = await ctx.client.query(
         `select br.batch_date::text as batch_date, rr.final_rank, rr.final_score::text as final_score,
                 rr.is_burned, r.participant_count,
@@ -213,7 +223,12 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
          order by br.batch_date asc`,
         [ctx.params.id],
       );
-      return { ...rows.rows[0], history: history.rows };
+      return {
+        ...rows.rows[0],
+        night_variant: lk?.nightVariant ?? false,
+        golden_star: lk?.goldenStar ?? false,
+        history: history.rows,
+      };
     },
   });
 

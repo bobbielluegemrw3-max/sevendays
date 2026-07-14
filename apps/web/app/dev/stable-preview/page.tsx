@@ -31,6 +31,9 @@ const HORSES: StableHorse[] = [
       'ACTIVE', i === 1 ? 'SMART' : null),
   ),
   // 手動出品中(Market Lock=今夜走らない)
+  // 隠し演出の視覚確認: 真夜中の馬(夜色)+黄金の夜(金星)
+  { ...H('n001', 'Midnight Veil', 'EPIC', 'LUCK', 3, 66, 22, true, 'ACTIVE'), night_variant: true, golden_star: true },
+  { ...H('g001', 'Gilded Comet', 'RARE', 'POWER', 4, 58, 30, false, 'ACTIVE'), golden_star: true },
   H('m001', 'Velvet Storm', 'RARE', 'SPRINTER', 5, 70, 20, false, 'ACTIVE', 'MANUAL'),
   H('m002', 'Quiet Ember', 'COMMON', 'BALANCED', 2, 55, 33, false, 'ACTIVE', 'MANUAL'),
   H('f001', 'Burning Meteor', 'RARE', 'POWER', 4, 0, 0, false, 'BURNED'),

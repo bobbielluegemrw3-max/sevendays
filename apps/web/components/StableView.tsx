@@ -25,6 +25,9 @@ export interface StableHorse {
   dna_hash: string; trained_for_next_race: boolean;
   /** 'SMART' | 'MANUAL' | null — 出品中の事実表示(Decision 087監査)。 */
   listing: string | null;
+  /** 隠し演出(EASTER_EGG_PLAN.md)— 真夜中の馬=夜色ルック / 黄金の夜=金星。 */
+  night_variant?: boolean;
+  golden_star?: boolean;
 }
 // status: 'ACTIVE'(出走中) | 'BURNED'(消滅) | 'DAY7_CLEARED'(チャンピオン) | 'MEMORIALIZED'(記念馬)
 export interface StableData {

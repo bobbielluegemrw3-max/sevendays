@@ -14,7 +14,7 @@ import { TrainingForm } from '@/components/TrainingForm';
 import { ItemBoostPanel } from '@/components/ItemBoostPanel';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
 import { RarityLegend } from '@/components/RarityLegend';
-import { deriveNftLook } from '@/lib/nft-visual';
+import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import s from '../app/horse-detail.module.css';
 
 /* ============================================================================
@@ -54,6 +54,9 @@ export interface HorseDetail {
   listing: string | null;
   /** 次のレース向けの調教済みか(2026-07-14: 調教フォームの完了表示用)。 */
   trained_for_next_race?: boolean;
+  /** 隠し演出(EASTER_EGG_PLAN.md)。 */
+  night_variant?: boolean;
+  golden_star?: boolean;
   /** この馬の全戦績(日付昇順)。 */
   history: HorseRaceResult[];
 }
@@ -265,7 +268,8 @@ function ValueLadder({ horse, mode }: { horse: HorseDetail; mode: Mode }) {
 
 /* ---- メイン --------------------------------------------------------------- */
 export function HorseDetailView({ horse }: { horse: HorseDetail }) {
-  const look = deriveNftLook(horse.dna_hash, horse.name);
+  // 隠し演出(EASTER_EGG_PLAN.md): 真夜中の馬は夜色ルック。
+  const look = horse.night_variant ? NIGHT_LOOK : deriveNftLook(horse.dna_hash, horse.name);
   const mode = modeOf(horse);
   const badge = statusBadge(mode);
   const mv = mastValue(horse, mode);
@@ -303,6 +307,9 @@ export function HorseDetailView({ horse }: { horse: HorseDetail }) {
           <div className={s.heroInner}>
             <div className={s.artBox}>
               <NftHorseArt look={look} className={s.heroCanvas} />
+              {/* 隠し演出(EASTER_EGG_PLAN.md) */}
+              {horse.golden_star ? <span className={s.heroGoldenStar} title="黄金の夜の生還馬">★</span> : null}
+              {horse.night_variant ? <span className={s.heroNightTag}>MIDNIGHT</span> : null}
               <div className={s.scrim} />
               <div className={s.artCap}>
                 <div>
