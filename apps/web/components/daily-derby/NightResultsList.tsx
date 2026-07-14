@@ -1,10 +1,19 @@
 'use client';
 
-import { ITEM_BY_KEY_V2 } from '@sevendays/domain';
+import { DAY0_MINT_FEE, ITEM_BY_KEY_V2 } from '@sevendays/domain';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import type { DerbyNightResults } from '@/lib/daily-derby';
 import s from '../../app/races.module.css';
+
+/* 表示は実際に動いたお金(2026-07-14 オーナー指摘):
+   新規発行=価格100+ミント手数料2=102 / P2P購入=成立額そのまま /
+   売却=成立額から手数料2%を引いた受取額。桁は2桁に整形(8桁生表示をやめる)。 */
+const money = (v: string | number): string =>
+  Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const MINT_FEE = Number(DAY0_MINT_FEE);
+const mintPaid = (price: string): string => money(Number(price) + MINT_FEE);
+const soldNet = (price: string): string => money(Number(price) * 0.98);
 
 /**
  * ある夜の自分の全結果(BURN/生存/DAY7/P2P売買/新規発行)の行リスト。
@@ -87,7 +96,7 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
       <HorseThumb dna={h.dna_hash} name={h.name} />
       <div className={s.recBody}>
         <div className={s.recName}>{h.name}</div>
-        <div className={s.recSub}>{h.counterpart} と売却マッチング成立 — <b className={s.recGold}>{h.price} USDT</b></div>
+        <div className={s.recSub}>{h.counterpart} と売却マッチング成立 {money(h.price)} — 受取 <b className={s.recGold}>{soldNet(h.price)} USDT</b>(手数料2%)</div>
       </div>
       <span className={`${s.recBadge} ${s.recBadgeCyan}`}>売却</span>
     </div>
@@ -100,8 +109,8 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
         <div className={s.recName}>{h.name}</div>
         <div className={s.recSub}>
           {h.is_mint
-            ? <>新規発行(DAY0)で入手 — <b className={s.recGold}>{h.price} USDT</b></>
-            : <>{h.counterpart} と購入マッチング成立(DAY{h.day}) — <b className={s.recGold}>{h.price} USDT</b></>}
+            ? <>新規発行(DAY0)で入手 — 支払 <b className={s.recGold}>{mintPaid(h.price)} USDT</b>({money(h.price)}+手数料{MINT_FEE})</>
+            : <>{h.counterpart} と購入マッチング成立(DAY{h.day}) — 支払 <b className={s.recGold}>{money(h.price)} USDT</b></>}
         </div>
       </div>
       <span className={`${s.recBadge} ${h.is_mint ? s.recBadgeMint : s.recBadgeCyan}`}>

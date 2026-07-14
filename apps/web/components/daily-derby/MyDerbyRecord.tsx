@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DAY0_MINT_FEE } from '@sevendays/domain';
 import { apiFetch } from '@/lib/client-api';
 import { NightResultsList, nightResultsCount } from '@/components/daily-derby/NightResultsList';
 import { conditionsView, type DerbyConditionsView, type DerbyNightResults } from '@/lib/daily-derby';
@@ -64,8 +65,13 @@ function NightDigest({ iso, data }: { iso: string; data: MyResults }) {
   const srv = data.survived.filter((h) => !h.day7).length;
   const burn = data.burned.length;
   const trade = data.sold.length + data.bought.length;
-  const inSum = data.sold.reduce((t, h) => t + Number(h.price), 0);
-  const outSum = data.bought.reduce((t, h) => t + Number(h.price), 0);
+  // 実際に動いたお金で合計する(2026-07-14 オーナー指摘):
+  // 売却=手数料2%控除後の受取 / 新規発行=価格+ミント手数料2 / P2P購入=成立額。
+  const inSum = data.sold.reduce((t, h) => t + Number(h.price) * 0.98, 0);
+  const outSum = data.bought.reduce(
+    (t, h) => t + Number(h.price) + (h.is_mint ? Number(DAY0_MINT_FEE) : 0),
+    0,
+  );
   const empty = nightResultsCount(data) === 0;
 
   const idx = data.dates.indexOf(iso);
@@ -91,8 +97,8 @@ function NightDigest({ iso, data }: { iso: string; data: MyResults }) {
           </div>
           {(data.sold.length > 0 || data.bought.length > 0) && (
             <div className={s.pl}>
-              {data.sold.length > 0 && <span className={s.plIn}>売却 受取 <b>+{money(inSum)}</b> USDT</span>}
-              {data.bought.length > 0 && <span className={s.plOut}>購入・発行 支払 <b>−{money(outSum)}</b> USDT</span>}
+              {data.sold.length > 0 && <span className={s.plIn}>売却 受取(手数料2%控除後) <b>+{money(inSum)}</b> USDT</span>}
+              {data.bought.length > 0 && <span className={s.plOut}>購入・発行 支払(手数料込み) <b>−{money(outSum)}</b> USDT</span>}
             </div>
           )}
         </>
