@@ -186,7 +186,7 @@ describe('Batch steps v1.0', () => {
 describe('misc fixed values', () => {
   it('MLM reward is 10.00, max sessions 10', () => {
     expect(MLM_REWARD_AMOUNT).toBe('10.00');
-    expect(MAX_CONCURRENT_PURCHASE_SESSIONS).toBe(10);
+    expect(MAX_CONCURRENT_PURCHASE_SESSIONS).toBe(1000); // Decision 096: 実質無制限(安全天井)
   });
 
   it('support bonus tiers (Decision 074): 3/2/1x5 summing to the 10.00 cap', () => {

@@ -403,10 +403,17 @@ export const WITHDRAWAL_ADMIN_REVIEW_THRESHOLD = '1000';
 export const WITHDRAWAL_MAX_DECIMALS = 6;
 
 // ---------------------------------------------------------------------------
-// Purchase sessions (Decisions 043, 051)
+// Purchase sessions (Decisions 043, 051; Decision 096 lifts the cap)
 // ---------------------------------------------------------------------------
 
-export const MAX_CONCURRENT_PURCHASE_SESSIONS = 10;
+/**
+ * Decision 096: 実質無制限(旧10)。大口ユーザー(例: 10,000 USDT=56頭)と
+ * プロモ在庫の仕込みを妨げない。1000は商品上の上限ではなく暴走バグ用の
+ * 安全天井(残高ロックが実際の制約)。
+ */
+export const MAX_CONCURRENT_PURCHASE_SESSIONS = 1000;
+/** 1リクエストで作成できる予約数(直列作成のためのリクエスト単位の上限)。 */
+export const PURCHASE_MAX_PER_REQUEST = 100;
 
 // ---------------------------------------------------------------------------
 // Batch (05_SETTLEMENT_ENGINE.md, Decision 047)

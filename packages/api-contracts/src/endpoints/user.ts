@@ -4,7 +4,7 @@ import {
   MIN_WITHDRAWAL_AMOUNT,
   DEFAULT_CHAIN,
   TRAINING_TYPES,
-  MAX_CONCURRENT_PURCHASE_SESSIONS,
+  PURCHASE_MAX_PER_REQUEST,
   PURCHASE_LOCK_AMOUNT,
   recommendedTrainingV1,
   renderNotification,
@@ -639,7 +639,9 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     // 途中で失敗(残高不足・上限)しても作成済みセッションはそのまま残る —
     // 各セッションは独立に有効で、同じキーの再試行は作成済み分をリプレイして続きから進む。
     input: z.object({
-      count: z.number().int().min(1).max(MAX_CONCURRENT_PURCHASE_SESSIONS).optional(),
+      // Decision 096: 同時予約の上限は実質撤廃。1リクエストの作成数だけ
+      // PURCHASE_MAX_PER_REQUEST(直列作成の実行時間ガード)で区切る。
+      count: z.number().int().min(1).max(PURCHASE_MAX_PER_REQUEST).optional(),
     }),
     handler: async (ctx, input) => {
       const count = input.count ?? 1;

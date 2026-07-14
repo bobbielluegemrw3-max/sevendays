@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { MAX_CONCURRENT_PURCHASE_SESSIONS, PURCHASE_LOCK_AMOUNT } from '@sevendays/domain';
+import {
+  MAX_CONCURRENT_PURCHASE_SESSIONS,
+  PURCHASE_LOCK_AMOUNT,
+  PURCHASE_MAX_PER_REQUEST,
+} from '@sevendays/domain';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import s from '../app/market.module.css';
 import d from '../app/support.module.css';
@@ -35,7 +39,9 @@ export function ReservePanel({
   const availableNum = Number(available);
   const maxByBalance = Math.max(0, Math.floor(availableNum / LOCK));
   const slots = Math.max(0, MAX_CONCURRENT_PURCHASE_SESSIONS - pendingCount);
-  const maxN = Math.min(maxByBalance, slots);
+  // Decision 096: 同時上限は実質撤廃(残高が実際の制約)。1回の操作は
+  // PURCHASE_MAX_PER_REQUESTまで — それ以上は続けてもう一度予約すればよい。
+  const maxN = Math.min(maxByBalance, slots, PURCHASE_MAX_PER_REQUEST);
 
   const [count, setCount] = useState(1);
   const [confirming, setConfirming] = useState(false);
@@ -137,7 +143,7 @@ export function ReservePanel({
             </div>
           ) : slots === 0 ? (
             <div className={s.reserveBlocked}>
-              予約は同時に{MAX_CONCURRENT_PURCHASE_SESSIONS}件までです。今夜20:00の処理をお待ちください。
+              予約が上限に達しています。今夜20:00の処理をお待ちください。
             </div>
           ) : (
             <div className={s.reserveAction}>
