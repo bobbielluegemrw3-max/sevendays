@@ -8,6 +8,7 @@ import { registerDerbyEndpoints } from './endpoints/derby.js';
 import { registerInternalEndpoints } from './endpoints/internal.js';
 import { registerCsEndpoints } from './endpoints/cs.js';
 import { registerPushEndpoints } from './endpoints/push.js';
+import { registerPromoEndpoints } from './endpoints/promo.js';
 
 export * from './errors.js';
 export * from './forbidden.js';
@@ -26,6 +27,7 @@ export function buildApiRegistry(): ApiRegistry {
   registerCsEndpoints(registry);
   registerInternalEndpoints(registry);
   registerPushEndpoints(registry);
+  registerPromoEndpoints(registry);
   return registry;
 }
 

@@ -11,6 +11,7 @@ const LINKS: { href: string; label: string }[] = [
   { href: '/admin/economy', label: '経済' },
   { href: '/admin/users', label: 'ユーザー' },
   { href: '/admin/items', label: 'アイテム' },
+  { href: '/admin/promo', label: 'プロモ' },
   { href: '/admin/races', label: 'レース' },
   { href: '/admin/support', label: 'サポート' },
   { href: '/admin/batches', label: 'バッチ' },

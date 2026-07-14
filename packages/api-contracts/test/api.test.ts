@@ -1936,3 +1936,96 @@ Seven Days Derby サポート', 0.9)
     expect(sbody.broadcasts.some((b) => b.mode === 'TEST')).toBe(true);
   });
 });
+
+describe('promo horse gifting (Decision 095)', () => {
+  function asAdmin(userId: string, roles: string[]): AuthContext {
+    return { kind: 'admin', userId, roles };
+  }
+
+  async function promoHorse(ownerId: string, day: number): Promise<string> {
+    const r = await client.query<{ id: string }>(
+      `insert into horses (owner_user_id, current_day, name, horse_type, rarity, dna_hash, dna_modifier,
+                           horse_generation_version, mint_seed_hash, ability_json)
+       values ($1, $2, $3, 'BALANCED', 'COMMON', $4, 0.5, 'horse_generation_v1.0', $5, $6)
+       returning id`,
+      [
+        ownerId,
+        day,
+        `Promo Horse ${randomUUID().slice(0, 13)}`,
+        randomUUID().replaceAll('-', ''),
+        randomUUID().replaceAll('-', ''),
+        JSON.stringify({ speed: 70, power: 70, stamina: 70, recovery: 70, luck: 70 }),
+      ],
+    );
+    return r.rows[0]!.id;
+  }
+
+  it('codes are generated, redeemed once per user per campaign, youngest stock first', async () => {
+    const stable = await newUser();
+    const stableEmail = await client.query<{ email: string }>(`select email from users where id = $1`, [stable]);
+    process.env.PROMO_STABLE_EMAIL = stableEmail.rows[0]!.email;
+    const admin = await newUser();
+    await client.query(`insert into admin_role_grants (user_id, role) values ($1, 'SUPER_ADMIN')`, [admin]);
+
+    // 在庫: Day3とDay1(若いDAY優先でDay1から配られる)
+    await promoHorse(stable, 3);
+    const young = await promoHorse(stable, 1);
+
+    const created = await call('POST', '/api/v1/admin/promo/codes', asAdmin(admin, ['SUPER_ADMIN']), {
+      body: { campaign: 'seminar-01', count: 3 },
+    });
+    expect(created.status).toBe(200);
+    const codes = (created.body as { codes: string[] }).codes;
+    expect(codes).toHaveLength(3);
+    expect(codes[0]).toMatch(/^SDD-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+
+    // 引換: Day1の馬が渡り、gifted_atが付き、通知が届く
+    const user = await newUser();
+    const redeem = await call('POST', '/api/v1/promo/redeem', asUser(user), {
+      body: { code: codes[0]!.toLowerCase() },
+    });
+    expect(redeem.status).toBe(200);
+    expect((redeem.body as { horse_id: string }).horse_id).toBe(young);
+    const owned = await client.query<{ owner_user_id: string; gifted_at: string | null }>(
+      `select owner_user_id, gifted_at::text as gifted_at from horses where id = $1`,
+      [young],
+    );
+    expect(owned.rows[0]!.owner_user_id).toBe(user);
+    expect(owned.rows[0]!.gifted_at).not.toBeNull();
+
+    // 同じコードは再利用不可 / 同キャンペーンで2枚目も不可
+    const again = await call('POST', '/api/v1/promo/redeem', asUser(await newUser()), {
+      body: { code: codes[0]! },
+    });
+    expect(again.status).toBe(409);
+    const second = await call('POST', '/api/v1/promo/redeem', asUser(user), {
+      body: { code: codes[1]! },
+    });
+    expect(second.status).toBe(409);
+    expect((second.body as { error: { code: string } }).error.code).toBe('PROMO_ALREADY_REDEEMED');
+
+    // 管理者の直接配布(在庫の残りDay3が渡る)→ 在庫切れで409
+    const walkIn = await newUser();
+    const walkInEmail = await client.query<{ email: string }>(`select email from users where id = $1`, [walkIn]);
+    const gift = await call('POST', '/api/v1/admin/promo/gift', asAdmin(admin, ['SUPER_ADMIN']), {
+      body: { recipient_email: walkInEmail.rows[0]!.email },
+    });
+    expect(gift.status).toBe(200);
+    const empty = await call('POST', '/api/v1/admin/promo/gift', asAdmin(admin, ['SUPER_ADMIN']), {
+      body: { recipient_email: walkInEmail.rows[0]!.email },
+    });
+    expect(empty.status).toBe(409);
+    expect((empty.body as { error: { code: string } }).error.code).toBe('PROMO_OUT_OF_STOCK');
+
+    // 無効コード / ユーザーはadmin APIに触れない
+    const bad = await call('POST', '/api/v1/promo/redeem', asUser(await newUser()), {
+      body: { code: 'SDD-XXXX-XXXX' },
+    });
+    expect(bad.status).toBe(404);
+    const forbidden = await call('POST', '/api/v1/admin/promo/codes', asUser(user), {
+      body: { campaign: 'x', count: 1 },
+    });
+    expect([401, 403]).toContain(forbidden.status);
+    delete process.env.PROMO_STABLE_EMAIL;
+  });
+});

@@ -3,6 +3,7 @@ import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { Countdown } from '@/components/Countdown';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { PwaSetupTile } from '@/components/PwaSetupTile';
+import { PromoRedeemForm } from '@/components/PromoRedeemForm';
 import { TradeAutoTile, TradeModeModal, type TradeSettings } from '@/components/TradeAutoControls';
 import { deriveNftLook } from '@/lib/nft-visual';
 import s from '../app/dashboard.module.css';
@@ -184,6 +185,9 @@ export function DashboardView({ data }: { data: DashboardData }) {
           </div>
         </section>
       )}
+
+      {/* ===== ③.5 引換コード(Decision 095: セミナー特典馬) ===== */}
+      <PromoRedeemForm />
 
       {/* ===== ④ 資産(残高 / 評価額 / Revenge Buff) ===== */}
       <section className={s.assets}>
