@@ -164,17 +164,17 @@ export function MarketPlaceView({
       {/* ---- 市場の鼓動 ---- */}
       <div className={s.pulse}>
         <div className={`${s.pulseCard} ${s.pulseBuy}`}>
-          <div className={s.pulseK}>今夜の買い予約 · DEMAND</div>
+          <div className={s.pulseK}>今夜の買い予約(需要)</div>
           <div className={s.pulseV}>{data.pending_buy_count.toLocaleString('en-US')}<span className={s.pulseUnit}> 件</span></div>
           <div className={s.pulseSub}>全プレイヤー合計(匿名)</div>
         </div>
         <div className={`${s.pulseCard} ${s.pulseSell}`}>
-          <div className={s.pulseK}>出品中の馬 · SUPPLY</div>
+          <div className={s.pulseK}>出品中の馬(供給)</div>
           <div className={s.pulseV}>{data.shelf.length.toLocaleString('en-US')}<span className={s.pulseUnit}> 頭</span></div>
           <div className={s.pulseSub}>マッチング順に掲載</div>
         </div>
         <div className={`${s.pulseCard} ${s.pulseMatch}`}>
-          <div className={s.pulseK}>直近の成約 · LAST MATCH</div>
+          <div className={s.pulseK}>直近の成約価格</div>
           <div className={s.pulseV}>{data.recent_matches.length > 0 ? fmt(data.recent_matches[0]!.price) : '—'}</div>
           <div className={s.pulseSub}>{data.recent_matches.length > 0 ? `${data.recent_matches[0]!.horse_name} · 最新` : 'まだありません'}</div>
         </div>
@@ -185,8 +185,8 @@ export function MarketPlaceView({
       {/* ---- 第1幕: SHOWCASE(出品中+直近の実成約SOLD、Decision 085) ---- */}
       <section className="panel">
         <div className="section-head">
-          <h2>SHOWCASE</h2>
-          <span className={s.shelfHeadNote}>出品中の馬は先頭から順にマッチングされます</span>
+          <h2>出品中の馬</h2>
+          <span className={s.shelfHeadNote}>先頭から順にマッチングされます</span>
         </div>
         {data.shelf.length === 0 && data.recent_matches.length === 0 ? (
           <p className="empty">まだ出品も成約もありません。今夜の最初の取引者になりましょう。</p>

@@ -77,8 +77,8 @@ export default async function MarketPreview({
               { id: 's3', status: 'EXPIRED', locked_amount: '177.16', assigned_price: null, refund_amount: '177.16', created_at: iso(5, 3) },
             ]}
             assignments={[
-              { id: 'as1', horse_id: 'h9', assigned_price: '133.10', status: 'SETTLED', was_day0_mint: false, created_at: iso(6, 12) },
-              { id: 'as2', horse_id: 'h8', assigned_price: '102.00', status: 'SETTLED', was_day0_mint: true, created_at: iso(5, 12) },
+              { id: 'as1', horse_id: 'h9', horse_name: 'Lunar Echo', assigned_price: '133.10', status: 'SETTLED', was_day0_mint: false, is_buyer: true, created_at: iso(6, 12) },
+              { id: 'as2', horse_id: 'h8', horse_name: 'Silent Dash', assigned_price: '100.00', status: 'SETTLED', was_day0_mint: true, is_buyer: true, created_at: iso(5, 12) },
             ]}
           />
         </>

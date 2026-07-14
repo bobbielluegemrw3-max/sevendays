@@ -20,15 +20,43 @@ function money(v: string | null): string {
   const n = Number(v);
   return Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v;
 }
+/** UTCのDB時刻を現地時刻 "YYYY-MM-DD HH:mm" に。 */
+function localTime(created: string): string {
+  const iso = created.replace(' ', 'T');
+  const d = new Date(/[+Z]/.test(iso.slice(10)) ? iso : `${iso}Z`);
+  if (Number.isNaN(d.getTime())) return created.slice(0, 16);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 function sessionMeta(status: string): { cls: string; label: string; pending: boolean } {
   switch (status) {
     case 'PENDING_ASSIGNMENT': return { cls: s.stPending!, label: '割当待ち', pending: true };
-    case 'ASSIGNED': return { cls: s.stAssigned!, label: '割当済', pending: false };
-    case 'COMPLETED': return { cls: s.stAssigned!, label: '完了', pending: false };
-    case 'REFUNDED': return { cls: s.stMuted!, label: '返金済', pending: false };
-    case 'EXPIRED': return { cls: s.stMuted!, label: '返金済(未割当)', pending: false };
+    case 'ASSIGNED': return { cls: s.stAssigned!, label: '馬を入手', pending: false };
+    case 'COMPLETED': return { cls: s.stAssigned!, label: '馬を入手', pending: false };
+    case 'REFUNDED': return { cls: s.stMuted!, label: '全額返金', pending: false };
+    case 'EXPIRED': return { cls: s.stMuted!, label: '全額返金(供給なし)', pending: false };
     case 'CANCELLED': return { cls: s.stMuted!, label: 'キャンセル', pending: false };
     default: return { cls: s.stMuted!, label: status, pending: false };
+  }
+}
+/** 予約1件で「実際に何が起きたか」の1文。 */
+function sessionStory(ss: Session): string {
+  switch (ss.status) {
+    case 'PENDING_ASSIGNMENT':
+      return `最大 ${money(ss.locked_amount)} USDT をロック中。今夜20:00のマッチングで馬が割り当てられます(20:00前ならキャンセルで全額返金)。`;
+    case 'ASSIGNED':
+    case 'COMPLETED': {
+      const paid = money(ss.assigned_price);
+      const refund = Number(ss.refund_amount) > 0 ? `、差額 ${money(ss.refund_amount)} USDT を返金` : '';
+      return `${paid} USDT の馬を入手しました${refund}。`;
+    }
+    case 'REFUNDED':
+    case 'EXPIRED':
+      return `割り当てがなかったため、ロックした ${money(ss.locked_amount)} USDT は全額返金されました。`;
+    case 'CANCELLED':
+      return `キャンセルしました。ロックした ${money(ss.locked_amount)} USDT は全額返金済みです。`;
+    default:
+      return '';
   }
 }
 
@@ -38,7 +66,7 @@ export function PurchaseView({ sessions, assignments }: { sessions: Session[]; a
       {/* 予約一覧 */}
       <div>
         <div className={s.secHead}>
-          <span className={s.secLabel}>あなたの予約 · RESERVATIONS</span>
+          <span className={s.secLabel}>あなたの購入予約</span>
           <span className={s.secCount}>{sessions.length}</span>
         </div>
         {sessions.length > 0 ? (
@@ -49,14 +77,10 @@ export function PurchaseView({ sessions, assignments }: { sessions: Session[]; a
                 <div key={ss.id} className={`${s.sCard} ${m.pending ? s.sPending : ''}`}>
                   <div className={s.sTop}>
                     <span className={`${s.badge} ${m.cls}`}>{m.label}</span>
-                    <span className={s.sCreated}>{ss.created_at.slice(0, 19)}</span>
+                    <span className={s.sCreated}>{localTime(ss.created_at)}</span>
                     {m.pending ? <span className={s.sCancel}><CancelSessionButton sessionId={ss.id} /></span> : null}
                   </div>
-                  <div className={s.sVals}>
-                    <div><div className={s.sK}>ロック額</div><div className={`${s.sV} ${s.sVlock}`}>{money(ss.locked_amount)}<small>USDT</small></div></div>
-                    <div><div className={s.sK}>割当価格</div><div className={`${s.sV} ${s.sVassign}`}>{money(ss.assigned_price)}</div></div>
-                    <div><div className={s.sK}>返金</div><div className={`${s.sV} ${s.sVrefund}`}>{money(ss.refund_amount)}</div></div>
-                  </div>
+                  <div className={s.sStory}>{sessionStory(ss)}</div>
                 </div>
               );
             })}
@@ -66,10 +90,10 @@ export function PurchaseView({ sessions, assignments }: { sessions: Session[]; a
         )}
       </div>
 
-      {/* 割当履歴 */}
+      {/* 入手・売却した馬 */}
       <div>
         <div className={s.secHead}>
-          <span className={s.secLabel}>割当履歴 · ASSIGNMENTS</span>
+          <span className={s.secLabel}>入手・売却した馬</span>
           <span className={s.secCount}>{assignments.length}</span>
         </div>
         <AssignmentList assignments={assignments} />

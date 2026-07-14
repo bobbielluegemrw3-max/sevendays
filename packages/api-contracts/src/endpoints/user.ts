@@ -792,12 +792,18 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     path: '/api/v1/assignments',
     auth: 'user',
     handler: async (ctx) => {
+      // 2026-07-14: 馬名と売買の向き(買い/売り)を同梱 — UIが内部IDではなく
+      // 「Bright Dash を購入」のように表示できるように。
       const rows = await ctx.client.query(
-        `select id, horse_id, assigned_price::text as assigned_price, status::text as status,
-                (market_listing_id is null) as was_day0_mint, created_at::text as created_at
-         from ownership_assignments
-         where buyer_user_id = $1 or seller_user_id = $1
-         order by created_at desc limit 100`,
+        `select a.id, a.horse_id, h.name as horse_name,
+                a.assigned_price::text as assigned_price, a.status::text as status,
+                (a.market_listing_id is null) as was_day0_mint,
+                (a.buyer_user_id = $1) as is_buyer,
+                a.created_at::text as created_at
+         from ownership_assignments a
+         join horses h on h.id = a.horse_id
+         where a.buyer_user_id = $1 or a.seller_user_id = $1
+         order by a.created_at desc limit 100`,
         [ctx.userId],
       );
       return { assignments: rows.rows };

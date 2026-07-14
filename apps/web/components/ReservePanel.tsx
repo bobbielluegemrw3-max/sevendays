@@ -80,7 +80,7 @@ export function ReservePanel({
   return (
     <section id="reserve" className={s.reserve}>
       <div className={s.reserveHead}>
-        <span className={s.reserveTitle}>購入予約 · RESERVE</span>
+        <span className={s.reserveTitle}>購入予約 — 馬を迎える</span>
         <span className={s.reserveBalance}>
           残高 <b>{fmt(availableNum)}</b> USDT
           <Link href="/wallet" className={s.reserveDeposit}>入金 →</Link>

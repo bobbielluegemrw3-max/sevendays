@@ -36,6 +36,9 @@
 .sTop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .sCreated { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); }
 .sCancel { margin-left: auto; }
+/* 予約カードの「何が起きたか」1文(2026-07-14: 生の3列を置換) */
+.sStory { margin-top: 9px; font-family: var(--font-jp, sans-serif); font-size: 12.5px;
+  line-height: 1.7; color: var(--text, #e9e7f5); }
 .sVals { display: flex; gap: 22px; margin-top: 11px; flex-wrap: wrap; }
 .sK { font-family: var(--font-mono); font-size: 8.5px; color: var(--faint); }
 .sV { font-family: var(--font-display); font-weight: 700; font-size: 16px; margin-top: 2px; }
