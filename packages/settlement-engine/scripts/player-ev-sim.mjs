@@ -57,7 +57,7 @@ function binom(rand, n, p) {
  *  payoutModel: 'celebration092'(現行: チャンピオン時に3/2/1) |
  *               'burn074'(旧: BURN時に3/2/1) |
  *               'burn021'(旧々: BURN時に直接紹介者へ10 USDT・1段のみ) */
-function simulate({ rand, days, playerSlots, tiers, burnRate, payoutModel = 'celebration092' }) {
+function simulate({ rand, days, playerSlots, tiers, burnRate, payoutModel = 'celebration092', tierAmounts = TIER_AMOUNTS }) {
   // プレイヤー自身の馬: 日齢別の頭数(常時 playerSlots 稼働)
   let own = [playerSlots, 0, 0, 0, 0, 0, 0];
   // 組織: tier d ごとに [メンバー数 m, 1人あたり馬数 h] → 馬プール(日齢別)
@@ -122,11 +122,11 @@ function simulate({ rand, days, playerSlots, tiers, burnRate, payoutModel = 'cel
         if (payoutModel === 'burn021') {
           if (d === 1) celebIncome += burned * 10; // 直接紹介者へ10 USDT/BURN
         } else if (payoutModel === 'burn074') {
-          if (d <= unlocked) celebIncome += burned * TIER_AMOUNTS[d];
+          if (d <= unlocked) celebIncome += burned * tierAmounts[d];
         }
         if (a === 6) {
           if (payoutModel === 'celebration092' && d <= unlocked) {
-            celebIncome += survived * TIER_AMOUNTS[d];
+            celebIncome += survived * tierAmounts[d];
           }
           resolved += survived;
         } else {
@@ -309,4 +309,40 @@ if (process.env.EQUIV_CHECK) {
     const { p, mean } = quickP({ tiers, payoutModel: model });
     console.log(name.padEnd(34) + ' P(プラス) ' + pct(p).padStart(6) + ' | 12週平均 ' + usd(mean).padStart(7));
   }
+}
+
+// ---- 4. ティア再配分の候補比較(REWEIGHT_CHECK=1) — Decision 099 検討材料 ----
+// トリガーは現行(チャンピオン祝い金)のまま、金額テーブルだけ差し替えた場合。
+// 全案とも合計≦11(満資格でも期待支払い 11×45.3%=4.98 < 積立5.40 = 構造的に安全)。
+if (process.env.REWEIGHT_CHECK) {
+  const CANDIDATES = [
+    ['A 現行 3/2/1×5(計10)', [0, 3, 2, 1, 1, 1, 1, 1]],
+    ['B T1=5/2/0.6×5(計10)', [0, 5, 2, 0.6, 0.6, 0.6, 0.6, 0.6]],
+    ['C T1=6/2/0.4×5(計10)', [0, 6, 2, 0.4, 0.4, 0.4, 0.4, 0.4]],
+    ['D T1=8/2/0.2×5(計11)', [0, 8, 2, 0.2, 0.2, 0.2, 0.2, 0.2]],
+    ['E T1=10/1/0×5(計11)', [0, 10, 1, 0, 0, 0, 0, 0]],
+  ];
+  const SHAPES = [
+    ['24人×2頭', [[24, 2]]],
+    ['24人×3頭', [[24, 3]]],
+    ['24人×3頭+各自1人紹介(T2=24人×3頭)', [[24, 3], [24, 3]]],
+    ['24人×3頭+深さ3(24→48→96)', [[24, 3], [48, 3], [96, 3]]],
+  ];
+  console.log('');
+  console.log('=== ティア再配分候補 × 組織形: P(12週でプラス) / 12週平均 ===');
+  for (const [shapeName, tiers] of SHAPES) {
+    console.log(`\n-- ${shapeName} --`);
+    for (const [candName, amounts] of CANDIDATES) {
+      const rand = rng(23);
+      let pos = 0, sum = 0;
+      const trials = 2000;
+      for (let t = 0; t < trials; t++) {
+        const r = simulate({ rand, days: 84, playerSlots: 10, tiers, burnRate: 0.107, tierAmounts: amounts });
+        if (r.total >= 0) pos++;
+        sum += r.total;
+      }
+      console.log(`  ${candName.padEnd(24)} P ${pct(pos / trials).padStart(6)} | 平均 ${usd(sum / trials).padStart(7)}`);
+    }
+  }
+  console.log('\n(比較基準: 旧021モデルは 24人×2頭=96.2% / 24人×3頭=99.9%)');
 }
