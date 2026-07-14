@@ -62,6 +62,8 @@ export interface ListableHorse {
   current_day: number;
   status: string;
   dna_hash: string;
+  /** 譲渡された馬(Decision 094)— 手動出品不可。 */
+  gifted_at?: string | null;
 }
 
 export interface MarketPlaceData {
@@ -107,8 +109,9 @@ export function MarketPlaceView({
   };
 
   const myIds = new Set(data.my_listings.map((l) => l.horse_id));
+  // Decision 094: 譲渡された馬(gifted_at)は手動出品不可のため候補から除外。
   const listable = myHorses.filter(
-    (h) => h.status === 'ACTIVE' && h.current_day >= 1 && h.current_day <= 6 && !myIds.has(h.id),
+    (h) => h.status === 'ACTIVE' && h.current_day >= 1 && h.current_day <= 6 && !myIds.has(h.id) && !h.gifted_at,
   );
 
   const submitList = async () => {

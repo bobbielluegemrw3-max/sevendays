@@ -12,6 +12,7 @@ import {
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { TrainingForm } from '@/components/TrainingForm';
 import { ItemBoostPanel } from '@/components/ItemBoostPanel';
+import { HorseTransferForm } from '@/components/HorseTransferForm';
 import { RarityLegend } from '@/components/RarityLegend';
 import { deriveNftLook } from '@/lib/nft-visual';
 import s from '../app/horse-detail.module.css';
@@ -47,6 +48,8 @@ export interface HorseDetail {
   ability_json: Record<string, number>;
   condition: string; fatigue: string;
   mint_seed_hash: string; horse_generation_version: string;
+  /** 譲渡された馬(Decision 094)— 手動出品不可の恒久マーク。 */
+  gifted_at?: string | null;
   /** 'SMART' | 'MANUAL' | null(087監査)。 */
   listing: string | null;
   /** この馬の全戦績(日付昇順)。 */
@@ -281,6 +284,7 @@ export function HorseDetailView({ horse }: { horse: HorseDetail }) {
             <span className={`${s.badge} ${s.typeBadge}`}>{horse.horse_type}</span>
             <span className={`${s.badge} ${badge.cls}`}>{badge.label}</span>
             {horse.listing === 'SMART' ? <span className={`${s.badge} ${s.stSmart}`}>出品中 · スマート</span> : null}
+            {horse.gifted_at ? <span className={`${s.badge} ${s.stGifted}`}>贈られた馬</span> : null}
           </div>
         </div>
         <div className={s.mastR}>
@@ -332,6 +336,10 @@ export function HorseDetailView({ horse }: { horse: HorseDetail }) {
                 <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} />
               </div>
               <div className={s.trainNote}>今夜20:00のスナップショット確定までに実施すると、今夜のレースに反映されます。</div>
+              {/* 馬の転送(Decision 094): ACTIVEかつ出品中でない馬のみ */}
+              {horse.listing === null ? (
+                <HorseTransferForm horseId={horse.id} horseName={horse.name} />
+              ) : null}
             </div>
           ) : mode === 'LISTED' ? (
             <div className={`${s.outcome} ${s.outListed}`}>

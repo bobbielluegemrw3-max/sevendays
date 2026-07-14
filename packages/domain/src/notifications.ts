@@ -30,6 +30,8 @@ export const NOTIFICATION_TYPES_V1 = [
   'AUTO_RESERVED',
   // Decision 092: サポートボーナスはチャンピオン誕生時のお祝い金に
   'SUPPORT_CELEBRATION_PAID',
+  // Decision 094: 馬の転送(ギフト)
+  'HORSE_GIFT_RECEIVED',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES_V1)[number];
@@ -119,6 +121,10 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   SUPPORT_CELEBRATION_PAID: {
     title: 'あなたの組織からチャンピオンが誕生しました。',
     body: 'お祝い金 {amount} USDT がウォレットに反映されました。({horse_name} / Tier {tier})',
+  },
+  HORSE_GIFT_RECEIVED: {
+    title: '馬が届きました。',
+    body: '{sender} さんから {horse_name} が贈られました。今夜からあなたの厩舎で出走します。',
   },
 };
 

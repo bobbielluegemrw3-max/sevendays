@@ -1433,6 +1433,85 @@ describe('item system (Decisions 078/079)', () => {
     expect(capped.status).toBe(429);
   });
 
+  it('horse transfer moves ownership, marks gifted, blocks manual listing (Decision 094)', async () => {
+    const sender = await fundedUser();
+    const recipientId = await newUser();
+    const recipient = await client.query<{ email: string }>(
+      `select email from users where id = $1`,
+      [recipientId],
+    );
+    const horseId = await itemHorse(sender, 3);
+
+    // 宛先不明 / 自分宛は不可
+    const nobody = await call('POST', `/api/v1/horses/${horseId}/transfer`, asUser(sender), {
+      body: { recipient_email: 'ghost@nowhere.dev' },
+    });
+    expect(nobody.status).toBe(404);
+    const selfSend = await call('POST', `/api/v1/horses/${horseId}/transfer`, asUser(sender), {
+      body: { recipient_email: (await client.query<{ email: string }>(`select email from users where id = $1`, [sender])).rows[0]!.email },
+    });
+    expect(selfSend.status).toBe(400);
+
+    // 成功: 所有が移り gifted_at が付き、受け手に通知
+    const ok = await call('POST', `/api/v1/horses/${horseId}/transfer`, asUser(sender), {
+      body: { recipient_email: recipient.rows[0]!.email.toUpperCase() },
+    });
+    expect(ok.status).toBe(200);
+    const moved = await client.query<{ owner_user_id: string; gifted_at: string | null }>(
+      `select owner_user_id, gifted_at::text as gifted_at from horses where id = $1`,
+      [horseId],
+    );
+    expect(moved.rows[0]!.owner_user_id).toBe(recipientId);
+    expect(moved.rows[0]!.gifted_at).not.toBeNull();
+    const notif = await client.query(
+      `select 1 from notifications where user_id = $1 and notification_type = 'HORSE_GIFT_RECEIVED'`,
+      [recipientId],
+    );
+    expect(notif.rows).toHaveLength(1);
+
+    // 送り手はもう所有していない(NOT_HORSE_OWNER)/同じ馬は同日再転送不可
+    const notOwner = await call('POST', `/api/v1/horses/${horseId}/transfer`, asUser(sender), {
+      body: { recipient_email: recipient.rows[0]!.email },
+    });
+    expect(notOwner.status).toBe(403);
+    const senderEmail = await client.query<{ email: string }>(`select email from users where id = $1`, [sender]);
+    const sameDay = await call('POST', `/api/v1/horses/${horseId}/transfer`, asUser(recipientId), {
+      body: { recipient_email: senderEmail.rows[0]!.email },
+    });
+    expect(sameDay.status).toBe(409); // HORSE_TRANSFER_DAILY(冪等キー=1日1回)
+
+    // 譲渡された馬は手動出品不可(スマート出品対象からは除外されない)
+    const list = await call('POST', '/api/v1/market/list', asUser(recipientId), {
+      body: { horse_id: horseId },
+    });
+    expect(list.status).toBe(409);
+    expect((list.body as { error: { code: string } }).error.code).toBe('HORSE_GIFTED_NO_MANUAL_LISTING');
+
+    // 出品中の馬は転送不可
+    const listedHorse = await itemHorse(sender, 2);
+    await call('POST', '/api/v1/market/list', asUser(sender), { body: { horse_id: listedHorse } });
+    const listedBlock = await call('POST', `/api/v1/horses/${listedHorse}/transfer`, asUser(sender), {
+      body: { recipient_email: recipient.rows[0]!.email },
+    });
+    expect(listedBlock.status).toBe(409);
+
+    // 送り手の上限: HORSE転送3件/24hで429
+    const capSender = await fundedUser();
+    for (let i = 0; i < 3; i += 1) {
+      const h = await itemHorse(capSender, 1);
+      await client.query(
+        `insert into user_transfers (sender_user_id, recipient_user_id, asset_type, horse_id, idempotency_key)
+         values ($1, $2, 'HORSE', $3, $4)`,
+        [capSender, recipientId, h, `horse-gift:${h}:seed${i}`],
+      );
+    }
+    const fourth = await itemHorse(capSender, 1);
+    const capped = await call('POST', `/api/v1/horses/${fourth}/transfer`, asUser(capSender), {
+      body: { recipient_email: recipient.rows[0]!.email },
+    });
+    expect(capped.status).toBe(429);
+  });
+
   it('bulk gift moves N oldest units; over-quantity is rejected (redesign)', async () => {
     const sender = await fundedUser();
     const recipientId = await newUser();

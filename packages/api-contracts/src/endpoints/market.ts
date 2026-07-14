@@ -41,9 +41,11 @@ export function registerMarketEndpoints(registry: ApiRegistry): void {
         status: string;
         current_day: number;
         last_manual_market_action_date: string | null;
+        gifted_at: string | null;
       }>(
         `select owner_user_id, status::text as status, current_day,
-                last_manual_market_action_date::text as last_manual_market_action_date
+                last_manual_market_action_date::text as last_manual_market_action_date,
+                gifted_at::text as gifted_at
          from horses where id = $1`,
         [input.horse_id],
       );
@@ -51,6 +53,11 @@ export function registerMarketEndpoints(registry: ApiRegistry): void {
       const h = horse.rows[0];
       if (h.owner_user_id !== ctx.userId) throw new ApiError('NOT_HORSE_OWNER', 'Not your horse');
       if (h.status !== 'ACTIVE') throw new ApiError('HORSE_NOT_ACTIVE', 'Horse is not active');
+      // Decision 094: 譲渡された馬は手動出品不可(意図的な換金操作だけを塞ぐ。
+      // スマート出品の対象からは除外しない — 売却回避メタを作らないため)。
+      if (h.gifted_at) {
+        throw new ApiError('HORSE_GIFTED_NO_MANUAL_LISTING', 'Gifted horses cannot be listed manually');
+      }
       if (h.current_day < 1 || h.current_day > 6) {
         throw new ApiError('MARKET_DAY_RANGE', 'Only Day1-Day6 horses can be listed');
       }

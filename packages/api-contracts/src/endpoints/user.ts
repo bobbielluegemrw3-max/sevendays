@@ -21,6 +21,9 @@ import { ApiError } from '../errors.js';
 import { sendCsEmail } from '../cs/mail.js';
 import type { ApiRegistry } from '../router.js';
 
+/** 馬転送の送り手上限(Decision 094・24時間ローリング)。 */
+const HORSE_TRANSFERS_PER_DAY = 3;
+
 /** User APIs (07_API.md) — JWT auth; reads are RLS-shaped (own rows only). */
 export function registerUserEndpoints(registry: ApiRegistry): void {
   registry.register({
@@ -152,7 +155,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       const rows = await ctx.client.query(
         `select h.id, h.name, h.status::text as status, h.current_day, h.horse_type::text as horse_type,
                 h.rarity::text as rarity, h.condition::text as condition, h.fatigue::text as fatigue,
-                h.dna_hash,
+                h.dna_hash, h.gifted_at::text as gifted_at,
                 exists(
                   select 1 from training_sessions t
                   where t.horse_id = h.id and t.effective_race_date = $2
@@ -177,7 +180,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         `select id, name, status::text as status, current_day, horse_type::text as horse_type,
                 rarity::text as rarity, dna_hash, dna_modifier::text as dna_modifier,
                 ability_json, condition::text as condition, fatigue::text as fatigue,
-                mint_seed_hash, horse_generation_version,
+                mint_seed_hash, horse_generation_version, gifted_at::text as gifted_at,
                 (select l.source::text from market_listings l
                  where l.horse_id = horses.id and l.status = 'LISTED' limit 1) as listing
          from horses where id = $1 and owner_user_id = $2`,
@@ -197,6 +200,111 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         [ctx.params.id],
       );
       return { ...rows.rows[0], history: history.rows };
+    },
+  });
+
+  // 馬の転送(Decision 094): ゲーム内資産としてのユーザー間ギフト。
+  //  - USDTのユーザー間送金は存在しないまま(法務整理)。譲渡馬は手動出品不可
+  //    (gifted_at恒久マーク)— 換金経路はレース結果かエンジンのスマート選定のみ。
+  //  - スマート出品対象からは除外しない(送り合って売却回避するメタを防ぐ)。
+  //  - 同じ馬の転送は1日1回(冪等キー horse-gift:{id}:{date} — 同日連鎖も不可)。
+  //  - 送り手の上限 3頭/24h。アイテムギフトと同じくメール宛先・即時・取消不可。
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/horses/:id/transfer',
+    auth: 'user',
+    input: z.object({ recipient_email: z.string().email() }),
+    handler: async (ctx, input) => {
+      if ((await getMarketplaceState(ctx.client)) !== 'OPEN') {
+        throw new ApiError('MARKETPLACE_LOCKED', 'Marketplace is locked during settlement');
+      }
+      const horseId = ctx.params.id!;
+      const horse = await ctx.client.query<{
+        owner_user_id: string;
+        status: string;
+        name: string;
+        listed: boolean;
+      }>(
+        `select owner_user_id, status::text as status, name,
+                exists (select 1 from market_listings l
+                        where l.horse_id = horses.id and l.status = 'LISTED') as listed
+         from horses where id = $1`,
+        [horseId],
+      );
+      if (!horse.rows[0]) throw new ApiError('HORSE_NOT_FOUND', 'Horse not found');
+      const h = horse.rows[0];
+      if (h.owner_user_id !== ctx.userId) throw new ApiError('NOT_HORSE_OWNER', 'Not your horse');
+      if (h.status !== 'ACTIVE') throw new ApiError('HORSE_NOT_ACTIVE', 'Horse is not active');
+      if (h.listed) {
+        throw new ApiError('HORSE_LISTED', 'A listed horse cannot be transferred — delist first');
+      }
+
+      const recipient = await ctx.client.query<{ id: string }>(
+        `select id from users where lower(email) = lower($1) and status = 'ACTIVE'`,
+        [input.recipient_email],
+      );
+      if (!recipient.rows[0]) {
+        throw new ApiError('GIFT_RECIPIENT_NOT_FOUND', 'No active user with that email');
+      }
+      const recipientId = recipient.rows[0].id;
+      if (recipientId === ctx.userId) {
+        throw new ApiError('GIFT_SELF', 'You cannot transfer a horse to yourself');
+      }
+
+      const sentToday = await ctx.client.query<{ n: number }>(
+        `select count(*)::int as n from user_transfers
+         where sender_user_id = $1 and asset_type = 'HORSE'
+           and created_at >= now() - interval '24 hours'`,
+        [ctx.userId],
+      );
+      if (sentToday.rows[0]!.n >= HORSE_TRANSFERS_PER_DAY) {
+        throw new ApiError('HORSE_TRANSFER_LIMIT', 'Daily horse transfer limit reached');
+      }
+
+      const sender = await ctx.client.query<{ email: string }>(
+        `select email from users where id = $1`,
+        [ctx.userId],
+      );
+      const senderEmail = sender.rows[0]!.email;
+      const maskedSender = senderEmail.endsWith('@user.sevendays')
+        ? 'ウォレットユーザー'
+        : `${senderEmail.slice(0, 2)}***`;
+      const today = batchDateFor(new Date());
+
+      await ctx.client.query('begin');
+      try {
+        const moved = await ctx.client.query(
+          `update horses set owner_user_id = $2, gifted_at = now()
+           where id = $1 and owner_user_id = $3 and status = 'ACTIVE'`,
+          [horseId, recipientId, ctx.userId],
+        );
+        if ((moved.affectedRows ?? 0) === 0) {
+          throw new ApiError('HORSE_NOT_ACTIVE', 'Horse changed state — transfer aborted');
+        }
+        await ctx.client.query(
+          `insert into user_transfers (sender_user_id, recipient_user_id, asset_type, horse_id, idempotency_key)
+           values ($1, $2, 'HORSE', $3, $4)`,
+          [ctx.userId, recipientId, horseId, `horse-gift:${horseId}:${today}`],
+        );
+        const rendered = renderNotification('HORSE_GIFT_RECEIVED', {
+          sender: maskedSender,
+          horse_name: h.name,
+        });
+        await insertNotification(ctx.client, {
+          userId: recipientId,
+          type: 'HORSE_GIFT_RECEIVED',
+          dedupeKey: `notif:HORSE_GIFT_RECEIVED:${horseId}:${today}`,
+          payload: { ...rendered, horse_id: horseId },
+        });
+        await ctx.client.query('commit');
+      } catch (error) {
+        await ctx.client.query('rollback').catch(() => undefined);
+        if (/user_transfers_idempotency_key|duplicate key/i.test((error as Error).message)) {
+          throw new ApiError('HORSE_TRANSFER_DAILY', 'This horse was already transferred today');
+        }
+        throw error;
+      }
+      return { horse_id: horseId, recipient: input.recipient_email, horse_name: h.name };
     },
   });
 
