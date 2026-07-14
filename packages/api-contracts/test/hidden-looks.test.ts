@@ -75,10 +75,26 @@ async function raceWithSeed(userId: string, horseId: string, seed: string, burne
      values ($1, 'race_v1.0', $2, 'FINALIZED') returning id`,
     [batchId, commit.rows[0]!.id],
   );
+  // 黄金の夜は「その夜 viewer が所有していた」判定 → snapshot の所有者を入れる。
+  await snapshot(race.rows[0]!.id, horseId, userId);
   await client.query(
     `insert into race_results (race_id, horse_id, final_score, deterministic_tiebreak_score, final_rank, is_burned)
      values ($1, $2, 100, 0, 1, $3)`,
     [race.rows[0]!.id, horseId, burned],
+  );
+}
+
+/** 最小の参加スナップショット(所有者帰属の判定に必要)。 */
+async function snapshot(raceId: string, horseId: string, ownerId: string): Promise<void> {
+  await client.query(
+    `insert into race_participant_snapshots
+       (race_id, horse_id, owner_user_id, current_day, horse_type, rarity, dna_hash,
+        ability_snapshot_json, weather, track_condition, race_engine_version,
+        liquidity_policy_version, price_table_version, race_seed_hash, snapshot_hash)
+     values ($1, $2, $3, 3, 'BALANCED', 'COMMON', $4, '{}'::jsonb, 'RAIN', 'SOFT', 'race_v1.0',
+             'liq_v1.0', 'price_v1.0', $5, $6)`,
+    [raceId, horseId, ownerId, randomUUID().replaceAll('-', ''),
+      randomUUID().replaceAll('-', ''), randomUUID().replaceAll('-', '')],
   );
 }
 
@@ -109,7 +125,7 @@ describe('hidden looks (EASTER_EGG_PLAN.md)', () => {
     // 02:23 MYT(1分ズレ)は対象外
     await mintFromReservation(u, dayH, '2042-01-14T18:23:00.000Z');
 
-    const looks = await computeHiddenLooks(client, [nightH, dayH]);
+    const looks = await computeHiddenLooks(client, [nightH, dayH], u);
     expect(looks.get(nightH)!.nightVariant).toBe(true);
     expect(looks.get(dayH)!.nightVariant).toBe(false);
   });
@@ -124,7 +140,7 @@ describe('hidden looks (EASTER_EGG_PLAN.md)', () => {
     await raceWithSeed(u, plain, plainSeed(), false, '2042-02-02'); // 普通の夜に生存
     await raceWithSeed(u, burnedInGold, goldenSeed(), true, '2042-02-03'); // 黄金の夜だがBURN
 
-    const looks = await computeHiddenLooks(client, [gold, plain, burnedInGold]);
+    const looks = await computeHiddenLooks(client, [gold, plain, burnedInGold], u);
     expect(looks.get(gold)!.goldenStar).toBe(true);
     expect(looks.get(plain)!.goldenStar).toBe(false);
     expect(looks.get(burnedInGold)!.goldenStar).toBe(false);
@@ -133,11 +149,11 @@ describe('hidden looks (EASTER_EGG_PLAN.md)', () => {
   it('該当なしは全フラグ空・空配列は空Map', async () => {
     const u = await newUser();
     const h = await newHorse(u);
-    const lk = (await computeHiddenLooks(client, [h])).get(h)!;
+    const lk = (await computeHiddenLooks(client, [h], u)).get(h)!;
     expect(lk.nightVariant).toBe(false);
     expect(lk.goldenStar).toBe(false);
     expect(lk.colorVariant).toBeNull();
-    expect((await computeHiddenLooks(client, [])).size).toBe(0);
+    expect((await computeHiddenLooks(client, [], u)).size).toBe(0);
   });
 
   it('原色ルート: 雨アイテムを雨で3回生存 → その馬が青に染まる', async () => {
@@ -148,7 +164,7 @@ describe('hidden looks (EASTER_EGG_PLAN.md)', () => {
       const race = await raceCond(d, 'RAIN', 'SOFT', 'DIRT');
       await useItem(u, h, 'rain_hood', race, d, 'SURVIVED');
     }
-    expect((await computeHiddenLooks(client, [h])).get(h)!.colorVariant).toBe('blue');
+    expect((await computeHiddenLooks(client, [h], u)).get(h)!.colorVariant).toBe('blue');
   });
 
   it('原色ルート: 2回では未達(色なし)', async () => {
@@ -159,7 +175,7 @@ describe('hidden looks (EASTER_EGG_PLAN.md)', () => {
       const race = await raceCond(d, 'RAIN', 'SOFT', 'DIRT');
       await useItem(u, h, 'rain_hood', race, d, 'SURVIVED');
     }
-    expect((await computeHiddenLooks(client, [h])).get(h)!.colorVariant).toBeNull();
+    expect((await computeHiddenLooks(client, [h], u)).get(h)!.colorVariant).toBeNull();
   });
 
   it('原色ルート: Burnドロップで1回生存 → 黒(最優先)', async () => {
@@ -167,7 +183,36 @@ describe('hidden looks (EASTER_EGG_PLAN.md)', () => {
     const h = await newHorse(u);
     const race = await raceCond('2043-03-01', 'SUNNY', 'GOOD', 'TURF');
     await useItem(u, h, 'spirit_roar', race, '2043-03-01', 'SURVIVED');
-    expect((await computeHiddenLooks(client, [h])).get(h)!.colorVariant).toBe('black');
+    expect((await computeHiddenLooks(client, [h], u)).get(h)!.colorVariant).toBe('black');
+  });
+
+  it('帰属修正(churn): 他人が2回・自分が1回では、自分視点で色は付かない', async () => {
+    // 馬が売買で持ち主を跨いでも、積み重ねは「その人自身の行動」だけで数える。
+    const owner1 = await newUser();
+    const owner2 = await newUser();
+    const h = await newHorse(owner1);
+    // owner1 が雨で2回
+    for (let i = 1; i <= 2; i += 1) {
+      const d = `2043-04-0${i}`;
+      const race = await raceCond(d, 'RAIN', 'SOFT', 'DIRT');
+      await useItem(owner1, h, 'rain_hood', race, d, 'SURVIVED');
+    }
+    // 売却で owner2 に。owner2 は雨で1回
+    const d3 = '2043-04-03';
+    const race3 = await raceCond(d3, 'RAIN', 'SOFT', 'DIRT');
+    await useItem(owner2, h, 'rain_hood', race3, d3, 'SURVIVED');
+
+    // owner2 視点: 自分の分は1回だけ → 色は付かない(他人の2回は化けない)
+    expect((await computeHiddenLooks(client, [h], owner2)).get(h)!.colorVariant).toBeNull();
+    // owner1 視点でも自分の分は2回 → まだ付かない
+    expect((await computeHiddenLooks(client, [h], owner1)).get(h)!.colorVariant).toBeNull();
+    // owner2 がさらに2回積めば、owner2 自身の3回で色が付く
+    for (let i = 4; i <= 5; i += 1) {
+      const d = `2043-04-0${i}`;
+      const race = await raceCond(d, 'RAIN', 'SOFT', 'DIRT');
+      await useItem(owner2, h, 'rain_hood', race, d, 'SURVIVED');
+    }
+    expect((await computeHiddenLooks(client, [h], owner2)).get(h)!.colorVariant).toBe('blue');
   });
 });
 

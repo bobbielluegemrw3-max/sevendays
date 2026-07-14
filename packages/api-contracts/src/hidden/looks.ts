@@ -19,7 +19,14 @@ import type { SqlClient } from '@sevendays/shared';
  *   - MILESTONE(777・案8): 通算777/7777頭目のDay0新規発行、または7日生まれ → 刻印
  *   - COLOR(原色ルート・オーナー新要望): その馬に適性アイテムを一致条件で
  *     使って生存を積むと、全身が原色に染まる(黒/赤/青/黄/緑)。**アイテム消費の
- *     per-horse funnel**。累積はその馬自身にのみ効く。
+ *     funnel**。
+ *
+ *  【帰属の原則(2026-07-15 オーナー指摘の修正)】
+ *   馬は自動出品で持ち主が入れ替わる。したがって「積み重ね系」(努力への報酬)は
+ *   **必ず viewer(=今その馬を持つ本人)自身の行動だけ**で数える — 他人がやった分が
+ *   割り当てで化けないように。COLOR / AURA / GOLDEN(生存時の所有者)は viewer 帰属。
+ *   一方「生まれつきの希少形質」(NIGHT/REVENGE/MILESTONE)は馬に付いて売買で移る
+ *   =市場がプレミアを付ける対象(所有していること自体が報酬・"自分がやった"主張ではない)。
  * ============================================================================
  */
 
@@ -72,6 +79,8 @@ const BURN_DROP_ITEMS = [
 export async function computeHiddenLooks(
   client: SqlClient,
   horseIds: readonly string[],
+  /** 表示する本人(=現在の所有者)。積み重ね系はこの人の行動だけで数える。 */
+  viewerUserId: string,
 ): Promise<Map<string, HiddenLook>> {
   const out = new Map<string, HiddenLook>();
   if (horseIds.length === 0) return out;
@@ -89,24 +98,28 @@ export async function computeHiddenLooks(
   );
   for (const r of night.rows) out.get(r.horse_id)!.nightVariant = true;
 
-  // ---- GOLDEN: 生存レースの commit_hash が秘密接頭辞 ----
+  // ---- GOLDEN: 生存レースの commit_hash が秘密接頭辞。かつ「その夜 viewer が
+  //      所有していた」(snapshot の所有者)ときだけ = 他人所有中の生存を化けさせない ----
   const golden = await client.query<{ horse_id: string }>(
     `select distinct rr.horse_id
      from race_results rr
      join races r on r.id = rr.race_id
      join randomness_commits rc on rc.id = r.seed_commit_id
-     where rr.horse_id = any($1) and rr.is_burned = false and lower(rc.commit_hash) like $2`,
-    [horseIds, `${GOLDEN_HASH_PREFIX}%`],
+     join race_participant_snapshots s on s.race_id = rr.race_id and s.horse_id = rr.horse_id
+     where rr.horse_id = any($1) and rr.is_burned = false
+       and lower(rc.commit_hash) like $2 and s.owner_user_id = $3`,
+    [horseIds, `${GOLDEN_HASH_PREFIX}%`, viewerUserId],
   );
   for (const r of golden.rows) out.get(r.horse_id)!.goldenStar = true;
 
-  // ---- AURA: 7日間毎日調教したチャンピオン(DAY7_CLEARED/MEMORIALIZED) ----
+  // ---- AURA: viewer が「毎日自分で」7日間調教し切ったチャンピオン ----
   const aura = await client.query<{ id: string }>(
     `select h.id
      from horses h
      where h.id = any($1) and h.status in ('DAY7_CLEARED', 'MEMORIALIZED')
-       and (select count(distinct t.effective_race_date) from training_sessions t where t.horse_id = h.id) >= 7`,
-    [horseIds],
+       and (select count(distinct t.effective_race_date) from training_sessions t
+            where t.horse_id = h.id and t.user_id = $2) >= 7`,
+    [horseIds, viewerUserId],
   );
   for (const r of aura.rows) out.get(r.id)!.goldenAura = true;
 
@@ -168,8 +181,9 @@ export async function computeHiddenLooks(
      from item_usages iu
      join races r on r.id = iu.race_id
      where iu.horse_id = any($1) and iu.status = 'SETTLED' and iu.settled_outcome = 'SURVIVED'
+       and iu.user_id = $7
      group by iu.horse_id`,
-    [horseIds, RAIN_ITEMS, SUN_ITEMS, TURF_MUD_ITEMS, STORM_EPIC_ITEMS, BURN_DROP_ITEMS],
+    [horseIds, RAIN_ITEMS, SUN_ITEMS, TURF_MUD_ITEMS, STORM_EPIC_ITEMS, BURN_DROP_ITEMS, viewerUserId],
   );
   for (const r of color.rows) {
     const cur = out.get(r.horse_id)!;

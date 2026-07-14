@@ -169,7 +169,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         [ctx.userId, effectiveRaceDate],
       );
       // 隠し演出ルック(EASTER_EGG_PLAN.md)— 真偽フラグ/色種別のみ付与。条件は秘匿。
-      const looks = await computeHiddenLooks(ctx.client, rows.rows.map((r) => r.id as string));
+      const looks = await computeHiddenLooks(ctx.client, rows.rows.map((r) => r.id as string), ctx.userId);
       const horses = rows.rows.map((r) => {
         const l = looks.get(r.id as string);
         return {
@@ -218,7 +218,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       );
       if (!rows.rows[0]) throw new ApiError('NOT_FOUND', 'Horse not found');
       // 隠し演出ルック(EASTER_EGG_PLAN.md)— 詳細ページ用の真偽フラグ。
-      const looks = await computeHiddenLooks(ctx.client, [ctx.params.id!]);
+      const looks = await computeHiddenLooks(ctx.client, [ctx.params.id!], ctx.userId);
       const lk = looks.get(ctx.params.id!);
       const history = await ctx.client.query(
         `select br.batch_date::text as batch_date, rr.final_rank, rr.final_score::text as final_score,
