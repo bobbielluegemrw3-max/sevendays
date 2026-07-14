@@ -203,3 +203,61 @@ console.log('=== 感度分析: S3(直紹介24人×3頭)のBURN率依存 ===');
 runScenario('S3 @ BURN 8.0%(荒れ相場の下限)', { tiers: [[24, 3]], burnRate: 0.08 });
 runScenario('S3 @ BURN 10.7%(NORMAL)', { tiers: [[24, 3]], burnRate: 0.107 });
 runScenario('S3 @ BURN 13.5%(荒れ相場の上限)', { tiers: [[24, 3]], burnRate: 0.135 });
+
+// ---- 2. 構成探索(フロンティア): P(12週でプラス)だけを圧縮出力 ----
+function quickP({ tiers, trials = 2000 }) {
+  const rand = rng(11);
+  let pos = 0;
+  const totals = [];
+  for (let t = 0; t < trials; t++) {
+    const r = simulate({ rand, days: 84, playerSlots: 10, tiers, burnRate: 0.107 });
+    totals.push(r.total);
+    if (r.total >= 0) pos++;
+  }
+  const mean = totals.reduce((s, x) => s + x, 0) / trials;
+  return { p: pos / trials, mean };
+}
+
+console.log('');
+console.log('=== 構成探索A: フラット組織(直紹介のみ・T1収入のみ) — P(12週でプラス) ===');
+console.log('行=直紹介人数 / 列=1人あたり稼働馬数');
+{
+  const Ds = [8, 12, 16, 20, 24, 28, 32, 40, 48, 64];
+  const Hs = [1, 2, 3, 5, 10];
+  console.log('        ' + Hs.map((h) => `${h}頭`.padStart(8)).join(''));
+  for (const d of Ds) {
+    const cells = Hs.map((h) => pct(quickP({ tiers: [[d, h]] }).p).padStart(8));
+    console.log(`${String(d).padStart(3)}人  ${cells.join('')}`);
+  }
+}
+
+console.log('');
+console.log('=== 構成探索B: 深さのある組織(枝分かれ2倍・各3頭) — P(12週でプラス) ===');
+{
+  const shapes = [
+    ['直8→16→32(深さ3・56人)', [[8, 3], [16, 3], [32, 3]]],
+    ['直12→24→48(深さ3・84人)', [[12, 3], [24, 3], [48, 3]]],
+    ['直16→32→64(深さ3・112人)', [[16, 3], [32, 3], [64, 3]]],
+    ['直24→48→96(深さ3・168人)', [[24, 3], [48, 3], [96, 3]]],
+    ['直8を深さ5まで2倍(248人)', [[8, 3], [16, 3], [32, 3], [64, 3], [128, 3]]],
+    ['直12を深さ5まで2倍(372人)', [[12, 3], [24, 3], [48, 3], [96, 3], [192, 3]]],
+  ];
+  for (const [name, tiers] of shapes) {
+    const { p, mean } = quickP({ tiers });
+    console.log(`${name.padEnd(30)} P(プラス) ${pct(p).padStart(6)} | 12週平均 ${usd(mean).padStart(7)} USDT`);
+  }
+}
+
+console.log('');
+console.log('=== 構成探索C: 稼働率50%(半分が休眠)の現実チェック ===');
+{
+  const shapes = [
+    ['直24人×3頭 → 実質12人×3頭', [[12, 3]]],
+    ['直24人×10頭 → 実質12人×10頭', [[12, 10]]],
+    ['直24→48→96(各3頭) → 実質半分', [[12, 3], [24, 3], [48, 3]]],
+  ];
+  for (const [name, tiers] of shapes) {
+    const { p, mean } = quickP({ tiers });
+    console.log(`${name.padEnd(32)} P(プラス) ${pct(p).padStart(6)} | 12週平均 ${usd(mean).padStart(7)} USDT`);
+  }
+}
