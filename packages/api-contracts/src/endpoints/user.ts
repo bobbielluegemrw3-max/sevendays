@@ -177,15 +177,27 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     handler: async (ctx) => {
       // 087監査: listing(出品状態)と history(この馬の全戦績)を追加 —
       // 詳細ページが「出品中=今夜走らない」の事実と7日間の物語を表示できるように。
+      // trained_for_next_race(2026-07-14): 一覧と同じ効力日規則 — 調教済みなら
+      // 詳細ページの調教フォームを「調教完了」表示に切り替えるため。
+      const today = batchDateFor(new Date());
+      const completedToday = await ctx.client.query(
+        `select 1 from batch_runs where batch_date = $1 and status = 'COMPLETED'`,
+        [today],
+      );
+      const effectiveRaceDate = completedToday.rows[0] ? addDays(today, 1) : today;
       const rows = await ctx.client.query(
         `select id, name, status::text as status, current_day, horse_type::text as horse_type,
                 rarity::text as rarity, dna_hash, dna_modifier::text as dna_modifier,
                 ability_json, condition::text as condition, fatigue::text as fatigue,
                 mint_seed_hash, horse_generation_version, gifted_at::text as gifted_at,
                 (select l.source::text from market_listings l
-                 where l.horse_id = horses.id and l.status = 'LISTED' limit 1) as listing
+                 where l.horse_id = horses.id and l.status = 'LISTED' limit 1) as listing,
+                exists(
+                  select 1 from training_sessions t
+                  where t.horse_id = horses.id and t.effective_race_date = $3
+                ) as trained_for_next_race
          from horses where id = $1 and owner_user_id = $2`,
-        [ctx.params.id, ctx.userId],
+        [ctx.params.id, ctx.userId, effectiveRaceDate],
       );
       if (!rows.rows[0]) throw new ApiError('NOT_FOUND', 'Horse not found');
       const history = await ctx.client.query(

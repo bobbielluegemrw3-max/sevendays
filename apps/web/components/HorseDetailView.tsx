@@ -52,6 +52,8 @@ export interface HorseDetail {
   gifted_at?: string | null;
   /** 'SMART' | 'MANUAL' | null(087監査)。 */
   listing: string | null;
+  /** 次のレース向けの調教済みか(2026-07-14: 調教フォームの完了表示用)。 */
+  trained_for_next_race?: boolean;
   /** この馬の全戦績(日付昇順)。 */
   history: HorseRaceResult[];
 }
@@ -332,7 +334,12 @@ export function HorseDetailView({ horse }: { horse: HorseDetail }) {
                 疲労はスコアとコンディションを蝕むので、7日間の采配が価値を伸ばす鍵です。
               </div>
               <div className={s.trainForm}>
-                <TrainingForm horseId={horse.id} horseType={horse.horse_type} fatigue={Number(horse.fatigue)} />
+                <TrainingForm
+                  horseId={horse.id}
+                  horseType={horse.horse_type}
+                  fatigue={Number(horse.fatigue)}
+                  trained={horse.trained_for_next_race === true}
+                />
                 <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} />
               </div>
               <div className={s.trainNote}>今夜20:00のスナップショット確定までに実施すると、今夜のレースに反映されます。</div>

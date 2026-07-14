@@ -36,10 +36,13 @@ export function TrainingForm({
   horseId,
   horseType,
   fatigue,
+  trained = false,
 }: {
   horseId: string;
   horseType: string;
   fatigue: number;
+  /** 次のレース向けの調教が済んでいる(2026-07-14: 完了表示でボタンを閉じる)。 */
+  trained?: boolean;
 }) {
   const router = useRouter();
   const type = horseType as HorseType;
@@ -48,6 +51,17 @@ export function TrainingForm({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // 調教済み(1日1回)は選択カードを畳んで完了表示だけにする。
+  if (trained) {
+    return (
+      <div className={s.tStack}>
+        <button type="button" disabled>
+          ✓ 調教完了 — 次のレースに適用されます
+        </button>
+      </div>
+    );
+  }
 
   async function submit() {
     setBusy(true);
