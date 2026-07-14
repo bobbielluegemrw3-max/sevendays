@@ -53,8 +53,11 @@ function binom(rand, n, p) {
   return k;
 }
 
-/** ティアごとのメンバー数と1人あたり稼働馬数から1試行(dayNum日)を回す */
-function simulate({ rand, days, playerSlots, tiers, burnRate }) {
+/** ティアごとのメンバー数と1人あたり稼働馬数から1試行(dayNum日)を回す。
+ *  payoutModel: 'celebration092'(現行: チャンピオン時に3/2/1) |
+ *               'burn074'(旧: BURN時に3/2/1) |
+ *               'burn021'(旧々: BURN時に直接紹介者へ10 USDT・1段のみ) */
+function simulate({ rand, days, playerSlots, tiers, burnRate, payoutModel = 'celebration092' }) {
   // プレイヤー自身の馬: 日齢別の頭数(常時 playerSlots 稼働)
   let own = [playerSlots, 0, 0, 0, 0, 0, 0];
   // 組織: tier d ごとに [メンバー数 m, 1人あたり馬数 h] → 馬プール(日齢別)
@@ -115,8 +118,16 @@ function simulate({ rand, days, playerSlots, tiers, burnRate }) {
         const burned = binom(rand, n, burnRate);
         const survived = n - burned;
         resolved += burned;
+        // 支払いモデル別の収入
+        if (payoutModel === 'burn021') {
+          if (d === 1) celebIncome += burned * 10; // 直接紹介者へ10 USDT/BURN
+        } else if (payoutModel === 'burn074') {
+          if (d <= unlocked) celebIncome += burned * TIER_AMOUNTS[d];
+        }
         if (a === 6) {
-          if (d <= unlocked) celebIncome += survived * TIER_AMOUNTS[d];
+          if (payoutModel === 'celebration092' && d <= unlocked) {
+            celebIncome += survived * TIER_AMOUNTS[d];
+          }
           resolved += survived;
         } else {
           next[a + 1] = survived;
@@ -205,12 +216,12 @@ runScenario('S3 @ BURN 10.7%(NORMAL)', { tiers: [[24, 3]], burnRate: 0.107 });
 runScenario('S3 @ BURN 13.5%(荒れ相場の上限)', { tiers: [[24, 3]], burnRate: 0.135 });
 
 // ---- 2. 構成探索(フロンティア): P(12週でプラス)だけを圧縮出力 ----
-function quickP({ tiers, trials = 2000 }) {
+function quickP({ tiers, trials = 2000, payoutModel = 'celebration092' }) {
   const rand = rng(11);
   let pos = 0;
   const totals = [];
   for (let t = 0; t < trials; t++) {
-    const r = simulate({ rand, days: 84, playerSlots: 10, tiers, burnRate: 0.107 });
+    const r = simulate({ rand, days: 84, playerSlots: 10, tiers, burnRate: 0.107, payoutModel });
     totals.push(r.total);
     if (r.total >= 0) pos++;
   }
@@ -245,6 +256,28 @@ console.log('=== 構成探索B: 深さのある組織(枝分かれ2倍・各3頭
   for (const [name, tiers] of shapes) {
     const { p, mean } = quickP({ tiers });
     console.log(`${name.padEnd(30)} P(プラス) ${pct(p).padStart(6)} | 12週平均 ${usd(mean).padStart(7)} USDT`);
+  }
+}
+
+console.log('');
+console.log('=== 構成探索D: 支払いモデルの変遷比較(直紹介24人の組織・12週) ===');
+console.log('021=BURN時に直接紹介者へ10 USDT(1段) / 074=BURN時に7ティア3/2/1 / 092=チャンピオン時に7ティア3/2/1(現行)');
+{
+  const shapes = [
+    ['直紹介24人×各1頭', [[24, 1]]],
+    ['直紹介24人×各2頭', [[24, 2]]],
+    ['直紹介24人×各3頭', [[24, 3]]],
+    ['直紹介24人×各10頭', [[24, 10]]],
+  ];
+  for (const [name, tiers] of shapes) {
+    const o21 = quickP({ tiers, payoutModel: 'burn021' });
+    const o74 = quickP({ tiers, payoutModel: 'burn074' });
+    const o92 = quickP({ tiers, payoutModel: 'celebration092' });
+    console.log(
+      `${name.padEnd(16)} 021: P ${pct(o21.p).padStart(6)} (平均 ${usd(o21.mean).padStart(7)}) | ` +
+      `074: P ${pct(o74.p).padStart(6)} (平均 ${usd(o74.mean).padStart(7)}) | ` +
+      `092: P ${pct(o92.p).padStart(6)} (平均 ${usd(o92.mean).padStart(7)})`,
+    );
   }
 }
 
