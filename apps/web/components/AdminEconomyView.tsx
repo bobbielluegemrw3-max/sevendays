@@ -41,7 +41,7 @@ export function AdminEconomyView({ data }: { data: AdminEconomy }) {
         </div>
       </div>
 
-      <div className={s.sec}>USER FUNDS · ユーザー資産(サマリー)</div>
+      <div className={s.sec}>ユーザー資産(サマリー)</div>
       <div className={s.statRow}>
         <div className={s.stat}>
           <div className={s.statK}>利用可能残高 合計</div>
@@ -63,7 +63,7 @@ export function AdminEconomyView({ data }: { data: AdminEconomy }) {
         </div>
       </div>
 
-      <div className={s.sec}>PLATFORM ACCOUNTS · プラットフォーム勘定</div>
+      <div className={s.sec}>プラットフォーム勘定</div>
       {data.platform_accounts.length > 0 ? (
         <>
           <div className={`${s.tableWrap} ${s.desktopTable}`}>
@@ -95,7 +95,7 @@ export function AdminEconomyView({ data }: { data: AdminEconomy }) {
         <div className={s.empty}>プラットフォーム勘定がまだありません。</div>
       )}
 
-      <div className={s.sec}>LAST 7 DAYS · 直近7日の取引種別</div>
+      <div className={s.sec}>直近7日の取引種別</div>
       {data.recent_transactions.length > 0 ? (
         <>
           <div className={`${s.tableWrap} ${s.desktopTable}`}>

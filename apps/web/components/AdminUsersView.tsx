@@ -169,7 +169,7 @@ export function AdminUsersView() {
             </div>
 
             {/* MLM位置 */}
-            <div className={s.sec}>MLM · MAP位置(上位チェーン)</div>
+            <div className={s.sec}>MAP位置(上位チェーン)</div>
             <div style={{ fontSize: 12.5 }}>
               {dossier.upline.length > 0
                 ? ['本人', ...dossier.upline.map((p) => p.email)].join(' ← ')
@@ -413,7 +413,7 @@ export function AdminUsersView() {
             )}
 
             {/* 管理アクション */}
-            <div className={s.sec}>ADMIN ACTIONS · 管理アクション</div>
+            <div className={s.sec}>管理アクション</div>
             <div className={s.controls}>
               <select className={s.sel} value={grantItemKey} onChange={(e) => setGrantItemKey(e.target.value)}>
                 <option value="">アイテムを選択…</option>
@@ -502,7 +502,7 @@ export function AdminUsersView() {
       {/* 承認待ちのUSDT付与(1,000超のみ・申請者と別の管理者が承認) */}
       {pending.length > 0 && (
         <div>
-          <div className={s.sec}>PENDING GRANTS · 承認待ちUSDT付与({pending.length})</div>
+          <div className={s.sec}>承認待ちUSDT付与({pending.length})</div>
           <div className={`${s.tableWrap} ${s.desktopTable}`}>
             <table className={s.tbl}>
               <thead>

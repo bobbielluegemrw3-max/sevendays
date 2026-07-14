@@ -58,7 +58,7 @@ export function AdminItemsView({ data }: { data: AdminItems }) {
         </div>
       </div>
 
-      <div className={s.sec}>RACE CONDITIONS · 公開されたレース条件の分布</div>
+      <div className={s.sec}>公開されたレース条件の分布</div>
       {totalConditions > 0 ? (
         <div className={s.badges}>
           {data.condition_distribution.map((r) => (

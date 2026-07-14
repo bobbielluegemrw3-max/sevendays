@@ -37,7 +37,7 @@ export function AdminRacesView({ data }: { data: AdminRaces }) {
         </div>
       </div>
 
-      <div className={s.sec}>RECENT RACES · 直近レース(最大30件)</div>
+      <div className={s.sec}>直近レース(最大30件)</div>
       {data.races.length > 0 ? (
         <>
           <div className={`${s.tableWrap} ${s.desktopTable}`}>

@@ -13,9 +13,9 @@
   --c-surface-2:#131120;       /* 一段上げ（ヘッダ行/展開） */
   --c-line:rgba(255,255,255,0.09);
   --c-line-soft:rgba(255,255,255,0.055);
-  --c-ink:#e9e7f5;             /* 主テキスト（高コントラスト） */
-  --c-ink-2:#b7b3d0;           /* 副テキスト */
-  --c-ink-3:#7d7aa0;           /* キャプション */
+  --c-ink:#f1effa;             /* 主テキスト（高コントラスト） */
+  --c-ink-2:#c9c5e0;           /* 副テキスト */
+  --c-ink-3:#938fb4;           /* キャプション */
   --c-accent:#ff4dcf;          /* ADMIN識別色。操作面だけに使う */
   --c-zebra:rgba(255,255,255,0.018);
   --c-good:#35d07f; --c-warn:#e6b24a; --c-bad:#ff5c5c;
@@ -31,10 +31,15 @@
 .nav{ display:flex; align-items:center; gap:2px; overflow-x:auto; padding:9px 12px;
   border-bottom:1px solid var(--c-line); background:var(--c-surface-2); scrollbar-width:none; }
 .nav::-webkit-scrollbar{ display:none; }
+@media(min-width:900px){ .nav{ flex-wrap:wrap; overflow-x:visible; row-gap:4px; } }
 .navBrand{ display:inline-flex; align-items:center; gap:8px; flex:none; padding:0 14px 0 4px; margin-right:6px; }
 .navBar{ width:4px; height:17px; border-radius:2px; background:var(--c-accent); }
 .navBrandT{ font-family:var(--c-disp); font-weight:800; font-size:12.5px; letter-spacing:0.16em; color:#fff; }
-.navLink{ flex:none; white-space:nowrap; font-family:var(--c-jp); font-size:12.5px; color:var(--c-ink-2);
+.navGroup{ display:inline-flex; align-items:center; gap:2px; flex:none; }
+.navGroupLabel{ font-family:var(--c-mono); font-size:9.5px; letter-spacing:0.14em; color:var(--c-ink-3);
+  padding:0 7px 0 4px; flex:none; user-select:none; }
+.navSep{ width:1px; height:18px; background:var(--c-line); margin:0 8px; flex:none; }
+.navLink{ flex:none; white-space:nowrap; font-family:var(--c-jp); font-size:13.5px; color:var(--c-ink-2);
   text-decoration:none; padding:8px 13px; border-radius:8px; letter-spacing:0.01em; }
 .navLink:hover{ color:#fff; background:rgba(255,255,255,0.04); }
 .navActive{ color:#fff; background:rgba(255,77,207,0.14); box-shadow:inset 0 -2px 0 var(--c-accent); }
@@ -47,39 +52,56 @@
 /* ---------- 統計ストリップ ---------- */
 .statRow{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
 .stat{ border:1px solid var(--c-line); border-radius:12px; padding:13px 15px; background:var(--c-surface); min-width:0; }
-.statK{ font-family:var(--c-mono); font-size:10px; letter-spacing:0.04em; color:var(--c-ink-3);
+.statK{ font-family:var(--c-jp); font-size:11.5px; letter-spacing:0.04em; color:var(--c-ink-3);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .statV{ font-family:var(--c-mono); font-weight:600; font-size:22px; color:var(--c-ink); margin-top:6px;
   font-variant-numeric:tabular-nums; letter-spacing:-0.01em; }
 .statV .u{ font-size:12px; color:var(--c-ink-3); margin-left:3px; font-weight:400; }
 .statV.gd{ color:#7ff0b0; }
-.statSub{ font-family:var(--c-mono); font-size:10px; color:var(--c-ink-3); margin-top:5px; }
+.statSub{ font-family:var(--c-jp); font-size:11px; color:var(--c-ink-3); margin-top:5px; }
 .statBig{ border-left:3px solid var(--c-line); }
 .statBig.ok{ border-left-color:var(--c-good); }
 .statBig.warn{ border-left-color:var(--c-warn); }
 .statBig.bad{ border-left-color:var(--c-bad); }
 
 /* ---------- セクションラベル ---------- */
-.sec{ font-family:var(--c-mono); font-size:11px; letter-spacing:0.08em; color:var(--c-ink-3);
-  margin:22px 0 9px; display:flex; align-items:center; gap:9px; }
+.sec{ font-family:var(--c-jp); font-weight:700; font-size:12.5px; letter-spacing:0.06em; color:var(--c-ink-2);
+  margin:24px 0 10px; display:flex; align-items:center; gap:9px; }
 .sec::after{ content:''; flex:1; height:1px; background:var(--c-line-soft); }
 
-/* ---------- メニュー（絵文字なし・単色グリフ） ---------- */
-.menu{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
-.mCard{ display:flex; flex-direction:column; gap:5px; border:1px solid var(--c-line); border-radius:11px;
-  padding:13px 14px; background:var(--c-surface); text-decoration:none; transition:border-color .12s, background .12s; }
-.mCard:hover{ border-color:rgba(255,77,207,0.4); background:var(--c-surface-2); }
-.mTop{ display:flex; align-items:center; gap:9px; }
-.mGlyph{ width:22px; height:22px; border-radius:6px; border:1px solid var(--c-line); flex:none;
-  display:flex; align-items:center; justify-content:center; font-family:var(--c-mono); font-size:11px;
-  color:var(--c-ink-2); background:var(--bg,#050409); }
-.mTitle{ font-family:var(--c-jp); font-weight:700; font-size:13.5px; color:#fff; }
-.mDesc{ font-family:var(--c-jp); font-size:11px; color:var(--c-ink-3); line-height:1.55; }
+/* ---------- コックピット: 要対応キュー(2026-07-14) ---------- */
+.qList{ display:flex; flex-direction:column; gap:8px; }
+.qRow{ display:flex; align-items:center; gap:11px; border:1px solid var(--c-line); border-radius:11px;
+  padding:12px 15px; background:var(--c-surface); text-decoration:none; min-width:0;
+  transition:border-color .12s, background .12s; }
+.qRow:hover{ background:var(--c-surface-2); }
+.qWarn{ border-left:3px solid var(--c-warn); }
+.qBad{ border-left:3px solid var(--c-bad); }
+.qDot{ width:8px; height:8px; border-radius:50%; flex:none; }
+.qWarn .qDot{ background:var(--c-warn); }
+.qBad .qDot{ background:var(--c-bad); animation:qPulse 1.6s ease-in-out infinite; }
+@keyframes qPulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.35; } }
+.qLabel{ font-family:var(--c-jp); font-weight:700; font-size:13.5px; color:#fff; white-space:nowrap; }
+.qDetail{ font-family:var(--c-jp); font-size:12.5px; color:var(--c-ink-2); min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+.qGo{ font-family:var(--c-jp); font-weight:600; font-size:12.5px; color:var(--c-accent); white-space:nowrap; }
+.qFetchNote{ font-family:var(--c-jp); font-size:12px; color:var(--c-warn); padding:2px 4px; }
+.allClear{ display:flex; align-items:center; gap:10px; border:1px solid rgba(53,208,127,0.3);
+  border-left:3px solid var(--c-good); border-radius:11px; padding:13px 15px;
+  background:rgba(53,208,127,0.05); font-family:var(--c-jp); font-size:13px; color:#9fe7c0; }
+.allClearMark{ font-size:15px; color:var(--c-good); flex:none; }
+
+/* コックピット: カウントダウン */
+.cdCard{ border-left-color:var(--c-accent); }
+.cd{ font-size:26px !important; letter-spacing:0.03em; }
+.cdSep{ color:var(--c-ink-3); margin:0 6px; font-weight:400; }
+.plainLink{ color:var(--c-accent); text-decoration:none; }
+.plainLink:hover{ text-decoration:underline; }
 
 /* ---------- データテーブル（核心） ---------- */
 .tableWrap{ border:1px solid var(--c-line); border-radius:12px; overflow:hidden; background:var(--c-surface); }
-.tbl{ width:100%; border-collapse:collapse; font-size:13px; }
-.tbl thead th{ font-family:var(--c-mono); font-size:10px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase;
+.tbl{ width:100%; border-collapse:collapse; font-size:13.5px; }
+.tbl thead th{ font-family:var(--c-mono); font-size:10.5px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase;
   color:var(--c-ink-3); text-align:left; padding:10px 14px; background:var(--c-surface-2);
   border-bottom:1px solid var(--c-line); white-space:nowrap; position:sticky; top:0; }
 .tbl tbody td{ padding:11px 14px; border-bottom:1px solid var(--c-line-soft); vertical-align:middle; color:var(--c-ink-2); }
@@ -89,9 +111,9 @@
 .tbl tbody tr:nth-child(even):hover{ background:rgba(255,255,255,0.03); }
 .num{ text-align:right; font-family:var(--c-mono); font-variant-numeric:tabular-nums; color:var(--c-ink); white-space:nowrap; }
 .num .u{ color:var(--c-ink-3); font-size:11px; margin-left:2px; }
-.mono{ font-family:var(--c-mono); font-size:11.5px; color:var(--c-ink-3); }
+.mono{ font-family:var(--c-mono); font-size:12px; color:var(--c-ink-3); }
 .strong{ font-family:var(--c-jp); font-weight:600; color:#fff; }
-.date{ font-family:var(--c-mono); font-size:11.5px; color:var(--c-ink-3); white-space:nowrap; }
+.date{ font-family:var(--c-mono); font-size:12px; color:var(--c-ink-2); white-space:nowrap; }
 .tRight{ text-align:right; }
 .ell{ max-width:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
@@ -146,9 +168,14 @@
   .mcTop{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .mcName{ font-family:var(--c-jp); font-weight:600; font-size:13.5px; color:#fff; min-width:0; overflow-wrap:anywhere; }
   .mcGrid{ display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; }
-  .mcCell{ display:flex; justify-content:space-between; gap:8px; font-size:11.5px; }
-  .mcCell .k{ font-family:var(--c-mono); font-size:10px; color:var(--c-ink-3); }
+  .mcCell{ display:flex; justify-content:space-between; gap:8px; font-size:12.5px; }
+  .mcCell .k{ font-family:var(--c-jp); font-size:11.5px; color:var(--c-ink-3); }
   .mcCell .v{ font-family:var(--c-mono); color:var(--c-ink); font-variant-numeric:tabular-nums; }
+  /* 要対応キュー: スマホでは詳細を2行目に折り返す */
+  .qRow{ flex-wrap:wrap; }
+  .qDetail{ flex-basis:100%; order:5; white-space:normal; overflow:visible; padding-left:19px; }
+  .qGo{ margin-left:auto; }
+  .cd{ font-size:22px !important; }
 }
 
 /* ==========================================================================

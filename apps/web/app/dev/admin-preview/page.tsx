@@ -16,11 +16,60 @@ export default async function AdminPreviewPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
       <AdminNav />
+      {/* コックピット: 要対応あり(出金/CS/リカバリ+バッチ異常)の状態 */}
       <AdminDashboardView
         data={{
-          latest_batch: { id: 'b1', batch_date: '2026-07-08', status: 'COMPLETED' },
-          economy_status: 'NORMAL',
-          metrics: { burn_rate: 0.42, prize_pool_days: 12 },
+          dashboard: {
+            latest_batch: { id: 'b1', batch_date: '2026-07-08', status: 'PARTIAL_FAILED' },
+            economy_status: 'NORMAL',
+            metrics: { burn_rate: 0.42, prize_pool_days: 12 },
+          },
+          derby: {
+            next_derby_at: new Date(Date.now() + 2 * 3600_000 + 31 * 60_000).toISOString(),
+            server_time: new Date().toISOString(),
+            tonight_field: { entrants: 14, burn_slots_min: 1, burn_slots_max: 1 },
+          },
+          pending: {
+            withdrawals: { count: 1, total: 1520 },
+            cs: 3,
+            recovery: 1,
+          },
+          last_race: {
+            batch_date: '2026-07-08',
+            status: 'SETTLED',
+            participant_count: 12,
+            burns: 2,
+            item_usages: 6,
+            weather: 'RAIN',
+            track_condition: 'HEAVY',
+            surface: 'DIRT',
+          },
+        }}
+      />
+      {/* コックピット: 全て正常(要対応ゼロ)の状態 */}
+      <AdminDashboardView
+        data={{
+          dashboard: {
+            latest_batch: { id: 'b2', batch_date: '2026-07-08', status: 'COMPLETED' },
+            economy_status: 'NORMAL',
+            metrics: { burn_rate: 0.42, prize_pool_days: 12 },
+          },
+          derby: {
+            next_derby_at: new Date(Date.now() + 45 * 60_000).toISOString(),
+            server_time: new Date().toISOString(),
+            tonight_field: { entrants: 100, burn_slots_min: 8, burn_slots_max: 13 },
+          },
+          pending: { withdrawals: { count: 0, total: 0 }, cs: 0, recovery: 0 },
+          last_race: {
+            batch_date: '2026-07-08',
+            status: 'SETTLED',
+            participant_count: 12,
+            burns: 2,
+            item_usages: 6,
+            weather: 'SUNNY',
+            track_condition: 'GOOD',
+            surface: 'TURF',
+          },
         }}
       />
       <AdminEconomyView

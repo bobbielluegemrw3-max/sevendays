@@ -1,10 +1,13 @@
 import Link from 'next/link';
+import { AdminDerbyCountdown } from '@/components/AdminDerbyCountdown';
 import s from '../app/admin.module.css';
 
 /* ============================================================================
- * /admin(管理ダッシュボード)— Ops Consoleリデザイン(2026-07-13ハンドオフ)。
- * 状態を最初の一目で(statBigの左3pxバー)。メニューは絵文字なしの整列グリッド。
- * 純粋な表示コンポーネント。表示は AdminDashboard の値のみ(架空値なし)。
+ * /admin(管理ダッシュボード)— 運営コックピット(2026-07-14 オーナー要望)。
+ * 「開いて3秒で、今日は安心か・何をすべきかが分かる」を最優先:
+ *   ①今夜のダービー(カウントダウン+出走+BURN枠) ②要対応キュー(出金/CS/
+ *   リカバリ/バッチ異常) ③直近レース結果 ④経済メトリクス。
+ * 旧メニューグリッドは廃止(ナビと完全重複していた)。純表示コンポーネント。
  * ========================================================================== */
 
 export interface AdminDashboard {
@@ -13,19 +16,43 @@ export interface AdminDashboard {
   metrics: Record<string, unknown> | null;
 }
 
-function ecoMeta(status: string): { bar: string; val: string; note: string } {
-  const u = (status || '').toUpperCase();
-  if (['HEALTHY', 'OK', 'NORMAL'].includes(u)) return { bar: s.ok!, val: s.gd!, note: 'バーン率・チャンピオン報酬プールは正常範囲' };
-  if (['WARNING', 'DEGRADED', 'CAUTION'].includes(u)) return { bar: s.warn!, val: '', note: '一部指標が閾値に接近しています' };
-  if (['CRITICAL', 'HALTED', 'ERROR'].includes(u)) return { bar: s.bad!, val: '', note: '要対応: 経済指標が異常です' };
-  return { bar: '', val: '', note: '' };
+export interface CockpitDerby {
+  next_derby_at: string;
+  server_time: string;
+  tonight_field: { entrants: number; burn_slots_min: number; burn_slots_max: number } | null;
 }
 
-function batchSt(status: string): string {
+export interface CockpitPending {
+  /** null = 取得失敗(そのページで直接確認してもらう) */
+  withdrawals: { count: number; total: number } | null;
+  cs: number | null;
+  recovery: number | null;
+}
+
+export interface CockpitLastRace {
+  batch_date: string;
+  status: string;
+  participant_count: number;
+  burns: number;
+  item_usages: number;
+  weather: string | null;
+  track_condition: string | null;
+  surface: string | null;
+}
+
+export interface AdminCockpitData {
+  dashboard: AdminDashboard;
+  derby: CockpitDerby | null;
+  pending: CockpitPending;
+  last_race: CockpitLastRace | null;
+}
+
+function ecoMeta(status: string): { bar: string; val: string; note: string } {
   const u = (status || '').toUpperCase();
-  if (u === 'COMPLETED') return s.stGood!;
-  if (u === 'FAILED') return s.stBad!;
-  return s.stWarn!;
+  if (['HEALTHY', 'OK', 'NORMAL'].includes(u)) return { bar: s.ok!, val: s.gd!, note: '経済指標は正常範囲' };
+  if (['WARNING', 'DEGRADED', 'CAUTION'].includes(u)) return { bar: s.warn!, val: '', note: '一部指標が閾値に接近' };
+  if (['CRITICAL', 'HALTED', 'ERROR'].includes(u)) return { bar: s.bad!, val: '', note: '要対応: 経済指標が異常' };
+  return { bar: '', val: '', note: '' };
 }
 
 function fmtVal(v: unknown): string {
@@ -35,85 +62,213 @@ function fmtVal(v: unknown): string {
   return JSON.stringify(v);
 }
 
-const MENU = [
-  { href: '/admin/economy', glyph: '経', title: '経済・準備金', desc: 'プラットフォーム勘定残高 / ユーザー資産総額 / 直近の取引種別' },
-  { href: '/admin/users', glyph: 'U', title: 'ユーザー', desc: 'メール検索 / 残高・馬・BURN・アイテム / 組織(直紹介)' },
-  { href: '/admin/items', glyph: '物', title: 'アイテム', desc: 'カタログ別の販売数・売上 / ドロップ・ギフト / アイテム設定の分布' },
-  { href: '/admin/races', glyph: '走', title: 'レース', desc: '直近レースの頭数・BURN数・アイテム設定 / Daily Derbyモード' },
-  { href: '/admin/support', glyph: 'C', title: 'サポート(AIメール)', desc: '受信メールのAI下書きを承認して送信 / 全件承認制' },
-  { href: '/admin/batches', glyph: '批', title: 'バッチ運行', desc: '毎晩20:00 MYTの一斉精算 / ステップ状況 / 失敗リトライ' },
-  { href: '/admin/withdrawals', glyph: '出', title: '出金レビュー', desc: '大口出金(1,000 USDT以上)の2名承認' },
-  { href: '/admin/recovery', glyph: '復', title: 'リカバリ', desc: '障害時の復旧案件 / 承認 → 実行の2段階' },
-  { href: '/admin/audit', glyph: '監', title: '監査ログ', desc: '管理操作・システム操作の全記録(直近200件)' },
-] as const;
+function money(n: number): string {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
-export function AdminDashboardView({ data }: { data: AdminDashboard }) {
-  const { latest_batch, economy_status, metrics } = data;
+/** 要対応1行。count が null なら取得失敗の注意書きに変わる。 */
+function QueueRow({
+  tone,
+  label,
+  detail,
+  href,
+  cta,
+}: {
+  tone: 'warn' | 'bad';
+  label: string;
+  detail: string;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <Link href={href} className={`${s.qRow} ${tone === 'bad' ? s.qBad : s.qWarn}`}>
+      <span className={s.qDot} />
+      <span className={s.qLabel}>{label}</span>
+      <span className={s.qDetail}>{detail}</span>
+      <span className={s.qGo}>{cta} →</span>
+    </Link>
+  );
+}
+
+export function AdminDashboardView({ data }: { data: AdminCockpitData }) {
+  const { dashboard, derby, pending, last_race } = data;
+  const { latest_batch, economy_status, metrics } = dashboard;
   const eco = ecoMeta(economy_status);
   const entries = metrics ? Object.entries(metrics) : [];
+
+  const batchBad =
+    latest_batch && ['FAILED', 'PARTIAL_FAILED'].includes(latest_batch.status.toUpperCase())
+      ? latest_batch
+      : null;
+  const fetchFailed = pending.withdrawals === null || pending.cs === null || pending.recovery === null;
+  const queueCount =
+    (pending.withdrawals?.count ?? 0) + (pending.cs ?? 0) + (pending.recovery ?? 0) + (batchBad ? 1 : 0);
+
+  const slots = derby?.tonight_field
+    ? derby.tonight_field.burn_slots_min === derby.tonight_field.burn_slots_max
+      ? String(derby.tonight_field.burn_slots_min)
+      : `${derby.tonight_field.burn_slots_min}〜${derby.tonight_field.burn_slots_max}`
+    : null;
 
   return (
     <div className={s.wrap}>
       <div className={s.ph}>
         <div>
           <h1 className={s.phTitle}>管理ダッシュボード</h1>
-          <div className={s.phSub}>運営の入口。異常があればここで気づける状態を最優先。</div>
+          <div className={s.phSub}>開いて3秒で「今日は安心か・何をすべきか」が分かる入口。</div>
         </div>
       </div>
 
-      {/* 状態ストリップ: 経済 + 最新バッチ + 先頭メトリクス2件 */}
+      {/* ===== ①今夜のダービー ===== */}
       <div className={s.statRow}>
+        <div className={`${s.stat} ${s.statBig} ${s.cdCard}`}>
+          <div className={s.statK}>今夜のダービーまで</div>
+          <div className={`${s.statV} ${s.cd}`}>
+            {derby ? (
+              <AdminDerbyCountdown targetIso={derby.next_derby_at} serverNowIso={derby.server_time} />
+            ) : (
+              '—'
+            )}
+          </div>
+          <div className={s.statSub}>毎晩 20:00 MYT・37ステップ一斉精算</div>
+        </div>
+        <div className={s.stat}>
+          <div className={s.statK}>今夜の出走</div>
+          <div className={s.statV}>
+            {derby?.tonight_field ? derby.tonight_field.entrants.toLocaleString() : '—'}
+            <span className={s.u}>頭</span>
+          </div>
+          <div className={s.statSub}>ACTIVE−手動出品(直前購入は明晩デビュー)</div>
+        </div>
+        <div className={s.stat}>
+          <div className={s.statK}>今夜のBURN枠</div>
+          <div className={s.statV}>
+            {slots ?? '—'}
+            <span className={s.u}>頭</span>
+          </div>
+          <div className={s.statSub}>{derby?.tonight_field?.entrants === 0 ? '出走なし' : 'floor(頭数×率)'}</div>
+        </div>
         <div className={`${s.stat} ${s.statBig} ${eco.bar}`}>
-          <div className={s.statK}>ECONOMY STATUS · 経済状態</div>
-          <div className={`${s.statV} ${eco.val}`}>{economy_status}</div>
+          <div className={s.statK}>経済状態</div>
+          <div className={`${s.statV} ${eco.val}`} style={{ fontSize: 19 }}>
+            {economy_status}
+          </div>
           {eco.note ? <div className={s.statSub}>{eco.note}</div> : null}
         </div>
-        <div className={`${s.stat} ${s.statBig}`}>
-          <div className={s.statK}>LATEST BATCH · 最新バッチ</div>
-          <div className={s.statV} style={{ fontSize: 19 }}>
-            {latest_batch ? latest_batch.batch_date : 'なし'}{' '}
-            {latest_batch ? (
-              <span className={`${s.st} ${batchSt(latest_batch.status)}`} style={{ verticalAlign: 3 }}>
-                {latest_batch.status}
-              </span>
-            ) : null}
-          </div>
-          <div className={s.statSub}>毎晩20:00 MYT の一斉精算</div>
-        </div>
-        {entries.slice(0, 2).map(([key, value]) => (
-          <div key={key} className={s.stat}>
-            <div className={s.statK}>{key}</div>
-            <div className={s.statV}>{fmtVal(value)}</div>
-          </div>
-        ))}
       </div>
 
-      <div className={s.sec}>MENU · 運営メニュー</div>
-      <div className={s.menu}>
-        {MENU.map((m) => (
-          <Link key={m.href} href={m.href} className={s.mCard}>
-            <span className={s.mTop}>
-              <span className={s.mGlyph} aria-hidden="true">{m.glyph}</span>
-              <span className={s.mTitle}>{m.title}</span>
-            </span>
-            <span className={s.mDesc}>{m.desc}</span>
-          </Link>
-        ))}
-      </div>
-
-      <div className={s.sec}>経済メトリクス · ECONOMY METRICS</div>
-      {entries.length > 0 ? (
-        <div className={s.statRow}>
-          {entries.map(([key, value]) => (
-            <div key={key} className={s.stat}>
-              <div className={s.statK}>{key}</div>
-              <div className={s.statV} style={{ fontSize: 16, overflowWrap: 'anywhere' }}>{fmtVal(value)}</div>
-            </div>
-          ))}
+      {/* ===== ②要対応キュー ===== */}
+      <div className={s.sec}>要対応</div>
+      {queueCount === 0 && !fetchFailed ? (
+        <div className={s.allClear}>
+          <span className={s.allClearMark}>✓</span> 対応事項はありません — 出金レビュー・CSメール・リカバリ・バッチすべて正常です。
         </div>
       ) : (
-        <div className={s.empty}>バッチ実行前のためメトリクスはありません。今夜20:00の精算後に集計されます。</div>
+        <div className={s.qList}>
+          {batchBad ? (
+            <QueueRow
+              tone="bad"
+              label={`バッチ ${batchBad.status}`}
+              detail={`${batchBad.batch_date} — ${batchBad.status === 'PARTIAL_FAILED' ? 'リトライ可能' : 'リカバリ手続きが必要'}`}
+              href="/admin/batches"
+              cta="バッチ運行"
+            />
+          ) : null}
+          {pending.withdrawals && pending.withdrawals.count > 0 ? (
+            <QueueRow
+              tone="warn"
+              label={`出金レビュー待ち ${pending.withdrawals.count}件`}
+              detail={`合計 ${money(pending.withdrawals.total)} USDT — 別人2名の承認が必要`}
+              href="/admin/withdrawals"
+              cta="レビュー"
+            />
+          ) : null}
+          {pending.cs ? (
+            <QueueRow
+              tone="warn"
+              label={`CS未対応メール ${pending.cs}件`}
+              detail="AI下書きを確認して承認送信(全件承認制)"
+              href="/admin/support"
+              cta="サポート"
+            />
+          ) : null}
+          {pending.recovery ? (
+            <QueueRow
+              tone="warn"
+              label={`リカバリ進行中 ${pending.recovery}件`}
+              detail="承認 → 実行の2段階(別人2名)"
+              href="/admin/recovery"
+              cta="リカバリ"
+            />
+          ) : null}
+          {fetchFailed ? (
+            <div className={s.qFetchNote}>一部の件数を取得できませんでした — 各ページで直接確認してください。</div>
+          ) : null}
+        </div>
       )}
+
+      {/* ===== ③直近レース結果 ===== */}
+      <div className={s.sec}>直近レース</div>
+      {last_race ? (
+        <div className={s.statRow}>
+          <div className={s.stat}>
+            <div className={s.statK}>開催日</div>
+            <div className={s.statV} style={{ fontSize: 17 }}>
+              {last_race.batch_date}
+            </div>
+            <div className={s.statSub}>{last_race.status}</div>
+          </div>
+          <div className={s.stat}>
+            <div className={s.statK}>出走 / BURN</div>
+            <div className={s.statV}>
+              {last_race.participant_count.toLocaleString()}
+              <span className={s.u}>頭</span>
+              <span className={s.cdSep}>/</span>
+              {last_race.burns.toLocaleString()}
+              <span className={s.u}>頭</span>
+            </div>
+          </div>
+          <div className={s.stat}>
+            <div className={s.statK}>アイテム使用</div>
+            <div className={s.statV}>
+              {last_race.item_usages.toLocaleString()}
+              <span className={s.u}>回</span>
+            </div>
+          </div>
+          <div className={s.stat}>
+            <div className={s.statK}>レース条件</div>
+            <div className={s.statV} style={{ fontSize: 15 }}>
+              {last_race.surface != null
+                ? `${last_race.weather} / ${last_race.track_condition} / ${last_race.surface}`
+                : '—'}
+            </div>
+            <div className={s.statSub}>
+              <Link href="/admin/races" className={s.plainLink}>
+                レース一覧 →
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className={s.empty}>レースはまだありません。最初の20:00バッチで生成されます。</div>
+      )}
+
+      {/* ===== ④経済メトリクス ===== */}
+      {entries.length > 0 ? (
+        <>
+          <div className={s.sec}>経済メトリクス{latest_batch ? `(${latest_batch.batch_date} 時点)` : ''}</div>
+          <div className={s.statRow}>
+            {entries.slice(0, 8).map(([k, v]) => (
+              <div key={k} className={s.stat}>
+                <div className={s.statK}>{k}</div>
+                <div className={s.statV} style={{ fontSize: 17 }}>
+                  {fmtVal(v)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

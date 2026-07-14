@@ -200,7 +200,7 @@ export function AdminSupportView() {
       {error ? <p className={s.error}>{error}</p> : null}
 
       {tab === 'queue' && (<>
-      <div className={s.sec}>PENDING · 承認待ち({pending.length})</div>
+      <div className={s.sec}>承認待ち({pending.length})</div>
       {pending.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {pending.map((msg) => (
@@ -266,7 +266,7 @@ export function AdminSupportView() {
         <div className={s.empty}>承認待ちの問い合わせはありません。</div>
       )}
 
-      <div className={s.sec}>HANDLED · 対応履歴(直近)</div>
+      <div className={s.sec}>対応履歴(直近)</div>
       {handled.length > 0 ? (
         <>
           <div className={`${s.tableWrap} ${s.desktopTable}`}>
@@ -311,7 +311,7 @@ export function AdminSupportView() {
 
       {tab === 'sent' && (
         <>
-          <div className={s.sec}>BROADCASTS · 一斉送信ジョブ({broadcasts.length})</div>
+          <div className={s.sec}>一斉送信ジョブ({broadcasts.length})</div>
           {broadcasts.length > 0 ? (
             <>
               <div className={`${s.tableWrap} ${s.desktopTable}`}>
@@ -346,7 +346,7 @@ export function AdminSupportView() {
             </>
           ) : <div className={s.empty}>一斉送信はまだありません。</div>}
 
-          <div className={s.sec}>SENT · 送信メール(直近100)</div>
+          <div className={s.sec}>送信メール(直近100)</div>
           {sentRows.length > 0 ? (
             <>
               <div className={`${s.tableWrap} ${s.desktopTable}`}>
