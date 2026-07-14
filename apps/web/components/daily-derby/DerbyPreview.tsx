@@ -213,7 +213,7 @@ export function DerbyPreview() {
 
       <DailyDerbyStage
         secondsToStart={secondsToStart}
-        counts={quiet ? { ...FIXTURE_COUNTS, horses: 180, burns: 19, listed: 168, assignments: 150, mints: 12 } : FIXTURE_COUNTS}
+        counts={quiet ? { ...FIXTURE_COUNTS, horses: 180, burns: 19, listed: 168, assignments: 150, mints: 12, day7: 9, celebrations: 40 } : FIXTURE_COUNTS}
         tickerEvents={FIXTURE_TICKER}
         nightResults={fixtureNightResults()}
         failed={failed}

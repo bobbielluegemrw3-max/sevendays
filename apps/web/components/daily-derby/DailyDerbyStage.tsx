@@ -913,7 +913,23 @@ function Counters({ elapsed: propElapsed, counts }: { elapsed: number; counts: D
   );
 }
 
-/* ⑦点呼モード: 静かな夜は濁流の代わりに自分の馬を1頭ずつ大写し(4秒交代)。 */
+/* 出走ゼロの夜(自分の馬が全頭「明晩デビュー」)の点呼代替カード。 */
+function RollcallEmpty({ debutCount }: { debutCount: number }) {
+  return (
+    <div className={s.rollcall}>
+      <div className={s.rollName}>今夜の出走はありません</div>
+      <div className={s.rollSub}>
+        {debutCount > 0
+          ? `あなたの新しい馬 ${debutCount}頭は、明晩 20:00 (GMT+8) にデビューします`
+          : '静かな夜 — 明晩のダービーをお待ちください'}
+      </div>
+    </div>
+  );
+}
+
+/* ⑦点呼モード: 静かな夜は濁流の代わりに自分の馬を1頭ずつ大写し(4秒交代)。
+ * 対象は「今夜実際に走った馬」(currentDay>=1)のみ — 今夜ミントされた馬は
+ * 明晩デビューなので点呼に出さない(2026-07-14 初ライブの指摘)。 */
 function Rollcall({ elapsed, myHorses }: { elapsed: number; myHorses: readonly MyDerbyHorse[] }) {
   const idx = Math.max(0, Math.floor((elapsed - LOGS_FROM) / 4)) % myHorses.length;
   const horse = myHorses[idx]!;
@@ -952,7 +968,8 @@ function LogPhase({
   // 正典のなめらかなログの流れ: ショー時計(1秒刻み)を60fpsに補間して描画する
   const elapsed = useShowClock(propElapsed);
   const myNames = useMemo(() => new Set(myHorseNames), [myHorseNames]);
-  const lines = logWindow(elapsed, 44, myNames);
+  // 2026-07-14: 行数は当夜の実件数でキャップ(案①「件数だけ実数」の結線)。
+  const lines = logWindow(elapsed, 44, myNames, counts);
   // 自分該当行が新しく現れたらチャイム/審判キューへ(1行につき1回)
   const seenMine = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -963,7 +980,9 @@ function LogPhase({
       }
     }
   }, [lines, onMine]);
-  // ⑦静かな夜は結果ターン(TURN1)を点呼モードに切り替える
+  // ⑦静かな夜は結果ターン(TURN1)を点呼モードに切り替える。
+  // 点呼対象は今夜走った馬のみ(currentDay>=1。今夜ミント=明晩デビューは除外)。
+  const runners = myHorses.filter((h) => (h.currentDay ?? 1) >= 1);
   const rollcall = quiet && elapsed < MARKET_OPEN.startAt && myHorses.length > 0;
   return (
     <div className={s.logPhase}>
@@ -977,7 +996,11 @@ function LogPhase({
 
       <div className={s.floodGrid}>
         {rollcall ? (
-          <Rollcall elapsed={elapsed} myHorses={myHorses} />
+          runners.length > 0 ? (
+            <Rollcall elapsed={elapsed} myHorses={runners} />
+          ) : (
+            <RollcallEmpty debutCount={myHorses.length} />
+          )
         ) : (
           <div className={s.logStream} aria-live="off">
             {lines.map((line) => (

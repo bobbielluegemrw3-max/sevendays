@@ -48,6 +48,10 @@ export interface DerbyCounts {
   listed: number;
   assignments: number;
   mints: number;
+  /** 今夜DAY7走破した頭数(2026-07-14: ログ濁流の件数実数化)。 */
+  day7: number;
+  /** 今夜起票された祝い金の行数(同上)。 */
+  celebrations: number;
 }
 
 /* ---- タイムライン(秒、T0 = 20:00) ------------------------------------- */
@@ -253,20 +257,48 @@ function makeLine(section: LogSection, i: number): LogLine {
   }
 }
 
+/** セクションごとの「実件数」上限(2026-07-14: 案①の結線漏れ修正 —
+ *  行はダミー生成のままだが、流れる行数は当夜の実数を超えない)。 */
+function sectionCap(key: string, c: DerbyCounts): number {
+  switch (key) {
+    case 'BURN': return c.burns;
+    case 'SURVIVE': return Math.max(0, c.horses - c.burns);
+    case 'VALUE': return Math.max(0, c.horses - c.burns);
+    case 'DAY7': return c.day7;
+    case 'LIST': return c.listed;
+    case 'BID': return c.listed;
+    case 'MATCH': return c.assignments;
+    case 'MINT': return c.mints;
+    case 'MLM': return c.celebrations;
+    case 'ITEM': return c.buffs;
+    default: return Number.POSITIVE_INFINITY; // RACE_END等のヘッダー行のみ
+  }
+}
+
 /**
  * elapsed 時点で画面に出ているべきログの「末尾 window 行」を返す。
  * 全行は生成せず、必要な index だけ導出する(高速)。
+ * counts を渡すと各セクションの行数が当夜の実件数でキャップされる
+ * (件数0のセクションはヘッダー+「NO EVENTS」1行 — 静かな夜は静かに見せる)。
  */
 export function logWindow(
   elapsed: number,
   window = 44,
   myNames?: ReadonlySet<string>,
+  counts?: DerbyCounts,
 ): LogLine[] {
   const out: LogLine[] = [];
   for (let sIdx = LOG_SECTIONS.length - 1; sIdx >= 0 && out.length < window; sIdx--) {
     const sec = LOG_SECTIONS[sIdx]!;
     if (elapsed < sec.startAt) continue;
-    const emitted = Math.floor((Math.min(elapsed, sec.endAt) - sec.startAt) * sec.rate);
+    const cap = counts ? sectionCap(sec.key, counts) : Number.POSITIVE_INFINITY;
+    const emitted = Math.min(
+      Math.floor((Math.min(elapsed, sec.endAt) - sec.startAt) * sec.rate),
+      cap,
+    );
+    if (counts && cap === 0 && sec.rate > 0 && out.length < window) {
+      out.push({ id: `${sec.key}:none`, tone: 'header', text: '        ─ NO EVENTS ─' });
+    }
     for (let i = emitted - 1; i >= 0 && out.length < window; i--) {
       const line = makeLine(sec, i);
       if (myNames && line.name && myNames.has(line.name)) line.mine = true;
@@ -313,6 +345,13 @@ export const FIXTURE_COUNTS: DerbyCounts = {
   listed: 26248,
   assignments: 24310,
   mints: 1938,
+  day7: 812,
+  celebrations: 3660,
+};
+
+/** ライブ結線でAPIのcountsが未着のときの空値(フィクスチャを本番に出さない)。 */
+export const EMPTY_COUNTS: DerbyCounts = {
+  horses: 0, burns: 0, buffs: 0, listed: 0, assignments: 0, mints: 0, day7: 0, celebrations: 0,
 };
 
 export const FIXTURE_TICKER: readonly string[] = [

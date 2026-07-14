@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/client-api';
 import {
-  FIXTURE_COUNTS,
+  EMPTY_COUNTS,
   PRE_SHOW_SECONDS,
   SHOW_TOTAL,
   conditionsView,
@@ -111,9 +111,24 @@ export function DerbyLive() {
     (status.phase === 'LIVE' || status.phase === 'COMPLETED' || status.phase === 'FAILED_SAFE_MODE') &&
     status.live_started_at
   ) {
-    secondsToStart = -((now - new Date(status.live_started_at).getTime()) / 1000);
+    // バッチ行の作成はワーカーtickで20:00より数秒〜数十秒遅れる。通常の夜は
+    // 20:00ちょうどをアンカーにして、カウントダウン→ショーの経過秒を連続させる
+    // (グレース中に進んだオープニングが巻き戻らない)。大幅に遅れて始まった
+    // バッチ(自己修復の再実行等)は実開始時刻をアンカーにする。
+    const startedMs = new Date(status.live_started_at).getTime();
+    const derbyTodayMs = new Date(status.next_derby_at).getTime() - 86_400_000;
+    const anchor = startedMs - derbyTodayMs < 120_000 && startedMs >= derbyTodayMs ? derbyTodayMs : startedMs;
+    secondsToStart = -((now - anchor) / 1000);
   } else {
     secondsToStart = (new Date(status.next_derby_at).getTime() - now) / 1000;
+    // 20:00を過ぎたのにバッチ行がまだ無い空白(ワーカー30秒tick+開始ラグ)では、
+    // next_derby_at が翌日に切り替わるため素直に計算すると「23:59:xx」の
+    // カウントダウンに戻ってしまう(2026-07-14 初ライブで実発生)。直前の20:00
+    // からの経過が10分以内なら、経過秒でオープニング演出を続けて実開始を待つ。
+    const sincePrevDerby = 86_400 - secondsToStart;
+    if (status.phase === 'WAITING' && sincePrevDerby >= 0 && sincePrevDerby < 600) {
+      secondsToStart = -sincePrevDerby;
+    }
   }
   // COMPLETEDで既にショー時間を過ぎている(後から開いた)場合は個人結果へ直行。
   if (status.phase === 'COMPLETED' && -secondsToStart > SHOW_TOTAL + 3600) {
@@ -123,7 +138,7 @@ export function DerbyLive() {
   return (
     <DailyDerbyStage
       secondsToStart={secondsToStart}
-      counts={status.counts ?? FIXTURE_COUNTS}
+      counts={status.counts ?? EMPTY_COUNTS}
       tickerEvents={status.ticker}
       nightResults={nightResults}
       failed={status.phase === 'FAILED_SAFE_MODE'}

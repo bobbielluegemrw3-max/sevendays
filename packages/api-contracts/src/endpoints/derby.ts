@@ -131,6 +131,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         listed: number;
         assignments: number;
         mints: number;
+        day7: number;
+        celebrations: number;
       }>(
         `select
            (select count(*)::int from horse_burns where race_id = $1) as burns,
@@ -141,10 +143,16 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
               where status = 'SETTLED'
                 and created_at >= $3::date and created_at < $3::date + interval '1 day') as assignments,
            (select count(*)::int from horses
-              where created_at >= $3::date and created_at < $3::date + interval '1 day') as mints`,
+              where created_at >= $3::date and created_at < $3::date + interval '1 day') as mints,
+           (select count(*)::int from race_participant_snapshots s
+              join horses h on h.id = s.horse_id
+              where s.race_id = $1 and h.status in ('DAY7_CLEARED', 'MEMORIALIZED')) as day7,
+           (select count(*)::int from support_celebrations where champion_date = $3::date) as celebrations`,
         [raceRow.id, batchRow!.id, today],
       );
       const a = agg.rows[0]!;
+      // 2026-07-14: day7/celebrations はログ濁流の「件数だけ実数」結線用
+      // (固定レートのダミー行が実件数を超えて流れないようにするキャップ)。
       counts = {
         horses: raceRow.participant_count ?? 0,
         burns: a.burns,
@@ -152,6 +160,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         listed: a.listed,
         assignments: a.assignments,
         mints: a.mints,
+        day7: a.day7,
+        celebrations: a.celebrations,
       };
 
       // Anonymized ticker: recent settled matches / burns / day7 clears.
