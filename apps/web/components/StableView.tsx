@@ -4,6 +4,7 @@ import { money, horseValue } from '@/components/stable-shared';
 import { BulkTrainButton } from '@/components/BulkTrainButton';
 import { ChampionCard, ListedCard, StableBrowser } from '@/components/StableBrowser';
 import { RarityLegend } from '@/components/RarityLegend';
+import { HiddenBadges, type HiddenBadge } from '@/components/HiddenBadges';
 import s from '../app/stable.module.css';
 
 /* ============================================================================
@@ -31,6 +32,8 @@ export interface StableData {
   stableName?: string | null;
   horses: StableHorse[];   // 全所有馬(現役 + 過去)
   pendingCount: number;    // 割当待ちの購入予約数
+  /** 獲得済みの隠し称号(EASTER_EGG_PLAN.md)。0件なら非表示。 */
+  hiddenBadges?: HiddenBadge[];
 }
 
 export function StableView({ data }: { data: StableData }) {
@@ -65,6 +68,11 @@ export function StableView({ data }: { data: StableData }) {
           </div>
         </div>
       </div>
+
+      {/* ===== 獲得した称号(隠し実績・EASTER_EGG_PLAN.md) ===== */}
+      {data.hiddenBadges && data.hiddenBadges.length > 0 ? (
+        <HiddenBadges badges={data.hiddenBadges} />
+      ) : null}
 
       {/* ===== 「馬を迎える」CTA ===== */}
       <section className={s.welcome}>

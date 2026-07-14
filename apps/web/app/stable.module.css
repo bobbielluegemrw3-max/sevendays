@@ -324,3 +324,17 @@
 .bulkTrainBtn:hover { filter: brightness(1.07); }
 .bulkTrainBtn:disabled { opacity: 0.6; cursor: default; }
 .bulkTrainNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); line-height: 1.5; flex: 1; min-width: 200px; }
+
+/* 獲得した称号(隠し実績・EASTER_EGG_PLAN.md) */
+.badgeStrip { margin: 0 0 1.1rem; }
+.badgeStripHead { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+.badgeStripTitle { font-family: var(--font-mono, monospace); font-size: 0.68rem; letter-spacing: 0.16em;
+  color: var(--gold, #c9a86a); text-transform: uppercase; }
+.badgeStripCount { font-family: var(--font-mono, monospace); font-size: 0.62rem; color: var(--faint, #7d7aa0);
+  border: 1px solid var(--border, rgba(255,255,255,0.1)); border-radius: 999px; padding: 0.05rem 0.5rem; }
+.badgeGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.7rem; }
+.badgeCard { display: flex; flex-direction: column; gap: 0.3rem; border: 1px solid; border-radius: 12px;
+  padding: 0.75rem 0.85rem; position: relative; }
+.badgeEmblem { width: 20px; height: 20px; border-radius: 50%; }
+.badgeName { font-family: var(--font-display, sans-serif); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.02em; }
+.badgeFlavor { font-size: 0.72rem; line-height: 1.55; color: var(--muted, #b7b3d0); }

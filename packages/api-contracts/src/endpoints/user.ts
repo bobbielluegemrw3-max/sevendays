@@ -17,6 +17,7 @@ import {
   verifyReplayInputs,
 } from '@sevendays/settlement-engine';
 import { verifyWalletLink } from '@sevendays/blockchain';
+import { evaluateHiddenBadges } from '../hidden/achievements.js';
 import { ApiError } from '../errors.js';
 import { sendCsEmail } from '../cs/mail.js';
 import type { ApiRegistry } from '../router.js';
@@ -784,6 +785,22 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       );
       if (!rows.rows[0]) throw new ApiError('NOT_FOUND', 'Purchase session not found');
       return rows.rows[0];
+    },
+  });
+
+  // 隠し実績バッジ(EASTER_EGG_PLAN.md・GO 2026-07-15)。読み取り専用・
+  // コスメティックのみ。獲得済みの称号(名前+雰囲気テキスト)だけ返す —
+  // 獲得条件は evaluateHiddenBadges の内部にのみ存在し、API には出さない。
+  // user_id 省略=自分。指定=他人の厩舎を見たときの公開バッジ(称号は公開情報)。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/hidden-badges',
+    auth: 'user',
+    input: z.object({ user_id: z.string().uuid().optional() }),
+    handler: async (ctx, input) => {
+      const target = input.user_id ?? ctx.userId;
+      const badges = await evaluateHiddenBadges(ctx.client, target);
+      return { badges };
     },
   });
 

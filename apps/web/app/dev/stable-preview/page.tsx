@@ -42,5 +42,17 @@ const HORSES: StableHorse[] = [
 
 export default async function StablePreview() {
   await requireDevPreviewAccess();
-  return <StableView data={{ horses: HORSES, pendingCount: 2 }} />;
+  return (
+    <StableView
+      data={{
+        horses: HORSES,
+        pendingCount: 2,
+        hiddenBadges: [
+          { key: 'rain_reader', name: '雨読みの三重奏', flavor: '雨を味方につけた者にだけ、水面は道を見せる。', tone: 'rain' },
+          { key: 'mud_general', name: '泥将', flavor: '道悪を制する者は、晴天の勝者を三度食う。', tone: 'mud' },
+          { key: 'legacy_bearer', name: '遺志を継ぐ者', flavor: '失われた馬の力が、次の一頭を勝たせた。', tone: 'spirit' },
+        ],
+      }}
+    />
+  );
 }
