@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { AccountLinking } from '@/components/AccountLinking';
 import { PwaSetupTile } from '@/components/PwaSetupTile';
+import { StableNameForm } from '@/components/StableNameForm';
 import { TradeAutoTile, type TradeSettings } from '@/components/TradeAutoControls';
 import { avatarHue } from '@/lib/support-tree';
 import s from '../app/account.module.css';
@@ -14,7 +15,7 @@ import s from '../app/account.module.css';
  * データ取得層 page.tsx・AccountLinking・TradeAutoTile・PwaSetupTile は変更しない。
  * ========================================================================== */
 
-export interface Me { id: string; email: string; created_at: string }
+export interface Me { id: string; email: string; created_at: string; stable_name?: string | null }
 export interface Wallet { wallet_address: string; created_at: string }
 export interface AccountStats {
   racing: number;      // 出走中(手動出品中を除くACTIVE)
@@ -64,6 +65,8 @@ export function AccountView({
           <div className={s.profileEmail}>
             {emailUnset ? <span className={s.vUnset}>(メール未設定 — ウォレットログイン)</span> : me.email}
           </div>
+          {/* 厩舎名(Decision 097): 公開アイデンティティ */}
+          <StableNameForm current={me.stable_name ?? null} />
           <div className={s.profileMeta}>
             <span>登録 {me.created_at.slice(0, 10)}</span>
             <span className={s.dayPill}>プレイ {days}日目</span>

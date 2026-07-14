@@ -860,4 +860,24 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
       };
     },
   });
+
+  // 厩舎名の強制解除(Decision 097): 不適切な公開名のモデレーション。監査必須。
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/stable-name/clear',
+    auth: 'admin',
+    input: z.object({ user_id: z.string().uuid(), reason: z.string().min(1).max(200) }),
+    handler: async (ctx, input) => {
+      requireAdminRole(ctx);
+      const cleared = await ctx.client.query(
+        `update users set stable_name = null where id = $1 and stable_name is not null`,
+        [input.user_id],
+      );
+      if ((cleared.affectedRows ?? 0) === 0) {
+        throw new ApiError('NOT_FOUND', 'User has no stable name');
+      }
+      await audit(ctx, `STABLE_NAME_CLEARED:${input.reason.slice(0, 120)}`, 'user', input.user_id);
+      return { user_id: input.user_id, cleared: true };
+    },
+  });
 }

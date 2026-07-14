@@ -124,3 +124,36 @@
   .profileCard { gap: 14px; padding: 16px 16px; }
   .avatar { width: 52px; height: 52px; font-size: 22px; }
 }
+
+/* ---- 厩舎名(Decision 097) ---- */
+.stableNameRow { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 6px; }
+.stableNameV {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.02rem;
+  background: linear-gradient(92deg, #f2e4bf, #c9a86a);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.stableNameUnset { font-size: 0.76rem; color: var(--muted); }
+.stableNameEdit {
+  padding: 4px 11px; border-radius: 999px; border: 1px solid rgba(201, 168, 106, 0.45);
+  background: rgba(201, 168, 106, 0.08); color: var(--gold-bright);
+  font-size: 0.72rem; cursor: pointer;
+}
+.stableNameEdit:hover { background: rgba(201, 168, 106, 0.15); }
+.stableNameInput {
+  min-width: 200px; padding: 7px 11px; border-radius: 9px;
+  border: 1px solid var(--border); background: rgba(10, 8, 22, 0.7);
+  color: var(--text); font-size: 0.9rem;
+}
+.stableNameInput:focus { outline: none; border-color: rgba(201, 168, 106, 0.55); }
+.stableNameSave {
+  padding: 7px 15px; border-radius: 9px; border: 1px solid rgba(201, 168, 106, 0.55);
+  background: rgba(201, 168, 106, 0.16); color: var(--gold-bright);
+  font-family: var(--font-display); font-weight: 700; font-size: 0.76rem; cursor: pointer;
+}
+.stableNameSave:disabled { opacity: 0.45; cursor: default; }
+.stableNameCancel {
+  padding: 7px 11px; border-radius: 9px; border: 1px solid var(--border);
+  background: transparent; color: var(--muted); font-size: 0.74rem; cursor: pointer;
+}
+.stableNameHint { flex-basis: 100%; font-size: 0.7rem; color: var(--faint); }
+.stableNameErr { flex-basis: 100%; font-size: 0.74rem; color: var(--bad); }

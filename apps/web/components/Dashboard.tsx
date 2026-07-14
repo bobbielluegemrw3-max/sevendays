@@ -11,14 +11,14 @@ import {
   type DashNotification,
 } from '@/components/DashboardView';
 
-interface Me { id: string }
+interface Me { id: string; stable_name?: string | null }
 interface Session { id: string; status: string }
 interface RaceResultRow { horse_id: string; final_score: string; final_rank: number; is_burned: boolean }
 
 /** Signed-in home: fetches everything through the in-process API bridge and
  *  hands plain data to the presentational DashboardView. */
 export default async function Dashboard() {
-  await serverApiOrLogin<Me>('/api/v1/me');
+  const me = await serverApiOrLogin<Me>('/api/v1/me');
   const [walletR, horsesR, buffR, sessionsR, racesR, buybacksR, notifR, tradeR] = await Promise.all([
     serverApi<DashWallet>('/api/v1/wallet'),
     serverApi<{ horses: DashHorse[] }>('/api/v1/horses'),
@@ -61,6 +61,7 @@ export default async function Dashboard() {
         buybacks: buybacksR.status === 200 ? buybacksR.body.buybacks : [],
         notifications: notifR.status === 200 ? notifR.body.notifications : [],
         trade: tradeR.status === 200 ? tradeR.body : null,
+        stableName: me.stable_name ?? null,
       }}
     />
   );

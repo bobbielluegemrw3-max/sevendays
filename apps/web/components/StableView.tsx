@@ -27,6 +27,8 @@ export interface StableHorse {
 }
 // status: 'ACTIVE'(出走中) | 'BURNED'(消滅) | 'DAY7_CLEARED'(チャンピオン) | 'MEMORIALIZED'(記念馬)
 export interface StableData {
+  /** 厩舎名(Decision 097)。未設定はマイ厩舎。 */
+  stableName?: string | null;
   horses: StableHorse[];   // 全所有馬(現役 + 過去)
   pendingCount: number;    // 割当待ちの購入予約数
 }
@@ -47,7 +49,7 @@ export function StableView({ data }: { data: StableData }) {
       {/* ===== ヘッダ(頭数 + 評価額合計) ===== */}
       <div className={s.header}>
         <div>
-          <div className={s.headTitle}>マイ厩舎</div>
+          <div className={s.headTitle}>{data.stableName ?? 'マイ厩舎'}</div>
           <div className={s.headSub}>
             現役 {active.length}頭{champions.length > 0 ? ` · チャンピオン ${champions.length}頭` : ''} · 消滅 {burned.length}頭
           </div>

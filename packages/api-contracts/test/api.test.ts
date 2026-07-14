@@ -2029,3 +2029,52 @@ describe('promo horse gifting (Decision 095)', () => {
     delete process.env.PROMO_STABLE_EMAIL;
   });
 });
+
+describe('stable names (Decision 097)', () => {
+  it('sets, validates, uniquifies and rate-limits the public stable name', async () => {
+    const user = await newUser();
+    // 不正: 記号/URL・短すぎ
+    const bad = await call('POST', '/api/v1/account/stable-name', asUser(user), {
+      body: { name: 'http://x' },
+    });
+    expect(bad.status).toBe(400);
+    const short = await call('POST', '/api/v1/account/stable-name', asUser(user), {
+      body: { name: 'あ' },
+    });
+    expect(short.status).toBe(400);
+
+    // 設定 → /me に反映
+    const ok = await call('POST', '/api/v1/account/stable-name', asUser(user), {
+      body: { name: '流星ステーブル' },
+    });
+    expect(ok.status).toBe(200);
+    const me = await call('GET', '/api/v1/me', asUser(user));
+    expect((me.body as { stable_name: string }).stable_name).toBe('流星ステーブル');
+
+    // 同名(大文字小文字違い含む)は409
+    const other = await newUser();
+    const taken = await call('POST', '/api/v1/account/stable-name', asUser(other), {
+      body: { name: '流星ステーブル' },
+    });
+    expect(taken.status).toBe(409);
+
+    // 1日1回: 同日の再変更は429
+    const again = await call('POST', '/api/v1/account/stable-name', asUser(user), {
+      body: { name: '流星ファーム' },
+    });
+    expect(again.status).toBe(429);
+
+    // 管理者は監査つきで解除できる
+    const admin = await newUser();
+    await client.query(`insert into admin_role_grants (user_id, role) values ($1, 'SUPER_ADMIN')`, [admin]);
+    const cleared = await call(
+      'POST',
+      '/api/v1/admin/stable-name/clear',
+      { kind: 'admin', userId: admin, roles: ['SUPER_ADMIN'] },
+      { body: { user_id: user, reason: 'test moderation' } },
+    );
+    expect(cleared.status).toBe(200);
+    const me2 = await call('GET', '/api/v1/me', asUser(user));
+    expect((me2.body as { stable_name: string | null }).stable_name).toBeNull();
+  });
+});

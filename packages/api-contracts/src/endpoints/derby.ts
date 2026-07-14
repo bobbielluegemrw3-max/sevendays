@@ -39,10 +39,11 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         horse_type: string;
         rarity: string;
         email: string;
+        stable_name: string | null;
         day7_clear_date: string | null;
       }>(
         `select h.id, h.name, h.dna_hash, h.horse_type::text as horse_type,
-                h.rarity::text as rarity, u.email,
+                h.rarity::text as rarity, u.email, u.stable_name,
                 bb.day7_clear_date::text as day7_clear_date
          from horses h
          join users u on u.id = h.owner_user_id
@@ -59,9 +60,10 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
           dna_hash: r.dna_hash,
           horse_type: r.horse_type,
           rarity: r.rarity,
-          owner: r.email.endsWith('@user.sevendays')
-            ? 'ウォレットユーザー'
-            : `${r.email.slice(0, 2)}***`,
+          owner: r.stable_name
+            ?? (r.email.endsWith('@user.sevendays')
+              ? 'ウォレットユーザー'
+              : `${r.email.slice(0, 2)}***`),
           cleared_at: r.day7_clear_date,
         })),
       };
@@ -394,9 +396,10 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         price: string;
         day: number | null;
         buyer_email: string | null;
+        buyer_stable: string | null;
       }>(
         `select h.name, h.dna_hash, a.assigned_price::text as price,
-                l.current_day as day, u.email as buyer_email
+                l.current_day as day, u.email as buyer_email, u.stable_name as buyer_stable
          from ownership_assignments a
          join horses h on h.id = a.horse_id
          join users u on u.id = a.buyer_user_id
@@ -413,11 +416,12 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         day: number | null;
         is_mint: boolean;
         seller_email: string | null;
+        seller_stable: string | null;
       }>(
         `select h.name, h.dna_hash, a.assigned_price::text as price,
                 coalesce(l.current_day, 0) as day,
                 (a.market_listing_id is null) as is_mint,
-                u.email as seller_email
+                u.email as seller_email, u.stable_name as seller_stable
          from ownership_assignments a
          join horses h on h.id = a.horse_id
          left join users u on u.id = a.seller_user_id
@@ -450,7 +454,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
           dna_hash: r.dna_hash,
           price: r.price,
           day: r.day,
-          counterpart: mask(r.buyer_email),
+          counterpart: r.buyer_stable ?? mask(r.buyer_email),
         })),
         bought: bought.rows.map((r) => ({
           name: r.name,
@@ -458,7 +462,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
           price: r.price,
           day: r.day,
           is_mint: r.is_mint,
-          counterpart: r.is_mint ? null : mask(r.seller_email),
+          counterpart: r.is_mint ? null : (r.seller_stable ?? mask(r.seller_email)),
         })),
       };
     },

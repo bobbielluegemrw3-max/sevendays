@@ -275,6 +275,10 @@ Amendment (2026-07-06, Owner): the user-facing name is サポートボーナス 
 
 096. The 10-concurrent-purchase-session cap (Decision 051) is lifted for everyone. Rationale: real buyers exist at the 10,000-USDT scale (~56 horses) and the promo stable needs bulk stocking (Decision 095); the cap was a UX/abuse guard, not an economic invariant — the true constraints are the balance lock (177.16 per session), the mint coverage gate, and the 10,000/night mint limit, all untouched. MAX_CONCURRENT_PURCHASE_SESSIONS becomes 1000, explicitly a runaway-bug ceiling rather than a product limit; a new PURCHASE_MAX_PER_REQUEST (100) bounds one API call because sessions are created serially (a whale reserves 56 in one click; 500 takes five clicks). The reserve panel caps its dropdown at 100 per operation and drops the "10件まで" copy; the auto-reserve setting keeps its 1-10/MAX shape (MAX now means balance-bounded, as documented). CS knowledge updated.
 
+## Decision 097 (2026-07-14, Owner)
+
+097. Stable names — the player's public identity. Horses churn daily through P2P but the STABLE persists; the owner wants the stable, not the account, to be the face of the player. users.stable_name: 2-20 chars (Japanese/latin/digits/spaces; no URLs/symbols/@), unique case-insensitively, one change per day, clearable to null; admins can force-clear with an audited reason (moderation). SURFACES: (1) the my-stable page title and the dashboard stable tile show the name instead of マイ厩舎; (2) matching counterparts (night-results sold/bought, champions hall) and gift/transfer sender names prefer the stable name; (3) the org map/pool/member views show 「厩舎名(ab***@domain)」 — emails stay MASKED at every tier including direct referrals (owner's explicit call: upline placement can put strangers in your downline, and address exchange for gifting happens off-platform via LINE/Telegram, which is lower-risk than exposing addresses in-app); transfers remain email-addressed. Unset names fall back to today's masked display everywhere. Migration 20260714040000.
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:

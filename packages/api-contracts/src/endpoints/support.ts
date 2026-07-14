@@ -41,6 +41,20 @@ function displayIdentity(email: string, walletAddress: string | null): string {
   return maskEmail(email);
 }
 
+/**
+ * Decision 097: 厩舎名があれば「厩舎名(ab***@domain)」、なければ従来のマスク表示。
+ * メールは全段マスク(オーナー決定 — 配置により面識のない直紹介があり得るため。
+ * アドレス交換はユーザー同士がゲーム外で行う)。
+ */
+function displayWithStable(
+  stableName: string | null,
+  email: string,
+  walletAddress: string | null,
+): string {
+  const base = displayIdentity(email, walletAddress);
+  return stableName ? `${stableName}(${base})` : base;
+}
+
 /** First linked wallet per user (a user can have at most a few). */
 const WALLET_JOIN = `left join lateral (
   select wallet_address from user_wallets w where w.user_id = u.id order by wallet_address limit 1
@@ -141,10 +155,11 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
       const rows = await ctx.client.query<{
         id: string;
         email: string;
+        stable_name: string | null;
         wallet_address: string | null;
         created_at: string;
       }>(
-        `select u.id, u.email, w.wallet_address, u.created_at::text as created_at
+        `select u.id, u.email, u.stable_name, w.wallet_address, u.created_at::text as created_at
          from users u
          ${WALLET_JOIN}
          where u.direct_referrer_user_id = $1 and u.placement_parent_user_id is null
@@ -154,7 +169,7 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
       return {
         members: rows.rows.map((r) => ({
           user_id: r.id,
-          display: displayIdentity(r.email, r.wallet_address),
+          display: displayWithStable(r.stable_name, r.email, r.wallet_address),
           joined_at: r.created_at,
         })),
       };
@@ -173,6 +188,7 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
         depth: number;
         placed_at: string | null;
         email: string;
+        stable_name: string | null;
         wallet_address: string | null;
       }>(
         `with recursive tree as (
@@ -184,7 +200,7 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
            where t.depth < $2
          )
          select t.id, t.parent_id, t.depth, t.placed_at::text as placed_at,
-                u.email, w.wallet_address,
+                u.email, u.stable_name, w.wallet_address,
                 (select count(*)::int from horses h
                   where h.owner_user_id = t.id and h.status = 'ACTIVE') as horses
          from tree t
@@ -199,7 +215,7 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
           user_id: r.id,
           parent_user_id: r.parent_id,
           tier: r.depth,
-          display: displayIdentity(r.email, r.wallet_address),
+          display: displayWithStable(r.stable_name, r.email, r.wallet_address),
           placed_at: r.placed_at,
           horses: (r as unknown as { horses: number }).horses,
         })),
@@ -222,10 +238,11 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
       }
       const who = await ctx.client.query<{
         email: string;
+        stable_name: string | null;
         wallet_address: string | null;
         placed_at: string | null;
       }>(
-        `select u.email, w.wallet_address, u.placed_at::text as placed_at
+        `select u.email, u.stable_name, w.wallet_address, u.placed_at::text as placed_at
          from users u ${WALLET_JOIN} where u.id = $1`,
         [targetId],
       );
@@ -260,7 +277,7 @@ export function registerSupportEndpoints(registry: ApiRegistry): void {
       const st = stats.rows[0]!;
       return {
         user_id: targetId,
-        display: displayIdentity(row.email, row.wallet_address),
+        display: displayWithStable(row.stable_name, row.email, row.wallet_address),
         tier: depth,
         placed_at: row.placed_at,
         active_horses: st.active_horses,

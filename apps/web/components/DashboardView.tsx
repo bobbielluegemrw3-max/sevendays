@@ -46,6 +46,8 @@ export interface DashboardData {
   notifications: DashNotification[];
   /** 売買自動化設定(Decision 086)。null = 取得失敗(モーダル/タイルとも出さない)。 */
   trade: TradeSettings | null;
+  /** 厩舎名(Decision 097)。未設定はマイ厩舎表示。 */
+  stableName?: string | null;
 }
 
 /* ---- helpers -------------------------------------------------------------- */
@@ -211,7 +213,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
       {/* ===== マイ厩舎(要約ストリップ + 直接購入) ===== */}
       <section className={s.stable}>
         <div className={s.tileHead}>
-          <span className={s.stableTitle}>マイ厩舎<small>STABLE {active.length} · 評価額 {stableValue.toFixed(2)} USDT</small></span>
+          <span className={s.stableTitle}>{data.stableName ?? 'マイ厩舎'}<small>STABLE {active.length} · 評価額 {stableValue.toFixed(2)} USDT</small></span>
           <span className={s.stableActions}>
             {/* 購入は/marketの予約ファネルに一本化(Decision 085) — 即時ロックのボタンは廃止 */}
             <Link href="/market" className={s.stableBuy}>馬を迎える ▶</Link>

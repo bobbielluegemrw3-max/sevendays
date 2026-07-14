@@ -308,8 +308,9 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
         union all
         (
           select min(t.id::text), 'RECEIVED', ui.item_key, count(*)::int,
-                 max(case when su.email like '%@user.sevendays' then 'ウォレットユーザー'
-                          else left(su.email, 2) || '***' end),
+                 max(coalesce(su.stable_name,
+                          case when su.email like '%@user.sevendays' then 'ウォレットユーザー'
+                               else left(su.email, 2) || '***' end)),
                  null, t.created_at::text
           from user_transfers t
           join user_items ui on ui.id = t.user_item_id
@@ -320,8 +321,9 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
         union all
         (
           select min(t.id::text), 'SENT', ui.item_key, count(*)::int,
-                 max(case when ru.email like '%@user.sevendays' then 'ウォレットユーザー'
-                          else left(ru.email, 2) || '***' end),
+                 max(coalesce(ru.stable_name,
+                          case when ru.email like '%@user.sevendays' then 'ウォレットユーザー'
+                               else left(ru.email, 2) || '***' end)),
                  null, t.created_at::text
           from user_transfers t
           join user_items ui on ui.id = t.user_item_id
@@ -418,14 +420,16 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
         throw new ApiError('GIFT_LIMIT', 'Daily transfer limit reached');
       }
 
-      const sender = await ctx.client.query<{ email: string }>(
-        `select email from users where id = $1`,
+      const sender = await ctx.client.query<{ email: string; stable_name: string | null }>(
+        `select email, stable_name from users where id = $1`,
         [ctx.userId],
       );
       const senderEmail = sender.rows[0]!.email;
-      const maskedSender = senderEmail.endsWith('@user.sevendays')
-        ? 'ウォレットユーザー'
-        : `${senderEmail.slice(0, 2)}***`;
+      // Decision 097: 差出人は厩舎名優先(「○○厩舎から届いた」)
+      const maskedSender = sender.rows[0]!.stable_name
+        ?? (senderEmail.endsWith('@user.sevendays')
+          ? 'ウォレットユーザー'
+          : `${senderEmail.slice(0, 2)}***`);
 
       const quantity = input.quantity ?? 1;
       await ctx.client.query('begin');

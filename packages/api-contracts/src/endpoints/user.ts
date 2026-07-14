@@ -32,7 +32,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     auth: 'user',
     handler: async (ctx) => {
       const r = await ctx.client.query<{ id: string; email: string; status: string; created_at: string }>(
-        `select id, email, status::text as status, created_at::text as created_at from users where id = $1`,
+        `select id, email, status::text as status, created_at::text as created_at,
+                stable_name from users where id = $1`,
         [ctx.userId],
       );
       if (!r.rows[0]) throw new ApiError('NOT_FOUND', 'User not found');
@@ -261,14 +262,16 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         throw new ApiError('HORSE_TRANSFER_LIMIT', 'Daily horse transfer limit reached');
       }
 
-      const sender = await ctx.client.query<{ email: string }>(
-        `select email from users where id = $1`,
+      const sender = await ctx.client.query<{ email: string; stable_name: string | null }>(
+        `select email, stable_name from users where id = $1`,
         [ctx.userId],
       );
       const senderEmail = sender.rows[0]!.email;
-      const maskedSender = senderEmail.endsWith('@user.sevendays')
-        ? 'ウォレットユーザー'
-        : `${senderEmail.slice(0, 2)}***`;
+      // Decision 097: 差出人は厩舎名優先(「○○厩舎から馬が届いた」)
+      const maskedSender = sender.rows[0]!.stable_name
+        ?? (senderEmail.endsWith('@user.sevendays')
+          ? 'ウォレットユーザー'
+          : `${senderEmail.slice(0, 2)}***`);
       const today = batchDateFor(new Date());
 
       await ctx.client.query('begin');
@@ -305,6 +308,47 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         throw error;
       }
       return { horse_id: horseId, recipient: input.recipient_email, horse_name: h.name };
+    },
+  });
+
+  // 厩舎名(Decision 097): 公開アイデンティティ。2〜20文字(和文/英数/スペース)・
+  // 一意(大文字小文字区別なし)・変更は1日1回。null指定で解除(マスク表示に戻る)。
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/account/stable-name',
+    auth: 'user',
+    input: z.object({ name: z.string().nullable() }),
+    handler: async (ctx, input) => {
+      const name = input.name?.trim() ?? null;
+      if (name !== null) {
+        // 和文(ひらがな/カタカナ/長音/漢字)+英数+スペースのみ。URL/記号/@は不可。
+        if (!/^[぀-ヿー一-鿿ｦ-ﾟA-Za-z0-9 ]{2,20}$/u.test(name)) {
+          throw new ApiError(
+            'STABLE_NAME_INVALID',
+            'Stable name must be 2-20 chars of Japanese, letters, digits or spaces',
+          );
+        }
+      }
+      const today = batchDateFor(new Date());
+      const current = await ctx.client.query<{ stable_name_changed_on: string | null }>(
+        `select stable_name_changed_on::text as stable_name_changed_on from users where id = $1`,
+        [ctx.userId],
+      );
+      if (current.rows[0]?.stable_name_changed_on === today) {
+        throw new ApiError('STABLE_NAME_DAILY_LIMIT', 'Stable name can change once per day');
+      }
+      try {
+        await ctx.client.query(
+          `update users set stable_name = $2, stable_name_changed_on = $3::date where id = $1`,
+          [ctx.userId, name, today],
+        );
+      } catch (error) {
+        if (/uq_users_stable_name|duplicate key/i.test((error as Error).message)) {
+          throw new ApiError('STABLE_NAME_TAKEN', 'This stable name is already in use');
+        }
+        throw error;
+      }
+      return { stable_name: name };
     },
   });
 
