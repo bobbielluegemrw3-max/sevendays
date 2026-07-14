@@ -270,6 +270,50 @@
   margin: 0;
 }
 
+/* ---------- community page: founder message ---------- */
+.founder {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin: 1.9rem 0 1.5rem;
+}
+.portrait {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  border: 1px solid #e7e5e4;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f5f5f4;
+}
+.pullquote {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 1.24rem;
+  line-height: 1.45;
+  color: #1c1917;
+  margin: 0;
+}
+.signature {
+  margin-top: 1.6rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f0efed;
+}
+.sigName {
+  font-size: 0.97rem;
+  font-weight: 700;
+  color: #1c1917;
+  margin: 0;
+}
+.sigMeta {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a8a29e;
+  margin: 0.2rem 0 0;
+}
+
 /* ---------- mobile ---------- */
 @media (max-width: 760px) {
   .shell {
@@ -297,4 +341,7 @@
   }
   .cards { grid-template-columns: 1fr; }
   .content h1 { font-size: 1.5rem; }
+  .founder { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .portrait { width: 88px; height: 88px; }
+  .pullquote { font-size: 1.1rem; }
 }
