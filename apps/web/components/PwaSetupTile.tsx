@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/client-api';
 import s from '../app/dashboard.module.css';
 
-type PwaState = 'loading' | 'done' | 'enable' | 'blocked' | 'ios-install' | 'install';
+type PwaState = 'loading' | 'done' | 'enable' | 'register' | 'blocked' | 'ios-install' | 'install';
 
 /** Android Chrome系が発火する「アプリを追加」ネイティブダイアログの起動イベント。 */
 interface BeforeInstallPromptEvent extends Event {
@@ -20,36 +20,42 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return bytes;
 }
 
+/** serviceWorker.ready は登録失敗時に永遠に解決しない — タイムアウトで守る。 */
+function swReady(ms: number): Promise<ServiceWorkerRegistration | null> {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
 /**
- * 許可済みブラウザの購読をサーバーに同期(Decision 084)。
- * 既存購読はそのまま登録し直す(endpoint uniqueのupsert)。失敗しても静かに諦める —
- * 次回ダッシュボード表示時に再試行される。
+ * 購読をサーバーに登録し、成功の事実を返す(Decision 084、2026-07-14堅牢化)。
+ * guri事案: 旧実装は失敗しても✓READYを出した。以後「サーバーが購読を持つ」
+ * ことを確認できた時だけ true。iOSはユーザー操作の文脈でsubscribeする必要が
+ * あるため、公開鍵は事前フェッチ済みのものを使い、await数を最小にする。
  */
-async function syncPushSubscription(): Promise<void> {
+async function syncPushSubscription(publicKey: string | null): Promise<boolean> {
   try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    const registration = await navigator.serviceWorker.ready;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+    const registration = await swReady(4000);
+    if (!registration) return false;
     let subscription = await registration.pushManager.getSubscription();
     if (!subscription) {
-      const keyRes = await apiFetch<{ public_key: string | null }>('/api/v1/push/public-key');
-      let publicKey: string | null = null;
-      if (keyRes.status === 200 && 'public_key' in keyRes.body && typeof keyRes.body.public_key === 'string') {
-        publicKey = keyRes.body.public_key;
-      }
-      if (!publicKey) return;
+      if (!publicKey) return false;
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,
       });
     }
     const json = subscription.toJSON();
-    if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) return;
-    await apiFetch('/api/v1/push/subscribe', {
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) return false;
+    const saved = await apiFetch<{ subscribed: boolean }>('/api/v1/push/subscribe', {
       method: 'POST',
       body: { endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth },
     });
+    return saved.status === 200;
   } catch {
-    // ベストエフォート(オフライン・非対応ブラウザ等)
+    return false;
   }
 }
 
@@ -67,15 +73,16 @@ function ShareIcon() {
 /**
  * ダッシュボードの「アプリ化&通知ON」導線。
  * - iOS Safari(未インストール)は通知APIが無い → 番号チップ3ステップでホーム画面追加を誘導
- * - 通知APIがある環境(インストール済みPWA / Android / PCブラウザ)は許可ボタン1つ
- * - Androidは通知ON完了後に beforeinstallprompt 経由の「+ アプリを追加」を控えめに提示
- * - 許可済みなら購読をサーバーへ同期して完了表示。SW(/sw.js)はキャッシュなしで
- *   プッシュ受信・クリック遷移のみを担う。配信は夜間バッチのブロードキャスト。
+ * - 通知APIがある環境は許可ボタン1つ。✓READYは**サーバー登録を確認できた時だけ**
+ *   (許可済み・未登録は「登録を完了する」ボタン = guri事案の自己修復経路)
+ * - 許可済みなら毎回サーバーと突合して自動同期。SW(/sw.js)はプッシュ受信のみ担う。
  */
 export function PwaSetupTile() {
   const [state, setState] = useState<PwaState>('loading');
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [mobile, setMobile] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const publicKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -86,10 +93,29 @@ export function PwaSetupTile() {
       (navigator as { standalone?: boolean }).standalone === true;
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
     setMobile(/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent));
+
+    // 公開鍵はマウント時に先読み(iOSのユーザー操作文脈を守るため、タップ後のawaitを減らす)
+    void apiFetch<{ public_key: string | null }>('/api/v1/push/public-key').then((r) => {
+      if (r.status === 200 && typeof (r.body as { public_key?: unknown }).public_key === 'string') {
+        publicKeyRef.current = (r.body as { public_key: string }).public_key;
+      }
+    });
+
     if ('Notification' in window) {
       if (Notification.permission === 'granted') {
-        setState('done');
-        void syncPushSubscription();
+        // 許可済みでも「サーバーに購読があるか」を必ず確認(guri事案)
+        void (async () => {
+          const status = await apiFetch<{ subscribed: boolean }>('/api/v1/push/status');
+          if (status.status === 200 && (status.body as { subscribed: boolean }).subscribed) {
+            setState('done');
+            // 端末変更に追従するベストエフォート同期(結果は問わない)
+            void syncPushSubscription(publicKeyRef.current);
+          } else {
+            // 許可はあるのに登録がない — ワンタップで登録を完了させる
+            const ok = await syncPushSubscription(publicKeyRef.current);
+            setState(ok ? 'done' : 'register');
+          }
+        })();
       } else if (Notification.permission === 'denied') {
         setState('blocked');
       } else {
@@ -100,7 +126,6 @@ export function PwaSetupTile() {
     } else {
       setState('install');
     }
-    // 「+ アプリを追加」用のネイティブイベント(Android Chrome系のみ発火。インストール済みなら発火しない)
     const onPrompt = (e: Event) => {
       e.preventDefault();
       setInstallEvent(e as BeforeInstallPromptEvent);
@@ -115,13 +140,24 @@ export function PwaSetupTile() {
   }, []);
 
   async function enable() {
+    if (busy) return;
+    setBusy(true);
     const result = await Notification.requestPermission();
     if (result === 'granted') {
-      setState('done');
-      void syncPushSubscription();
+      const ok = await syncPushSubscription(publicKeyRef.current);
+      setState(ok ? 'done' : 'register');
     } else if (result === 'denied') {
       setState('blocked');
     }
+    setBusy(false);
+  }
+
+  async function completeRegistration() {
+    if (busy) return;
+    setBusy(true);
+    const ok = await syncPushSubscription(publicKeyRef.current);
+    setState(ok ? 'done' : 'register');
+    setBusy(false);
   }
 
   async function install() {
@@ -156,8 +192,17 @@ export function PwaSetupTile() {
         ) : state === 'enable' ? (
           <>
             <span className={s.pwaText}>通知をONにすると、毎晩20:00の発走をお知らせします。</span>
-            <button type="button" className={s.pwaBtn} onClick={() => void enable()}>
-              通知をONにする
+            <button type="button" className={s.pwaBtn} onClick={() => void enable()} disabled={busy}>
+              {busy ? '設定中…' : '通知をONにする'}
+            </button>
+          </>
+        ) : state === 'register' ? (
+          <>
+            <span className={s.pwaText}>
+              許可は済んでいますが、この端末の登録がまだ完了していません。
+            </span>
+            <button type="button" className={s.pwaBtn} onClick={() => void completeRegistration()} disabled={busy}>
+              {busy ? '登録中…' : '登録を完了する'}
             </button>
           </>
         ) : state === 'blocked' ? (

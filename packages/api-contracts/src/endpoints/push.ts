@@ -29,6 +29,22 @@ export function registerPushEndpoints(registry: ApiRegistry): void {
     handler: () => Promise.resolve({ public_key: vapidPublicKey() }),
   });
 
+  // 実登録状態(2026-07-14 guri調査): 「READY」はブラウザ許可ではなく
+  // サーバー登録の事実で判定する — 許可済みでも登録0件のケースが実際に起きた。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/push/status',
+    auth: 'user',
+    handler: async (ctx) => {
+      const r = await ctx.client.query<{ n: number }>(
+        `select count(*)::int as n from push_subscriptions
+         where user_id = $1 and disabled_at is null`,
+        [ctx.userId],
+      );
+      return { subscribed: r.rows[0]!.n > 0, devices: r.rows[0]!.n };
+    },
+  });
+
   registry.register({
     method: 'POST',
     path: '/api/v1/push/subscribe',

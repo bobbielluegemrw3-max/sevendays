@@ -98,6 +98,24 @@ describe('push subscriptions', () => {
     expect(missing.status).toBe(404);
   });
 
+  it('status reports the SERVER-side truth (guri incident 2026-07-14)', async () => {
+    const user = await newUser();
+    const before = await call('GET', '/api/v1/push/status', asUser(user));
+    expect((before.body as { subscribed: boolean }).subscribed).toBe(false);
+
+    const endpoint = `https://push.example/${randomUUID()}`;
+    await call('POST', '/api/v1/push/subscribe', asUser(user), { body: sub(endpoint) });
+    const after = await call('GET', '/api/v1/push/status', asUser(user));
+    expect(after.body as { subscribed: boolean; devices: number }).toEqual({
+      subscribed: true,
+      devices: 1,
+    });
+
+    await call('POST', '/api/v1/push/unsubscribe', asUser(user), { body: { endpoint } });
+    const disabled = await call('GET', '/api/v1/push/status', asUser(user));
+    expect((disabled.body as { subscribed: boolean }).subscribed).toBe(false);
+  });
+
   it('public-key endpoint answers (null when VAPID env is not set)', async () => {
     const user = await newUser();
     const res = await call('GET', '/api/v1/push/public-key', asUser(user));
