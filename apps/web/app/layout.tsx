@@ -1,9 +1,14 @@
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
+import Link from 'next/link';
 import './globals.css';
 import { getAccessToken, serverApi } from '@/lib/server-api';
+import { withSqlClient } from '@/lib/db';
+import { getMaintenanceState } from '@/lib/maintenance';
 import { TopNav } from '@/components/TopNav';
 import { Splash } from '@/components/Splash';
+import { MaintenanceScreen } from '@/components/MaintenanceScreen';
+import m from '@/components/maintenance.module.css';
 
 export const metadata: Metadata = {
   title: 'Seven Days Derby',
@@ -44,6 +49,35 @@ async function TopNavLoader() {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const authed = (await getAccessToken()) !== null;
+
+  // メンテナンスモード(Decision 098): ONの間、管理者以外は全ページを
+  // メンテナンス画面に差し替える(APIはブリッジ側で503遮断済み)。
+  // /api/v1/me はメンテ中も管理者だけ200を返す(ブリッジのゲートが
+  // 非管理者を503にする)ため、この1回の問い合わせで判定が完結する。
+  const maintenance = await withSqlClient((client) => getMaintenanceState(client));
+  let maintenanceAdmin = false;
+  if (maintenance.enabled) {
+    const me = authed ? await serverApi<{ is_admin?: boolean }>('/api/v1/me') : null;
+    maintenanceAdmin = me?.status === 200 && me.body.is_admin === true;
+    if (!maintenanceAdmin) {
+      return (
+        <html lang="ja">
+          <head>
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+            <link
+              href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+              rel="stylesheet"
+            />
+          </head>
+          <body>
+            <MaintenanceScreen message={maintenance.message} />
+          </body>
+        </html>
+      );
+    }
+  }
+
   return (
     <html lang="ja">
       <head>
@@ -59,6 +93,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         {/* 起動スプラッシュ(セッション初回のみ・全ページ共通) */}
         <Splash />
+        {maintenance.enabled && maintenanceAdmin ? (
+          <div className={m.adminBanner}>
+            メンテナンス中 — 一般ユーザーは遮断されています。解除は{' '}
+            <Link href="/admin">管理ダッシュボード</Link> から。
+          </div>
+        ) : null}
         {/* Anonymous pages (landing / login) carry their own header. */}
         {authed ? (
           <Suspense fallback={<TopNav />}>

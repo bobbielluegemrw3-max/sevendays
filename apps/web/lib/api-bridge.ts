@@ -12,6 +12,7 @@ import {
 } from '@sevendays/api-contracts';
 import { sendCsEmail } from '@sevendays/api-contracts';
 import type { SqlClient } from '@sevendays/shared';
+import { getMaintenanceState } from './maintenance';
 
 /**
  * The ONLY bridge between HTTP/RSC and the API contracts registry
@@ -301,12 +302,31 @@ export async function dispatchBridge(
 }
 
 /** Dispatch with a pre-resolved AuthContext (server components resolve auth
- *  ONCE per render via React cache instead of per data call). */
+ *  ONCE per render via React cache instead of per data call).
+ *
+ *  メンテナンスモード(Decision 098): ONの間、管理者以外のディスパッチは
+ *  全て503 MAINTENANCEで遮断する(RSC経由もHTTP経由もここを通る)。
+ *  管理者は素通り = メンテ解除の操作も管理画面も通常どおり。ワーカーは
+ *  このブリッジを使わない(internal認証・別サーバー)ためバッチは走り続ける。 */
 export async function dispatchWithAuth(
   client: SqlClient,
   request: Omit<BridgeRequest, 'accessToken'>,
   auth: AuthContext,
 ): Promise<ApiResponse> {
+  if (auth.kind !== 'admin') {
+    const maintenance = await getMaintenanceState(client);
+    if (maintenance.enabled) {
+      return {
+        status: 503,
+        body: {
+          error: {
+            code: 'MAINTENANCE',
+            message: maintenance.message || 'Seven Days Derby is under maintenance.',
+          },
+        },
+      };
+    }
+  }
   return registry.dispatch(client, {
     method: request.method,
     path: request.path,

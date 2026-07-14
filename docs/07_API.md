@@ -124,6 +124,8 @@ Daily Derby live status (ADR-008 R1, Decision 073):
 - GET `/api/v1/admin/liquidity/reports`
 - GET `/api/v1/admin/stress-tests`
 - GET `/api/v1/admin/policies`
+- GET `/api/v1/admin/maintenance` (Decision 098): current maintenance state {enabled, message, updated_at}.
+- POST `/api/v1/admin/maintenance` (Decision 098): `{enabled, message?}` — toggles maintenance mode (audited: MAINTENANCE_ENABLED/DISABLED). While ON, the web bridge returns 503 MAINTENANCE for every non-admin dispatch (pages render a maintenance screen via the root layout); admins retain full access including login. Workers/internal auth are unaffected — the nightly batch keeps running.
 
 Admin recovery and retry require role validation and audit. Dual approval is required for recovery and for releasing large withdrawals (Decision 060: one FINANCE_ADMIN + one SUPER_ADMIN, two distinct persons).
 

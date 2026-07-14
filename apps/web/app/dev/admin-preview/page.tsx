@@ -34,6 +34,7 @@ export default async function AdminPreviewPage() {
             cs: 3,
             recovery: 1,
           },
+          maintenance: { enabled: true, message: '2026-07-15 02:00頃まで' },
           last_race: {
             batch_date: '2026-07-08',
             status: 'SETTLED',
@@ -60,6 +61,7 @@ export default async function AdminPreviewPage() {
             tonight_field: { entrants: 100, burn_slots_min: 8, burn_slots_max: 13 },
           },
           pending: { withdrawals: { count: 0, total: 0 }, cs: 0, recovery: 0 },
+          maintenance: { enabled: false, message: '' },
           last_race: {
             batch_date: '2026-07-08',
             status: 'SETTLED',

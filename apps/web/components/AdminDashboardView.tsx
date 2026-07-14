@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AdminDerbyCountdown } from '@/components/AdminDerbyCountdown';
+import { MaintenanceToggle } from '@/components/MaintenanceToggle';
 import s from '../app/admin.module.css';
 
 /* ============================================================================
@@ -45,6 +46,8 @@ export interface AdminCockpitData {
   derby: CockpitDerby | null;
   pending: CockpitPending;
   last_race: CockpitLastRace | null;
+  /** null = 取得失敗(セクション非表示) */
+  maintenance: { enabled: boolean; message: string } | null;
 }
 
 function ecoMeta(status: string): { bar: string; val: string; note: string } {
@@ -91,7 +94,7 @@ function QueueRow({
 }
 
 export function AdminDashboardView({ data }: { data: AdminCockpitData }) {
-  const { dashboard, derby, pending, last_race } = data;
+  const { dashboard, derby, pending, last_race, maintenance } = data;
   const { latest_batch, economy_status, metrics } = dashboard;
   const eco = ecoMeta(economy_status);
   const entries = metrics ? Object.entries(metrics) : [];
@@ -206,6 +209,14 @@ export function AdminDashboardView({ data }: { data: AdminCockpitData }) {
           ) : null}
         </div>
       )}
+
+      {/* ===== メンテナンスモード(Decision 098) ===== */}
+      {maintenance ? (
+        <>
+          <div className={s.sec}>メンテナンスモード</div>
+          <MaintenanceToggle enabled={maintenance.enabled} message={maintenance.message} />
+        </>
+      ) : null}
 
       {/* ===== ③直近レース結果 ===== */}
       <div className={s.sec}>直近レース</div>

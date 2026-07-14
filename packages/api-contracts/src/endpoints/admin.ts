@@ -861,6 +861,53 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
     },
   });
 
+  // メンテナンスモード(Decision 098): ONの間、Webの画面/APIは管理者以外を
+  // 遮断する(実施はapps/webのブリッジ+レイアウト。ワーカー/内部認証は対象外
+  // = 20:00バッチはメンテ中も走る)。ここは状態の読み書きと監査のみ。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/admin/maintenance',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const row = await ctx.client.query<{ value: { enabled?: boolean; message?: string }; updated_at: string }>(
+        `select value, updated_at::text as updated_at from system_settings where key = 'maintenance'`,
+      );
+      const value = row.rows[0]?.value ?? {};
+      return {
+        enabled: value.enabled === true,
+        message: typeof value.message === 'string' ? value.message : '',
+        updated_at: row.rows[0]?.updated_at ?? null,
+      };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/maintenance',
+    auth: 'admin',
+    input: z.object({ enabled: z.boolean(), message: z.string().max(500).optional() }),
+    handler: async (ctx, input) => {
+      requireAdminRole(ctx);
+      const value = { enabled: input.enabled, message: input.message ?? '' };
+      await ctx.client.query(
+        `insert into system_settings (key, value, updated_at, updated_by)
+         values ('maintenance', $1::jsonb, now(), $2)
+         on conflict (key) do update set value = excluded.value, updated_at = now(), updated_by = excluded.updated_by`,
+        [JSON.stringify(value), ctx.userId],
+      );
+      // audit_logs.reference_id はuuid型 — システム設定の監査は固定の
+      // シングルトンUUID(全ゼロ)を参照に使う(対象はreference_typeで判別)。
+      await audit(
+        ctx,
+        input.enabled ? 'MAINTENANCE_ENABLED' : 'MAINTENANCE_DISABLED',
+        'system_settings',
+        '00000000-0000-0000-0000-000000000000',
+      );
+      return { enabled: value.enabled, message: value.message };
+    },
+  });
+
   // 厩舎名の強制解除(Decision 097): 不適切な公開名のモデレーション。監査必須。
   registry.register({
     method: 'POST',

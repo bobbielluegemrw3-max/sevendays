@@ -21,13 +21,14 @@ interface RecoveryRow {
 }
 
 export default async function AdminDashboardPage() {
-  const [dash, wd, cs, rec, races, derby] = await Promise.all([
+  const [dash, wd, cs, rec, races, derby, mnt] = await Promise.all([
     serverApi<AdminDashboard>('/api/v1/admin/dashboard'),
     serverApi<{ withdrawals: WithdrawalRow[] }>('/api/v1/admin/withdrawals'),
     serverApi<{ messages: CsRow[] }>('/api/v1/admin/cs/queue'),
     serverApi<{ recoveries: RecoveryRow[] }>('/api/v1/admin/recovery'),
     serverApi<{ races: CockpitLastRace[] }>('/api/v1/admin/races/overview'),
     serverApi<CockpitDerby>('/api/v1/daily-derby/status'),
+    serverApi<{ enabled: boolean; message: string }>('/api/v1/admin/maintenance'),
   ]);
   if (dash.status !== 200) return <p className="error">ダッシュボードを取得できません。</p>;
 
@@ -58,6 +59,8 @@ export default async function AdminDashboardPage() {
             rec.status === 200 ? rec.body.recoveries.filter((r) => r.completed_at === null).length : null,
         },
         last_race: races.status === 200 ? (races.body.races[0] ?? null) : null,
+        maintenance:
+          mnt.status === 200 ? { enabled: mnt.body.enabled, message: mnt.body.message } : null,
       }}
     />
   );
