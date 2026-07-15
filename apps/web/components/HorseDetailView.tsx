@@ -10,6 +10,7 @@ import {
   type Weather,
 } from '@sevendays/domain';
 import { NftHorseArt } from '@/components/NftHorseArt';
+import { HorsePager, type PagerNav } from '@/components/HorsePager';
 import { TrainingForm } from '@/components/TrainingForm';
 import { ItemBoostPanel } from '@/components/ItemBoostPanel';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
@@ -277,7 +278,7 @@ function ValueLadder({ horse, mode }: { horse: HorseDetail; mode: Mode }) {
 }
 
 /* ---- メイン --------------------------------------------------------------- */
-export function HorseDetailView({ horse }: { horse: HorseDetail }) {
+export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: PagerNav | undefined }) {
   // 隠し演出(EASTER_EGG_PLAN.md): 真夜中の馬は夜色ルック。
   const look = horse.night_variant ? NIGHT_LOOK : deriveNftLook(horse.dna_hash, horse.name);
   const mode = modeOf(horse);
@@ -341,6 +342,8 @@ export function HorseDetailView({ horse }: { horse: HorseDetail }) {
                   <div className="v">{Math.min(7, horse.current_day)}<small>/7</small></div>
                 </div>
               </div>
+              {/* 前/次の馬へ(厩舎に戻らず回れる) */}
+              {nav ? <HorsePager nav={nav} /> : null}
             </div>
             <div className={s.heroFoot}>
               <DayRail horse={horse} mode={mode} />
