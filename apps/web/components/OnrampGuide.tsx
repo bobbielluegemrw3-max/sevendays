@@ -34,20 +34,16 @@ export interface OnrampLink {
   ready: boolean;
 }
 
-/** 既定の候補(検証済みの2件 + オーナー差し替え枠3件)。 */
+/** 既定の候補。すべて国を問わず使えるグローバルサービスに統一(国中立)。
+ *  日本特化のJPYCは外した(Decision 2026-07-15): 1国だけ特化すると日本偏りになり、
+ *  かといって各国パリティは不可能 — 中国は暗号資産が全面禁止、韓国は取引所の外部
+ *  ウォレット出金がトラベルルールで厳しく制限。ゆえに国中立が最も公平で安全。 */
 export const DEFAULT_ONRAMP_LINKS: OnrampLink[] = [
   {
     name: 'Transak',
     blurb: 'クレジットカード・銀行振込などで、Polygon の USDT を直接購入(64か国以上)。',
     href: 'https://global.transak.com',
     kind: 'direct',
-    ready: true,
-  },
-  {
-    name: 'JPYC(日本の方向け)',
-    blurb: '円で日本の規制対応ステーブルコインJPYCを購入 → DEXで Polygon の USDT に交換。手順が多いので上級者向け。',
-    href: 'https://jpyc.co.jp/',
-    kind: 'advanced',
     ready: true,
   },
   // ▼ オーナー推奨(2026-07-15確定)。いずれも紹介(リファラル)リンク=下の免責で広告関係を明示。
