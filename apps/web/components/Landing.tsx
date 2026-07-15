@@ -187,7 +187,7 @@ export function Landing({
               <div className={s.l}>{'// NEXT POST 20:00 MYT'}</div>
               <Countdown className={s.cd} />
               <div className={s.s}>
-                <LocalPostTime />
+                <LocalPostTime lang={lang} />
               </div>
               <GoogleLoginButton label={t.login_join_race} />
             </div>
@@ -245,7 +245,7 @@ export function Landing({
                 </div>
                 <div className={s.t}>{t.step02_t}</div>
                 <div className={s.d}>
-                  {t.step02_da}<LocalRaceTime />{t.step02_db}
+                  {t.step02_da}<LocalRaceTime lang={lang} />{t.step02_db}
                 </div>
               </div>
               <div className={s.step}>
@@ -364,7 +364,7 @@ export function Landing({
           <p className={s.lead}>
             {t.s4_lead_a}
             <b style={{ color: '#00eaff' }}>
-              <LocalRaceTime />
+              <LocalRaceTime lang={lang} />
             </b>
             {t.s4_lead_b}
           </p>

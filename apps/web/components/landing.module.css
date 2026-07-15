@@ -469,8 +469,10 @@
 .langChev { transition: transform 0.18s ease; opacity: 0.75; }
 .langChevOpen { transform: rotate(180deg); transition: transform 0.18s ease; opacity: 0.9; }
 
-.langMenu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 60; margin: 0; padding: 6px;
-  list-style: none; min-width: 168px;
+/* 左端(ボタンの左辺)に揃えて右方向に開く。モバイルではこのボタンが画面左端に来るため、
+ * right:0 だと 200px 幅のメニューが画面外(左)へはみ出す(オーナー報告 2026-07-15)。 */
+.langMenu { position: absolute; left: 0; right: auto; top: calc(100% + 8px); z-index: 60; margin: 0; padding: 6px;
+  list-style: none; min-width: 168px; max-width: calc(100vw - 32px);
   background: #171429; border: 1px solid rgba(255,255,255,0.14); border-radius: 12px;
   box-shadow: 0 18px 40px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4);
   animation: langMenuIn 0.14s ease; }
