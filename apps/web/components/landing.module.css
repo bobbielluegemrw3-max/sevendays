@@ -454,3 +454,11 @@
 .foot .links a { color: #8f8ac2; }
 .foot .links a:hover { color: #eae7ff; }
 .foot .cpy { font-family: var(--font-mono); font-size: 10px; color: #4a4670; }
+
+/* 言語切替(TOPページ・2026-07-15) */
+.navRight { display: flex; align-items: center; gap: 10px; }
+.langSelect { font-family: var(--font-mono, monospace); font-size: 11px; color: #cbb8ff;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.14); border-radius: 8px;
+  padding: 6px 8px; cursor: pointer; outline: none; }
+.langSelect:hover { border-color: rgba(124,107,255,0.6); }
+@media (max-width: 640px) { .langSelect { font-size: 10.5px; padding: 5px 6px; } }

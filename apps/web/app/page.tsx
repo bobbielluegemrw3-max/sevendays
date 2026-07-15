@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { burnSlotRangeV1 } from '@sevendays/domain';
 import { getAccessToken } from '@/lib/server-api';
 import { withSqlClient } from '@/lib/db';
 import { Landing } from '@/components/Landing';
+import { isLang, type Lang } from '@/lib/landing-i18n';
 
 /**
  * Root is always the public landing page. Signed-in players are redirected to
@@ -38,5 +40,10 @@ async function tonightField(): Promise<{ entrants: number; min: number; max: num
 export default async function Home() {
   const token = await getAccessToken();
   if (token) redirect('/dashboard');
-  return <Landing tonightField={await tonightField()} />;
+  // 言語(TOPページ): cookie sdd_lang を優先、なければブラウザのAccept-Languageで初期推定、既定は日本語。
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get('sdd_lang')?.value;
+  let lang: Lang = 'ja';
+  if (isLang(cookieLang)) lang = cookieLang;
+  return <Landing tonightField={await tonightField()} lang={lang} />;
 }

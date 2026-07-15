@@ -8,6 +8,8 @@ import { DAY0_MINT_TOTAL_CHARGE, PRICE_TABLE_V1 } from '@sevendays/domain';
 import { pickShowcase } from '@/lib/horse-visual';
 import { pickNftShowcase } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { LANDING_COPY, type Lang } from '@/lib/landing-i18n';
 import s from './landing.module.css';
 
 /**
@@ -51,7 +53,14 @@ export interface LandingTonightField {
   max: number;
 }
 
-export function Landing({ tonightField = null }: { tonightField?: LandingTonightField | null }) {
+export function Landing({
+  tonightField = null,
+  lang = 'ja',
+}: {
+  tonightField?: LandingTonightField | null;
+  lang?: Lang;
+}) {
+  const t = LANDING_COPY[lang];
   // ショーケース: 名前/価格/レアリティは決定論エンジン、アートは承認済みNFTルック空間。
   const horses = pickShowcase(8, () => (Math.random() * 0xffffffff) >>> 0);
   const looks = pickNftShowcase(8, () => (Math.random() * 0xffffffff) >>> 0);
@@ -76,11 +85,14 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
           </span>
         </div>
         <div className={s.navMenu}>
-          <Link href="#how">遊び方</Link>
-          <Link href="#collection">コレクション</Link>
-          <Link href="#economy">エコノミー</Link>
+          <Link href="#how">{t.nav_how}</Link>
+          <Link href="#collection">{t.nav_collection}</Link>
+          <Link href="#economy">{t.nav_economy}</Link>
         </div>
-        <GoogleLoginButton size="sm" label="Google でログイン" />
+        <div className={s.navRight}>
+          <LanguageSwitcher current={lang} />
+          <GoogleLoginButton size="sm" label={t.login} />
+        </div>
       </div>
 
       {/* ===== ① HERO ===== */}
@@ -97,17 +109,15 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
               <span className={s.l1}>SEVEN&nbsp;DAYS</span>
               <span className={s.l2}>DERBY</span>
             </h1>
-            <p className={s.hlead}>
-              7日間を、走り抜け。全馬が一斉に発走。下位はBurn、生き残った馬は毎日価値が高まる。P2Pで売買。
-            </p>
+            <p className={s.hlead}>{t.hero_lead}</p>
             <div className={s.hsub}>Provably fair. Fully replayable. No AI winners.</div>
             <div className={s.hbtns}>
               {/* ヒーローのデザインは変更禁止 — 見た目そのまま、動作だけGoogle直起動 */}
               <GoogleLoginButton unstyled className={s.btnPrimary}>
-                馬を迎える ▶
+                {t.hero_cta_adopt}
               </GoogleLoginButton>
               <Link href="#how">
-                <button className={s.btnGhost}>遊び方を見る</button>
+                <button className={s.btnGhost}>{t.hero_cta_how}</button>
               </Link>
             </div>
             <div className={s.hstats}>
@@ -179,7 +189,7 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
               <div className={s.s}>
                 <LocalPostTime />
               </div>
-              <GoogleLoginButton label="Google でレースに参加" />
+              <GoogleLoginButton label={t.login_join_race} />
             </div>
             {/* provably fair trust card */}
             <div className={s.trustCard}>
@@ -190,7 +200,7 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                 </div>
                 <div>
                   <div className={s.tt}>COMMIT &amp; REVEAL</div>
-                  <div className={s.td}>結果は事前にコミットされ、後から検証できる。</div>
+                  <div className={s.td}>{t.trust_commit}</div>
                 </div>
               </div>
               <div className={s.trustRow}>
@@ -199,7 +209,7 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                 </div>
                 <div>
                   <div className={s.tt}>USDT ON POLYGON</div>
-                  <div className={s.td}>賞金はオンチェーンで受け取る。</div>
+                  <div className={s.td}>{t.trust_usdt}</div>
                 </div>
               </div>
               <div className={s.trustRow}>
@@ -208,7 +218,7 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                 </div>
                 <div>
                   <div className={s.tt}>OPEN LEDGER</div>
-                  <div className={s.td}>全レースの記録は台帳で公開、CSVで検証可能。</div>
+                  <div className={s.td}>{t.trust_ledger}</div>
                 </div>
               </div>
             </div>
@@ -226,38 +236,38 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                 <div className={s.no} style={{ color: '#00eaff' }}>
                   01
                 </div>
-                <div className={s.t}>馬を迎える</div>
-                <div className={s.d}>購入を申し込むと自動でマッチング。出走中の馬(P2P)を優先、在庫が足りなければ新規Mint(102 USDT=価格100+手数料2)。価格は割当先次第。</div>
+                <div className={s.t}>{t.step01_t}</div>
+                <div className={s.d}>{t.step01_d}</div>
               </div>
               <div className={s.step}>
                 <div className={s.no} style={{ color: '#ff2dc4' }}>
                   02
                 </div>
-                <div className={s.t}>調教して出走</div>
+                <div className={s.t}>{t.step02_t}</div>
                 <div className={s.d}>
-                  レース前に1日1回だけ調教できます。毎晩 <LocalRaceTime />、すべての馬が一斉に走ります。
+                  {t.step02_da}<LocalRaceTime />{t.step02_db}
                 </div>
               </div>
               <div className={s.step}>
                 <div className={s.no} style={{ color: '#ff6fd0' }}>
                   03
                 </div>
-                <div className={s.t}>生存 or Burn</div>
-                <div className={s.d}>1日1回レース開催。毎晩1回、存在する全ての馬が一斉にレース出走。成績下位の馬はBurnで消滅(全記録は台帳で公開)。生き残り馬は価値が高まり翌日のレースへ。</div>
+                <div className={s.t}>{t.step03_t}</div>
+                <div className={s.d}>{t.step03_d}</div>
               </div>
               <div className={s.step}>
                 <div className={s.no} style={{ color: '#c6ff3a' }}>
                   04
                 </div>
-                <div className={s.t}>P2P売買</div>
-                <div className={s.d}>生き残り馬は価値が高まったままP2P売買に自動利確。馬の所有者は即座にUSDTになります。</div>
+                <div className={s.t}>{t.step04_t}</div>
+                <div className={s.d}>{t.step04_d}</div>
               </div>
               <div className={`${s.step} ${s.gold}`}>
                 <div className={s.no} style={{ color: '#c9a86a' }}>
                   05
                 </div>
-                <div className={s.t}>Day7 → チャンピオン</div>
-                <div className={s.d}>7日走り切れば200 USDTを7回で受取。完済で記念NFTになります。</div>
+                <div className={s.t}>{t.step05_t}</div>
+                <div className={s.d}>{t.step05_d}</div>
               </div>
             </div>
           </div>
@@ -272,9 +282,9 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
             YOU ARE THE STABLE OWNER
           </span>
           <h2 className={s.h2} style={{ marginTop: 14 }}>
-            これは、厩舎のゲームだ。
+            {t.s3_h2}
           </h2>
-          <p className={s.lead}>あなたは厩舎のオーナー。あなたが迎える馬が、あなたの7日間を決める。</p>
+          <p className={s.lead}>{t.s3_lead}</p>
         </div>
         <div className={s.stableRail}>
           {stableHorses.map((h, i) => {
@@ -303,8 +313,8 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                 <path d="M3 13l9 5 9-5" />
               </svg>
             </div>
-            <h3>集める</h3>
-            <p>マイ厩舎に、有能な馬をどれだけ揃えられるか。</p>
+            <h3>{t.q1_h}</h3>
+            <p>{t.q1_p}</p>
             <span className={s.ghost} style={{ color: '#00eaff' }}>
               01
             </span>
@@ -318,8 +328,8 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                 <path d="M12 1v3M12 20v3M1 12h3M20 12h3" strokeLinecap="round" />
               </svg>
             </div>
-            <h3>狙う</h3>
-            <p>チャンピオンになる馬を、見抜けるか。</p>
+            <h3>{t.q2_h}</h3>
+            <p>{t.q2_p}</p>
             <span className={s.ghost} style={{ color: '#ff2dc4' }}>
               02
             </span>
@@ -331,14 +341,14 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                 <path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3Z" />
               </svg>
             </div>
-            <h3>守る</h3>
-            <p>BURNされない馬を、走らせ続けられるか。</p>
+            <h3>{t.q3_h}</h3>
+            <p>{t.q3_p}</p>
             <span className={s.ghost} style={{ color: '#c9a86a' }}>
               03
             </span>
           </div>
         </div>
-        <p className={s.closing}>買う・鍛える・走らせる・手放す。すべての判断が、あなたの厩舎の物語になる。</p>
+        <p className={s.closing}>{t.s3_closing}</p>
       </LandingReveal>
 
       {/* ===== ④ 毎晩20:00、全馬一斉の巨大レース ===== */}
@@ -349,14 +359,14 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
             THE DAILY DERBY — 20:00 MYT
           </span>
           <h2 className={s.h2} style={{ marginTop: 14 }}>
-            毎晩20:00、全馬一斉の巨大レース。
+            {t.s4_h2}
           </h2>
           <p className={s.lead}>
-            あなたの国では{' '}
+            {t.s4_lead_a}
             <b style={{ color: '#00eaff' }}>
-              毎晩 <LocalRaceTime />
-            </b>{' '}
-            — マイ厩舎の馬は、毎晩デイリーダービーに出走する。勝ち残った馬は価値が上がり(100 → 110 → 121 → …)、敗れた馬はBURN — 消滅する。
+              <LocalRaceTime />
+            </b>
+            {t.s4_lead_b}
           </p>
         </div>
         <div className={s.showWrap}>
@@ -397,54 +407,50 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                 </div>
               </div>
               <div className={s.myLane}>
-                <div className={s.myLaneH}>MY LANE — あなたの馬</div>
+                <div className={s.myLaneH}>MY LANE — {t.mylane_yours}</div>
                 <div className={`${s.myEv} ${s.champ}`}>
                   <div className={s.mn}>Golden Wind</div>
-                  <div className={s.ms}>DAY7 走破 — CHAMPION</div>
+                  <div className={s.ms}>{t.ev_champ}</div>
                 </div>
                 <div className={`${s.myEv} ${s.survive}`}>
                   <div className={s.mn}>Azure Comet</div>
-                  <div className={s.ms}>DAY3 → DAY4 生存</div>
+                  <div className={s.ms}>{t.ev_survive}</div>
                 </div>
                 <div className={`${s.myEv} ${s.burn}`}>
                   <div className={s.mn}>Crimson Nova</div>
-                  <div className={s.ms}>DAY2 — BURN</div>
+                  <div className={s.ms}>{t.ev_burn}</div>
                 </div>
               </div>
             </div>
           </div>
           <div className={s.showSide}>
             <LandingReveal className={`${s.fcCard}`} inClassName={`${s.in}`} threshold={0.3}>
-              <div className={s.fcTag}>— 明日の予報 —</div>
-              <div className={s.fcTitle}>
-                レースの最後には、
-                <br />
-                「明日の予報」が発表される。
-              </div>
+              <div className={s.fcTag}>{t.fc_tag}</div>
+              <div className={s.fcTitle}>{t.fc_title}</div>
               <div className={s.fcRow}>
                 <div className={s.fcChip}>
-                  <div className={s.k}>天候</div>
-                  <div className={`${s.v} ${s.cy}`}>雨</div>
+                  <div className={s.k}>{t.fc_weather_k}</div>
+                  <div className={`${s.v} ${s.cy}`}>{t.fc_weather_v}</div>
                 </div>
                 <div className={s.fcChip}>
-                  <div className={s.k}>馬場</div>
-                  <div className={`${s.v} ${s.gd}`}>稍重</div>
+                  <div className={s.k}>{t.fc_track_k}</div>
+                  <div className={`${s.v} ${s.gd}`}>{t.fc_track_v}</div>
                 </div>
                 <div className={s.fcChip}>
-                  <div className={s.k}>コース</div>
-                  <div className={`${s.v} ${s.gr}`}>芝</div>
+                  <div className={s.k}>{t.fc_course_k}</div>
+                  <div className={`${s.v} ${s.gr}`}>{t.fc_course_v}</div>
                 </div>
               </div>
               <div className={s.fcNote}>
-                <b>予報が見られるのは、毎晩のレースの中だけ。</b>
+                <b>{t.fc_note_b}</b>
                 <br />
-                だから、毎晩見る理由がある。予報は参考情報で、結果を保証するものではありません。
+                {t.fc_note_rest}
               </div>
             </LandingReveal>
             <div className={s.nextRaceCard}>
               <div className={s.l}>{'// NEXT POST 20:00 MYT'}</div>
               <Countdown className={s.nrCd} />
-              <div className={s.nrNote}>この時間だけ、明日の予報が出る。</div>
+              <div className={s.nrNote}>{t.next_race_note}</div>
             </div>
           </div>
         </div>
@@ -458,14 +464,12 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
             AFTER THE RACE — TRADE TIME
           </span>
           <h2 className={s.h2} style={{ marginTop: 14 }}>
-            走った馬は、売れる。
+            {t.s5_h2}
           </h2>
         </div>
         <div className={s.featureRow}>
           <div className={s.panelCard}>
-            <p className={s.p} style={{ margin: 0 }}>
-              毎晩のレースが終わると、マーケットプレイスが開く。生き残ったあなたの馬は、価値が上がった状態で取引される。高く売って利確するか、明日も走らせて更に狙うか、新しい馬を迎えるか — それを決めるのが、厩舎のオーナーの仕事だ。
-            </p>
+            <p className={s.p} style={{ margin: 0 }}>{t.s5_p}</p>
           </div>
           <div className={s.panelCard}>
             <div className={s.eyebrow} style={{ color: '#8f8ac2', fontSize: 10 }}>
@@ -493,7 +497,7 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
               </div>
             </div>
             <p className={s.p} style={{ margin: '16px 0 0', fontSize: 12.5, color: '#8f8ac2' }}>
-              生き残るほど価値が積み上がる。手放す夜は、あなたが選ぶ。
+              {t.s5_p2}
             </p>
           </div>
         </div>
@@ -507,7 +511,7 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
             DAY7 — CHAMPION
           </span>
           <h2 className={s.h2} style={{ marginTop: 14 }}>
-            7晩勝ち残った馬は、チャンピオンになる。
+            {t.s6_h2}
           </h2>
         </div>
         <div className={s.featureRow}>
@@ -517,11 +521,9 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
               <path d="M6 40h36" strokeLinecap="round" />
             </svg>
             <div className={s.champBig}>
-              200 USDT<small>7日間にわたって賞金を受け取り、合計200 USDT。</small>
+              200 USDT<small>{t.champ_small}</small>
             </div>
-            <p className={s.p} style={{ marginTop: 16 }}>
-              チャンピオン馬はもうレースを走らない。マーケットにも出ない。走り切った証は、記念NFTとして厩舎に残る。
-            </p>
+            <p className={s.p} style={{ marginTop: 16 }}>{t.s6_p}</p>
           </div>
           <div className={s.leagueCard}>
             <span className={s.comingBadge}>
@@ -529,9 +531,7 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
               COMING SOON
             </span>
             <h3>CHAMPION LEAGUE</h3>
-            <p className={s.p} style={{ margin: 0 }}>
-              アクティブユーザー10,000人到達で開幕。チャンピオン馬を持つ厩舎だけが出られる週次リーグ戦。毎週、賞金がかかる。
-            </p>
+            <p className={s.p} style={{ margin: 0 }}>{t.league_p}</p>
           </div>
         </div>
       </LandingReveal>
@@ -544,13 +544,13 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
             TEAM — SUPPORT BONUS
           </span>
           <h2 className={s.h2} style={{ marginTop: 14 }}>
-            仲間の栄光は、チームの祝福だ。
+            {t.s7_h2}
           </h2>
         </div>
         <div className={s.featureRow}>
           <div className={s.panelCard}>
             <p className={s.p} style={{ margin: 0 }}>
-              あなたの厩舎は、仲間を招いてチームを作れる。チームの中からチャンピオン(7日間走破)が誕生したとき、支えたチームには<b style={{ color: '#ff8fe4' }}>サポートボーナス</b>がお祝い金として配られる。誰かの栄光が、チーム全体の実りになる仕組みだ。だから仲間の馬を応援しよう — チームの中から、次のチャンピオンを送り出そう。
+              {t.s7_pa}<b style={{ color: '#ff8fe4' }}>{t.s7_support}</b>{t.s7_pb}
             </p>
           </div>
           <div className={s.teamDiag}>
@@ -559,7 +559,7 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                 <div className={s.disc}>
                   <NftHorseArt look={stableLooks[0]!} />
                 </div>
-                <div className={s.lbl}>仲間</div>
+                <div className={s.lbl}>{t.team_mate}</div>
               </div>
               <div className={`${s.tNode} ${s.champ}`}>
                 <div className={s.disc}>
@@ -571,13 +571,13 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                 <div className={s.disc}>
                   <NftHorseArt look={stableLooks[2]!} />
                 </div>
-                <div className={s.lbl}>あなたの厩舎</div>
+                <div className={s.lbl}>{t.team_center}</div>
               </div>
               <div className={s.tNode}>
                 <div className={s.disc}>
                   <NftHorseArt look={stableLooks[3]!} />
                 </div>
-                <div className={s.lbl}>仲間</div>
+                <div className={s.lbl}>{t.team_mate}</div>
               </div>
             </div>
             <div style={{ textAlign: 'center' }}>
@@ -600,11 +600,11 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
             MARKETPLACE — SHOWCASE
           </span>
           <h2 className={s.h2} style={{ marginTop: 14 }}>
-            厩舎に迎えられる馬たち。
+            {t.s8_h2}
           </h2>
           <div className={s.showcaseNote}>
             <span className={s.dot} />
-            SHOWCASE — 実際の出品と価格は、ログイン後のマーケットでご覧いただけます。
+            SHOWCASE — {t.showcase_note_rest}
           </div>
         </div>
         <div className={s.galGrid}>
@@ -643,21 +643,21 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                   </div>
                   <div className={s.priceRow}>
                     <div>
-                      <div className={s.pl}>{day === 0 ? 'MINT · 手数料込' : 'P2P PRICE'}</div>
+                      <div className={s.pl}>{day === 0 ? t.mint_label : 'P2P PRICE'}</div>
                       <div className={s.pv}>
                         {price} <span className={s.u}>USDT</span>
                       </div>
                     </div>
                     <span className={s.last}>DAY {day}</span>
                   </div>
-                  <GoogleLoginButton label="Google で購入" className={`${s.galGoogle}`} />
+                  <GoogleLoginButton label={t.login_buy} className={`${s.galGoogle}`} />
                 </div>
               </div>
             );
           })}
         </div>
         <div className={s.colMore}>
-          <GoogleLoginButton unstyled>すべての出品を見る →</GoogleLoginButton>
+          <GoogleLoginButton unstyled>{t.see_all}</GoogleLoginButton>
         </div>
       </LandingReveal>
 
@@ -669,31 +669,31 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
             PUBLIC LEDGER — PROVABLY FAIR
           </span>
           <h2 className={s.h2} style={{ marginTop: 14 }}>
-            すべての記録が、台帳に残る。
+            {t.s9_h2}
           </h2>
           <p className={s.lead}>
-            ゲーム内には公開台帳がある。毎晩のレースで何頭が走り、何頭が生き残り、何頭がBURNされたか — 全記録がそのまま公開される。
-            <b style={{ color: '#f2e4bf' }}>CSVでダウンロードして、勝率でもなんでも、自由に計算していい。</b>{' '}
-            レース結果は事前コミットされたシードから決定論的に計算され、レース後にシードが公開される。誰でも再計算して検証できる。
+            {t.s9_lead_a}
+            <b style={{ color: '#f2e4bf' }}>{t.s9_lead_b}</b>{' '}
+            {t.s9_lead_c}
           </p>
         </div>
         <div className={s.ledgerWrap}>
           <div className={s.ledgerCells}>
             <div className={s.cell}>
-              <div className={`${s.n} ${s.cy}`}>台帳</div>
-              <div className={s.k}>毎晩公開</div>
+              <div className={`${s.n} ${s.cy}`}>{t.ledger_a_n}</div>
+              <div className={s.k}>{t.ledger_a_k}</div>
             </div>
             <div className={s.cell}>
               <div className={`${s.n} ${s.go}`}>CSV</div>
-              <div className={s.k}>ダウンロード可</div>
+              <div className={s.k}>{t.ledger_b_k}</div>
             </div>
             <div className={s.cell}>
-              <div className={`${s.n} ${s.gr}`}>コミット・リビール</div>
-              <div className={s.k}>誰でも検証</div>
+              <div className={`${s.n} ${s.gr}`}>{t.ledger_c_n}</div>
+              <div className={s.k}>{t.ledger_c_k}</div>
             </div>
             <div className={s.cell}>
-              <div className={`${s.n} ${s.mg}`}>複式簿記</div>
-              <div className={s.k}>負残高を構造的に許さない</div>
+              <div className={`${s.n} ${s.mg}`}>{t.ledger_d_n}</div>
+              <div className={s.k}>{t.ledger_d_k}</div>
             </div>
           </div>
           <div className={s.ledgerViz}>
@@ -720,7 +720,7 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
                 </svg>
                 results.csv
               </span>
-              <span>誰でもダウンロードして再計算できます。</span>
+              <span>{t.csv_note}</span>
             </div>
           </div>
         </div>
@@ -738,15 +738,15 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
               JOIN TONIGHT&apos;S RACE
             </div>
             <h2>
-              今日から、あなたは
+              {t.s10_h2a}
               <br />
-              厩舎のオーナーだ。
+              {t.s10_h2b}
             </h2>
             <div>
-              <GoogleLoginButton size="lg" label="Google で厩舎を持つ" />
+              <GoogleLoginButton size="lg" label={t.login_own} />
             </div>
             <p className={s.p} style={{ margin: '18px 0 0', maxWidth: 'none' }}>
-              Googleアカウントで、すぐに始められます。
+              {t.s10_p}
             </p>
             <div className={s.fine}>USDT · POLYGON · PROVABLY FAIR</div>
           </div>
@@ -776,9 +776,9 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
               <div className={s.gatePlate}>
                 <div>
                   <div className={s.gpt}>YOUR STALL · DAY 0</div>
-                  <div className={s.gpn}>まだ名前のない一頭</div>
+                  <div className={s.gpn}>{t.gate_name}</div>
                 </div>
-                <span className={s.gpTag}>◇ 枠 空き</span>
+                <span className={s.gpTag}>{t.gate_slot}</span>
               </div>
               <div className={s.gateTimer}>
                 <span className={s.gtl}>{'// GATE OPENS IN'}</span>
@@ -789,10 +789,10 @@ export function Landing({ tonightField = null }: { tonightField?: LandingTonight
               {tonightField && (
                 <div className={s.gateField}>
                   <span>
-                    出走予定 <b>{tonightField.entrants}</b>頭
+                    {t.field_entrants_a}<b>{tonightField.entrants}</b>{t.field_entrants_u}
                   </span>
                   <span className={s.gfBurn}>
-                    BURN枠 <b>{tonightField.min === tonightField.max ? tonightField.max : `${tonightField.min}〜${tonightField.max}`}</b>頭
+                    {t.field_burn_a}<b>{tonightField.min === tonightField.max ? tonightField.max : `${tonightField.min}〜${tonightField.max}`}</b>{t.field_burn_u}
                   </span>
                   <span className={s.gfLive}>
                     <span className={s.gfDot} />
