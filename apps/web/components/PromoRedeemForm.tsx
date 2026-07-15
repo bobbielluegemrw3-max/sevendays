@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { APP_COPY, type Lang } from '@/lib/i18n';
 import s from '@/app/dashboard.module.css';
 
 /**
@@ -11,7 +12,8 @@ import s from '@/app/dashboard.module.css';
  * 運営厩舎から馬が1頭その場で届く。控えめなトグル — コードを
  * 持たない大多数のユーザーには1行のリンクにしか見えない。
  */
-export function PromoRedeemForm() {
+export function PromoRedeemForm({ lang = 'ja' }: { lang?: Lang }) {
+  const t = APP_COPY[lang].promo;
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');
@@ -33,7 +35,7 @@ export function PromoRedeemForm() {
       setHorse({ id: body.horse_id, name: body.horse_name });
       router.refresh();
     } else {
-      setError(errorMessage(r.body) ?? '引換に失敗しました。コードをご確認ください。');
+      setError(errorMessage(r.body) ?? t.err_default);
     }
   };
 
@@ -41,9 +43,9 @@ export function PromoRedeemForm() {
     return (
       <section className={s.promoCard}>
         <span className={s.promoDone}>
-          🎁 <b>{horse.name}</b> があなたの厩舎に届きました — 今夜20:00から出走します。
+          {t.done_pre}<b>{horse.name}</b>{t.done_post}
         </span>
-        <Link href={`/horses/${horse.id}`} className={s.promoLink}>馬を見る →</Link>
+        <Link href={`/horses/${horse.id}`} className={s.promoLink}>{t.view_horse}</Link>
       </section>
     );
   }
@@ -51,14 +53,14 @@ export function PromoRedeemForm() {
   if (!open) {
     return (
       <button type="button" className={s.promoToggle} onClick={() => setOpen(true)}>
-        引換コードをお持ちですか? →
+        {t.toggle}
       </button>
     );
   }
 
   return (
     <section className={s.promoCard}>
-      <span className={s.promoLabel}>引換コード</span>
+      <span className={s.promoLabel}>{t.label}</span>
       <input
         className={s.promoInput}
         placeholder="SDD-XXXX-XXXX"
@@ -68,10 +70,10 @@ export function PromoRedeemForm() {
         maxLength={20}
       />
       <button type="button" className={s.promoBtn} onClick={() => void submit()} disabled={busy || code.trim().length < 4}>
-        {busy ? '確認中…' : '馬を受け取る'}
+        {busy ? t.submitting : t.submit}
       </button>
       <button type="button" className={s.promoCancel} onClick={() => setOpen(false)} disabled={busy}>
-        閉じる
+        {t.close}
       </button>
       {error ? <span className={s.promoErr}>{error}</span> : null}
     </section>

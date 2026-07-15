@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { APP_COPY, type Lang } from '@/lib/i18n';
 import s from '../app/dashboard.module.css';
 import d from '../app/support.module.css';
 
@@ -23,14 +24,16 @@ export interface TradeSettings {
 
 async function save(
   next: { auto_list: boolean; auto_reserve?: boolean; auto_reserve_max?: number | null },
+  saveErr: string,
 ): Promise<string | null> {
   const result = await apiFetch('/api/v1/trade-settings', { method: 'POST', body: next });
-  return result.status === 200 ? null : (errorMessage(result.body) ?? '設定の保存に失敗しました。');
+  return result.status === 200 ? null : (errorMessage(result.body) ?? saveErr);
 }
 
 /* ============================== 必須選択モーダル ============================== */
 
-export function TradeModeModal({ settings, preview = false }: { settings: TradeSettings; preview?: boolean }) {
+export function TradeModeModal({ settings, preview = false, lang = 'ja' }: { settings: TradeSettings; preview?: boolean; lang?: Lang }) {
+  const t = APP_COPY[lang].trade;
   const router = useRouter();
   const [open, setOpen] = useState(!settings.chosen);
   const [busy, setBusy] = useState(false);
@@ -47,7 +50,7 @@ export function TradeModeModal({ settings, preview = false }: { settings: TradeS
       setOpen(false);
       return;
     }
-    const err = await save({ auto_list: autoList });
+    const err = await save({ auto_list: autoList }, t.save_err);
     setBusy(false);
     if (err) {
       setError(err);
@@ -60,40 +63,40 @@ export function TradeModeModal({ settings, preview = false }: { settings: TradeS
   return (
     <div className={d.overlay} role="dialog" aria-modal="true">
       <div className={`${d.dialog} ${s.tmDialog}`}>
-        <div className={d.dialogTitle}>馬の売り方を選んでください</div>
+        <div className={d.dialogTitle}>{t.modal_title}</div>
         <p className={s.tmLead}>
-          あなたの馬をどうやってマーケットに出すかを選びます(あとからいつでも変更できます)。
+          {t.modal_lead}
         </p>
         <div className={s.tmGrid}>
           <div className={`${s.tmCard} ${s.tmCardSmart}`}>
             <div className={s.tmCardHead}>
-              スマート出品 <span className={s.tmBadge}>おすすめ</span>
+              {t.smart_head} <span className={s.tmBadge}>{t.smart_badge}</span>
             </div>
             <ul className={s.tmList}>
-              <li>経済エンジンが良いタイミングで自動出品(1晩最大1頭・当日価格)</li>
-              <li><b>出品中もレースに出走します</b></li>
-              <li>自動購入予約(売れたら翌晩の予約を自動作成)が使えます</li>
-              <li>毎日の操作は不要</li>
+              <li>{t.smart_li1}</li>
+              <li><b>{t.smart_li2}</b></li>
+              <li>{t.smart_li3}</li>
+              <li>{t.smart_li4}</li>
             </ul>
             <button type="button" className={s.tmCta} disabled={busy} onClick={() => void choose(true)}>
-              スマート出品ではじめる
+              {t.smart_cta}
             </button>
           </div>
           <div className={s.tmCard}>
-            <div className={s.tmCardHead}>手動出品</div>
+            <div className={s.tmCardHead}>{t.manual_head}</div>
             <ul className={s.tmList}>
-              <li>出品する馬とタイミングを自分で選ぶ</li>
-              <li>出品中はレースに出走しません(Day・価値は凍結)</li>
-              <li>出品操作は馬ごとに1日1回・取り下げは翌バッチ反映</li>
-              <li>自動購入予約は使えません</li>
+              <li>{t.manual_li1}</li>
+              <li>{t.manual_li2}</li>
+              <li>{t.manual_li3}</li>
+              <li>{t.manual_li4}</li>
             </ul>
             <button type="button" className={`secondary ${s.tmGhost}`} disabled={busy} onClick={() => void choose(false)}>
-              手動出品でやる
+              {t.manual_cta}
             </button>
           </div>
         </div>
         {error ? <p className="error">{error}</p> : null}
-        <p className={s.tmNote}>どちらを選んでも、購入予約・台帳の公開ルールは同じです。</p>
+        <p className={s.tmNote}>{t.modal_note}</p>
       </div>
     </div>
   );
@@ -116,7 +119,8 @@ function Toggle({ on, disabled, onClick }: { on: boolean; disabled?: boolean; on
   );
 }
 
-export function TradeAutoTile({ settings, preview = false }: { settings: TradeSettings; preview?: boolean }) {
+export function TradeAutoTile({ settings, preview = false, lang = 'ja' }: { settings: TradeSettings; preview?: boolean; lang?: Lang }) {
+  const t = APP_COPY[lang].trade;
   const router = useRouter();
   const [local, setLocal] = useState(settings);
   const [busy, setBusy] = useState(false);
@@ -133,7 +137,7 @@ export function TradeAutoTile({ settings, preview = false }: { settings: TradeSe
       auto_list: next.auto_list,
       auto_reserve: next.auto_reserve,
       auto_reserve_max: next.auto_reserve_max,
-    });
+    }, t.save_err);
     setBusy(false);
     if (err) {
       setLocal(prev);
@@ -149,8 +153,8 @@ export function TradeAutoTile({ settings, preview = false }: { settings: TradeSe
   return (
     <section className={s.auto}>
       <div className={s.autoHead}>
-        <span className={s.autoLabel}>AUTO · 売買の自動化</span>
-        <span className={s.autoNote}>いつでも変更できます</span>
+        <span className={s.autoLabel}>{t.tile_label}</span>
+        <span className={s.autoNote}>{t.tile_note}</span>
       </div>
       <div className={s.autoRow}>
         <Toggle
@@ -164,11 +168,9 @@ export function TradeAutoTile({ settings, preview = false }: { settings: TradeSe
             })
           }
         />
-        <span className={s.autoName}>スマート出品</span>
+        <span className={s.autoName}>{t.smart_name}</span>
         <span className={s.autoDesc}>
-          {local.auto_list
-            ? '経済エンジンが自動で出品します(出品中もレースに出走)'
-            : 'OFF: 出品はマーケットの「馬を出品する」から手動で行います'}
+          {local.auto_list ? t.smart_on_desc : t.smart_off_desc}
         </span>
       </div>
       <div className={`${s.autoRow} ${!local.auto_list ? s.autoRowDisabled : ''}`}>
@@ -177,15 +179,13 @@ export function TradeAutoTile({ settings, preview = false }: { settings: TradeSe
           disabled={!local.auto_list}
           onClick={() => void apply({ ...local, auto_reserve: !local.auto_reserve })}
         />
-        <span className={s.autoName}>自動購入予約</span>
+        <span className={s.autoName}>{t.reserve_name}</span>
         <span className={s.autoDesc}>
-          {local.auto_list
-            ? '毎晩のバッチ後、残高の範囲で購入予約を自動作成(メールで毎回お知らせ)'
-            : 'スマート出品ONで使えます'}
+          {local.auto_list ? t.reserve_on_desc : t.reserve_off_desc}
         </span>
         {local.auto_list && local.auto_reserve ? (
           <label className={s.autoMax}>
-            上限
+            {t.max_label}
             <select
               className={s.autoMaxSelect}
               value={local.auto_reserve_max === null ? 'MAX' : String(local.auto_reserve_max)}
@@ -197,7 +197,7 @@ export function TradeAutoTile({ settings, preview = false }: { settings: TradeSe
               }
             >
               {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>{n} 頭</option>
+                <option key={n} value={n}>{n}{t.max_unit}</option>
               ))}
               <option value="MAX">MAX</option>
             </select>

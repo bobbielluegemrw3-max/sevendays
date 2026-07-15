@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/client-api';
+import { APP_COPY, type Lang } from '@/lib/i18n';
 import s from '../app/dashboard.module.css';
 
 type PwaState = 'loading' | 'done' | 'enable' | 'register' | 'blocked' | 'ios-install' | 'install';
@@ -77,7 +78,8 @@ function ShareIcon() {
  *   (許可済み・未登録は「登録を完了する」ボタン = guri事案の自己修復経路)
  * - 許可済みなら毎回サーバーと突合して自動同期。SW(/sw.js)はプッシュ受信のみ担う。
  */
-export function PwaSetupTile() {
+export function PwaSetupTile({ lang = 'ja' }: { lang?: Lang }) {
+  const t = APP_COPY[lang].pwa;
   const [state, setState] = useState<PwaState>('loading');
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [mobile, setMobile] = useState(false);
@@ -173,9 +175,9 @@ export function PwaSetupTile() {
   const installOffer =
     installEvent && mobile && (state === 'done' || state === 'install') ? (
       <div className={s.pwaInstallRow}>
-        <span className={s.pwaHint}>ホーム画面に追加するとワンタップで開けます。</span>
+        <span className={s.pwaHint}>{t.install_hint}</span>
         <button type="button" className={s.pwaGhostBtn} onClick={() => void install()}>
-          + アプリを追加
+          {t.add_app}
         </button>
       </div>
     ) : null;
@@ -183,59 +185,59 @@ export function PwaSetupTile() {
   return (
     <section className={s.pwa}>
       <div className={s.pwaRow}>
-        <span className={s.pwaLabel}>APP &amp; 通知</span>
+        <span className={s.pwaLabel}>{t.label}</span>
         {state === 'done' ? (
           <>
-            <span className={s.pwaText}>通知はONです。毎晩20:00、発走をお知らせします。</span>
+            <span className={s.pwaText}>{t.done_text}</span>
             <span className={s.pwaDone}>✓ READY</span>
           </>
         ) : state === 'enable' ? (
           <>
-            <span className={s.pwaText}>通知をONにすると、毎晩20:00の発走をお知らせします。</span>
+            <span className={s.pwaText}>{t.enable_text}</span>
             <button type="button" className={s.pwaBtn} onClick={() => void enable()} disabled={busy}>
-              {busy ? '設定中…' : '通知をONにする'}
+              {busy ? t.enable_busy : t.enable_btn}
             </button>
           </>
         ) : state === 'register' ? (
           <>
             <span className={s.pwaText}>
-              許可は済んでいますが、この端末の登録がまだ完了していません。
+              {t.register_text}
             </span>
             <button type="button" className={s.pwaBtn} onClick={() => void completeRegistration()} disabled={busy}>
-              {busy ? '登録中…' : '登録を完了する'}
+              {busy ? t.register_busy : t.register_btn}
             </button>
           </>
         ) : state === 'blocked' ? (
-          <span className={s.pwaText}>通知は現在ブロック中です。ブラウザの設定で許可すると再開できます。</span>
+          <span className={s.pwaText}>{t.blocked_text}</span>
         ) : state === 'ios-install' ? (
-          <span className={s.pwaText}>ホーム画面に追加すると発走通知が届きます。</span>
+          <span className={s.pwaText}>{t.ios_install_text}</span>
         ) : (
-          <span className={s.pwaText}>ホーム画面に追加すると、アプリとして使えます。</span>
+          <span className={s.pwaText}>{t.install_text}</span>
         )}
       </div>
       {state === 'ios-install' ? (
         <div className={s.pwaFlow}>
           <span className={s.pwaStep}>
             <span className={s.pwaStepNum}>1</span>
-            共有ボタン
+            {t.ios_step1_a}
             <ShareIcon />
-            をタップ
+            {t.ios_step1_b}
           </span>
           <span className={s.pwaArrow}>→</span>
           <span className={s.pwaStep}>
             <span className={s.pwaStepNum}>2</span>
-            「ホーム画面に追加」
+            {t.ios_step2}
           </span>
           <span className={s.pwaArrow}>→</span>
           <span className={s.pwaStep}>
             <span className={s.pwaStepNum}>3</span>
-            アプリを開いて通知ON
+            {t.ios_step3}
           </span>
         </div>
       ) : null}
       {state === 'install' && !installOffer ? (
         <div className={s.pwaSteps}>
-          ブラウザのメニューから「ホーム画面に追加」/「アプリをインストール」を選ぶと、アプリとして起動できます。
+          {t.install_steps}
         </div>
       ) : null}
       {installOffer}
