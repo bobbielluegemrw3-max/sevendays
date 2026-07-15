@@ -9,11 +9,8 @@ import s from '../app/wallet.module.css';
  * 履歴一覧は client の <WalletHistory> に委譲。データ取得層 page.tsx は依頼側で結線。
  * 表示数値は各 API の値のみ(架空値なし)。
  *
- * OnrampGuide(USDT入手ガイド)の表示ゲート:
- *   env `ONRAMP_ENABLED` を page.tsx(動的サーバー)で読み onrampEnabled prop で受ける。
- *   true のときだけ入金アドレス直下に出す。deposit.chain_id は DEFAULT_CHAIN 定数なので
- *   常に 'POLYGON_POS' を返し testnet/mainnet を判別できないため、明示フラグで制御する。
- *   ※ env はビルド時インライン化を避けるため page.tsx でブラケット記法で実行時読取。
+ * OnrampGuide(USDT入手ガイド)は入金アドレスがある時に常時表示(オーナー判断
+ * 2026-07-15: テスターは信頼できる少人数のため誤送金の懸念なし)。
  * ========================================================================== */
 
 export interface Wallet { available: string; locked: string }
@@ -24,8 +21,8 @@ function money(v: string): string {
 }
 
 export function WalletView({
-  wallet, deposit, history, onrampEnabled = false,
-}: { wallet: Wallet; deposit: DepositInfo | null; history: HistoryEntry[]; onrampEnabled?: boolean }) {
+  wallet, deposit, history,
+}: { wallet: Wallet; deposit: DepositInfo | null; history: HistoryEntry[] }) {
   const hasLocked = Number(wallet.locked) > 0;
 
   return (
@@ -72,9 +69,8 @@ export function WalletView({
         )}
       </section>
 
-      {/* USDT入手ガイド(上の入金アドレスへ送る USDT の入手先)。
-          env ゲート ON かつ 入金アドレスがある時だけ表示 */}
-      {onrampEnabled && deposit ? <OnrampGuide address={deposit.address} /> : null}
+      {/* USDT入手ガイド(上の入金アドレスへ送る USDT の入手先)。入金アドレスがある時に表示 */}
+      {deposit ? <OnrampGuide address={deposit.address} /> : null}
 
       {/* 出金(既存 WithdrawForm を内包) */}
       <section className={s.withdraw}>
