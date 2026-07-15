@@ -1,4 +1,6 @@
 import { serverApiOrLogin } from '@/lib/server-api';
+import { getLang } from '@/lib/i18n-server';
+import { APP_COPY } from '@/lib/i18n';
 import { SupportMapView } from '@/components/SupportMapView';
 import { demoSupportNetwork } from '@/lib/support-demo';
 import type { NetworkNode, PoolMember, SupportSummary } from '@/components/SupportView';
@@ -11,6 +13,8 @@ import type { NetworkNode, PoolMember, SupportSummary } from '@/components/Suppo
  * のみ(APIには何も書かない)。
  */
 export default async function SupportMapPage() {
+  const lang = await getLang();
+  const t = APP_COPY[lang].support;
   const [me, summary, pool, network] = await Promise.all([
     serverApiOrLogin<{ id: string }>('/api/v1/me'),
     serverApiOrLogin<SupportSummary>('/api/v1/support/summary'),
@@ -32,15 +36,15 @@ export default async function SupportMapPage() {
             borderRadius: '10px',
           }}
         >
-          サンプル組織を表示中(仮データ・約60名)— 招待した仲間が増えると、ここは自動的に
-          あなたの実際の組織に切り替わります。
+          {t.demo_note}
         </p>
       ) : null}
       <SupportMapView
         preview={isDemo}
+        lang={lang}
         data={{
           selfUserId: me.id,
-          selfDisplay: 'あなた',
+          selfDisplay: t.self,
           network: demo ? demo.network : network.nodes,
           pool: demo ? demo.pool : pool.members,
           tierAmounts: summary.tier_amounts,

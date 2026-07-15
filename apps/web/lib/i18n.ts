@@ -319,6 +319,131 @@ export interface AppDict {
     status_pending: string;
     detail_note: string;
   };
+  /** サポートボーナス(SupportDashboardView + SupportMapView + /support/map page)。
+   *  R3規範: MLM/コミッション/紹介報酬/稼げる 等は使わない。 */
+  support: {
+    // 共通
+    self: string; // 「あなた」
+    unit_people: string; // 「名」
+    unit_horses: string; // 「頭」
+    // ダッシュボード見出し・リード
+    map_cta: string;
+    lead: string;
+    // スターターレート
+    rate_k: string;
+    rate_who: string;
+    gauge_starter: string;
+    gauge_leader: string;
+    gauge_sub_a: string;
+    gauge_sub_bold: string;
+    boost_tpl: string; // 「スターターブースト ×{x}」
+    standard: string;
+    rate_note: string;
+    // ティアヒーロー
+    tier_hero_k: string;
+    next_maintain_tpl: string; // 「T{n}まで 組織 {v} USDT 以上を維持」
+    next_direct_tpl: string; // 「(+直接 {d} 以上)」
+    tier_max: string;
+    vol_a: string; vol_b: string; vol_c: string; // 現在価値: [org] · 直接: [direct] · 再評価…
+    action_k: string;
+    action_pool_tpl: string; // 「配置待ちの仲間が {n}名 …」
+    action_grow_tpl: string; // 「次のティア解放は組織 {v} USDT から。…」
+    action_max: string;
+    action_btn_place: string;
+    action_btn_view: string;
+    // KPI
+    kpi_total: string;
+    kpi_total_sub_tpl: string; // 「{n}回の受け取り」
+    kpi_network: string;
+    kpi_network_sub: string;
+    kpi_pool: string;
+    kpi_pool_place: string;
+    kpi_pool_none: string;
+    // ティア表
+    tier_table_h: string;
+    tier_meta: string;
+    tier_cond_always: string;
+    tier_cond_org_tpl: string; // 「組織 ≥ {v}」
+    tier_cond_direct_tpl: string; // 「 +直接 ≥ {d}」
+    t1_range: string; // 「 (3〜8)」
+    tier_foot: string;
+    // 招待
+    invite_title: string;
+    invite_code_label: string; // 「あなたのコード 」+ <b>code</b>
+    invite_copied: string;
+    invite_copy: string;
+    invite_note: string;
+    // 履歴
+    hist_h: string;
+    hist_empty: string;
+    hist_why: string;
+    // マップ: ツールバー・検索
+    toolbar_stats_tpl: string; // 「メンバー {members}名 · 配置待ち {pool}名 · 最深 T{depth}」
+    mode_map: string;
+    mode_list: string;
+    expand_all: string;
+    collapse_all: string;
+    map_search_ph: string;
+    map_search_aria: string;
+    map_search_btn: string;
+    map_search_notfound: string;
+    // 配置バナー
+    place_select_a: string; // 「 の配置先を選択中 — 」
+    place_hint_map: string;
+    place_hint_list: string;
+    place_select_b: string; // 「してください」
+    cancel: string;
+    // ドリルダウン
+    you_crumb: string;
+    focus_tier_tpl: string; // 「TIER {t} · 」
+    focus_meta_tpl: string; // 「直下 {direct}名 · 配下 {sub}名」
+    detail_btn: string;
+    place_here: string;
+    drill_empty: string;
+    child_horse_tpl: string; // 「馬{h}頭 · 」
+    child_meta_tpl: string; // 「直下{kids}名 · 配下{sub}名」
+    drill_open_aria: string;
+    // マップキャンバス
+    empty_tree: string;
+    node_collapsed_tpl: string; // 「+{n}名 折りたたみ中」
+    node_series_tpl: string; // 「直下 {n}系列」
+    node_direct_tpl: string; // 「直下 {n}名」
+    toggle_expand_aria: string;
+    toggle_collapse_aria: string;
+    node_place_hint_tpl: string; // 「ここに配置 · T{n}」
+    // プールドック
+    dock_title: string;
+    dock_hint: string;
+    dock_empty: string;
+    pool_joined_tpl: string; // 「参加 {d}」
+    pool_place_btn: string;
+    // 詳細モーダル
+    m_sub_tpl: string; // 「TIER {t}(あなたから{t}段目)」
+    m_placed_tpl: string; // 「 · 配置 {d}」
+    m_active_horses: string;
+    m_horses_value: string;
+    m_burns: string; unit_times: string;
+    m_items: string; unit_items: string;
+    m_direct: string;
+    m_subtree: string;
+    m_note: string;
+    m_note_loading: string;
+    close: string;
+    // 確定ダイアログ
+    confirm_title: string;
+    confirm_body_a: string; // 「 を 」
+    confirm_target_self: string;
+    confirm_target_tpl: string; // 「{name} の直下(TIER {t})」
+    confirm_body_b: string; // 「 に配置します。」
+    warn_a: string; warn_bold: string; warn_b: string;
+    confirm_check: string;
+    reselect: string;
+    placing: string;
+    confirm_btn: string;
+    err_place: string;
+    // /support/map デモ注記
+    demo_note: string;
+  };
 }
 
 const ja: AppDict = {
@@ -596,6 +721,117 @@ const ja: AppDict = {
     status_next: '次回',
     status_pending: '予定',
     detail_note: '毎晩20:00の精算で1回ずつ支払われます。7回すべて完了すると、この馬の記念NFT（Polygon / ERC-721）がミントされます。',
+  },
+  support: {
+    self: 'あなた',
+    unit_people: '名',
+    unit_horses: '頭',
+    map_cta: '組織マップを開く →',
+    lead: 'あなたの組織からチャンピオン(7日間走破)が誕生したとき、支えたネットワークにお祝い金が支払われます。紹介しただけでは発生しません。',
+    rate_k: 'STARTER RATE · あなたの紹介単価',
+    rate_who: '直接招待した仲間のチャンピオン1頭ごとに、あなたへ',
+    gauge_starter: 'スターター',
+    gauge_leader: 'リーダー',
+    gauge_sub_a: '組織が育つほど単価は 8.00 → 3.00 へ滑らかに移行します(組織 50,000 USDT で 3.00)。単価×組織規模は一定になる設計 — ',
+    gauge_sub_bold: '組織が育っても、直接分の収入合計は下がりません。',
+    boost_tpl: 'スターターブースト ×{x}',
+    standard: 'スタンダード',
+    rate_note: '単価はチャンピオン誕生の夜のものが適用され、毎日 20:00 (GMT+8) に再評価されます。',
+    tier_hero_k: 'SUPPORT TIER · 現在のティア',
+    next_maintain_tpl: 'T{n}まで 組織 {v} USDT 以上を維持',
+    next_direct_tpl: '(+直接 {d} 以上)',
+    tier_max: '最上位ティアに到達しています',
+    vol_a: '組織(配下7段)の稼働馬 現在価値: ',
+    vol_b: ' · 直接招待分: ',
+    vol_c: ' · 毎日20:00 (GMT+8) に再評価(下回ると自動で下がります)',
+    action_k: '次のアクション · NEXT',
+    action_pool_tpl: '配置待ちの仲間が {n}名 います。配置するとネットワークに加わり、ティア維持につながります。',
+    action_grow_tpl: '次のティア解放は組織 {v} USDT から。仲間を招待して、ネットワーク全体を育てましょう。',
+    action_max: 'すべてのティアが解放されています。ネットワークの維持を続けましょう。',
+    action_btn_place: 'マップで配置する',
+    action_btn_view: '組織マップを見る',
+    kpi_total: '累計サポートボーナス',
+    kpi_total_sub_tpl: '{n}回の受け取り',
+    kpi_network: 'ネットワーク',
+    kpi_network_sub: 'あなたが支える仲間',
+    kpi_pool: '配置待ち',
+    kpi_pool_place: 'マップで配置する →',
+    kpi_pool_none: '配置待ちなし',
+    tier_table_h: 'ティアと支払額',
+    tier_meta: 'チャンピオン1頭の誕生で、お祝い金(T1=あなたの紹介単価 3〜8 / T2=2 / T3〜7=各1 USDT)が上位7ティアに配られます。',
+    tier_cond_always: '常時',
+    tier_cond_org_tpl: '組織 ≥ {v}',
+    tier_cond_direct_tpl: ' +直接 ≥ {d}',
+    t1_range: ' (3〜8)',
+    tier_foot: '組織ボリューム = あなたの組織マップ配下7段(サポートボーナスが届く範囲)の稼働馬価値の合計。T5以上は「直接招待した仲間の稼働馬価値」も併せて必要です。横並び(直下の系列数)は無制限。',
+    invite_title: '招待リンク · INVITE',
+    invite_code_label: 'あなたのコード ',
+    invite_copied: '✓ コピーしました',
+    invite_copy: 'リンクをコピー',
+    invite_note: '招待しただけではボーナスは発生しません。サポートボーナスは、あなたのネットワーク内でチャンピオン(7日間走破)が誕生したときにだけ、所定の額(T1=紹介単価3〜8 / T2=2 / T3〜7=各1 USDT)の範囲でお祝い金として支払われます。金額・頻度の保証はありません。',
+    hist_h: 'サポートボーナス履歴',
+    hist_empty: 'まだサポートボーナスはありません。',
+    hist_why: '組織のチャンピオン誕生',
+    toolbar_stats_tpl: 'メンバー {members}名 · 配置待ち {pool}名 · 最深 T{depth}',
+    mode_map: 'マップ',
+    mode_list: 'リスト',
+    expand_all: 'すべて展開',
+    collapse_all: 'すべて折りたたむ',
+    map_search_ph: 'メンバーを探す(表示名の一部 or メールアドレス完全一致)',
+    map_search_aria: '組織内メンバー検索',
+    map_search_btn: '検索',
+    map_search_notfound: 'あなたの組織(配下7段)には見つかりませんでした',
+    place_select_a: ' の配置先を選択中 — ',
+    place_hint_map: 'マップ上のノード(あなた or 配下メンバー)をクリック',
+    place_hint_list: 'リストのメンバーをタップ',
+    place_select_b: 'してください',
+    cancel: 'キャンセル',
+    you_crumb: '★ あなた',
+    focus_tier_tpl: 'TIER {t} · ',
+    focus_meta_tpl: '直下 {direct}名 · 配下 {sub}名',
+    detail_btn: '詳細',
+    place_here: 'ここに配置',
+    drill_empty: 'この下にはまだ誰もいません。',
+    child_horse_tpl: '馬{h}頭 · ',
+    child_meta_tpl: '直下{kids}名 · 配下{sub}名',
+    drill_open_aria: 'この系列を開く',
+    empty_tree: 'まだ誰も配置されていません。仲間を招待して、最初の1人を配置しましょう。',
+    node_collapsed_tpl: '+{n}名 折りたたみ中',
+    node_series_tpl: '直下 {n}系列',
+    node_direct_tpl: '直下 {n}名',
+    toggle_expand_aria: '展開',
+    toggle_collapse_aria: '折りたたむ',
+    node_place_hint_tpl: 'ここに配置 · T{n}',
+    dock_title: '配置待ちの仲間',
+    dock_hint: '配置は確定すると変更不可',
+    dock_empty: '配置待ちの仲間はいません。ダッシュボードから招待リンクを共有しましょう。',
+    pool_joined_tpl: '参加 {d}',
+    pool_place_btn: '配置',
+    m_sub_tpl: 'TIER {t}(あなたから{t}段目)',
+    m_placed_tpl: ' · 配置 {d}',
+    m_active_horses: '稼働馬',
+    m_horses_value: '稼働馬の現在価値',
+    m_burns: 'BURN回数(累計)', unit_times: '回',
+    m_items: 'アイテム使用(累計)', unit_items: '個',
+    m_direct: '直下',
+    m_subtree: '配下(7段内)',
+    m_note: '稼働馬の現在価値は、あなたの組織ボリューム(ティア解放)への貢献分です。',
+    m_note_loading: ' 取得中…',
+    close: '閉じる',
+    confirm_title: '配置を確定する',
+    confirm_body_a: ' を ',
+    confirm_target_self: 'あなたの直下(TIER 1)',
+    confirm_target_tpl: '{name} の直下(TIER {t})',
+    confirm_body_b: ' に配置します。',
+    warn_a: '⚠ 配置は一度確定すると',
+    warn_bold: '二度と変更できません',
+    warn_b: '。配置換えの依頼は受け付けられません(システム上の例外処理は運営管理者のみ)。',
+    confirm_check: '変更できないことを理解しました',
+    reselect: '配置先を選び直す',
+    placing: '配置中…',
+    confirm_btn: 'この位置で確定する',
+    err_place: '配置に失敗しました。',
+    demo_note: 'サンプル組織を表示中(仮データ・約60名)— 招待した仲間が増えると、ここは自動的にあなたの実際の組織に切り替わります。',
   },
 };
 
@@ -875,6 +1111,117 @@ const en: AppDict = {
     status_pending: 'Scheduled',
     detail_note: 'One payment is made each night at the 20:00 settlement. When all 7 are complete, this horse’s Memorial NFT (Polygon / ERC-721) is minted.',
   },
+  support: {
+    self: 'You',
+    unit_people: '',
+    unit_horses: '',
+    map_cta: 'Open the org map →',
+    lead: 'When a Champion (a seven-day finisher) is born from your organization, a celebration is paid to the network that supported it. Inviting alone does not trigger it.',
+    rate_k: 'STARTER RATE · your referral rate',
+    rate_who: 'To you, per Champion from a friend you directly invited',
+    gauge_starter: 'Starter',
+    gauge_leader: 'Leader',
+    gauge_sub_a: 'As your organization grows, the rate shifts smoothly from 8.00 → 3.00 (3.00 at an organization of 50,000 USDT). Rate × organization size is designed to stay constant — ',
+    gauge_sub_bold: 'as your organization grows, your direct total does not fall.',
+    boost_tpl: 'Starter boost ×{x}',
+    standard: 'Standard',
+    rate_note: 'The rate applied is the one on the night a Champion is born, re-evaluated daily at 20:00 (GMT+8).',
+    tier_hero_k: 'SUPPORT TIER · current tier',
+    next_maintain_tpl: 'Maintain organization ≥ {v} USDT to reach T{n}',
+    next_direct_tpl: ' (+ direct ≥ {d})',
+    tier_max: 'You’ve reached the top tier',
+    vol_a: 'Organization (7 tiers below) active-horse value: ',
+    vol_b: ' · direct invites: ',
+    vol_c: ' · re-evaluated daily at 20:00 (GMT+8) (drops automatically if it falls below)',
+    action_k: 'NEXT · next action',
+    action_pool_tpl: '{n} friends are waiting to be placed. Placing them adds them to your network and helps you hold your tier.',
+    action_grow_tpl: 'The next tier unlocks at an organization of {v} USDT. Invite friends and grow the whole network.',
+    action_max: 'All tiers are unlocked. Keep maintaining your network.',
+    action_btn_place: 'Place on the map',
+    action_btn_view: 'View the org map',
+    kpi_total: 'Total Support Bonus',
+    kpi_total_sub_tpl: '{n} received',
+    kpi_network: 'Network',
+    kpi_network_sub: 'Friends you support',
+    kpi_pool: 'Awaiting placement',
+    kpi_pool_place: 'Place on the map →',
+    kpi_pool_none: 'None awaiting',
+    tier_table_h: 'Tiers & payouts',
+    tier_meta: 'When one Champion is born, a celebration (T1 = your referral rate 3–8 / T2 = 2 / T3–7 = 1 USDT each) is distributed to the 7 tiers above.',
+    tier_cond_always: 'Always',
+    tier_cond_org_tpl: 'Org ≥ {v}',
+    tier_cond_direct_tpl: ' + direct ≥ {d}',
+    t1_range: ' (3–8)',
+    tier_foot: 'Organization volume = the total active-horse value of the 7 tiers below you on your org map (the range the Support Bonus reaches). T5+ also require the active-horse value of friends you directly invited. Width (number of direct lines) is unlimited.',
+    invite_title: 'Invite link · INVITE',
+    invite_code_label: 'Your code ',
+    invite_copied: '✓ Copied',
+    invite_copy: 'Copy link',
+    invite_note: 'Inviting alone pays no bonus. A Support Bonus is paid only when a Champion (a seven-day finisher) is born within your network, as a celebration within set amounts (T1 = referral rate 3–8 / T2 = 2 / T3–7 = 1 USDT each). No amount or frequency is guaranteed.',
+    hist_h: 'Support Bonus history',
+    hist_empty: 'No Support Bonus yet.',
+    hist_why: 'A Champion born in your organization',
+    toolbar_stats_tpl: '{members} members · {pool} awaiting · deepest T{depth}',
+    mode_map: 'Map',
+    mode_list: 'List',
+    expand_all: 'Expand all',
+    collapse_all: 'Collapse all',
+    map_search_ph: 'Find a member (part of a display name or exact email)',
+    map_search_aria: 'Search members in your organization',
+    map_search_btn: 'Search',
+    map_search_notfound: 'Not found in your organization (7 tiers below)',
+    place_select_a: ' — choosing where to place — ',
+    place_hint_map: 'click a node on the map (you or a member below you)',
+    place_hint_list: 'tap a member in the list',
+    place_select_b: '',
+    cancel: 'Cancel',
+    you_crumb: '★ You',
+    focus_tier_tpl: 'TIER {t} · ',
+    focus_meta_tpl: '{direct} direct · {sub} below',
+    detail_btn: 'Details',
+    place_here: 'Place here',
+    drill_empty: 'No one below this yet.',
+    child_horse_tpl: '{h} horses · ',
+    child_meta_tpl: '{kids} direct · {sub} below',
+    drill_open_aria: 'Open this line',
+    empty_tree: 'No one placed yet. Invite friends and place your first person.',
+    node_collapsed_tpl: '+{n} collapsed',
+    node_series_tpl: '{n} direct lines',
+    node_direct_tpl: '{n} direct',
+    toggle_expand_aria: 'Expand',
+    toggle_collapse_aria: 'Collapse',
+    node_place_hint_tpl: 'Place here · T{n}',
+    dock_title: 'Friends awaiting placement',
+    dock_hint: 'Placement is final once confirmed',
+    dock_empty: 'No friends awaiting placement. Share your invite link from the dashboard.',
+    pool_joined_tpl: 'Joined {d}',
+    pool_place_btn: 'Place',
+    m_sub_tpl: 'TIER {t} ({t} levels below you)',
+    m_placed_tpl: ' · placed {d}',
+    m_active_horses: 'Active horses',
+    m_horses_value: 'Active-horse value',
+    m_burns: 'BURNs (total)', unit_times: '',
+    m_items: 'Items used (total)', unit_items: '',
+    m_direct: 'Direct',
+    m_subtree: 'Below (within 7 tiers)',
+    m_note: 'Active-horse value is this member’s contribution to your organization volume (tier unlocks).',
+    m_note_loading: ' loading…',
+    close: 'Close',
+    confirm_title: 'Confirm placement',
+    confirm_body_a: ' will be placed ',
+    confirm_target_self: 'directly below you (TIER 1)',
+    confirm_target_tpl: 'directly below {name} (TIER {t})',
+    confirm_body_b: '.',
+    warn_a: '⚠ Once confirmed, placement ',
+    warn_bold: 'can never be changed',
+    warn_b: '. Re-placement requests cannot be accepted (system exceptions are for operators only).',
+    confirm_check: 'I understand this cannot be changed',
+    reselect: 'Choose a different spot',
+    placing: 'Placing…',
+    confirm_btn: 'Confirm this spot',
+    err_place: 'Placement failed.',
+    demo_note: 'Showing a sample organization (placeholder data, ~60 people) — as your invited friends grow, this switches automatically to your real organization.',
+  },
 };
 
 const zh: AppDict = {
@@ -1152,6 +1499,117 @@ const zh: AppDict = {
     status_next: '下次',
     status_pending: '预定',
     detail_note: '每晚20:00结算时支付一次。7次全部完成后，将铸造这匹马的纪念NFT（Polygon / ERC-721）。',
+  },
+  support: {
+    self: '你',
+    unit_people: '人',
+    unit_horses: '匹',
+    map_cta: '打开组织图 →',
+    lead: '当你的组织中诞生冠军(跑完七天)时，会向支持它的网络发放祝贺金。仅仅邀请不会触发。',
+    rate_k: 'STARTER RATE · 你的推荐单价',
+    rate_who: '你直接邀请的伙伴每诞生一位冠军，发给你',
+    gauge_starter: '新手',
+    gauge_leader: '领袖',
+    gauge_sub_a: '组织越壮大，单价从 8.00 → 3.00 平滑过渡(组织达 50,000 USDT 时为 3.00)。单价×组织规模设计为恒定 — ',
+    gauge_sub_bold: '组织壮大后，你的直接部分收入总额不会下降。',
+    boost_tpl: '新手加成 ×{x}',
+    standard: '标准',
+    rate_note: '适用的单价为冠军诞生当晚的单价，每天 20:00 (GMT+8) 重新评估。',
+    tier_hero_k: 'SUPPORT TIER · 当前层级',
+    next_maintain_tpl: '维持组织 ≥ {v} USDT 以达到 T{n}',
+    next_direct_tpl: '(+直接 ≥ {d})',
+    tier_max: '你已达到最高层级',
+    vol_a: '组织(下方7层)在役马现值: ',
+    vol_b: ' · 直接邀请部分: ',
+    vol_c: ' · 每天20:00 (GMT+8) 重新评估(低于则自动下降)',
+    action_k: 'NEXT · 下一步',
+    action_pool_tpl: '有 {n} 位伙伴等待安置。安置后即加入你的网络，有助于维持层级。',
+    action_grow_tpl: '下一层级在组织达 {v} USDT 时解锁。邀请伙伴，壮大整个网络。',
+    action_max: '所有层级均已解锁。继续维护你的网络。',
+    action_btn_place: '在组织图中安置',
+    action_btn_view: '查看组织图',
+    kpi_total: '累计支持奖励',
+    kpi_total_sub_tpl: '已领取 {n} 次',
+    kpi_network: '网络',
+    kpi_network_sub: '你支持的伙伴',
+    kpi_pool: '等待安置',
+    kpi_pool_place: '在组织图中安置 →',
+    kpi_pool_none: '无等待安置',
+    tier_table_h: '层级与发放额',
+    tier_meta: '每诞生一位冠军，祝贺金(T1=你的推荐单价 3〜8 / T2=2 / T3〜7=各1 USDT)会分配给上方7层。',
+    tier_cond_always: '始终',
+    tier_cond_org_tpl: '组织 ≥ {v}',
+    tier_cond_direct_tpl: ' +直接 ≥ {d}',
+    t1_range: ' (3〜8)',
+    tier_foot: '组织规模 = 你组织图下方7层(支持奖励覆盖范围)在役马价值的合计。T5 以上还需「你直接邀请伙伴的在役马价值」。横向(直属系列数)不限。',
+    invite_title: '邀请链接 · INVITE',
+    invite_code_label: '你的邀请码 ',
+    invite_copied: '✓ 已复制',
+    invite_copy: '复制链接',
+    invite_note: '仅仅邀请不会产生奖励。支持奖励仅在你的网络中诞生冠军(跑完七天)时，才会在规定额度(T1=推荐单价3〜8 / T2=2 / T3〜7=各1 USDT)内作为祝贺金发放。金额与频率不作保证。',
+    hist_h: '支持奖励记录',
+    hist_empty: '还没有支持奖励。',
+    hist_why: '组织内冠军诞生',
+    toolbar_stats_tpl: '成员 {members} 人 · 等待安置 {pool} 人 · 最深 T{depth}',
+    mode_map: '图谱',
+    mode_list: '列表',
+    expand_all: '全部展开',
+    collapse_all: '全部折叠',
+    map_search_ph: '查找成员(显示名的一部分 或 邮箱完全匹配)',
+    map_search_aria: '组织内成员搜索',
+    map_search_btn: '搜索',
+    map_search_notfound: '在你的组织(下方7层)中未找到',
+    place_select_a: ' 的安置位置选择中 — ',
+    place_hint_map: '请点击图上的节点(你 或 下属成员)',
+    place_hint_list: '请点按列表中的成员',
+    place_select_b: '',
+    cancel: '取消',
+    you_crumb: '★ 你',
+    focus_tier_tpl: 'TIER {t} · ',
+    focus_meta_tpl: '直属 {direct} 人 · 下属 {sub} 人',
+    detail_btn: '详情',
+    place_here: '安置到这里',
+    drill_empty: '此下方还没有任何人。',
+    child_horse_tpl: '马{h}匹 · ',
+    child_meta_tpl: '直属{kids}人 · 下属{sub}人',
+    drill_open_aria: '展开该系列',
+    empty_tree: '还没有安置任何人。邀请伙伴，安置第一个人吧。',
+    node_collapsed_tpl: '+{n} 人 折叠中',
+    node_series_tpl: '直属 {n} 系列',
+    node_direct_tpl: '直属 {n} 人',
+    toggle_expand_aria: '展开',
+    toggle_collapse_aria: '折叠',
+    node_place_hint_tpl: '安置到这里 · T{n}',
+    dock_title: '等待安置的伙伴',
+    dock_hint: '安置一经确认不可更改',
+    dock_empty: '没有等待安置的伙伴。从仪表板分享你的邀请链接吧。',
+    pool_joined_tpl: '加入 {d}',
+    pool_place_btn: '安置',
+    m_sub_tpl: 'TIER {t}(距你第{t}层)',
+    m_placed_tpl: ' · 安置 {d}',
+    m_active_horses: '在役马',
+    m_horses_value: '在役马现值',
+    m_burns: 'BURN次数(累计)', unit_times: '次',
+    m_items: '道具使用(累计)', unit_items: '个',
+    m_direct: '直属',
+    m_subtree: '下属(7层内)',
+    m_note: '在役马现值是该成员对你组织规模(层级解锁)的贡献部分。',
+    m_note_loading: ' 获取中…',
+    close: '关闭',
+    confirm_title: '确认安置',
+    confirm_body_a: ' 将被安置到 ',
+    confirm_target_self: '你的直下（TIER 1）',
+    confirm_target_tpl: '{name} 的直下（TIER {t}）',
+    confirm_body_b: '。',
+    warn_a: '⚠ 安置一经确认',
+    warn_bold: '将永久无法更改',
+    warn_b: '。恕不受理改置请求(系统例外处理仅限运营管理员)。',
+    confirm_check: '我已明白此操作不可更改',
+    reselect: '重新选择位置',
+    placing: '安置中…',
+    confirm_btn: '确认此位置',
+    err_place: '安置失败。',
+    demo_note: '正在显示示例组织(模拟数据·约60人)— 当你邀请的伙伴增多时，这里会自动切换为你的真实组织。',
   },
 };
 
@@ -1431,6 +1889,117 @@ const ko: AppDict = {
     status_pending: '예정',
     detail_note: '매일 밤 20:00 정산에서 1회씩 지급됩니다. 7회 모두 완료되면 이 말의 기념 NFT(Polygon / ERC-721)가 발행됩니다.',
   },
+  support: {
+    self: '나',
+    unit_people: '명',
+    unit_horses: '마리',
+    map_cta: '조직도 열기 →',
+    lead: '당신의 조직에서 챔피언(7일 완주)이 탄생하면, 이를 뒷받침한 네트워크에 축하금이 지급됩니다. 초대만으로는 발생하지 않습니다.',
+    rate_k: 'STARTER RATE · 나의 추천 단가',
+    rate_who: '직접 초대한 동료의 챔피언 한 마리마다 당신에게',
+    gauge_starter: '스타터',
+    gauge_leader: '리더',
+    gauge_sub_a: '조직이 성장할수록 단가는 8.00 → 3.00 으로 부드럽게 이동합니다(조직 50,000 USDT에서 3.00). 단가×조직 규모는 일정하도록 설계 — ',
+    gauge_sub_bold: '조직이 커져도 직접 몫의 수입 합계는 줄지 않습니다.',
+    boost_tpl: '스타터 부스트 ×{x}',
+    standard: '스탠다드',
+    rate_note: '적용 단가는 챔피언이 탄생한 밤의 단가이며, 매일 20:00 (GMT+8)에 재평가됩니다.',
+    tier_hero_k: 'SUPPORT TIER · 현재 티어',
+    next_maintain_tpl: 'T{n}까지 조직 {v} USDT 이상 유지',
+    next_direct_tpl: '(+직접 {d} 이상)',
+    tier_max: '최상위 티어에 도달했습니다',
+    vol_a: '조직(하위 7단) 가동마 현재 가치: ',
+    vol_b: ' · 직접 초대분: ',
+    vol_c: ' · 매일 20:00 (GMT+8)에 재평가(밑돌면 자동으로 내려갑니다)',
+    action_k: 'NEXT · 다음 행동',
+    action_pool_tpl: '배치 대기 중인 동료가 {n}명 있습니다. 배치하면 네트워크에 합류하고 티어 유지에 도움이 됩니다.',
+    action_grow_tpl: '다음 티어 해제는 조직 {v} USDT 부터. 동료를 초대해 네트워크 전체를 키우세요.',
+    action_max: '모든 티어가 해제되었습니다. 네트워크 유지를 이어가세요.',
+    action_btn_place: '지도에서 배치하기',
+    action_btn_view: '조직도 보기',
+    kpi_total: '누적 서포트 보너스',
+    kpi_total_sub_tpl: '{n}회 수령',
+    kpi_network: '네트워크',
+    kpi_network_sub: '당신이 뒷받침하는 동료',
+    kpi_pool: '배치 대기',
+    kpi_pool_place: '지도에서 배치하기 →',
+    kpi_pool_none: '배치 대기 없음',
+    tier_table_h: '티어와 지급액',
+    tier_meta: '챔피언 한 마리 탄생 시, 축하금(T1=나의 추천 단가 3〜8 / T2=2 / T3〜7=각 1 USDT)이 상위 7티어에 분배됩니다.',
+    tier_cond_always: '항상',
+    tier_cond_org_tpl: '조직 ≥ {v}',
+    tier_cond_direct_tpl: ' +직접 ≥ {d}',
+    t1_range: ' (3〜8)',
+    tier_foot: '조직 볼륨 = 조직도에서 당신 하위 7단(서포트 보너스가 닿는 범위)의 가동마 가치 합계. T5 이상은 「직접 초대한 동료의 가동마 가치」도 함께 필요합니다. 가로 폭(직속 계열 수)은 무제한.',
+    invite_title: '초대 링크 · INVITE',
+    invite_code_label: '나의 코드 ',
+    invite_copied: '✓ 복사했습니다',
+    invite_copy: '링크 복사',
+    invite_note: '초대만으로는 보너스가 발생하지 않습니다. 서포트 보너스는 당신의 네트워크 안에서 챔피언(7일 완주)이 탄생했을 때에만 정해진 금액(T1=추천 단가 3〜8 / T2=2 / T3〜7=각 1 USDT) 범위에서 축하금으로 지급됩니다. 금액·빈도는 보장되지 않습니다.',
+    hist_h: '서포트 보너스 내역',
+    hist_empty: '아직 서포트 보너스가 없습니다.',
+    hist_why: '조직의 챔피언 탄생',
+    toolbar_stats_tpl: '멤버 {members}명 · 배치 대기 {pool}명 · 최심 T{depth}',
+    mode_map: '지도',
+    mode_list: '목록',
+    expand_all: '모두 펼치기',
+    collapse_all: '모두 접기',
+    map_search_ph: '멤버 찾기(표시명 일부 또는 이메일 완전 일치)',
+    map_search_aria: '조직 내 멤버 검색',
+    map_search_btn: '검색',
+    map_search_notfound: '당신의 조직(하위 7단)에서 찾을 수 없습니다',
+    place_select_a: ' 의 배치 위치 선택 중 — ',
+    place_hint_map: '지도의 노드(나 또는 하위 멤버)를 클릭',
+    place_hint_list: '목록의 멤버를 탭',
+    place_select_b: '하세요',
+    cancel: '취소',
+    you_crumb: '★ 나',
+    focus_tier_tpl: 'TIER {t} · ',
+    focus_meta_tpl: '직속 {direct}명 · 하위 {sub}명',
+    detail_btn: '상세',
+    place_here: '여기에 배치',
+    drill_empty: '이 아래에는 아직 아무도 없습니다.',
+    child_horse_tpl: '말{h}마리 · ',
+    child_meta_tpl: '직속{kids}명 · 하위{sub}명',
+    drill_open_aria: '이 계열 열기',
+    empty_tree: '아직 아무도 배치되지 않았습니다. 동료를 초대해 첫 사람을 배치하세요.',
+    node_collapsed_tpl: '+{n}명 접힘',
+    node_series_tpl: '직속 {n}계열',
+    node_direct_tpl: '직속 {n}명',
+    toggle_expand_aria: '펼치기',
+    toggle_collapse_aria: '접기',
+    node_place_hint_tpl: '여기에 배치 · T{n}',
+    dock_title: '배치 대기 중인 동료',
+    dock_hint: '배치는 확정 시 변경 불가',
+    dock_empty: '배치 대기 중인 동료가 없습니다. 대시보드에서 초대 링크를 공유하세요.',
+    pool_joined_tpl: '참가 {d}',
+    pool_place_btn: '배치',
+    m_sub_tpl: 'TIER {t}(당신으로부터 {t}단째)',
+    m_placed_tpl: ' · 배치 {d}',
+    m_active_horses: '가동마',
+    m_horses_value: '가동마 현재 가치',
+    m_burns: 'BURN 횟수(누적)', unit_times: '회',
+    m_items: '아이템 사용(누적)', unit_items: '개',
+    m_direct: '직속',
+    m_subtree: '하위(7단 이내)',
+    m_note: '가동마 현재 가치는 이 멤버가 당신의 조직 볼륨(티어 해제)에 기여한 몫입니다.',
+    m_note_loading: ' 가져오는 중…',
+    close: '닫기',
+    confirm_title: '배치 확정',
+    confirm_body_a: ' 을(를) ',
+    confirm_target_self: '당신의 바로 아래(TIER 1)',
+    confirm_target_tpl: '{name} 의 바로 아래(TIER {t})',
+    confirm_body_b: ' 에 배치합니다.',
+    warn_a: '⚠ 배치는 한 번 확정하면 ',
+    warn_bold: '다시는 변경할 수 없습니다',
+    warn_b: '. 재배치 요청은 받을 수 없습니다(시스템 예외 처리는 운영 관리자만).',
+    confirm_check: '변경할 수 없음을 이해했습니다',
+    reselect: '배치 위치 다시 선택',
+    placing: '배치 중…',
+    confirm_btn: '이 위치로 확정',
+    err_place: '배치에 실패했습니다.',
+    demo_note: '샘플 조직을 표시 중(임시 데이터·약 60명) — 초대한 동료가 늘어나면 여기는 자동으로 당신의 실제 조직으로 전환됩니다.',
+  },
 };
 
 const ms: AppDict = {
@@ -1708,6 +2277,117 @@ const ms: AppDict = {
     status_next: 'Seterusnya',
     status_pending: 'Dijadualkan',
     detail_note: 'Satu bayaran dibuat setiap malam pada penyelesaian 20:00. Apabila kesemua 7 selesai, NFT peringatan kuda ini (Polygon / ERC-721) ditempa.',
+  },
+  support: {
+    self: 'Anda',
+    unit_people: '',
+    unit_horses: '',
+    map_cta: 'Buka peta organisasi →',
+    lead: 'Apabila seorang Juara (penamat tujuh hari) lahir daripada organisasi anda, satu raikan dibayar kepada rangkaian yang menyokongnya. Menjemput sahaja tidak mencetuskannya.',
+    rate_k: 'STARTER RATE · kadar rujukan anda',
+    rate_who: 'Kepada anda, bagi setiap Juara daripada rakan yang anda jemput terus',
+    gauge_starter: 'Pemula',
+    gauge_leader: 'Pemimpin',
+    gauge_sub_a: 'Semakin organisasi anda berkembang, kadar beralih lancar dari 8.00 → 3.00 (3.00 pada organisasi 50,000 USDT). Kadar × saiz organisasi direka kekal malar — ',
+    gauge_sub_bold: 'apabila organisasi berkembang, jumlah pendapatan bahagian terus anda tidak menurun.',
+    boost_tpl: 'Boost pemula ×{x}',
+    standard: 'Standard',
+    rate_note: 'Kadar yang digunakan ialah kadar pada malam Juara lahir, dinilai semula setiap hari pada 20:00 (GMT+8).',
+    tier_hero_k: 'SUPPORT TIER · tier semasa',
+    next_maintain_tpl: 'Kekalkan organisasi ≥ {v} USDT untuk mencapai T{n}',
+    next_direct_tpl: ' (+ terus ≥ {d})',
+    tier_max: 'Anda telah mencapai tier tertinggi',
+    vol_a: 'Nilai kuda aktif organisasi (7 tier di bawah): ',
+    vol_b: ' · jemputan terus: ',
+    vol_c: ' · dinilai semula setiap hari 20:00 (GMT+8) (turun automatik jika di bawahnya)',
+    action_k: 'NEXT · tindakan seterusnya',
+    action_pool_tpl: '{n} rakan menunggu untuk diletakkan. Meletakkan mereka menambah mereka ke rangkaian anda dan membantu mengekalkan tier.',
+    action_grow_tpl: 'Tier seterusnya dibuka pada organisasi {v} USDT. Jemput rakan dan kembangkan seluruh rangkaian.',
+    action_max: 'Semua tier dibuka. Teruskan mengekalkan rangkaian anda.',
+    action_btn_place: 'Letak pada peta',
+    action_btn_view: 'Lihat peta organisasi',
+    kpi_total: 'Jumlah Support Bonus',
+    kpi_total_sub_tpl: '{n} kali diterima',
+    kpi_network: 'Rangkaian',
+    kpi_network_sub: 'Rakan yang anda sokong',
+    kpi_pool: 'Menunggu penempatan',
+    kpi_pool_place: 'Letak pada peta →',
+    kpi_pool_none: 'Tiada menunggu',
+    tier_table_h: 'Tier & bayaran',
+    tier_meta: 'Apabila seorang Juara lahir, satu raikan (T1 = kadar rujukan anda 3–8 / T2 = 2 / T3–7 = 1 USDT setiap satu) diagihkan kepada 7 tier di atas.',
+    tier_cond_always: 'Sentiasa',
+    tier_cond_org_tpl: 'Org ≥ {v}',
+    tier_cond_direct_tpl: ' + terus ≥ {d}',
+    t1_range: ' (3–8)',
+    tier_foot: 'Volum organisasi = jumlah nilai kuda aktif 7 tier di bawah anda pada peta organisasi (julat yang dicapai Support Bonus). T5+ turut memerlukan nilai kuda aktif rakan yang anda jemput terus. Lebar (bilangan barisan terus) tanpa had.',
+    invite_title: 'Pautan jemputan · INVITE',
+    invite_code_label: 'Kod anda ',
+    invite_copied: '✓ Disalin',
+    invite_copy: 'Salin pautan',
+    invite_note: 'Menjemput sahaja tidak membayar bonus. Support Bonus dibayar hanya apabila seorang Juara (penamat tujuh hari) lahir dalam rangkaian anda, sebagai raikan dalam jumlah yang ditetapkan (T1 = kadar rujukan 3–8 / T2 = 2 / T3–7 = 1 USDT setiap satu). Jumlah dan kekerapan tidak dijamin.',
+    hist_h: 'Sejarah Support Bonus',
+    hist_empty: 'Belum ada Support Bonus.',
+    hist_why: 'Juara lahir dalam organisasi anda',
+    toolbar_stats_tpl: '{members} ahli · {pool} menunggu · terdalam T{depth}',
+    mode_map: 'Peta',
+    mode_list: 'Senarai',
+    expand_all: 'Kembang semua',
+    collapse_all: 'Runtuh semua',
+    map_search_ph: 'Cari ahli (sebahagian nama paparan atau e-mel tepat)',
+    map_search_aria: 'Cari ahli dalam organisasi anda',
+    map_search_btn: 'Cari',
+    map_search_notfound: 'Tidak dijumpai dalam organisasi anda (7 tier di bawah)',
+    place_select_a: ' — memilih tempat penempatan — ',
+    place_hint_map: 'klik nod pada peta (anda atau ahli di bawah anda)',
+    place_hint_list: 'ketik seorang ahli dalam senarai',
+    place_select_b: '',
+    cancel: 'Batal',
+    you_crumb: '★ Anda',
+    focus_tier_tpl: 'TIER {t} · ',
+    focus_meta_tpl: '{direct} terus · {sub} di bawah',
+    detail_btn: 'Butiran',
+    place_here: 'Letak di sini',
+    drill_empty: 'Belum ada sesiapa di bawah ini.',
+    child_horse_tpl: '{h} kuda · ',
+    child_meta_tpl: '{kids} terus · {sub} di bawah',
+    drill_open_aria: 'Buka barisan ini',
+    empty_tree: 'Belum ada sesiapa diletakkan. Jemput rakan dan letakkan orang pertama anda.',
+    node_collapsed_tpl: '+{n} diruntuhkan',
+    node_series_tpl: '{n} barisan terus',
+    node_direct_tpl: '{n} terus',
+    toggle_expand_aria: 'Kembang',
+    toggle_collapse_aria: 'Runtuh',
+    node_place_hint_tpl: 'Letak di sini · T{n}',
+    dock_title: 'Rakan menunggu penempatan',
+    dock_hint: 'Penempatan muktamad setelah disahkan',
+    dock_empty: 'Tiada rakan menunggu penempatan. Kongsi pautan jemputan anda dari papan pemuka.',
+    pool_joined_tpl: 'Menyertai {d}',
+    pool_place_btn: 'Letak',
+    m_sub_tpl: 'TIER {t} ({t} tingkat di bawah anda)',
+    m_placed_tpl: ' · diletakkan {d}',
+    m_active_horses: 'Kuda aktif',
+    m_horses_value: 'Nilai kuda aktif',
+    m_burns: 'BURN (jumlah)', unit_times: '',
+    m_items: 'Item digunakan (jumlah)', unit_items: '',
+    m_direct: 'Terus',
+    m_subtree: 'Di bawah (dalam 7 tier)',
+    m_note: 'Nilai kuda aktif ialah sumbangan ahli ini kepada volum organisasi anda (pembukaan tier).',
+    m_note_loading: ' memuatkan…',
+    close: 'Tutup',
+    confirm_title: 'Sahkan penempatan',
+    confirm_body_a: ' akan diletakkan ',
+    confirm_target_self: 'terus di bawah anda (TIER 1)',
+    confirm_target_tpl: 'terus di bawah {name} (TIER {t})',
+    confirm_body_b: '.',
+    warn_a: '⚠ Setelah disahkan, penempatan ',
+    warn_bold: 'tidak boleh diubah selama-lamanya',
+    warn_b: '. Permintaan penempatan semula tidak boleh diterima (pengecualian sistem untuk pengendali sahaja).',
+    confirm_check: 'Saya faham ini tidak boleh diubah',
+    reselect: 'Pilih tempat lain',
+    placing: 'Meletakkan…',
+    confirm_btn: 'Sahkan tempat ini',
+    err_place: 'Penempatan gagal.',
+    demo_note: 'Memaparkan organisasi sampel (data sementara, ~60 orang) — apabila rakan yang anda jemput bertambah, ini bertukar automatik kepada organisasi sebenar anda.',
   },
 };
 

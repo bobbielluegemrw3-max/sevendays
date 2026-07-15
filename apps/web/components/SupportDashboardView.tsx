@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { BonusRow, SupportSummary } from '@/components/SupportView';
 import { localDateTime } from '@/lib/format-time';
+import { APP_COPY, fill, type Lang } from '@/lib/i18n';
 import s from '../app/support.module.css';
 
 /**
@@ -26,7 +27,8 @@ const fmtUsdt = (v: string): string =>
 const tierColor = (t: number): string =>
   ['#c9a86a', '#00eaff', '#5ff5ff', '#7ee0ff', '#a9c6ff', '#c9a8ff', '#ff8fe4', '#ff5ce0'][t] ?? '#8f8ac2';
 
-export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
+export function SupportDashboardView({ data, lang = 'ja' }: { data: SupportDashboardData; lang?: Lang }) {
+  const t = APP_COPY[lang].support;
   const { summary } = data;
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState('https://sevendaysderby.com');
@@ -63,45 +65,43 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
     <>
       <div className="section-head">
         <h1>Support Bonus</h1>
-        <Link href="/support/map" className={s.mapCta}>組織マップを開く →</Link>
+        <Link href="/support/map" className={s.mapCta}>{t.map_cta}</Link>
       </div>
       <p className={s.lead}>
-        あなたの組織からチャンピオン(7日間走破)が誕生したとき、支えたネットワークに
-        お祝い金が支払われます。紹介しただけでは発生しません。
+        {t.lead}
       </p>
 
       {/* ---- ⓪ あなたの紹介単価(Decision 099 スターターレート) ---- */}
       <section className={s.rateCard}>
         <div className={s.rateLeft}>
-          <div className={s.rateK}>STARTER RATE · あなたの紹介単価</div>
+          <div className={s.rateK}>{t.rate_k}</div>
           <div className={s.rateV}>
             {fmtUsdt(summary.starter_rate)}
             <span className="unit">USDT</span>
           </div>
-          <div className={s.rateWho}>直接招待した仲間のチャンピオン1頭ごとに、あなたへ</div>
+          <div className={s.rateWho}>{t.rate_who}</div>
         </div>
         <div className={s.rateMid}>
           <div className={s.rateGaugeLabels}>
-            <span className={s.rateGaugeStart}>スターター 8.00</span>
-            <span className={s.rateGaugeEnd}>リーダー 3.00</span>
+            <span className={s.rateGaugeStart}>{t.gauge_starter} 8.00</span>
+            <span className={s.rateGaugeEnd}>{t.gauge_leader} 3.00</span>
           </div>
           <div className={s.rateGauge}>
             <span className={s.rateGaugeFill} style={{ width: `${ratePos}%` }} />
             <span className={s.rateGaugeDot} style={{ left: `${ratePos}%` }} />
           </div>
           <div className={s.rateGaugeSub}>
-            組織が育つほど単価は 8.00 → 3.00 へ滑らかに移行します(組織 50,000 USDT で 3.00)。
-            単価×組織規模は一定になる設計 — <b>組織が育っても、直接分の収入合計は下がりません。</b>
+            {t.gauge_sub_a}<b>{t.gauge_sub_bold}</b>
           </div>
         </div>
         <div className={s.rateRight}>
           {boost > 1.005 ? (
-            <span className={s.ratePill}>スターターブースト ×{boost.toFixed(1)}</span>
+            <span className={s.ratePill}>{fill(t.boost_tpl, { x: boost.toFixed(1) })}</span>
           ) : (
-            <span className={s.ratePillStd}>スタンダード</span>
+            <span className={s.ratePillStd}>{t.standard}</span>
           )}
           <div className={s.rateNote}>
-            単価はチャンピオン誕生の夜のものが適用され、毎日 20:00 (GMT+8) に再評価されます。
+            {t.rate_note}
           </div>
         </div>
       </section>
@@ -109,37 +109,35 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
       {/* ---- ① ヒーロー: ティア状態 + 次のアクション ---- */}
       <div className={s.hero}>
         <div className={s.tierHero}>
-          <div className={s.tierHeroK}>SUPPORT TIER · 現在のティア</div>
+          <div className={s.tierHeroK}>{t.tier_hero_k}</div>
           <div className={s.tierHeroRow}>
             <span className={s.tierHeroNum}>T{summary.unlocked_tiers}<span className={s.of}> / {summary.max_tiers}</span></span>
             <span className={s.tierHeroBar}>
               <span className={s.progress}><span style={{ width: `${progress}%` }} /></span>
               <span className={s.tierHeroNext} style={{ display: 'block' }}>
                 {nextOrgThreshold
-                  ? `T${summary.unlocked_tiers + 1}まで 組織 ${fmtUsdt(nextOrgThreshold)} USDT 以上を維持` +
-                    (nextDirectThreshold ? `(+直接 ${fmtUsdt(nextDirectThreshold)} 以上)` : '')
-                  : '最上位ティアに到達しています'}
+                  ? fill(t.next_maintain_tpl, { n: summary.unlocked_tiers + 1, v: fmtUsdt(nextOrgThreshold) }) +
+                    (nextDirectThreshold ? fill(t.next_direct_tpl, { d: fmtUsdt(nextDirectThreshold) }) : '')
+                  : t.tier_max}
               </span>
             </span>
           </div>
           <div className={s.tierHeroVol}>
-            組織(配下7段)の稼働馬 現在価値: <b>{fmtUsdt(summary.org_volume)} USDT</b> ·
-            直接招待分: <b>{fmtUsdt(summary.direct_volume)} USDT</b> ·
-            毎日20:00 (GMT+8) に再評価(下回ると自動で下がります)
+            {t.vol_a}<b>{fmtUsdt(summary.org_volume)} USDT</b>{t.vol_b}<b>{fmtUsdt(summary.direct_volume)} USDT</b>{t.vol_c}
           </div>
         </div>
 
         <div className={`${s.action} ${hasPool ? s.actionPlace : s.actionGrow}`}>
-          <div className={s.actionK}>次のアクション · NEXT</div>
+          <div className={s.actionK}>{t.action_k}</div>
           <div className={s.actionText}>
             {hasPool
-              ? `配置待ちの仲間が ${summary.pool_count}名 います。配置するとネットワークに加わり、ティア維持につながります。`
+              ? fill(t.action_pool_tpl, { n: summary.pool_count })
               : nextOrgThreshold
-                ? `次のティア解放は組織 ${fmtUsdt(nextOrgThreshold)} USDT から。仲間を招待して、ネットワーク全体を育てましょう。`
-                : 'すべてのティアが解放されています。ネットワークの維持を続けましょう。'}
+                ? fill(t.action_grow_tpl, { v: fmtUsdt(nextOrgThreshold) })
+                : t.action_max}
           </div>
           <Link href="/support/map" className={s.actionBtn}>
-            {hasPool ? 'マップで配置する' : '組織マップを見る'}
+            {hasPool ? t.action_btn_place : t.action_btn_view}
           </Link>
         </div>
       </div>
@@ -147,27 +145,27 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
       {/* ---- ② KPI ---- */}
       <div className={s.kpis}>
         <div className={`${s.kpi} ${s.kpiGold}`}>
-          <div className={s.kpiK}>累計サポートボーナス</div>
+          <div className={s.kpiK}>{t.kpi_total}</div>
           <div className={s.kpiV}>{fmtUsdt(summary.bonuses_received_total)}<span className="unit">USDT</span></div>
-          <div className={s.kpiSub}>{summary.bonuses_received_count}回の受け取り</div>
+          <div className={s.kpiSub}>{fill(t.kpi_total_sub_tpl, { n: summary.bonuses_received_count })}</div>
         </div>
         <div className={`${s.kpi} ${s.kpiCyan}`}>
-          <div className={s.kpiK}>ネットワーク</div>
-          <div className={s.kpiV}>{data.networkCount}<span className="unit">名</span></div>
-          <div className={s.kpiSub}>あなたが支える仲間</div>
+          <div className={s.kpiK}>{t.kpi_network}</div>
+          <div className={s.kpiV}>{data.networkCount}<span className="unit">{t.unit_people}</span></div>
+          <div className={s.kpiSub}>{t.kpi_network_sub}</div>
         </div>
         <Link href="/support/map" className={`${s.kpi} ${hasPool ? s.kpiPoolActive : s.kpiPool}`}>
-          <div className={s.kpiK}>配置待ち</div>
-          <div className={s.kpiV}>{summary.pool_count}<span className="unit">名</span></div>
-          <div className={s.kpiSub}>{hasPool ? 'マップで配置する →' : '配置待ちなし'}</div>
+          <div className={s.kpiK}>{t.kpi_pool}</div>
+          <div className={s.kpiV}>{summary.pool_count}<span className="unit">{t.unit_people}</span></div>
+          <div className={s.kpiSub}>{hasPool ? t.kpi_pool_place : t.kpi_pool_none}</div>
         </Link>
       </div>
 
       {/* ---- ③ ティアと支払額 ---- */}
       <section className="panel">
-        <h2>ティアと支払額</h2>
+        <h2>{t.tier_table_h}</h2>
         <div className={s.tierMeta}>
-          チャンピオン1頭の誕生で、お祝い金(T1=あなたの紹介単価 3〜8 / T2=2 / T3〜7=各1 USDT)が上位7ティアに配られます。
+          {t.tier_meta}
         </div>
         <div className={s.tierTable}>
           {summary.tier_amounts.map((amount, i) => {
@@ -176,14 +174,14 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
               <div key={i} className={`${s.tierCell} ${open ? s.tierCellOpen : ''}`}>
                 <div className={s.tierCellName}>T{i + 1}{open ? ' ✓' : ''}</div>
                 <div className={s.tierCellAmount}>
-                  {i === 0 ? `${fmtUsdt(summary.starter_rate)} (3〜8)` : Number(amount).toFixed(0)} USDT
+                  {i === 0 ? `${fmtUsdt(summary.starter_rate)}${t.t1_range}` : Number(amount).toFixed(0)} USDT
                 </div>
                 <div className={s.tierCellCond}>
                   {i === 0
-                    ? '常時'
-                    : `組織 ≥ ${Number(summary.org_thresholds[i]).toLocaleString('en-US')}` +
+                    ? t.tier_cond_always
+                    : fill(t.tier_cond_org_tpl, { v: Number(summary.org_thresholds[i]).toLocaleString('en-US') }) +
                       (i + 1 >= summary.direct_required_from_tier
-                        ? ` +直接 ≥ ${Number(summary.direct_thresholds[i]).toLocaleString('en-US')}`
+                        ? fill(t.tier_cond_direct_tpl, { d: Number(summary.direct_thresholds[i]).toLocaleString('en-US') })
                         : '')}
                 </div>
               </div>
@@ -191,35 +189,32 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
           })}
         </div>
         <div className={s.tierFoot}>
-          組織ボリューム = あなたの組織マップ配下7段(サポートボーナスが届く範囲)の稼働馬価値の合計。
-          T5以上は「直接招待した仲間の稼働馬価値」も併せて必要です。横並び(直下の系列数)は無制限。
+          {t.tier_foot}
         </div>
       </section>
 
       {/* ---- ④ 招待リンク(1cカード: リンクピル+一体型コピーCTA) ---- */}
       <section className={s.invite}>
         <div className={s.inviteHead}>
-          <span className={s.inviteTitle}>招待リンク · INVITE</span>
-          <span className={s.inviteCode}>あなたのコード <b>{summary.referral_code}</b></span>
+          <span className={s.inviteTitle}>{t.invite_title}</span>
+          <span className={s.inviteCode}>{t.invite_code_label}<b>{summary.referral_code}</b></span>
         </div>
         <div className={s.inviteRow}>
           <span className={s.inviteLink}>{inviteUrl}</span>
           <button type="button" className={s.inviteCopy} onClick={copyInvite}>
-            {copied ? '✓ コピーしました' : 'リンクをコピー'}
+            {copied ? t.invite_copied : t.invite_copy}
           </button>
         </div>
         <p className={s.inviteNote}>
-          招待しただけではボーナスは発生しません。サポートボーナスは、あなたのネットワーク内で
-          チャンピオン(7日間走破)が誕生したときにだけ、所定の額(T1=紹介単価3〜8 / T2=2 /
-          T3〜7=各1 USDT)の範囲でお祝い金として支払われます。金額・頻度の保証はありません。
+          {t.invite_note}
         </p>
       </section>
 
       {/* ---- ⑤ ボーナス履歴 ---- */}
       <section className="panel">
-        <h2>サポートボーナス履歴</h2>
+        <h2>{t.hist_h}</h2>
         {data.bonuses.length === 0 ? (
-          <p className="empty">まだサポートボーナスはありません。</p>
+          <p className="empty">{t.hist_empty}</p>
         ) : (
           <div className={s.histList}>
             {data.bonuses.map((b, i) => (
@@ -228,7 +223,7 @@ export function SupportDashboardView({ data }: { data: SupportDashboardData }) {
                   {b.tier ? `T${b.tier}` : '—'}
                 </span>
                 <span className={s.histDate}>{localDateTime(b.created_at)}</span>
-                <span className={s.histWhy}>組織のチャンピオン誕生</span>
+                <span className={s.histWhy}>{t.hist_why}</span>
                 <span className={s.histAmt}>+{fmtUsdt(b.amount)}<span className="unit">USDT</span></span>
               </div>
             ))}

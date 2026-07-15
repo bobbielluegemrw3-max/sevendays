@@ -10,6 +10,7 @@ import {
   type SupportTreeInput,
 } from '@/lib/support-tree';
 import type { PoolMember } from '@/components/SupportView';
+import { APP_COPY, fill, type Lang } from '@/lib/i18n';
 import s from '../app/support-map.module.css';
 import d from '../app/support.module.css';
 
@@ -69,7 +70,8 @@ function synthDetail(node: SupportTreeInput, direct: number, subtree: number): M
   };
 }
 
-export function SupportMapView({ data, preview = false }: { data: SupportMapData; preview?: boolean }) {
+export function SupportMapView({ data, preview = false, lang = 'ja' }: { data: SupportMapData; preview?: boolean; lang?: Lang }) {
+  const t = APP_COPY[lang].support;
   const router = useRouter();
   const [mode, setMode] = useState<'map' | 'list'>('map');
   const [zoom, setZoom] = useState(1);
@@ -132,7 +134,7 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
 
   const targetInfo = targetId
     ? targetId === data.selfUserId
-      ? { isSelf: true, tier: 0, display: 'あなた' }
+      ? { isSelf: true, tier: 0, display: t.self }
       : (() => {
           const n = byId.get(targetId);
           return n ? { isSelf: false, tier: n.tier, display: n.display } : null;
@@ -164,7 +166,7 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
     });
     setBusy(false);
     if (result.status === 200) { cancelPlacement(); router.refresh(); }
-    else setError(errorMessage(result.body) ?? '配置に失敗しました。');
+    else setError(errorMessage(result.body) ?? t.err_place);
   };
 
   const toggleCollapse = (id: string) => {
@@ -219,7 +221,7 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
       const hit = r.status === 200 ? (r.body as { user_id: string | null }).user_id : null;
       if (hit && byId.has(hit)) { revealNode(hit); return; }
     }
-    setSearchMsg('あなたの組織(配下7段)には見つかりませんでした');
+    setSearchMsg(t.map_search_notfound);
   };
 
   /* ---- 詳細モーダル ---- */
@@ -271,17 +273,17 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
       <div className={s.toolbar}>
         <span className={s.toolTitle}>ORGANIZATION MAP</span>
         <span className={s.toolStats}>
-          メンバー {network.length}名 · 配置待ち {pool.length}名 · 最深 T{layout.maxTier || 0}
+          {fill(t.toolbar_stats_tpl, { members: network.length, pool: pool.length, depth: layout.maxTier || 0 })}
         </span>
         <span className={s.toolSpacer} />
         <span className={s.modeGroup}>
-          <button type="button" className={`${s.modeBtn} ${mode === 'map' ? s.modeOn : ''}`} onClick={() => setMode('map')}>マップ</button>
-          <button type="button" className={`${s.modeBtn} ${mode === 'list' ? s.modeOn : ''}`} onClick={() => setMode('list')}>リスト</button>
+          <button type="button" className={`${s.modeBtn} ${mode === 'map' ? s.modeOn : ''}`} onClick={() => setMode('map')}>{t.mode_map}</button>
+          <button type="button" className={`${s.modeBtn} ${mode === 'list' ? s.modeOn : ''}`} onClick={() => setMode('list')}>{t.mode_list}</button>
         </span>
         {mode === 'map' && (
           <>
             <button type="button" className={s.ghostBtn} onClick={collapseAll}>
-              {collapsed.size > 0 ? 'すべて展開' : 'すべて折りたたむ'}
+              {collapsed.size > 0 ? t.expand_all : t.collapse_all}
             </button>
             <span className={s.zoomGroup}>
               <button type="button" className={s.zoomBtn} onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)))}>−</button>
@@ -301,10 +303,10 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
           className={s.searchInput}
           value={searchQ}
           onChange={(e) => setSearchQ(e.target.value)}
-          placeholder="メンバーを探す(表示名の一部 or メールアドレス完全一致)"
-          aria-label="組織内メンバー検索"
+          placeholder={t.map_search_ph}
+          aria-label={t.map_search_aria}
         />
-        <button type="submit" className={s.ghostBtn}>検索</button>
+        <button type="submit" className={s.ghostBtn}>{t.map_search_btn}</button>
         {searchMsg && <span className={s.searchMsg}>{searchMsg}</span>}
       </form>
 
@@ -313,11 +315,11 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
         <div className={s.placeBanner}>
           <span className={s.placeDot} />
           <span>
-            <span className={s.placeBannerName}>{placing.display}</span> の配置先を選択中 —
-            {mode === 'map' ? 'マップ上のノード(あなた or 配下メンバー)をクリック' : 'リストのメンバーをタップ'}してください
+            <span className={s.placeBannerName}>{placing.display}</span>{t.place_select_a}
+            {mode === 'map' ? t.place_hint_map : t.place_hint_list}{t.place_select_b}
           </span>
           <span style={{ flex: 1 }} />
-          <button type="button" className="secondary" onClick={cancelPlacement}>キャンセル</button>
+          <button type="button" className="secondary" onClick={cancelPlacement}>{t.cancel}</button>
         </div>
       )}
 
@@ -330,7 +332,7 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
               className={`${s.crumbBtn} ${drillId === null ? s.crumbOn : ''}`}
               onClick={() => setDrillId(null)}
             >
-              ★ あなた
+              {t.you_crumb}
             </button>
             {crumbs.map((c) => (
               <span key={c.user_id} className={s.crumbSeg}>
@@ -354,13 +356,13 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
               {drillNode ? nodeInitial(drillNode.display) : '★'}
             </span>
             <span className={s.focusBody}>
-              <span className={s.focusName}>{drillNode ? drillNode.display : 'あなた'}</span>
+              <span className={s.focusName}>{drillNode ? drillNode.display : t.self}</span>
               <span className={s.focusMeta}>
-                {drillNode ? `TIER ${drillNode.tier} · ` : ''}直下 {drillChildren.length}名 · 配下 {drillNode ? subtreeCount.get(drillNode.user_id) ?? 0 : network.length}名
+                {drillNode ? fill(t.focus_tier_tpl, { t: drillNode.tier }) : ''}{fill(t.focus_meta_tpl, { direct: drillChildren.length, sub: drillNode ? subtreeCount.get(drillNode.user_id) ?? 0 : network.length })}
               </span>
             </span>
             {drillNode && (
-              <button type="button" className={s.ghostBtn} onClick={() => void openDetail(drillNode)}>詳細</button>
+              <button type="button" className={s.ghostBtn} onClick={() => void openDetail(drillNode)}>{t.detail_btn}</button>
             )}
             {placementMode && (
               <button
@@ -368,14 +370,14 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
                 className={s.poolBtn}
                 onClick={() => { setTargetId(drillNode ? drillNode.user_id : data.selfUserId); setConfirmed(false); }}
               >
-                ここに配置
+                {t.place_here}
               </button>
             )}
           </div>
 
           <div className={s.childList}>
             {drillChildren.length === 0 ? (
-              <p className={s.dockEmpty}>この下にはまだ誰もいません。</p>
+              <p className={s.dockEmpty}>{t.drill_empty}</p>
             ) : (
               drillChildren.map((n) => {
                 const kids = (childrenOf.get(n.user_id) ?? []).length;
@@ -399,11 +401,11 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
                         {n.display}
                       </span>
                       <span className={s.childMeta}>
-                        {typeof n.horses === 'number' ? `馬${n.horses}頭 · ` : ''}直下{kids}名 · 配下{sub}名
+                        {typeof n.horses === 'number' ? fill(t.child_horse_tpl, { h: n.horses }) : ''}{fill(t.child_meta_tpl, { kids, sub })}
                       </span>
                     </button>
                     {kids > 0 && (
-                      <button type="button" className={s.drillBtn} aria-label="この系列を開く" onClick={() => setDrillId(n.user_id)}>
+                      <button type="button" className={s.drillBtn} aria-label={t.drill_open_aria} onClick={() => setDrillId(n.user_id)}>
                         ▸
                       </button>
                     )}
@@ -424,7 +426,7 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
           onPointerLeave={endPan}
         >
           {network.length === 0 && !placementMode ? (
-            <div className={s.emptyTree}>まだ誰も配置されていません。仲間を招待して、最初の1人を配置しましょう。</div>
+            <div className={s.emptyTree}>{t.empty_tree}</div>
           ) : (
             <div className={s.canvasPad} style={{ width: layout.width * zoom + 40, height: (layout.height + 20) * zoom + 20 }}>
               <div className={s.canvasScale} style={{ transform: `scale(${zoom})`, width: layout.width, height: layout.height + 20 }}>
@@ -487,24 +489,24 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
                         {n.isSelf ? '★' : nodeInitial(n.display)}
                       </span>
                       <span className={s.nodeBody}>
-                        <span className={s.nodeName}>{n.isSelf ? 'あなた' : n.display}</span>
+                        <span className={s.nodeName}>{n.isSelf ? t.self : n.display}</span>
                         <span className={s.nodeMeta}>
                           {n.isSelf
-                            ? `直下 ${n.directCount}系列`
-                            : n.collapsed ? `+${n.hiddenCount}名 折りたたみ中` : `直下 ${n.directCount}名`}
+                            ? fill(t.node_series_tpl, { n: n.directCount })
+                            : n.collapsed ? fill(t.node_collapsed_tpl, { n: n.hiddenCount }) : fill(t.node_direct_tpl, { n: n.directCount })}
                         </span>
                       </span>
                       {hasKids && (
                         <span
                           className={`${s.toggle} ${n.collapsed ? s.collapsed : ''}`}
                           role="button"
-                          aria-label={n.collapsed ? '展開' : '折りたたむ'}
+                          aria-label={n.collapsed ? t.toggle_expand_aria : t.toggle_collapse_aria}
                           onClick={(e) => { e.stopPropagation(); toggleCollapse(n.user_id); }}
                         >
                           {n.collapsed ? '▸' : '▾'}
                         </span>
                       )}
-                      {active && <span className={s.nodeTargetHint}>ここに配置 · T{n.tier + 1}</span>}
+                      {active && <span className={s.nodeTargetHint}>{fill(t.node_place_hint_tpl, { n: n.tier + 1 })}</span>}
                     </div>
                   );
                 })}
@@ -517,12 +519,12 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
       {/* ---- プールドック ---- */}
       <div className={s.dock}>
         <div className={s.dockHead}>
-          <span className={s.dockTitle}>配置待ちの仲間</span>
-          <span className={s.dockCount}>{pool.length}名</span>
-          <span className={s.dockHint}>配置は確定すると変更不可</span>
+          <span className={s.dockTitle}>{t.dock_title}</span>
+          <span className={s.dockCount}>{pool.length}{t.unit_people}</span>
+          <span className={s.dockHint}>{t.dock_hint}</span>
         </div>
         {pool.length === 0 ? (
-          <p className={s.dockEmpty}>配置待ちの仲間はいません。ダッシュボードから招待リンクを共有しましょう。</p>
+          <p className={s.dockEmpty}>{t.dock_empty}</p>
         ) : (
           <div className={s.dockRow}>
             {pool.map((m) => (
@@ -532,9 +534,9 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
                 </span>
                 <span className={s.poolText}>
                   <span className={s.poolName}>{m.display}</span>
-                  <span className={s.poolMeta}>参加 {fmtDate(m.joined_at)}</span>
+                  <span className={s.poolMeta}>{fill(t.pool_joined_tpl, { d: fmtDate(m.joined_at) })}</span>
                 </span>
-                <button type="button" className={s.poolBtn} onClick={() => beginPlacement(m)}>配置</button>
+                <button type="button" className={s.poolBtn} onClick={() => beginPlacement(m)}>{t.pool_place_btn}</button>
               </div>
             ))}
           </div>
@@ -552,24 +554,24 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
               <span>
                 <div className={d.dialogTitle} style={{ margin: 0 }}>{detail.display}</div>
                 <span className={s.mSub}>
-                  TIER {detail.tier}(あなたから{detail.tier}段目){detail.placed_at ? ` · 配置 ${fmtDate(detail.placed_at)}` : ''}
+                  {fill(t.m_sub_tpl, { t: detail.tier })}{detail.placed_at ? fill(t.m_placed_tpl, { d: fmtDate(detail.placed_at) }) : ''}
                 </span>
               </span>
             </div>
             <div className={s.mGrid}>
-              <div className={s.mCell}><span className={s.mKey}>稼働馬</span><span className={s.mVal}>{detail.active_horses}<small>頭</small></span></div>
-              <div className={s.mCell}><span className={s.mKey}>稼働馬の現在価値</span><span className={s.mVal}>{Number(detail.horses_value).toLocaleString('en-US')}<small>USDT</small></span></div>
-              <div className={s.mCell}><span className={s.mKey}>BURN回数(累計)</span><span className={s.mVal}>{detail.burns_total}<small>回</small></span></div>
-              <div className={s.mCell}><span className={s.mKey}>アイテム使用(累計)</span><span className={s.mVal}>{detail.items_used}<small>個</small></span></div>
-              <div className={s.mCell}><span className={s.mKey}>直下</span><span className={s.mVal}>{detail.direct_count}<small>名</small></span></div>
-              <div className={s.mCell}><span className={s.mKey}>配下(7段内)</span><span className={s.mVal}>{detail.subtree_count}<small>名</small></span></div>
+              <div className={s.mCell}><span className={s.mKey}>{t.m_active_horses}</span><span className={s.mVal}>{detail.active_horses}<small>{t.unit_horses}</small></span></div>
+              <div className={s.mCell}><span className={s.mKey}>{t.m_horses_value}</span><span className={s.mVal}>{Number(detail.horses_value).toLocaleString('en-US')}<small>USDT</small></span></div>
+              <div className={s.mCell}><span className={s.mKey}>{t.m_burns}</span><span className={s.mVal}>{detail.burns_total}<small>{t.unit_times}</small></span></div>
+              <div className={s.mCell}><span className={s.mKey}>{t.m_items}</span><span className={s.mVal}>{detail.items_used}<small>{t.unit_items}</small></span></div>
+              <div className={s.mCell}><span className={s.mKey}>{t.m_direct}</span><span className={s.mVal}>{detail.direct_count}<small>{t.unit_people}</small></span></div>
+              <div className={s.mCell}><span className={s.mKey}>{t.m_subtree}</span><span className={s.mVal}>{detail.subtree_count}<small>{t.unit_people}</small></span></div>
             </div>
             <p className={s.mNote}>
-              稼働馬の現在価値は、あなたの組織ボリューム(ティア解放)への貢献分です。
-              {detailBusy ? ' 取得中…' : ''}
+              {t.m_note}
+              {detailBusy ? t.m_note_loading : ''}
             </p>
             <div className={d.dialogActions}>
-              <button type="button" className="secondary" onClick={() => setDetail(null)}>閉じる</button>
+              <button type="button" className="secondary" onClick={() => setDetail(null)}>{t.close}</button>
             </div>
           </div>
         </div>
@@ -579,25 +581,24 @@ export function SupportMapView({ data, preview = false }: { data: SupportMapData
       {placing && targetInfo && (
         <div className={d.overlay} role="dialog" aria-modal="true">
           <div className={d.dialog}>
-            <div className={d.dialogTitle}>配置を確定する</div>
+            <div className={d.dialogTitle}>{t.confirm_title}</div>
             <p className="muted" style={{ fontSize: '0.85rem' }}>
-              <strong>{placing.display}</strong> を{' '}
-              <strong>{targetInfo.isSelf ? 'あなたの直下(TIER 1)' : `${targetInfo.display} の直下(TIER ${targetInfo.tier + 1})`}</strong>{' '}
-              に配置します。
+              <strong>{placing.display}</strong>{t.confirm_body_a}
+              <strong>{targetInfo.isSelf ? t.confirm_target_self : fill(t.confirm_target_tpl, { name: targetInfo.display, t: targetInfo.tier + 1 })}</strong>
+              {t.confirm_body_b}
             </p>
             <div className={d.warnBox}>
-              ⚠ 配置は一度確定すると<strong>二度と変更できません</strong>。
-              配置換えの依頼は受け付けられません(システム上の例外処理は運営管理者のみ)。
+              {t.warn_a}<strong>{t.warn_bold}</strong>{t.warn_b}
             </div>
             <label className={d.confirmLabel}>
               <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
-              変更できないことを理解しました
+              {t.confirm_check}
             </label>
             {error && <p className="error">{error}</p>}
             <div className={d.dialogActions}>
-              <button type="button" className="secondary" onClick={() => setTargetId(null)}>配置先を選び直す</button>
+              <button type="button" className="secondary" onClick={() => setTargetId(null)}>{t.reselect}</button>
               <button type="button" disabled={!confirmed || busy} onClick={() => void submitPlacement()}>
-                {busy ? '配置中…' : 'この位置で確定する'}
+                {busy ? t.placing : t.confirm_btn}
               </button>
             </div>
           </div>
