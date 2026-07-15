@@ -5,6 +5,7 @@ import { StableNameForm } from '@/components/StableNameForm';
 import { TradeAutoTile, type TradeSettings } from '@/components/TradeAutoControls';
 import { avatarHue } from '@/lib/support-tree';
 import { localDate } from '@/lib/format-time';
+import { APP_COPY, fill, type Lang } from '@/lib/i18n';
 import s from '../app/account.module.css';
 
 /* ============================================================================
@@ -31,28 +32,31 @@ export function AccountView({
   wallets,
   stats,
   trade,
+  lang = 'ja',
 }: {
   me: Me;
   wallets: Wallet[];
   stats: AccountStats;
   trade: TradeSettings | null;
+  lang?: Lang;
 }) {
+  const t = APP_COPY[lang].account;
   // ウォレットログインのみのユーザーは合成メール(@user.sevendays)を持つ → 未設定扱い
   const emailUnset = me.email.endsWith('@user.sevendays');
   const days = Math.max(1, Math.floor((Date.now() - new Date(me.created_at).getTime()) / 86400000) + 1);
   const hue = avatarHue(me.email);
 
   const cells: Array<{ v: number; k: string; cls: string; glyph: string; href: string }> = [
-    { v: stats.racing, k: '出走中', cls: s.stCyan!, glyph: '◈', href: '/horses' },
-    { v: stats.listed, k: '出品中', cls: s.stWarn!, glyph: '↗', href: '/market' },
-    { v: stats.champions, k: 'チャンピオン', cls: s.stGold!, glyph: '◆', href: '/horses' },
-    { v: stats.burned, k: '消滅', cls: s.stMag!, glyph: '✕', href: '/horses' },
-    { v: stats.pendingReservations, k: '割当待ち予約', cls: s.stCyan!, glyph: '⟳', href: '/market' },
+    { v: stats.racing, k: t.st_racing, cls: s.stCyan!, glyph: '◈', href: '/horses' },
+    { v: stats.listed, k: t.st_listed, cls: s.stWarn!, glyph: '↗', href: '/market' },
+    { v: stats.champions, k: t.st_champions, cls: s.stGold!, glyph: '◆', href: '/horses' },
+    { v: stats.burned, k: t.st_burned, cls: s.stMag!, glyph: '✕', href: '/horses' },
+    { v: stats.pendingReservations, k: t.st_pending, cls: s.stCyan!, glyph: '⟳', href: '/market' },
   ];
 
   return (
     <div className={s.wrap}>
-      <div className={s.h1}>アカウント</div>
+      <div className={s.h1}>{t.title}</div>
 
       {/* ① アイデンティティ帯 */}
       <div className={s.profileCard}>
@@ -64,22 +68,22 @@ export function AccountView({
         </span>
         <div className={s.profileBody}>
           <div className={s.profileEmail}>
-            {emailUnset ? <span className={s.vUnset}>(メール未設定 — ウォレットログイン)</span> : me.email}
+            {emailUnset ? <span className={s.vUnset}>{t.email_unset}</span> : me.email}
           </div>
           {/* 厩舎名(Decision 097): 公開アイデンティティ */}
-          <StableNameForm current={me.stable_name ?? null} />
+          <StableNameForm current={me.stable_name ?? null} lang={lang} />
           <div className={s.profileMeta}>
-            <span>登録 {localDate(me.created_at)}</span>
-            <span className={s.dayPill}>プレイ {days}日目</span>
+            <span>{t.reg_label}{localDate(me.created_at)}</span>
+            <span className={s.dayPill}>{fill(t.play_tpl, { n: days })}</span>
           </div>
-          <div className={s.profileId}>ID {me.id}</div>
+          <div className={s.profileId}>{t.id_label}{me.id}</div>
         </div>
       </div>
 
       {/* ② あなたの記録 ＋ 設定(PC 2カラム) */}
       <div className={s.recordGrid}>
         <section className={`${s.sec} ${s.cy}`}>
-          <div className={s.secLabel}>あなたの記録 <span className={s.en}>· RECORD</span></div>
+          <div className={s.secLabel}>{t.record_label} <span className={s.en}>· RECORD</span></div>
           <div className={s.statGrid}>
             {cells.map((c) => (
               <Link key={c.k} href={c.href} className={`${s.statCell} ${c.cls}`}>
@@ -90,43 +94,41 @@ export function AccountView({
             ))}
           </div>
           <div className={s.statNote}>
-            数字をタップすると各ページへ移動します。報酬の受け取り状況は{' '}
-            <Link href="/champion" className={s.inlineLink}>CHAMPION</Link>、入出金の履歴は{' '}
-            <Link href="/wallet" className={s.inlineLink}>WALLET</Link> で確認できます。
+            {t.stat_note_a}
+            <Link href="/champion" className={s.inlineLink}>CHAMPION</Link>{t.stat_note_b}
+            <Link href="/wallet" className={s.inlineLink}>WALLET</Link>{t.stat_note_c}
           </div>
         </section>
 
         <section className={s.sec}>
-          <div className={s.secLabel}>設定 <span className={s.en}>· SETTINGS</span></div>
+          <div className={s.secLabel}>{t.settings_label} <span className={s.en}>· SETTINGS</span></div>
           <div className={s.settingsStack}>
-            {trade ? <TradeAutoTile settings={trade} /> : null}
-            <PwaSetupTile />
+            {trade ? <TradeAutoTile settings={trade} lang={lang} /> : null}
+            <PwaSetupTile lang={lang} />
           </div>
         </section>
       </div>
 
       {/* ③ ログイン方法の連携(既存 AccountLinking を内包 → CSSの :global() で意匠化) */}
       <section className={s.sec}>
-        <div className={s.secLabel}>ログイン方法の連携 <span className={s.en}>· LINKING</span></div>
+        <div className={s.secLabel}>{t.linking_label} <span className={s.en}>· LINKING</span></div>
         <div className={s.lead}>
-          連携すると、どのログイン方法でも同じアカウント(残高・馬)にアクセスできます。
-          1つのウォレットは1つのアカウントにのみ紐づけできます。
+          {t.linking_lead}
         </div>
         <div className={s.linkBody}>
-          <AccountLinking userId={me.id} wallets={wallets.map((w) => w.wallet_address)} />
+          <AccountLinking userId={me.id} wallets={wallets.map((w) => w.wallet_address)} lang={lang} />
         </div>
       </section>
 
       {/* ④ サポート導線 */}
       <section className={s.sec}>
-        <div className={s.secLabel}>サポート <span className={s.en}>· SUPPORT</span></div>
+        <div className={s.secLabel}>{t.support_label} <span className={s.en}>· SUPPORT</span></div>
         <div className={s.lead}>
-          ゲームのルール・アカウント・入出金など、お困りのことがあればお気軽にご連絡ください。
-          ご登録のメールアドレスへ返信します。
+          {t.support_lead}
         </div>
         <div className={s.supportRow}>
-          <Link href="/guide" className={s.supportGhost}>使い方を見る →</Link>
-          <Link href="/contact" className={s.supportBtn}>お問い合わせフォームへ →</Link>
+          <Link href="/guide" className={s.supportGhost}>{t.support_guide}</Link>
+          <Link href="/contact" className={s.supportBtn}>{t.support_contact}</Link>
         </div>
       </section>
     </div>

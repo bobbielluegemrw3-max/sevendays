@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { UserIdentity } from '@supabase/supabase-js';
 import { apiFetch, errorMessage, siteOrigin, supabaseBrowser } from '@/lib/client-api';
+import { APP_COPY, fill, type Lang } from '@/lib/i18n';
 
 interface Eip1193Provider {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;
@@ -26,7 +27,8 @@ function toHex(text: string): string {
  * - MetaMask: personal_sign proof -> user_wallets; Web3 sessions for a
  *   linked wallet resolve to this game account at the API bridge.
  */
-export function AccountLinking({ userId, wallets }: { userId: string; wallets: string[] }) {
+export function AccountLinking({ userId, wallets, lang = 'ja' }: { userId: string; wallets: string[]; lang?: Lang }) {
+  const t = APP_COPY[lang].linking;
   const router = useRouter();
   const [identities, setIdentities] = useState<UserIdentity[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -59,13 +61,13 @@ export function AccountLinking({ userId, wallets }: { userId: string; wallets: s
     const injected = (window as { ethereum?: Eip1193Provider }).ethereum;
     if (!injected) {
       setBusy(false);
-      setError('MetaMaskが見つかりません。拡張機能をインストールしてください。');
+      setError(t.err_no_metamask);
       return;
     }
     try {
       const accounts = (await injected.request({ method: 'eth_requestAccounts' })) as string[];
       const address = accounts[0];
-      if (!address) throw new Error('ウォレットアドレスを取得できませんでした');
+      if (!address) throw new Error(t.err_no_address);
       const linkText = walletLinkMessage(userId);
       const signature = (await injected.request({
         method: 'personal_sign',
@@ -77,10 +79,10 @@ export function AccountLinking({ userId, wallets }: { userId: string; wallets: s
       });
       setBusy(false);
       if (result.status !== 200) {
-        setError(errorMessage(result.body) ?? 'ウォレットの紐づけに失敗しました');
+        setError(errorMessage(result.body) ?? t.err_link_wallet);
         return;
       }
-      setMessage(`ウォレット ${address.slice(0, 6)}…${address.slice(-4)} を紐づけました`);
+      setMessage(fill(t.linked_tpl, { addr: `${address.slice(0, 6)}…${address.slice(-4)}` }));
       router.refresh();
     } catch (e) {
       setBusy(false);
@@ -97,7 +99,7 @@ export function AccountLinking({ userId, wallets }: { userId: string; wallets: s
     });
     setBusy(false);
     if (result.status !== 200) {
-      setError(errorMessage(result.body) ?? '解除に失敗しました');
+      setError(errorMessage(result.body) ?? t.err_unlink);
       return;
     }
     router.refresh();
@@ -120,9 +122,9 @@ export function AccountLinking({ userId, wallets }: { userId: string; wallets: s
 
   return (
     <div className="stack">
-      <h3>ログインID(Supabase)</h3>
+      <h3>{t.login_id}</h3>
       {identities === null ? (
-        <p className="muted">読み込み中…</p>
+        <p className="muted">{t.loading}</p>
       ) : (
         <table>
           <tbody>
@@ -135,10 +137,10 @@ export function AccountLinking({ userId, wallets }: { userId: string; wallets: s
                 <td>
                   {identities.length > 1 ? (
                     <button className="secondary" onClick={() => void unlinkIdentity(identity)} disabled={busy}>
-                      解除
+                      {t.unlink}
                     </button>
                   ) : (
-                    <span className="muted">(最後のログインIDは解除できません)</span>
+                    <span className="muted">{t.last_id}</span>
                   )}
                 </td>
               </tr>
@@ -148,11 +150,11 @@ export function AccountLinking({ userId, wallets }: { userId: string; wallets: s
       )}
       {!hasGoogle ? (
         <button onClick={() => void linkGoogle()} disabled={busy}>
-          Google を紐づけ
+          {t.link_google}
         </button>
       ) : null}
 
-      <h3>ウォレット</h3>
+      <h3>{t.wallet_h}</h3>
       {wallets.length > 0 ? (
         <table>
           <tbody>
@@ -163,7 +165,7 @@ export function AccountLinking({ userId, wallets }: { userId: string; wallets: s
                 </td>
                 <td>
                   <button className="secondary" onClick={() => void unlinkWallet(address)} disabled={busy}>
-                    解除
+                    {t.unlink}
                   </button>
                 </td>
               </tr>
@@ -171,10 +173,10 @@ export function AccountLinking({ userId, wallets }: { userId: string; wallets: s
           </tbody>
         </table>
       ) : (
-        <p className="muted">紐づけ済みのウォレットはありません。</p>
+        <p className="muted">{t.no_wallet}</p>
       )}
       <button onClick={() => void linkMetaMask()} disabled={busy}>
-        🦊 MetaMask を紐づけ
+        {t.link_metamask}
       </button>
 
       {message ? <p className="ok">{message}</p> : null}

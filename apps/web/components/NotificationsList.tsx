@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/client-api';
 import { localDate } from '@/lib/format-time';
+import { APP_COPY, fill, type Lang, type AppDict } from '@/lib/i18n';
 import s from '../app/notifications.module.css';
 
 /* ============================================================================
@@ -23,39 +24,43 @@ export interface Notification {
 
 const PAGE_SIZE = 15;
 
-type Cat = 'レース' | '売買' | '報酬' | '入出金' | 'その他';
-interface TypeMeta { cls: string; glyph: string; label: string; cat: Cat; lane: string }
+type Cat = 'race' | 'trade' | 'reward' | 'money' | 'other';
+interface TypeMeta { cls: string; glyph: string; cat: Cat; lane: string }
 const TYPE_META: Record<string, TypeMeta> = {
-  RACE_RESULT_READY:      { cls: 'tRace', glyph: '◈', label: 'レース結果', cat: 'レース', lane: 'rgba(0,234,255,0.65)' },
-  HORSE_BURNED:           { cls: 'tBurn', glyph: '✕', label: 'Burn', cat: 'レース', lane: 'rgba(255,45,196,0.7)' },
-  REVENGE_BUFF_GENERATED: { cls: 'tBurn', glyph: '↺', label: 'Revenge Buff', cat: 'レース', lane: 'rgba(255,45,196,0.5)' },
-  BUYBACK_PAYMENT_PAID:   { cls: 'tBuyback', glyph: '◆', label: 'チャンピオン報酬', cat: '報酬', lane: 'rgba(201,168,106,0.7)' },
-  BUYBACK_COMPLETED:      { cls: 'tBuyback', glyph: '◆', label: 'チャンピオン報酬', cat: '報酬', lane: 'rgba(201,168,106,0.7)' },
-  MEMORIAL_NFT_MINTED:    { cls: 'tBuyback', glyph: '❖', label: '記念NFT', cat: '報酬', lane: 'rgba(201,168,106,0.7)' },
-  SUPPORT_BONUS_PAID:     { cls: 'tBuyback', glyph: '♥', label: 'サポートボーナス', cat: '報酬', lane: 'rgba(201,168,106,0.55)' },
-  SUPPORT_CELEBRATION_PAID: { cls: 'tBuyback', glyph: '♥', label: 'お祝い金', cat: '報酬', lane: 'rgba(201,168,106,0.55)' },
-  ASSIGNMENT_COMPLETED:   { cls: 'tAssignment', glyph: '✦', label: '馬の割当', cat: '売買', lane: 'rgba(0,234,255,0.5)' },
-  HORSE_SOLD:             { cls: 'tAssignment', glyph: '↗', label: '売却成立', cat: '売買', lane: 'rgba(0,234,255,0.5)' },
-  AUTO_LISTED:            { cls: 'tAssignment', glyph: '⇱', label: '自動出品', cat: '売買', lane: 'rgba(0,234,255,0.4)' },
-  AUTO_RESERVED:          { cls: 'tAssignment', glyph: '⟳', label: '自動購入予約', cat: '売買', lane: 'rgba(0,234,255,0.4)' },
-  MARKETPLACE_LOCKED:     { cls: 'tDefault', glyph: '…', label: '精算中', cat: '売買', lane: 'rgba(255,255,255,0.18)' },
-  MARKETPLACE_REOPENED:   { cls: 'tDefault', glyph: '○', label: '再開', cat: '売買', lane: 'rgba(255,255,255,0.18)' },
-  DEPOSIT_CONFIRMED:      { cls: 'tDeposit', glyph: '↓', label: '入金', cat: '入出金', lane: 'rgba(201,168,106,0.6)' },
-  WITHDRAWAL_COMPLETED:   { cls: 'tDeposit', glyph: '↑', label: '出金', cat: '入出金', lane: 'rgba(201,168,106,0.6)' },
-  WITHDRAWAL_FAILED:      { cls: 'tBurn', glyph: '!', label: '出金エラー', cat: '入出金', lane: 'rgba(255,45,196,0.7)' },
-  TRAINING_COMPLETED:     { cls: 'tTraining', glyph: '⤴', label: '調教', cat: 'その他', lane: 'rgba(53,208,127,0.55)' },
-  ITEM_DROPPED:           { cls: 'tTraining', glyph: '✧', label: 'アイテム', cat: 'その他', lane: 'rgba(53,208,127,0.45)' },
-  ITEM_GIFT_RECEIVED:     { cls: 'tTraining', glyph: '🎁', label: 'ギフト', cat: 'その他', lane: 'rgba(53,208,127,0.45)' },
+  RACE_RESULT_READY:      { cls: 'tRace', glyph: '◈', cat: 'race', lane: 'rgba(0,234,255,0.65)' },
+  HORSE_BURNED:           { cls: 'tBurn', glyph: '✕', cat: 'race', lane: 'rgba(255,45,196,0.7)' },
+  REVENGE_BUFF_GENERATED: { cls: 'tBurn', glyph: '↺', cat: 'race', lane: 'rgba(255,45,196,0.5)' },
+  BUYBACK_PAYMENT_PAID:   { cls: 'tBuyback', glyph: '◆', cat: 'reward', lane: 'rgba(201,168,106,0.7)' },
+  BUYBACK_COMPLETED:      { cls: 'tBuyback', glyph: '◆', cat: 'reward', lane: 'rgba(201,168,106,0.7)' },
+  MEMORIAL_NFT_MINTED:    { cls: 'tBuyback', glyph: '❖', cat: 'reward', lane: 'rgba(201,168,106,0.7)' },
+  SUPPORT_BONUS_PAID:     { cls: 'tBuyback', glyph: '♥', cat: 'reward', lane: 'rgba(201,168,106,0.55)' },
+  SUPPORT_CELEBRATION_PAID: { cls: 'tBuyback', glyph: '♥', cat: 'reward', lane: 'rgba(201,168,106,0.55)' },
+  ASSIGNMENT_COMPLETED:   { cls: 'tAssignment', glyph: '✦', cat: 'trade', lane: 'rgba(0,234,255,0.5)' },
+  HORSE_SOLD:             { cls: 'tAssignment', glyph: '↗', cat: 'trade', lane: 'rgba(0,234,255,0.5)' },
+  AUTO_LISTED:            { cls: 'tAssignment', glyph: '⇱', cat: 'trade', lane: 'rgba(0,234,255,0.4)' },
+  AUTO_RESERVED:          { cls: 'tAssignment', glyph: '⟳', cat: 'trade', lane: 'rgba(0,234,255,0.4)' },
+  MARKETPLACE_LOCKED:     { cls: 'tDefault', glyph: '…', cat: 'trade', lane: 'rgba(255,255,255,0.18)' },
+  MARKETPLACE_REOPENED:   { cls: 'tDefault', glyph: '○', cat: 'trade', lane: 'rgba(255,255,255,0.18)' },
+  DEPOSIT_CONFIRMED:      { cls: 'tDeposit', glyph: '↓', cat: 'money', lane: 'rgba(201,168,106,0.6)' },
+  WITHDRAWAL_COMPLETED:   { cls: 'tDeposit', glyph: '↑', cat: 'money', lane: 'rgba(201,168,106,0.6)' },
+  WITHDRAWAL_FAILED:      { cls: 'tBurn', glyph: '!', cat: 'money', lane: 'rgba(255,45,196,0.7)' },
+  TRAINING_COMPLETED:     { cls: 'tTraining', glyph: '⤴', cat: 'other', lane: 'rgba(53,208,127,0.55)' },
+  ITEM_DROPPED:           { cls: 'tTraining', glyph: '✧', cat: 'other', lane: 'rgba(53,208,127,0.45)' },
+  ITEM_GIFT_RECEIVED:     { cls: 'tTraining', glyph: '🎁', cat: 'other', lane: 'rgba(53,208,127,0.45)' },
 };
-const CATS: Array<'ALL' | Cat> = ['ALL', 'レース', '売買', '報酬', '入出金', 'その他'];
+const CATS: Array<'ALL' | Cat> = ['ALL', 'race', 'trade', 'reward', 'money', 'other'];
 
 function meta(type: string): TypeMeta {
-  return TYPE_META[type] ?? { cls: 'tDefault', glyph: '•', label: 'お知らせ', cat: 'その他', lane: 'rgba(255,255,255,0.18)' };
+  return TYPE_META[type] ?? { cls: 'tDefault', glyph: '•', cat: 'other', lane: 'rgba(255,255,255,0.18)' };
 }
-function titleOf(n: Notification): string {
-  const t = n.payload_json?.['title'];
-  if (typeof t === 'string' && t) return t;
-  return meta(n.notification_type).label;
+/** 種別ラベルは辞書から(payload に title があればそれを優先)。 */
+function labelOf(type: string, t: AppDict['notif']): string {
+  return t.types[type] ?? t.type_default;
+}
+function titleOf(n: Notification, t: AppDict['notif']): string {
+  const title = n.payload_json?.['title'];
+  if (typeof title === 'string' && title) return title;
+  return labelOf(n.notification_type, t);
 }
 function bodyOf(n: Notification): string | null {
   const b = n.payload_json?.['body'];
@@ -89,19 +94,20 @@ function hrefOf(n: Notification): string {
     default: return '/dashboard';
   }
 }
-function timeAgo(value: string): string {
+function timeAgo(value: string, t: AppDict['notif']): string {
   // Zなしのナイーブ文字列はUTC扱い(ブラウザ差で相対時刻がズレるのを防ぐ)。
   const iso = value.replace(' ', 'T');
   const hasTz = /[+Z]|[+-]\d{2}:?\d{2}$/.test(iso.slice(10));
   const mins = Math.max(0, Math.floor((Date.now() - new Date(hasTz ? iso : `${iso}Z`).getTime()) / 60000));
-  if (mins < 60) return `${mins}分前`;
-  if (mins < 1440) return `${Math.floor(mins / 60)}時間前`;
-  return `${Math.floor(mins / 1440)}日前`;
+  if (mins < 60) return fill(t.min_tpl, { n: mins });
+  if (mins < 1440) return fill(t.hour_tpl, { n: Math.floor(mins / 60) });
+  return fill(t.day_tpl, { n: Math.floor(mins / 1440) });
 }
 const dateOf = (iso: string): string => localDate(iso); // 現地日でグルーピング(2026-07-14)
 const dateLabel = (d: string): string => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 
-export function NotificationsList({ notifications, preview = false }: { notifications: Notification[]; preview?: boolean }) {
+export function NotificationsList({ notifications, preview = false, lang = 'ja' }: { notifications: Notification[]; preview?: boolean; lang?: Lang }) {
+  const t = APP_COPY[lang].notif;
   const [q, setQ] = useState('');
   const [cat, setCat] = useState<'ALL' | Cat>('ALL');
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -124,10 +130,10 @@ export function NotificationsList({ notifications, preview = false }: { notifica
       const m = meta(n.notification_type);
       if (cat !== 'ALL' && m.cat !== cat) return false;
       if (unreadOnly && n.read_at != null) return false;
-      if (needle && !`${titleOf(n)} ${m.label}`.toLowerCase().includes(needle)) return false;
+      if (needle && !`${titleOf(n, t)} ${labelOf(n.notification_type, t)}`.toLowerCase().includes(needle)) return false;
       return true;
     });
-  }, [notifications, q, cat, unreadOnly]);
+  }, [notifications, q, cat, unreadOnly, t]);
 
   // 最新日のダイジェスト(絞り込みに依存しない全体の要約)
   const digest = useMemo(() => {
@@ -136,15 +142,15 @@ export function NotificationsList({ notifications, preview = false }: { notifica
     const day = notifications.filter((n) => dateOf(n.created_at) === latestDate);
     const count = (types: string[]) => day.filter((n) => types.includes(n.notification_type)).length;
     const parts: Array<{ label: string; n: number; cls: string }> = [
-      { label: 'レース結果', n: count(['RACE_RESULT_READY']), cls: 'tRace' },
-      { label: 'Burn', n: count(['HORSE_BURNED']), cls: 'tBurn' },
-      { label: '報酬', n: count(['BUYBACK_PAYMENT_PAID', 'BUYBACK_COMPLETED', 'SUPPORT_BONUS_PAID', 'MEMORIAL_NFT_MINTED']), cls: 'tBuyback' },
-      { label: '売買', n: count(['ASSIGNMENT_COMPLETED', 'HORSE_SOLD', 'AUTO_LISTED', 'AUTO_RESERVED']), cls: 'tAssignment' },
-      { label: '入出金', n: count(['DEPOSIT_CONFIRMED', 'WITHDRAWAL_COMPLETED', 'WITHDRAWAL_FAILED']), cls: 'tDeposit' },
+      { label: labelOf('RACE_RESULT_READY', t), n: count(['RACE_RESULT_READY']), cls: 'tRace' },
+      { label: labelOf('HORSE_BURNED', t), n: count(['HORSE_BURNED']), cls: 'tBurn' },
+      { label: t.cats.reward, n: count(['BUYBACK_PAYMENT_PAID', 'BUYBACK_COMPLETED', 'SUPPORT_BONUS_PAID', 'MEMORIAL_NFT_MINTED']), cls: 'tBuyback' },
+      { label: t.cats.trade, n: count(['ASSIGNMENT_COMPLETED', 'HORSE_SOLD', 'AUTO_LISTED', 'AUTO_RESERVED']), cls: 'tAssignment' },
+      { label: t.cats.money, n: count(['DEPOSIT_CONFIRMED', 'WITHDRAWAL_COMPLETED', 'WITHDRAWAL_FAILED']), cls: 'tDeposit' },
     ].filter((p) => p.n > 0);
     if (parts.length === 0) return null;
     return { date: latestDate, parts, total: day.length };
-  }, [notifications]);
+  }, [notifications, t]);
 
   const shown = filtered.length;
   const pageCount = Math.max(1, Math.ceil(shown / PAGE_SIZE));
@@ -153,7 +159,7 @@ export function NotificationsList({ notifications, preview = false }: { notifica
   const reset = () => setPage(0);
 
   if (total === 0) {
-    return <div className={s.empty}>通知はまだありません。<br />レース結果・Burn・チャンピオン報酬・売買などがここに届きます。</div>;
+    return <div className={s.empty}>{t.empty_a}<br />{t.empty_b}</div>;
   }
 
   return (
@@ -162,8 +168,8 @@ export function NotificationsList({ notifications, preview = false }: { notifica
       {digest ? (
         <div className={s.digest}>
           <div className={s.digestHead}>
-            <span className={s.digestTitle}>{dateLabel(digest.date)} のダイジェスト</span>
-            <span className={s.digestCount}>{digest.total}件</span>
+            <span className={s.digestTitle}>{fill(t.digest_title_tpl, { d: dateLabel(digest.date) })}</span>
+            <span className={s.digestCount}>{fill(t.count_tpl, { n: digest.total })}</span>
           </div>
           <div className={s.digestParts}>
             {digest.parts.map((p) => (
@@ -171,14 +177,14 @@ export function NotificationsList({ notifications, preview = false }: { notifica
             ))}
           </div>
           <div className={s.digestLinks}>
-            <Link href="/races" className={s.digestLink}>結果を見る →</Link>
-            <Link href="/wallet" className={s.digestLink}>取引履歴 →</Link>
+            <Link href="/races" className={s.digestLink}>{t.digest_results}</Link>
+            <Link href="/wallet" className={s.digestLink}>{t.digest_history}</Link>
           </div>
         </div>
       ) : null}
 
       <div className={s.controls}>
-        <input className={s.search} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder="通知を検索…" aria-label="通知を検索" />
+        <input className={s.search} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder={t.search_ph} aria-label={t.search_ph} />
         <div className={s.catChips}>
           {CATS.map((c) => (
             <button
@@ -188,12 +194,12 @@ export function NotificationsList({ notifications, preview = false }: { notifica
               onClick={() => { setCat(c); reset(); }}
               aria-pressed={cat === c}
             >
-              {c === 'ALL' ? 'すべて' : c}
+              {c === 'ALL' ? t.cat_all : t.cats[c]}
             </button>
           ))}
         </div>
-        <button type="button" className={`${s.toggleBtn} ${unreadOnly ? s.toggleBtnOn : ''}`} onClick={() => { setUnreadOnly((v) => !v); reset(); }} aria-pressed={unreadOnly}>未読のみ</button>
-        <span className={s.count}>{shown === total ? `全${total}件` : `${total}件中 ${shown}件`}</span>
+        <button type="button" className={`${s.toggleBtn} ${unreadOnly ? s.toggleBtnOn : ''}`} onClick={() => { setUnreadOnly((v) => !v); reset(); }} aria-pressed={unreadOnly}>{t.unread_only}</button>
+        <span className={s.count}>{shown === total ? fill(t.count_all_tpl, { n: total }) : fill(t.count_some_tpl, { total, shown })}</span>
       </div>
 
       {slice.length > 0 ? (
@@ -215,14 +221,14 @@ export function NotificationsList({ notifications, preview = false }: { notifica
                   <span className={`${s.icon} ${s[m.cls]!}`}>{m.glyph}</span>
                   <div className={s.body}>
                     <div className={s.topLine}>
-                      <span className={`${s.typeBadge} ${s[m.cls]!}`}>{m.label}</span>
+                      <span className={`${s.typeBadge} ${s[m.cls]!}`}>{labelOf(n.notification_type, t)}</span>
                       {unread ? <span className={s.dot} /> : null}
                     </div>
-                    <div className={`${s.title} ${unread ? s.titleUnread : ''}`}>{titleOf(n)}</div>
+                    <div className={`${s.title} ${unread ? s.titleUnread : ''}`}>{titleOf(n, t)}</div>
                     {body ? <div className={s.sub}>{body}</div> : null}
                   </div>
                   <span className={s.rowRight}>
-                    <span className={s.time}>{timeAgo(n.created_at)}</span>
+                    <span className={s.time}>{timeAgo(n.created_at, t)}</span>
                     <span className={s.openArrow}>→</span>
                   </span>
                 </Link>
@@ -231,14 +237,14 @@ export function NotificationsList({ notifications, preview = false }: { notifica
           })}
         </div>
       ) : (
-        <div className={s.empty}>条件に一致する通知がありません。</div>
+        <div className={s.empty}>{t.empty_filtered}</div>
       )}
 
       {pageCount > 1 ? (
         <div className={s.pager}>
-          <button type="button" className={s.pagerBtn} disabled={safePage === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← 前へ</button>
+          <button type="button" className={s.pagerBtn} disabled={safePage === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>{t.prev}</button>
           <span className={s.pageLabel}>{safePage + 1} / {pageCount}</span>
-          <button type="button" className={s.pagerBtn} disabled={safePage >= pageCount - 1} onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}>次へ →</button>
+          <button type="button" className={s.pagerBtn} disabled={safePage >= pageCount - 1} onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}>{t.next}</button>
         </div>
       ) : null}
     </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { APP_COPY, type Lang } from '@/lib/i18n';
 import s from '../app/contact.module.css';
 
 /* /contact — サポート窓口(2026-07-12 リデザイン)。
@@ -10,17 +11,16 @@ import s from '../app/contact.module.css';
  * ③フォーム+返信のご案内(PC2カラム)。送信内容はサポートの受付キューに入り、
  * 返信は登録メールアドレスへ届く。 */
 
-const FAQS = [
-  { q: 'BURNとは?', href: '/guide#race' },
-  { q: '購入・売却のしくみ', href: '/guide#buy' },
-  { q: '入金が反映されない', href: '/guide#wallet' },
-  { q: 'チャンピオン報酬はいつ?', href: '/guide#champion' },
-  { q: 'チーム(サポートボーナス)', href: '/guide#team' },
-];
-
-const CATEGORIES = ['ゲームのルール', '入出金', '購入・売却', 'チーム', 'その他'] as const;
-
-export function ContactView() {
+export function ContactView({ lang = 'ja' }: { lang?: Lang }) {
+  const t = APP_COPY[lang].contact;
+  const FAQS = [
+    { q: t.faq_burn, href: '/guide#race' },
+    { q: t.faq_buy, href: '/guide#buy' },
+    { q: t.faq_deposit, href: '/guide#wallet' },
+    { q: t.faq_champion, href: '/guide#champion' },
+    { q: t.faq_team, href: '/guide#team' },
+  ];
+  const CATEGORIES = [t.cat_rules, t.cat_money, t.cat_trade, t.cat_team, t.cat_other];
   const [category, setCategory] = useState<string>('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -39,7 +39,7 @@ export function ContactView() {
     });
     setBusy(false);
     if (result.status !== 200) {
-      setError(errorMessage(result.body) ?? '送信に失敗しました。時間をおいてお試しください。');
+      setError(errorMessage(result.body) ?? t.err_send);
       return;
     }
     setDone(true);
@@ -48,17 +48,17 @@ export function ContactView() {
   if (done) {
     return (
       <div className={s.wrap}>
-        <div className={s.h1}>お問い合わせ</div>
+        <div className={s.h1}>{t.title}</div>
         <div className={s.doneCard}>
           <div className={s.doneMark}>✓</div>
-          <div className={s.doneTitle}>送信しました</div>
+          <div className={s.doneTitle}>{t.done_title}</div>
           <p className={s.doneText}>
-            お問い合わせありがとうございます。サポートチームが確認のうえ、
-            <b>ご登録のメールアドレス</b>へ返信いたします。
+            {t.done_a}
+            <b>{t.done_bold}</b>{t.done_b}
           </p>
           <div className={s.doneLinks}>
-            <Link href="/guide" className={s.doneLink}>使い方を見る →</Link>
-            <Link href="/dashboard" className={s.doneLink}>ダッシュボードへ →</Link>
+            <Link href="/guide" className={s.doneLink}>{t.done_guide}</Link>
+            <Link href="/dashboard" className={s.doneLink}>{t.done_dashboard}</Link>
           </div>
         </div>
       </div>
@@ -67,15 +67,14 @@ export function ContactView() {
 
   return (
     <div className={s.wrap}>
-      <div className={s.h1}>お問い合わせ</div>
+      <div className={s.h1}>{t.title}</div>
       <p className={s.lead}>
-        ゲームのルール・アカウント・入出金など、なんでもお気軽にどうぞ。
-        サポートチームが確認し、ご登録のメールアドレスへ返信します。
+        {t.lead}
       </p>
 
       {/* よくある質問 — 問い合わせ前の自己解決導線 */}
       <div className={s.faq}>
-        <span className={s.faqLabel}>よくある質問</span>
+        <span className={s.faqLabel}>{t.faq_label}</span>
         <div className={s.faqChips}>
           {FAQS.map((f) => (
             <Link key={f.q} href={f.href} className={s.faqChip}>{f.q}</Link>
@@ -85,7 +84,7 @@ export function ContactView() {
 
       <div className={s.cols}>
         <div className={s.form}>
-          <div className={s.label}>カテゴリ(任意)</div>
+          <div className={s.label}>{t.cat_label}</div>
           <div className={s.catChips}>
             {CATEGORIES.map((c) => (
               <button
@@ -100,23 +99,23 @@ export function ContactView() {
             ))}
           </div>
 
-          <label className={s.label} htmlFor="contact-subject">件名</label>
+          <label className={s.label} htmlFor="contact-subject">{t.subject_label}</label>
           <input
             id="contact-subject"
             className={s.input}
             value={subject}
             maxLength={200}
-            placeholder="例: BURNについて教えてください"
+            placeholder={t.subject_ph}
             onChange={(e) => setSubject(e.target.value)}
           />
-          <label className={s.label} htmlFor="contact-body">お問い合わせ内容</label>
+          <label className={s.label} htmlFor="contact-body">{t.body_label}</label>
           <textarea
             id="contact-body"
             className={s.textarea}
             rows={9}
             value={body}
             maxLength={10000}
-            placeholder="できるだけ具体的にお書きいただくと、正確なご案内ができます"
+            placeholder={t.body_ph}
             onChange={(e) => setBody(e.target.value)}
           />
           {error ? <p className={s.error}>{error}</p> : null}
@@ -126,21 +125,21 @@ export function ContactView() {
             disabled={busy || subject.trim() === '' || body.trim() === ''}
             onClick={() => void submit()}
           >
-            {busy ? '送信中…' : '送信する'}
+            {busy ? t.sending : t.send}
           </button>
         </div>
 
         <aside className={s.aside}>
           <div className={s.asideCard}>
-            <div className={s.asideTitle}>返信について</div>
+            <div className={s.asideTitle}>{t.aside_reply_title}</div>
             <ul className={s.asideList}>
-              <li><b>ご登録のメールアドレス</b>宛に返信します(このページでの返信表示はありません)</li>
-              <li>内容により確認へお時間をいただく場合があります</li>
-              <li>残高・取引の具体的な数字は、サイト内の各ページでご確認いただけます</li>
+              <li><b>{t.li1_bold}</b>{t.li1_rest}</li>
+              <li>{t.aside_li2}</li>
+              <li>{t.aside_li3}</li>
             </ul>
           </div>
           <div className={s.asideCard}>
-            <div className={s.asideTitle}>メールでも受け付けています</div>
+            <div className={s.asideTitle}>{t.aside_mail_title}</div>
             <a href="mailto:support@sevendaysderby.com" className={s.mailLink}>support@sevendaysderby.com</a>
           </div>
         </aside>

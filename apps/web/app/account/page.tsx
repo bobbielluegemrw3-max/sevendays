@@ -1,4 +1,5 @@
 import { serverApi, serverApiOrLogin } from '@/lib/server-api';
+import { getLang } from '@/lib/i18n-server';
 import { AccountView, type AccountStats, type Me, type Wallet } from '@/components/AccountView';
 import type { TradeSettings } from '@/components/TradeAutoControls';
 
@@ -7,6 +8,7 @@ interface SessionRow { status: string }
 
 /** /account — 設定とあなたの記録のハブ(2026-07-12)。集計はすべて既存APIの実データ。 */
 export default async function AccountPage() {
+  const lang = await getLang();
   const me = await serverApiOrLogin<Me>('/api/v1/me');
   const [wallets, horses, sessions, trade] = await Promise.all([
     serverApi<{ wallets: Wallet[] }>('/api/v1/account/wallets'),
@@ -33,6 +35,7 @@ export default async function AccountPage() {
       wallets={wallets.status === 200 ? wallets.body.wallets : []}
       stats={stats}
       trade={trade.status === 200 ? trade.body : null}
+      lang={lang}
     />
   );
 }

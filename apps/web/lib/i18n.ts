@@ -20,6 +20,11 @@ import { LANDING_LANGS, LANG_LABEL, isLang, type Lang } from '@/lib/landing-i18n
 
 export { LANDING_LANGS as APP_LANGS, LANG_LABEL, isLang, type Lang };
 
+/** テンプレ文字列の {name} を値で埋める(多言語の語順差を吸収)。client 安全。 */
+export function fill(tpl: string, vars: Record<string, string | number>): string {
+  return tpl.replace(/\{(\w+)\}/g, (_m: string, k: string) => String(vars[k] ?? ''));
+}
+
 export interface AppDict {
   common: {
     horses_unit: string; // 数の後ろに付く「頭」(英語は " horses" のようにスペース込み)
@@ -143,6 +148,122 @@ export interface AppDict {
     install_hint: string;
     add_app: string;
   };
+  /** アカウントページ(AccountView)。 */
+  account: {
+    title: string;
+    st_racing: string;
+    st_listed: string;
+    st_champions: string;
+    st_burned: string;
+    st_pending: string;
+    email_unset: string;
+    reg_label: string; // 「登録 」+ 日付
+    play_tpl: string; // 「プレイ {n}日目」
+    id_label: string; // 「ID 」+ id
+    record_label: string;
+    stat_note_a: string; // …報酬の受け取り状況は [CHAMPION] …入出金の履歴は [WALLET] …
+    stat_note_b: string;
+    stat_note_c: string;
+    settings_label: string;
+    linking_label: string;
+    linking_lead: string;
+    support_label: string;
+    support_lead: string;
+    support_guide: string;
+    support_contact: string;
+  };
+  /** 厩舎名フォーム(StableNameForm)。 */
+  stableName: {
+    unset: string;
+    set_btn: string;
+    change_btn: string;
+    placeholder: string;
+    saving: string;
+    save: string;
+    cancel: string;
+    hint: string;
+    err: string;
+  };
+  /** ログイン連携(AccountLinking)。 */
+  linking: {
+    login_id: string;
+    loading: string;
+    unlink: string;
+    last_id: string;
+    link_google: string;
+    wallet_h: string;
+    no_wallet: string;
+    link_metamask: string;
+    err_no_metamask: string;
+    err_no_address: string;
+    err_link_wallet: string;
+    linked_tpl: string; // 「ウォレット {addr} を紐づけました」
+    err_unlink: string;
+  };
+  /** 問い合わせフォーム(ContactView)。 */
+  contact: {
+    title: string;
+    lead: string;
+    faq_label: string;
+    faq_burn: string;
+    faq_buy: string;
+    faq_deposit: string;
+    faq_champion: string;
+    faq_team: string;
+    cat_rules: string;
+    cat_money: string;
+    cat_trade: string;
+    cat_team: string;
+    cat_other: string;
+    cat_label: string;
+    subject_label: string;
+    subject_ph: string;
+    body_label: string;
+    body_ph: string;
+    sending: string;
+    send: string;
+    err_send: string;
+    done_title: string;
+    done_a: string; // …確認のうえ [ご登録のメールアドレス] へ返信…
+    done_bold: string;
+    done_b: string;
+    done_guide: string;
+    done_dashboard: string;
+    aside_reply_title: string;
+    li1_bold: string; // <b>ご登録のメールアドレス</b> + li1_rest
+    li1_rest: string;
+    aside_li2: string;
+    aside_li3: string;
+    aside_mail_title: string;
+  };
+  /** 通知(NotificationsView + NotificationsList)。 */
+  notif: {
+    title: string;
+    unread_tpl: string; // 「未読 {n}」
+    read_note: string;
+    /** 通知種別ラベル(notification_type → 表示名)。 */
+    types: Record<string, string>;
+    type_default: string;
+    /** カテゴリ表示名(内部id → 表示名)。 */
+    cats: Record<'race' | 'trade' | 'reward' | 'money' | 'other', string>;
+    cat_all: string;
+    digest_title_tpl: string; // 「{d} のダイジェスト」
+    count_tpl: string; // 「{n}件」(ダイジェスト件数)
+    digest_results: string;
+    digest_history: string;
+    search_ph: string;
+    unread_only: string;
+    count_all_tpl: string; // 「全{n}件」
+    count_some_tpl: string; // 「{total}件中 {shown}件」
+    empty_a: string;
+    empty_b: string;
+    empty_filtered: string;
+    prev: string;
+    next: string;
+    min_tpl: string; // 「{n}分前」
+    hour_tpl: string; // 「{n}時間前」
+    day_tpl: string; // 「{n}日前」
+  };
 }
 
 const ja: AppDict = {
@@ -250,6 +371,123 @@ const ja: AppDict = {
     install_steps: 'ブラウザのメニューから「ホーム画面に追加」/「アプリをインストール」を選ぶと、アプリとして起動できます。',
     install_hint: 'ホーム画面に追加するとワンタップで開けます。',
     add_app: '+ アプリを追加',
+  },
+  account: {
+    title: 'アカウント',
+    st_racing: '出走中',
+    st_listed: '出品中',
+    st_champions: 'チャンピオン',
+    st_burned: '消滅',
+    st_pending: '割当待ち予約',
+    email_unset: '(メール未設定 — ウォレットログイン)',
+    reg_label: '登録 ',
+    play_tpl: 'プレイ {n}日目',
+    id_label: 'ID ',
+    record_label: 'あなたの記録',
+    stat_note_a: '数字をタップすると各ページへ移動します。報酬の受け取り状況は ',
+    stat_note_b: '、入出金の履歴は ',
+    stat_note_c: ' で確認できます。',
+    settings_label: '設定',
+    linking_label: 'ログイン方法の連携',
+    linking_lead: '連携すると、どのログイン方法でも同じアカウント(残高・馬)にアクセスできます。1つのウォレットは1つのアカウントにのみ紐づけできます。',
+    support_label: 'サポート',
+    support_lead: 'ゲームのルール・アカウント・入出金など、お困りのことがあればお気軽にご連絡ください。ご登録のメールアドレスへ返信します。',
+    support_guide: '使い方を見る →',
+    support_contact: 'お問い合わせフォームへ →',
+  },
+  stableName: {
+    unset: '厩舎名 未設定 — 設定すると成約や組織マップにこの名前が出ます',
+    set_btn: '厩舎名を設定',
+    change_btn: '変更',
+    placeholder: '例: 流星ステーブル',
+    saving: '保存中…',
+    save: '保存',
+    cancel: 'やめる',
+    hint: '2〜20文字(日本語/英数字)・全ユーザーに公開・変更は1日1回',
+    err: '厩舎名を保存できませんでした。',
+  },
+  linking: {
+    login_id: 'ログインID(Supabase)',
+    loading: '読み込み中…',
+    unlink: '解除',
+    last_id: '(最後のログインIDは解除できません)',
+    link_google: 'Google を紐づけ',
+    wallet_h: 'ウォレット',
+    no_wallet: '紐づけ済みのウォレットはありません。',
+    link_metamask: '🦊 MetaMask を紐づけ',
+    err_no_metamask: 'MetaMaskが見つかりません。拡張機能をインストールしてください。',
+    err_no_address: 'ウォレットアドレスを取得できませんでした',
+    err_link_wallet: 'ウォレットの紐づけに失敗しました',
+    linked_tpl: 'ウォレット {addr} を紐づけました',
+    err_unlink: '解除に失敗しました',
+  },
+  contact: {
+    title: 'お問い合わせ',
+    lead: 'ゲームのルール・アカウント・入出金など、なんでもお気軽にどうぞ。サポートチームが確認し、ご登録のメールアドレスへ返信します。',
+    faq_label: 'よくある質問',
+    faq_burn: 'BURNとは?',
+    faq_buy: '購入・売却のしくみ',
+    faq_deposit: '入金が反映されない',
+    faq_champion: 'チャンピオン報酬はいつ?',
+    faq_team: 'チーム(サポートボーナス)',
+    cat_rules: 'ゲームのルール',
+    cat_money: '入出金',
+    cat_trade: '購入・売却',
+    cat_team: 'チーム',
+    cat_other: 'その他',
+    cat_label: 'カテゴリ(任意)',
+    subject_label: '件名',
+    subject_ph: '例: BURNについて教えてください',
+    body_label: 'お問い合わせ内容',
+    body_ph: 'できるだけ具体的にお書きいただくと、正確なご案内ができます',
+    sending: '送信中…',
+    send: '送信する',
+    err_send: '送信に失敗しました。時間をおいてお試しください。',
+    done_title: '送信しました',
+    done_a: 'お問い合わせありがとうございます。サポートチームが確認のうえ、',
+    done_bold: 'ご登録のメールアドレス',
+    done_b: 'へ返信いたします。',
+    done_guide: '使い方を見る →',
+    done_dashboard: 'ダッシュボードへ →',
+    aside_reply_title: '返信について',
+    li1_bold: 'ご登録のメールアドレス',
+    li1_rest: '宛に返信します(このページでの返信表示はありません)',
+    aside_li2: '内容により確認へお時間をいただく場合があります',
+    aside_li3: '残高・取引の具体的な数字は、サイト内の各ページでご確認いただけます',
+    aside_mail_title: 'メールでも受け付けています',
+  },
+  notif: {
+    title: '通知',
+    unread_tpl: '未読 {n}',
+    read_note: '開くと既読になります · タップで関連ページへ',
+    types: {
+      RACE_RESULT_READY: 'レース結果', HORSE_BURNED: 'Burn', REVENGE_BUFF_GENERATED: 'Revenge Buff',
+      BUYBACK_PAYMENT_PAID: 'チャンピオン報酬', BUYBACK_COMPLETED: 'チャンピオン報酬', MEMORIAL_NFT_MINTED: '記念NFT',
+      SUPPORT_BONUS_PAID: 'サポートボーナス', SUPPORT_CELEBRATION_PAID: 'お祝い金', ASSIGNMENT_COMPLETED: '馬の割当',
+      HORSE_SOLD: '売却成立', AUTO_LISTED: '自動出品', AUTO_RESERVED: '自動購入予約',
+      MARKETPLACE_LOCKED: '精算中', MARKETPLACE_REOPENED: '再開', DEPOSIT_CONFIRMED: '入金',
+      WITHDRAWAL_COMPLETED: '出金', WITHDRAWAL_FAILED: '出金エラー', TRAINING_COMPLETED: '調教',
+      ITEM_DROPPED: 'アイテム', ITEM_GIFT_RECEIVED: 'ギフト',
+    },
+    type_default: 'お知らせ',
+    cats: { race: 'レース', trade: '売買', reward: '報酬', money: '入出金', other: 'その他' },
+    cat_all: 'すべて',
+    digest_title_tpl: '{d} のダイジェスト',
+    count_tpl: '{n}件',
+    digest_results: '結果を見る →',
+    digest_history: '取引履歴 →',
+    search_ph: '通知を検索…',
+    unread_only: '未読のみ',
+    count_all_tpl: '全{n}件',
+    count_some_tpl: '{total}件中 {shown}件',
+    empty_a: '通知はまだありません。',
+    empty_b: 'レース結果・Burn・チャンピオン報酬・売買などがここに届きます。',
+    empty_filtered: '条件に一致する通知がありません。',
+    prev: '← 前へ',
+    next: '次へ →',
+    min_tpl: '{n}分前',
+    hour_tpl: '{n}時間前',
+    day_tpl: '{n}日前',
   },
 };
 
@@ -359,6 +597,123 @@ const en: AppDict = {
     install_hint: 'Add to your home screen to open it with one tap.',
     add_app: '+ Add app',
   },
+  account: {
+    title: 'Account',
+    st_racing: 'Racing',
+    st_listed: 'Listed',
+    st_champions: 'Champions',
+    st_burned: 'Burned',
+    st_pending: 'Pending reservations',
+    email_unset: '(No email — wallet login)',
+    reg_label: 'Joined ',
+    play_tpl: 'Day {n} of play',
+    id_label: 'ID ',
+    record_label: 'Your record',
+    stat_note_a: 'Tap a number to jump to its page. Check reward payouts in ',
+    stat_note_b: ', and deposit/withdrawal history in ',
+    stat_note_c: '.',
+    settings_label: 'Settings',
+    linking_label: 'Link your login methods',
+    linking_lead: 'Once linked, any login method reaches the same account (balance and horses). A wallet can be linked to only one account.',
+    support_label: 'Support',
+    support_lead: 'Questions about the rules, your account, or deposits/withdrawals — reach out anytime. We reply to your registered email.',
+    support_guide: 'Read the guide →',
+    support_contact: 'Go to the contact form →',
+  },
+  stableName: {
+    unset: 'Stable name not set — set it and this name shows on trades and the org map',
+    set_btn: 'Set stable name',
+    change_btn: 'Change',
+    placeholder: 'e.g. Meteor Stable',
+    saving: 'Saving…',
+    save: 'Save',
+    cancel: 'Cancel',
+    hint: '2–20 characters · public to all users · one change per day',
+    err: 'Could not save the stable name.',
+  },
+  linking: {
+    login_id: 'Login IDs (Supabase)',
+    loading: 'Loading…',
+    unlink: 'Unlink',
+    last_id: '(the last login ID cannot be unlinked)',
+    link_google: 'Link Google',
+    wallet_h: 'Wallets',
+    no_wallet: 'No linked wallets.',
+    link_metamask: '🦊 Link MetaMask',
+    err_no_metamask: 'MetaMask not found. Please install the extension.',
+    err_no_address: 'Could not get the wallet address',
+    err_link_wallet: 'Failed to link the wallet',
+    linked_tpl: 'Linked wallet {addr}',
+    err_unlink: 'Failed to unlink',
+  },
+  contact: {
+    title: 'Contact',
+    lead: 'Rules, your account, deposits/withdrawals — ask us anything. Our support team reviews it and replies to your registered email.',
+    faq_label: 'FAQ',
+    faq_burn: 'What is BURN?',
+    faq_buy: 'How buying & selling works',
+    faq_deposit: 'My deposit isn’t showing',
+    faq_champion: 'When is the Champion Reward?',
+    faq_team: 'Teams (Support Bonus)',
+    cat_rules: 'Game rules',
+    cat_money: 'Deposits/withdrawals',
+    cat_trade: 'Buying/selling',
+    cat_team: 'Team',
+    cat_other: 'Other',
+    cat_label: 'Category (optional)',
+    subject_label: 'Subject',
+    subject_ph: 'e.g. Please explain BURN',
+    body_label: 'Your message',
+    body_ph: 'The more specific you are, the more accurately we can help',
+    sending: 'Sending…',
+    send: 'Send',
+    err_send: 'Failed to send. Please try again later.',
+    done_title: 'Sent',
+    done_a: 'Thanks for reaching out. Our support team will review it and reply to ',
+    done_bold: 'your registered email',
+    done_b: '.',
+    done_guide: 'Read the guide →',
+    done_dashboard: 'To the dashboard →',
+    aside_reply_title: 'About replies',
+    li1_bold: 'Your registered email',
+    li1_rest: ' — we reply there (no reply is shown on this page)',
+    aside_li2: 'Some inquiries may take time to review',
+    aside_li3: 'Exact balance and transaction figures are on their own pages in the app',
+    aside_mail_title: 'You can also reach us by email',
+  },
+  notif: {
+    title: 'Notifications',
+    unread_tpl: '{n} unread',
+    read_note: 'Opening marks them read · tap to go to the related page',
+    types: {
+      RACE_RESULT_READY: 'Race result', HORSE_BURNED: 'Burn', REVENGE_BUFF_GENERATED: 'Revenge Buff',
+      BUYBACK_PAYMENT_PAID: 'Champion Reward', BUYBACK_COMPLETED: 'Champion Reward', MEMORIAL_NFT_MINTED: 'Memorial NFT',
+      SUPPORT_BONUS_PAID: 'Support Bonus', SUPPORT_CELEBRATION_PAID: 'Celebration', ASSIGNMENT_COMPLETED: 'Horse assigned',
+      HORSE_SOLD: 'Sold', AUTO_LISTED: 'Auto-listed', AUTO_RESERVED: 'Auto reservation',
+      MARKETPLACE_LOCKED: 'Settling', MARKETPLACE_REOPENED: 'Reopened', DEPOSIT_CONFIRMED: 'Deposit',
+      WITHDRAWAL_COMPLETED: 'Withdrawal', WITHDRAWAL_FAILED: 'Withdrawal error', TRAINING_COMPLETED: 'Training',
+      ITEM_DROPPED: 'Item', ITEM_GIFT_RECEIVED: 'Gift',
+    },
+    type_default: 'Notice',
+    cats: { race: 'Race', trade: 'Trade', reward: 'Reward', money: 'Deposits', other: 'Other' },
+    cat_all: 'All',
+    digest_title_tpl: '{d} digest',
+    count_tpl: '{n}',
+    digest_results: 'View results →',
+    digest_history: 'Transaction history →',
+    search_ph: 'Search notifications…',
+    unread_only: 'Unread only',
+    count_all_tpl: 'All {n}',
+    count_some_tpl: '{shown} of {total}',
+    empty_a: 'No notifications yet.',
+    empty_b: 'Race results, Burns, Champion Rewards, trades and more arrive here.',
+    empty_filtered: 'No notifications match.',
+    prev: '← Prev',
+    next: 'Next →',
+    min_tpl: '{n}m ago',
+    hour_tpl: '{n}h ago',
+    day_tpl: '{n}d ago',
+  },
 };
 
 const zh: AppDict = {
@@ -466,6 +821,123 @@ const zh: AppDict = {
     install_steps: '在浏览器菜单中选择“添加到主屏幕”/“安装应用”，即可作为应用启动。',
     install_hint: '添加到主屏幕即可一键打开。',
     add_app: '+ 添加应用',
+  },
+  account: {
+    title: '账户',
+    st_racing: '出赛中',
+    st_listed: '出品中',
+    st_champions: '冠军',
+    st_burned: '消灭',
+    st_pending: '等待分配的预约',
+    email_unset: '(未设置邮箱 — 钱包登录)',
+    reg_label: '注册 ',
+    play_tpl: '游玩第 {n} 天',
+    id_label: 'ID ',
+    record_label: '你的记录',
+    stat_note_a: '点按数字即可跳转到对应页面。奖励领取情况见 ',
+    stat_note_b: '，入出金记录见 ',
+    stat_note_c: '。',
+    settings_label: '设置',
+    linking_label: '关联登录方式',
+    linking_lead: '关联后，任何登录方式都可访问同一账户(余额与马匹)。一个钱包只能关联一个账户。',
+    support_label: '支持',
+    support_lead: '有关游戏规则、账户、入出金等任何问题，欢迎随时联系。我们会回复到你注册的邮箱。',
+    support_guide: '查看使用方法 →',
+    support_contact: '前往联系表单 →',
+  },
+  stableName: {
+    unset: '马房名 未设置 — 设置后成交与组织图会显示此名称',
+    set_btn: '设置马房名',
+    change_btn: '修改',
+    placeholder: '例: 流星马房',
+    saving: '保存中…',
+    save: '保存',
+    cancel: '取消',
+    hint: '2〜20个字符 · 对所有用户公开 · 每天可修改一次',
+    err: '无法保存马房名。',
+  },
+  linking: {
+    login_id: '登录 ID(Supabase)',
+    loading: '加载中…',
+    unlink: '解除',
+    last_id: '(最后一个登录 ID 无法解除)',
+    link_google: '关联 Google',
+    wallet_h: '钱包',
+    no_wallet: '尚无已关联的钱包。',
+    link_metamask: '🦊 关联 MetaMask',
+    err_no_metamask: '未找到 MetaMask。请先安装该扩展。',
+    err_no_address: '无法获取钱包地址',
+    err_link_wallet: '钱包关联失败',
+    linked_tpl: '已关联钱包 {addr}',
+    err_unlink: '解除失败',
+  },
+  contact: {
+    title: '联系我们',
+    lead: '游戏规则、账户、入出金等，任何问题都欢迎咨询。支持团队会查看并回复到你注册的邮箱。',
+    faq_label: '常见问题',
+    faq_burn: '什么是 BURN?',
+    faq_buy: '购买与出售的机制',
+    faq_deposit: '入金未到账',
+    faq_champion: '冠军奖励何时发放?',
+    faq_team: '团队(支持奖励)',
+    cat_rules: '游戏规则',
+    cat_money: '入出金',
+    cat_trade: '购买/出售',
+    cat_team: '团队',
+    cat_other: '其他',
+    cat_label: '类别(可选)',
+    subject_label: '主题',
+    subject_ph: '例: 请说明 BURN',
+    body_label: '咨询内容',
+    body_ph: '尽量写得具体，我们才能更准确地为你解答',
+    sending: '发送中…',
+    send: '发送',
+    err_send: '发送失败。请稍后再试。',
+    done_title: '已发送',
+    done_a: '感谢你的咨询。支持团队会查看并回复到',
+    done_bold: '你注册的邮箱',
+    done_b: '。',
+    done_guide: '查看使用方法 →',
+    done_dashboard: '前往仪表板 →',
+    aside_reply_title: '关于回复',
+    li1_bold: '你注册的邮箱',
+    li1_rest: ' — 我们会回复到这里(本页不显示回复)',
+    aside_li2: '部分咨询可能需要一些时间核实',
+    aside_li3: '余额与交易的具体数字，可在站内各页面查看',
+    aside_mail_title: '也可通过邮件联系',
+  },
+  notif: {
+    title: '通知',
+    unread_tpl: '未读 {n}',
+    read_note: '打开即标记为已读 · 点按前往相关页面',
+    types: {
+      RACE_RESULT_READY: '比赛结果', HORSE_BURNED: 'Burn', REVENGE_BUFF_GENERATED: 'Revenge Buff',
+      BUYBACK_PAYMENT_PAID: '冠军奖励', BUYBACK_COMPLETED: '冠军奖励', MEMORIAL_NFT_MINTED: '纪念NFT',
+      SUPPORT_BONUS_PAID: '支持奖励', SUPPORT_CELEBRATION_PAID: '祝贺金', ASSIGNMENT_COMPLETED: '马匹分配',
+      HORSE_SOLD: '出售成交', AUTO_LISTED: '自动出品', AUTO_RESERVED: '自动购买预约',
+      MARKETPLACE_LOCKED: '结算中', MARKETPLACE_REOPENED: '重新开放', DEPOSIT_CONFIRMED: '入金',
+      WITHDRAWAL_COMPLETED: '出金', WITHDRAWAL_FAILED: '出金错误', TRAINING_COMPLETED: '训练',
+      ITEM_DROPPED: '道具', ITEM_GIFT_RECEIVED: '礼物',
+    },
+    type_default: '通知',
+    cats: { race: '比赛', trade: '买卖', reward: '奖励', money: '入出金', other: '其他' },
+    cat_all: '全部',
+    digest_title_tpl: '{d} 摘要',
+    count_tpl: '{n}件',
+    digest_results: '查看结果 →',
+    digest_history: '交易记录 →',
+    search_ph: '搜索通知…',
+    unread_only: '仅未读',
+    count_all_tpl: '共{n}件',
+    count_some_tpl: '{total}件中 {shown}件',
+    empty_a: '还没有通知。',
+    empty_b: '比赛结果、Burn、冠军奖励、买卖等都会显示在这里。',
+    empty_filtered: '没有符合条件的通知。',
+    prev: '← 上一页',
+    next: '下一页 →',
+    min_tpl: '{n}分钟前',
+    hour_tpl: '{n}小时前',
+    day_tpl: '{n}天前',
   },
 };
 
@@ -575,6 +1047,123 @@ const ko: AppDict = {
     install_hint: '홈 화면에 추가하면 한 번의 탭으로 열 수 있습니다.',
     add_app: '+ 앱 추가',
   },
+  account: {
+    title: '계정',
+    st_racing: '출전 중',
+    st_listed: '출품 중',
+    st_champions: '챔피언',
+    st_burned: '소멸',
+    st_pending: '배정 대기 예약',
+    email_unset: '(이메일 미설정 — 지갑 로그인)',
+    reg_label: '가입 ',
+    play_tpl: '플레이 {n}일째',
+    id_label: 'ID ',
+    record_label: '당신의 기록',
+    stat_note_a: '숫자를 탭하면 각 페이지로 이동합니다. 보상 수령 현황은 ',
+    stat_note_b: ', 입출금 내역은 ',
+    stat_note_c: ' 에서 확인할 수 있습니다.',
+    settings_label: '설정',
+    linking_label: '로그인 방법 연동',
+    linking_lead: '연동하면 어떤 로그인 방법으로도 같은 계정(잔액·말)에 접근할 수 있습니다. 지갑 하나는 계정 하나에만 연동할 수 있습니다.',
+    support_label: '지원',
+    support_lead: '게임 규칙·계정·입출금 등 궁금한 점이 있으면 언제든 문의하세요. 등록하신 이메일로 답변드립니다.',
+    support_guide: '이용 방법 보기 →',
+    support_contact: '문의 양식으로 →',
+  },
+  stableName: {
+    unset: '마구간 이름 미설정 — 설정하면 거래와 조직도에 이 이름이 표시됩니다',
+    set_btn: '마구간 이름 설정',
+    change_btn: '변경',
+    placeholder: '예: 유성 마구간',
+    saving: '저장 중…',
+    save: '저장',
+    cancel: '취소',
+    hint: '2〜20자 · 모든 사용자에게 공개 · 하루 한 번 변경',
+    err: '마구간 이름을 저장하지 못했습니다.',
+  },
+  linking: {
+    login_id: '로그인 ID(Supabase)',
+    loading: '불러오는 중…',
+    unlink: '해제',
+    last_id: '(마지막 로그인 ID는 해제할 수 없습니다)',
+    link_google: 'Google 연동',
+    wallet_h: '지갑',
+    no_wallet: '연동된 지갑이 없습니다.',
+    link_metamask: '🦊 MetaMask 연동',
+    err_no_metamask: 'MetaMask를 찾을 수 없습니다. 확장 프로그램을 설치해 주세요.',
+    err_no_address: '지갑 주소를 가져오지 못했습니다',
+    err_link_wallet: '지갑 연동에 실패했습니다',
+    linked_tpl: '지갑 {addr} 을(를) 연동했습니다',
+    err_unlink: '해제에 실패했습니다',
+  },
+  contact: {
+    title: '문의',
+    lead: '게임 규칙·계정·입출금 등 무엇이든 편하게 물어보세요. 지원팀이 확인 후 등록하신 이메일로 답변드립니다.',
+    faq_label: '자주 묻는 질문',
+    faq_burn: 'BURN이란?',
+    faq_buy: '구매·판매의 구조',
+    faq_deposit: '입금이 반영되지 않음',
+    faq_champion: '챔피언 보상은 언제?',
+    faq_team: '팀(서포트 보너스)',
+    cat_rules: '게임 규칙',
+    cat_money: '입출금',
+    cat_trade: '구매/판매',
+    cat_team: '팀',
+    cat_other: '기타',
+    cat_label: '카테고리(선택)',
+    subject_label: '제목',
+    subject_ph: '예: BURN에 대해 알려주세요',
+    body_label: '문의 내용',
+    body_ph: '가능한 한 구체적으로 작성해 주시면 정확히 안내해 드릴 수 있습니다',
+    sending: '전송 중…',
+    send: '보내기',
+    err_send: '전송에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+    done_title: '전송했습니다',
+    done_a: '문의해 주셔서 감사합니다. 지원팀이 확인 후 ',
+    done_bold: '등록하신 이메일',
+    done_b: '로 답변드립니다.',
+    done_guide: '이용 방법 보기 →',
+    done_dashboard: '대시보드로 →',
+    aside_reply_title: '답변 안내',
+    li1_bold: '등록하신 이메일',
+    li1_rest: ' 로 답변드립니다(이 페이지에는 답변이 표시되지 않습니다)',
+    aside_li2: '내용에 따라 확인에 시간이 걸릴 수 있습니다',
+    aside_li3: '잔액·거래의 구체적인 수치는 사이트 내 각 페이지에서 확인할 수 있습니다',
+    aside_mail_title: '이메일로도 접수합니다',
+  },
+  notif: {
+    title: '알림',
+    unread_tpl: '미읽음 {n}',
+    read_note: '열면 읽음 처리됩니다 · 탭하면 관련 페이지로',
+    types: {
+      RACE_RESULT_READY: '레이스 결과', HORSE_BURNED: 'Burn', REVENGE_BUFF_GENERATED: 'Revenge Buff',
+      BUYBACK_PAYMENT_PAID: '챔피언 보상', BUYBACK_COMPLETED: '챔피언 보상', MEMORIAL_NFT_MINTED: '기념 NFT',
+      SUPPORT_BONUS_PAID: '서포트 보너스', SUPPORT_CELEBRATION_PAID: '축하금', ASSIGNMENT_COMPLETED: '말 배정',
+      HORSE_SOLD: '판매 성사', AUTO_LISTED: '자동 출품', AUTO_RESERVED: '자동 구매 예약',
+      MARKETPLACE_LOCKED: '정산 중', MARKETPLACE_REOPENED: '재개', DEPOSIT_CONFIRMED: '입금',
+      WITHDRAWAL_COMPLETED: '출금', WITHDRAWAL_FAILED: '출금 오류', TRAINING_COMPLETED: '조련',
+      ITEM_DROPPED: '아이템', ITEM_GIFT_RECEIVED: '선물',
+    },
+    type_default: '알림',
+    cats: { race: '레이스', trade: '매매', reward: '보상', money: '입출금', other: '기타' },
+    cat_all: '전체',
+    digest_title_tpl: '{d} 다이제스트',
+    count_tpl: '{n}건',
+    digest_results: '결과 보기 →',
+    digest_history: '거래 내역 →',
+    search_ph: '알림 검색…',
+    unread_only: '미읽음만',
+    count_all_tpl: '전체 {n}건',
+    count_some_tpl: '{total}건 중 {shown}건',
+    empty_a: '아직 알림이 없습니다.',
+    empty_b: '레이스 결과·Burn·챔피언 보상·매매 등이 여기에 도착합니다.',
+    empty_filtered: '조건에 맞는 알림이 없습니다.',
+    prev: '← 이전',
+    next: '다음 →',
+    min_tpl: '{n}분 전',
+    hour_tpl: '{n}시간 전',
+    day_tpl: '{n}일 전',
+  },
 };
 
 const ms: AppDict = {
@@ -682,6 +1271,123 @@ const ms: AppDict = {
     install_steps: 'Dari menu pelayar, pilih “Tambah ke Skrin Utama” / “Pasang aplikasi” untuk melancarkannya sebagai aplikasi.',
     install_hint: 'Tambah ke skrin utama untuk membukanya dengan satu ketikan.',
     add_app: '+ Tambah aplikasi',
+  },
+  account: {
+    title: 'Akaun',
+    st_racing: 'Berlumba',
+    st_listed: 'Disenaraikan',
+    st_champions: 'Juara',
+    st_burned: 'Musnah',
+    st_pending: 'Tempahan menunggu',
+    email_unset: '(Tiada e-mel — log masuk dompet)',
+    reg_label: 'Menyertai ',
+    play_tpl: 'Hari ke-{n} bermain',
+    id_label: 'ID ',
+    record_label: 'Rekod anda',
+    stat_note_a: 'Ketik nombor untuk ke halamannya. Semak bayaran ganjaran di ',
+    stat_note_b: ', dan sejarah deposit/pengeluaran di ',
+    stat_note_c: '.',
+    settings_label: 'Tetapan',
+    linking_label: 'Pautkan kaedah log masuk anda',
+    linking_lead: 'Setelah dipautkan, mana-mana kaedah log masuk mencapai akaun yang sama (baki dan kuda). Satu dompet hanya boleh dipautkan ke satu akaun.',
+    support_label: 'Sokongan',
+    support_lead: 'Soalan tentang peraturan, akaun, atau deposit/pengeluaran — hubungi kami bila-bila masa. Kami membalas ke e-mel berdaftar anda.',
+    support_guide: 'Baca panduan →',
+    support_contact: 'Ke borang hubungi →',
+  },
+  stableName: {
+    unset: 'Nama kandang belum ditetapkan — tetapkan dan nama ini muncul pada dagangan dan peta organisasi',
+    set_btn: 'Tetapkan nama kandang',
+    change_btn: 'Ubah',
+    placeholder: 'cth. Kandang Meteor',
+    saving: 'Menyimpan…',
+    save: 'Simpan',
+    cancel: 'Batal',
+    hint: '2–20 aksara · terbuka kepada semua pengguna · satu perubahan sehari',
+    err: 'Tidak dapat menyimpan nama kandang.',
+  },
+  linking: {
+    login_id: 'ID log masuk (Supabase)',
+    loading: 'Memuatkan…',
+    unlink: 'Nyahpaut',
+    last_id: '(ID log masuk terakhir tidak boleh dinyahpaut)',
+    link_google: 'Pautkan Google',
+    wallet_h: 'Dompet',
+    no_wallet: 'Tiada dompet dipautkan.',
+    link_metamask: '🦊 Pautkan MetaMask',
+    err_no_metamask: 'MetaMask tidak dijumpai. Sila pasang sambungan itu.',
+    err_no_address: 'Tidak dapat memperoleh alamat dompet',
+    err_link_wallet: 'Gagal memautkan dompet',
+    linked_tpl: 'Dompet {addr} dipautkan',
+    err_unlink: 'Gagal menyahpaut',
+  },
+  contact: {
+    title: 'Hubungi',
+    lead: 'Peraturan, akaun, deposit/pengeluaran — tanya kami apa sahaja. Pasukan sokongan akan menyemak dan membalas ke e-mel berdaftar anda.',
+    faq_label: 'Soalan lazim',
+    faq_burn: 'Apa itu BURN?',
+    faq_buy: 'Cara beli & jual',
+    faq_deposit: 'Deposit saya tidak muncul',
+    faq_champion: 'Bila Champion Reward?',
+    faq_team: 'Pasukan (Support Bonus)',
+    cat_rules: 'Peraturan permainan',
+    cat_money: 'Deposit/pengeluaran',
+    cat_trade: 'Beli/jual',
+    cat_team: 'Pasukan',
+    cat_other: 'Lain-lain',
+    cat_label: 'Kategori (pilihan)',
+    subject_label: 'Subjek',
+    subject_ph: 'cth. Sila jelaskan BURN',
+    body_label: 'Mesej anda',
+    body_ph: 'Lebih terperinci anda menulis, lebih tepat kami dapat membantu',
+    sending: 'Menghantar…',
+    send: 'Hantar',
+    err_send: 'Gagal menghantar. Sila cuba lagi kemudian.',
+    done_title: 'Dihantar',
+    done_a: 'Terima kasih kerana menghubungi kami. Pasukan sokongan akan menyemak dan membalas ke ',
+    done_bold: 'e-mel berdaftar anda',
+    done_b: '.',
+    done_guide: 'Baca panduan →',
+    done_dashboard: 'Ke papan pemuka →',
+    aside_reply_title: 'Tentang balasan',
+    li1_bold: 'E-mel berdaftar anda',
+    li1_rest: ' — kami membalas di sana (tiada balasan dipaparkan di halaman ini)',
+    aside_li2: 'Sesetengah pertanyaan mungkin mengambil masa untuk disemak',
+    aside_li3: 'Angka baki dan transaksi yang tepat ada pada halaman masing-masing dalam aplikasi',
+    aside_mail_title: 'Anda juga boleh menghubungi kami melalui e-mel',
+  },
+  notif: {
+    title: 'Notifikasi',
+    unread_tpl: '{n} belum dibaca',
+    read_note: 'Membuka menandakannya dibaca · ketik untuk ke halaman berkaitan',
+    types: {
+      RACE_RESULT_READY: 'Keputusan perlumbaan', HORSE_BURNED: 'Burn', REVENGE_BUFF_GENERATED: 'Revenge Buff',
+      BUYBACK_PAYMENT_PAID: 'Champion Reward', BUYBACK_COMPLETED: 'Champion Reward', MEMORIAL_NFT_MINTED: 'NFT peringatan',
+      SUPPORT_BONUS_PAID: 'Support Bonus', SUPPORT_CELEBRATION_PAID: 'Raikan', ASSIGNMENT_COMPLETED: 'Kuda ditetapkan',
+      HORSE_SOLD: 'Terjual', AUTO_LISTED: 'Auto-senarai', AUTO_RESERVED: 'Tempahan automatik',
+      MARKETPLACE_LOCKED: 'Menyelesaikan', MARKETPLACE_REOPENED: 'Dibuka semula', DEPOSIT_CONFIRMED: 'Deposit',
+      WITHDRAWAL_COMPLETED: 'Pengeluaran', WITHDRAWAL_FAILED: 'Ralat pengeluaran', TRAINING_COMPLETED: 'Latihan',
+      ITEM_DROPPED: 'Item', ITEM_GIFT_RECEIVED: 'Hadiah',
+    },
+    type_default: 'Notis',
+    cats: { race: 'Perlumbaan', trade: 'Dagangan', reward: 'Ganjaran', money: 'Deposit', other: 'Lain-lain' },
+    cat_all: 'Semua',
+    digest_title_tpl: 'Ringkasan {d}',
+    count_tpl: '{n}',
+    digest_results: 'Lihat keputusan →',
+    digest_history: 'Sejarah transaksi →',
+    search_ph: 'Cari notifikasi…',
+    unread_only: 'Belum dibaca sahaja',
+    count_all_tpl: 'Semua {n}',
+    count_some_tpl: '{shown} daripada {total}',
+    empty_a: 'Belum ada notifikasi.',
+    empty_b: 'Keputusan perlumbaan, Burn, Champion Reward, dagangan dan banyak lagi tiba di sini.',
+    empty_filtered: 'Tiada notifikasi sepadan.',
+    prev: '← Sebelum',
+    next: 'Seterusnya →',
+    min_tpl: '{n} min lalu',
+    hour_tpl: '{n} jam lalu',
+    day_tpl: '{n} hari lalu',
   },
 };
 
