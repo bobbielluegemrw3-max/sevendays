@@ -220,7 +220,7 @@ export async function approveRecovery(
 
 export async function executeRecovery(
   client: SqlClient,
-  input: { recoveryId: string; executedBy: string; handlers?: StepHandlers },
+  input: { recoveryId: string; executedBy: string; handlers?: StepHandlers; solo?: boolean },
 ): Promise<BatchResult> {
   const recovery = await client.query<{
     batch_run_id: string;
@@ -241,7 +241,9 @@ export async function executeRecovery(
   if (row.completed_at !== null) {
     throw new RecoveryError('INVALID_BATCH_STATE', 'Recovery already completed');
   }
-  if (row.approval_status !== 'APPROVED') {
+  // solo (DEBUG/TESTNET): skip the dual-approval gate — soloRecover already
+  // enforced that the actor holds BOTH required roles.
+  if (!input.solo && row.approval_status !== 'APPROVED') {
     throw new RecoveryError(
       'DUAL_APPROVAL_REQUIRED',
       `Recovery execution requires APPROVED status (got ${row.approval_status})`,
@@ -289,6 +291,57 @@ export async function executeRecovery(
     await log(client, input.recoveryId, row.batch_run_id, input.executedBy, 'EXECUTE_FAILED', detail);
   }
   return result;
+}
+
+/**
+ * Solo recovery — DEBUG/TESTNET allowance (2026-07-15, owner request).
+ *
+ * Lets ONE admin who holds BOTH FINANCE_ADMIN and SUPER_ADMIN recover a
+ * FAILED/PARTIAL_FAILED batch without a second approver. The *role authority*
+ * is unchanged — both role powers are still required — only the
+ * two-distinct-humans separation of duties is waived. It requests (or reuses)
+ * the recovery snapshot, self-approves it, and executes; every action is still
+ * logged in recovery_logs and outcomes stay immutable.
+ *
+ * ⚠ Re-gate to full dual approval before mainnet (05_SETTLEMENT_ENGINE.md).
+ */
+export async function soloRecover(
+  client: SqlClient,
+  input: { batchRunId: string; adminUserId: string; reason: string; handlers?: StepHandlers },
+): Promise<BatchResult> {
+  const roles = await activeAdminRoles(client, input.adminUserId);
+  if (!roles.includes('FINANCE_ADMIN') || !roles.includes('SUPER_ADMIN')) {
+    throw new RecoveryError(
+      'DUAL_APPROVAL_REQUIRED',
+      'Solo recovery requires one ACTIVE admin holding BOTH FINANCE_ADMIN and SUPER_ADMIN',
+    );
+  }
+  // Reuse an open recovery for this batch if one exists, else request a new one.
+  const open = await client.query<{ id: string }>(
+    `select id from recovery_snapshots
+     where batch_run_id = $1 and completed_at is null order by created_at desc limit 1`,
+    [input.batchRunId],
+  );
+  const recoveryId =
+    open.rows[0]?.id ??
+    (await requestRecovery(client, {
+      batchRunId: input.batchRunId,
+      reason: input.reason,
+      requestedBy: input.adminUserId,
+    }));
+  // Leave the snapshot PENDING (the recovery_approved_requires_both /
+  // recovery_distinct_approvers constraints only fire on APPROVED). Record the
+  // solo approval in the log, then execute with the solo bypass.
+  await log(client, recoveryId, input.batchRunId, input.adminUserId, 'SOLO_APPROVED', {
+    reason: input.reason,
+  });
+  const handlerArgs = input.handlers === undefined ? {} : { handlers: input.handlers };
+  return executeRecovery(client, {
+    recoveryId,
+    executedBy: input.adminUserId,
+    solo: true,
+    ...handlerArgs,
+  });
 }
 
 export interface TimedOutRecovery {

@@ -8,6 +8,7 @@ import { approveWithdrawal, rejectWithdrawal } from '@sevendays/blockchain';
 import {
   approveRecovery,
   executeRecovery,
+  soloRecover,
   runBatch,
   buildProductionHandlers,
 } from '@sevendays/settlement-engine';
@@ -99,6 +100,39 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
       await audit(ctx, 'ADMIN_BATCH_RETRY', 'batch_run', ctx.params.id!);
       const result = await runBatch(ctx.client, {
         batchDate: batch.rows[0].batch_date,
+        handlers: buildProductionHandlers(),
+      });
+      return { batch_run_id: result.batchRunId, status: result.status };
+    },
+  });
+
+  // Solo recovery (DEBUG/TESTNET, 2026-07-15): one admin holding BOTH
+  // FINANCE_ADMIN and SUPER_ADMIN recovers a FAILED/PARTIAL_FAILED batch
+  // without a second approver. soloRecover enforces the both-roles check and
+  // logs every action. Re-gate to full dual approval before mainnet.
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/batches/:id/recover',
+    auth: 'admin',
+    idempotencyKeyRequired: true,
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const batch = await ctx.client.query<{ status: string }>(
+        `select status::text as status from batch_runs where id = $1`,
+        [ctx.params.id],
+      );
+      if (!batch.rows[0]) throw new ApiError('NOT_FOUND', 'Batch not found');
+      if (!['FAILED', 'PARTIAL_FAILED'].includes(batch.rows[0].status)) {
+        throw new ApiError(
+          'INVALID_BATCH_STATE',
+          `Recover requires FAILED/PARTIAL_FAILED (got ${batch.rows[0].status})`,
+        );
+      }
+      await audit(ctx, 'ADMIN_BATCH_SOLO_RECOVER', 'batch_run', ctx.params.id!);
+      const result = await soloRecover(ctx.client, {
+        batchRunId: ctx.params.id!,
+        adminUserId: ctx.userId,
+        reason: 'debug single-admin recovery (testnet)',
         handlers: buildProductionHandlers(),
       });
       return { batch_run_id: result.batchRunId, status: result.status };

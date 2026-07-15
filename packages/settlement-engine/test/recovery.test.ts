@@ -8,6 +8,7 @@ import {
   requestRecovery,
   approveRecovery,
   executeRecovery,
+  soloRecover,
   checkRecoveryTimeouts,
   RecoveryError,
 } from '../src/index.js';
@@ -32,6 +33,17 @@ async function newAdmin(role: 'FINANCE_ADMIN' | 'SUPER_ADMIN'): Promise<string> 
     `insert into admin_role_grants (user_id, role) values ($1, $2::admin_role)`,
     [id, role],
   );
+  return id;
+}
+
+async function newDualAdmin(): Promise<string> {
+  const id = await newUser();
+  for (const role of ['FINANCE_ADMIN', 'SUPER_ADMIN'] as const) {
+    await client.query(
+      `insert into admin_role_grants (user_id, role) values ($1, $2::admin_role)`,
+      [id, role],
+    );
+  }
   return id;
 }
 
@@ -119,6 +131,37 @@ describe('recovery request and dual approval', () => {
     expect(logs.rows.map((l) => l.action)).toEqual([
       'REQUESTED', 'APPROVED_1', 'APPROVED_2', 'EXECUTE_START', 'COMPLETED',
     ]);
+  });
+
+  // 単独リカバリ(DEBUG/TESTNET, 2026-07-15): FINANCE+SUPER を併せ持つ1名で復旧。
+  it('solo recovery by one FINANCE+SUPER admin completes the batch and reopens the market', async () => {
+    const { batchRunId } = await failedBatch('2037-01-15');
+    expect(await getMarketplaceState(client)).toBe('MARKET_LOCKED');
+    const dual = await newDualAdmin();
+    const result = await soloRecover(client, {
+      batchRunId,
+      adminUserId: dual,
+      reason: 'debug single-admin recovery',
+      handlers: {}, // default no-op burn handler succeeds this time
+    });
+    expect(result.status).toBe('COMPLETED');
+    expect(await getMarketplaceState(client)).toBe('OPEN');
+    const logs = await client.query<{ action: string }>(
+      `select action from recovery_logs rl join recovery_snapshots rs on rs.id = rl.recovery_snapshot_id
+       where rs.batch_run_id = $1 order by rl.created_at`,
+      [batchRunId],
+    );
+    expect(logs.rows.map((l) => l.action)).toContain('SOLO_APPROVED');
+  });
+
+  it('solo recovery is refused for an admin missing a required role', async () => {
+    const { batchRunId } = await failedBatch('2037-01-16');
+    const financeOnly = await newAdmin('FINANCE_ADMIN');
+    await expect(
+      soloRecover(client, { batchRunId, adminUserId: financeOnly, reason: 'x' }),
+    ).rejects.toThrow('BOTH FINANCE_ADMIN and SUPER_ADMIN');
+    // batch stays FAILED, market stays locked
+    expect(await getMarketplaceState(client)).toBe('MARKET_LOCKED');
   });
 
   it('rejects recovery requests for healthy batches', async () => {

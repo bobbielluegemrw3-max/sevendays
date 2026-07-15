@@ -1,14 +1,20 @@
 import { RecoveryActions } from '@/components/RecoveryActions';
+import { RecoverBatchButton } from '@/components/RecoverBatchButton';
 import { statusKind } from '@/components/admin-shared';
 import s from '../app/admin.module.css';
 
 /* /admin/recovery — Ops Consoleリデザイン(2026-07-13ハンドオフ)。
- * FAILEDバッチのリカバリ手続き(二重承認)。純表示。 */
+ * FAILEDバッチのリカバリ手続き。純表示。
+ * ①復旧起動が必要なバッチ(単独リカバリ・DEBUG/TESTNET) ②既存リカバリ手続き。 */
 
 export interface Recovery {
   id: string; batch_date: string; batch_status: string; recovery_reason: string;
   approval_status: string; approved_by_1: string | null; approved_by_2: string | null;
   created_at: string; completed_at: string | null;
+}
+
+export interface FailedBatch {
+  id: string; batch_date: string; status: string; completed_steps: number | string;
 }
 
 const ST: Record<string, string> = { good: s.stGood!, warn: s.stWarn!, bad: s.stBad!, cyan: s.stNeutral!, muted: s.stNeutral! };
@@ -23,14 +29,43 @@ function ApprovalBadges({ r }: { r: Recovery }) {
   );
 }
 
-export function AdminRecoveryView({ recoveries }: { recoveries: Recovery[] }) {
+export function AdminRecoveryView({
+  recoveries,
+  failedBatches = [],
+}: {
+  recoveries: Recovery[];
+  failedBatches?: FailedBatch[];
+}) {
   return (
     <div className={s.wrap}>
       <div className={s.ph}>
         <div>
-          <h1 className={s.phTitle}>リカバリ手続き（二重承認）</h1>
+          <h1 className={s.phTitle}>リカバリ手続き</h1>
         </div>
       </div>
+
+      {failedBatches.length > 0 ? (
+        <div className={`${s.tableWrap} ${s.desktopTable}`} style={{ marginBottom: '1rem' }}>
+          <table className={s.tbl}>
+            <thead>
+              <tr>
+                <th>復旧が必要なバッチ</th><th>状態</th><th>完了ステップ</th><th className={s.tRight}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {failedBatches.map((b) => (
+                <tr key={b.id}>
+                  <td className={s.date}>{b.batch_date}</td>
+                  <td><span className={`${s.st} ${ST[statusKind(b.status)]}`}>{b.status}</span></td>
+                  <td>{b.completed_steps} / 37</td>
+                  <td className={s.tRight}><RecoverBatchButton batchId={b.id} batchDate={b.batch_date} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
       {recoveries.length > 0 ? (
         <>
           <div className={`${s.tableWrap} ${s.desktopTable}`}>
@@ -81,12 +116,14 @@ export function AdminRecoveryView({ recoveries }: { recoveries: Recovery[] }) {
             })}
           </div>
         </>
-      ) : (
+      ) : failedBatches.length === 0 ? (
         <div className={s.empty}>リカバリ対象はありません。</div>
-      )}
+      ) : null}
       <div className={s.note}>
-        FAILEDバッチの復旧は FINANCE_ADMIN + SUPER_ADMIN を合わせた<b>別人2名</b>の承認後にのみ実行できます。
+        現在デバッグ運用中のため、FINANCE_ADMIN + SUPER_ADMIN を併せ持つ管理者1名で
+        「単独リカバリ実行」できます(二人目の承認は不要)。失敗ステップから再実行され、
         posted Ledger・シード・スナップショットは変更されません。
+        <b>メインネット前に二重承認へ戻します。</b>
       </div>
     </div>
   );
