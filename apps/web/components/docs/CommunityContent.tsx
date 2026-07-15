@@ -23,8 +23,8 @@ export function CommunityContent() {
 
       <div className={s.founder}>
         <img
-          src="/docs/founder-placeholder.svg"
-          alt="Founder of the Seven Days Derby Community"
+          src="/docs/founder.jpg"
+          alt="Arturas Tsalei, founder of the Seven Days Derby Community"
           className={s.portrait}
         />
         <p className={s.pullquote}>
@@ -51,9 +51,8 @@ export function CommunityContent() {
       </p>
 
       <div className={s.signature}>
-        <p className={s.sigName}>Founder Name</p>
+        <p className={s.sigName}>Arturas Tsalei</p>
         <p className={s.sigMeta}>Founder, Seven Days Derby Community</p>
-        <p className={s.sigMeta}>Kuala Lumpur, Malaysia · July 2026</p>
       </div>
 
       <h2>How Seven Days Derby is operated</h2>
