@@ -3,9 +3,7 @@ import s from '@/app/docs/docs.module.css';
 
 /**
  * /docs/community の本文(創設者メッセージ+運営主体の開示)。
- * ドラフト段階: 写真はプレースホルダー・名前は仮置き。オーナーGO後に
- * 実写真(/docs/founder.jpg 等)・表記名・確定文面に差し替えて
- * app/docs/community/page.tsx から公開する(DocsNav にも追加)。
+ * オーナー承認済みの確定文面(2026-07-15公開)。創設者 Arturas Tsalei。
  *
  * 文面の規律(R1/R3): earn/profit/invest/return・保証・リクルート調は使わない。
  * 約束するのは「フェアなルール」だけ。運営主体は事実記載のみ
@@ -76,7 +74,7 @@ export function CommunityContent() {
         and the <Link href="/ledger">Transparency Ledger</Link>.
       </div>
 
-      <p className={s.footerMeta}>DRAFT FOR REVIEW · JULY 14, 2026</p>
+      <p className={s.footerMeta}>LAST UPDATED · JULY 15, 2026</p>
     </>
   );
 }

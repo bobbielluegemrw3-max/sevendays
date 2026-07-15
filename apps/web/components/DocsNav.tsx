@@ -6,6 +6,7 @@ import s from '@/app/docs/docs.module.css';
 
 const ITEMS = [
   { href: '/docs', label: 'Overview' },
+  { href: '/docs/community', label: 'The Community' },
   { href: '/docs/funds', label: 'How Funds Are Handled' },
   { href: '/docs/fairness', label: 'Fairness & Determinism' },
   { href: '/docs/risk', label: 'Risk Disclosure' },

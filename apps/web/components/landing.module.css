@@ -455,10 +455,39 @@
 .foot .links a:hover { color: #eae7ff; }
 .foot .cpy { font-family: var(--font-mono); font-size: 10px; color: #4a4670; }
 
-/* 言語切替(TOPページ・2026-07-15) */
+/* 言語切替(TOPページ・2026-07-15、自前ドロップダウン) */
 .navRight { display: flex; align-items: center; gap: 10px; }
-.langSelect { font-family: var(--font-mono, monospace); font-size: 11px; color: #cbb8ff;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.14); border-radius: 8px;
-  padding: 6px 8px; cursor: pointer; outline: none; }
-.langSelect:hover { border-color: rgba(124,107,255,0.6); }
-@media (max-width: 640px) { .langSelect { font-size: 10.5px; padding: 5px 6px; } }
+.langRoot { position: relative; }
+.langBtn { display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-mono, monospace); font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+  color: #d8ccff; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 10px; padding: 8px 11px; cursor: pointer; outline: none; line-height: 1;
+  transition: border-color 0.15s ease, background 0.15s ease; }
+.langBtn:hover { border-color: rgba(124,107,255,0.6); background: rgba(124,107,255,0.1); }
+.langBtn:focus-visible { border-color: rgba(124,107,255,0.85); box-shadow: 0 0 0 3px rgba(124,107,255,0.28); }
+.langBtnText { white-space: nowrap; }
+.langChev { transition: transform 0.18s ease; opacity: 0.75; }
+.langChevOpen { transform: rotate(180deg); transition: transform 0.18s ease; opacity: 0.9; }
+
+.langMenu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 60; margin: 0; padding: 6px;
+  list-style: none; min-width: 168px;
+  background: #171429; border: 1px solid rgba(255,255,255,0.14); border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4);
+  animation: langMenuIn 0.14s ease; }
+@keyframes langMenuIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.langMenu li { margin: 0; padding: 0; }
+.langItem { display: flex; align-items: center; gap: 9px; width: 100%;
+  font-family: var(--font-mono, monospace); font-size: 13px; font-weight: 500; text-align: left;
+  color: #cbb8ff; background: transparent; border: 0; border-radius: 8px;
+  padding: 10px 11px; cursor: pointer; line-height: 1.2;
+  transition: background 0.12s ease, color 0.12s ease; }
+.langItem:hover { background: rgba(124,107,255,0.16); color: #f2edff; }
+.langItemActive { color: #ffffff; background: rgba(124,107,255,0.1); }
+.langCheck { display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; flex: 0 0 14px; color: #a48bff; }
+
+@media (max-width: 640px) {
+  .langBtn { font-size: 12.5px; padding: 9px 12px; }
+  .langMenu { min-width: 200px; padding: 7px; }
+  .langItem { font-size: 14px; padding: 13px 12px; }  /* タッチ標的を確保 */
+}
