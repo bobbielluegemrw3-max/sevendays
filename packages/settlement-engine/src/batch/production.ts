@@ -551,12 +551,16 @@ export async function verifyReplayInputs(
     weather: ScoreInput['weather'];
     track_condition: ScoreInput['track'];
     dna_modifier: string;
+    // v1.1 (Decision 078): アイテム加点は snapshot に凍結される。replay も同じ入力から
+    // 再構築しないと item を使った夜だけ score が一致せず検証が誤って失敗する
+    // (2026-07-15 本番インシデント: firm_plates の +0.60 を replay が落としていた)。
+    item_snapshot_json: { item_points: number; item_random_shift: number } | null;
     final_score: string | null;
   }>(
     `select s.horse_id, s.horse_type::text as horse_type, s.rarity::text as rarity,
             s.ability_snapshot_json, s.training_snapshot_json, s.revenge_buff_snapshot_json,
             s.weather::text as weather, s.track_condition::text as track_condition,
-            h.dna_modifier::text as dna_modifier, s.final_score::text as final_score
+            h.dna_modifier::text as dna_modifier, s.item_snapshot_json, s.final_score::text as final_score
      from race_participant_snapshots s join horses h on h.id = s.horse_id
      where s.race_id = $1 order by s.horse_id`,
     [raceId],
@@ -600,6 +604,8 @@ export async function verifyReplayInputs(
       condition: snap.ability_snapshot_json.condition,
       fatigue: snap.ability_snapshot_json.fatigue,
       buffRarity: snap.revenge_buff_snapshot_json?.buff_rarity ?? null,
+      itemPoints: snap.item_snapshot_json?.item_points ?? 0,
+      itemRandomShift: snap.item_snapshot_json?.item_random_shift ?? 0,
       raceSeed: seed,
       raceEngineVersion,
     });

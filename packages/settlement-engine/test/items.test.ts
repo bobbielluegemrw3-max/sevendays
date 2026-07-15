@@ -14,6 +14,7 @@ import {
   createParticipantSnapshots,
   finalizeAndBurn,
   runRaceScores,
+  verifyReplayInputs,
 } from '../src/index.js';
 
 /**
@@ -201,6 +202,19 @@ describe('item system through the batch (Decision 078)', () => {
       [setup.raceId, setup.horses[0]],
     );
     expect(Number(scored.rows[0]!.item_modifier)).toBe(expected.itemPoints);
+
+    // 回帰(2026-07-15 本番インシデント): item を使った夜も replay 検証が通ること。
+    // verifyReplayInputs が snapshot の itemPoints/itemRandomShift を再構築せず 0 で
+    // 再計算していたため、score が item 分だけズレて RACE_SNAPSHOT_VERIFICATION_FAILED に
+    // なり、バッチが FAILED_SAFE_MODE で停止していた。
+    // (verifyReplayInputs は reveal 済みシードを要求する — commit_hash=sha256(raceSeed) なので
+    //  reveal_seed=raceSeed をセットすれば commit-reveal 照合も通る。)
+    await client.query(
+      `update randomness_commits set reveal_seed = $2
+       from races r where r.seed_commit_id = randomness_commits.id and r.id = $1`,
+      [setup.raceId, setup.raceSeed],
+    );
+    await expect(verifyReplayInputs(client, setup.raceId, VERSION)).resolves.toBeUndefined();
 
     const mlmBefore = Number(
       await getBalance(client, await getPlatformAccountId(client, 'PLATFORM_MLM_RESERVE')),
