@@ -63,6 +63,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       return (
         <html lang="ja">
           <head>
+            {/* Impact/MoonPay アフィリエイト サイト検証(value属性が必須なため直書き) */}
+            <meta {...({ name: 'impact-site-verification', value: '2702f35a-9d4e-4347-8a63-8b52915e3125' } as Record<string, string>)} />
             <link rel="preconnect" href="https://fonts.googleapis.com" />
             <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
             <link
@@ -81,6 +83,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ja">
       <head>
+        {/* Impact/MoonPay アフィリエイト サイト検証(value属性が必須なため直書き) */}
+        <meta {...({ name: 'impact-site-verification', value: '2702f35a-9d4e-4347-8a63-8b52915e3125' } as Record<string, string>)} />
         {/* Fonts matching the design handoff (Orbitron display, Space Grotesk,
             Zen Kaku Gothic New for Japanese, IBM Plex Mono for data). */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
