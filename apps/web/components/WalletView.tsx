@@ -1,12 +1,21 @@
 import { WalletHistory, type HistoryEntry } from '@/components/WalletHistory';
 import { WithdrawForm } from '@/components/WithdrawForm';
+import { OnrampGuide } from '@/components/OnrampGuide';
 import s from '../app/wallet.module.css';
 
 /* ============================================================================
  * /wallet(ウォレット)再設計 — ダッシュボード Option 1c と同じ部品言語。
- * 純粋な表示コンポーネント。残高・入金アドレス・出金(既存 WithdrawForm)・履歴。
+ * 純粋な表示コンポーネント。残高・入金アドレス・USDT入手ガイド・出金・履歴。
  * 履歴一覧は client の <WalletHistory> に委譲。データ取得層 page.tsx は依頼側で結線。
  * 表示数値は各 API の値のみ(架空値なし)。
+ *
+ * OnrampGuide(USDT入手ガイド)の表示ゲート:
+ *   env `ONRAMP_ENABLED === 'true'` のときだけ入金アドレス直下に出す。
+ *   deposit.chain_id は DEFAULT_CHAIN 定数なので常に 'POLYGON_POS' を返し、
+ *   testnet/mainnet を判別できない。テストネット/デバッグ運用中に「実 USDT を
+ *   買って送金」を出すと、ユーザーが実 USDT を(watcher 未稼働の)アドレスに送って
+ *   失う誤送金リスクがある。ゆえに既定 OFF。メインネットで入金を本番稼働させる
+ *   タイミング(または今すぐ表示したいとき)に web サービスの env を true にする。
  * ========================================================================== */
 
 export interface Wallet { available: string; locked: string }
@@ -20,6 +29,7 @@ export function WalletView({
   wallet, deposit, history,
 }: { wallet: Wallet; deposit: DepositInfo | null; history: HistoryEntry[] }) {
   const hasLocked = Number(wallet.locked) > 0;
+  const onrampEnabled = process.env.ONRAMP_ENABLED === 'true';
 
   return (
     <div className={s.wrap}>
@@ -64,6 +74,10 @@ export function WalletView({
           <div className={s.depLead}>入金アドレスを準備中です。しばらくしてから再度お試しください。</div>
         )}
       </section>
+
+      {/* USDT入手ガイド(上の入金アドレスへ送る USDT の入手先)。
+          env ゲート ON かつ 入金アドレスがある時だけ表示 */}
+      {onrampEnabled && deposit ? <OnrampGuide address={deposit.address} /> : null}
 
       {/* 出金(既存 WithdrawForm を内包) */}
       <section className={s.withdraw}>
