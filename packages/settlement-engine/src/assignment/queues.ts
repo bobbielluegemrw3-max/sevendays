@@ -5,7 +5,13 @@ import { marketTiebreakScore, purchaseTiebreakScore } from './tiebreak.js';
  * Deterministic queues (05_SETTLEMENT_ENGINE.md, Decisions 012/013).
  *
  * Horse Queue:  listed_at ASC -> current_day DESC -> market tiebreak DESC -> horse_uuid ASC
- * Buyer Queue:  created_at ASC -> purchase tiebreak DESC -> session_uuid ASC
+ * Buyer Queue:  purchase tiebreak DESC -> session_uuid ASC
+ *
+ * 買い手キューは予約時刻に依存しない(2026-07-15 オーナー決定): 早い者勝ちだと
+ * 「新規発行(Day0)狙いで締切ギリギリ予約」等のタイミング操作の誘因が生まれるため、
+ * 並びをシード由来の決定論スコア(batch×session)だけで決める公平抽選にした。
+ * いつ予約しても順番は変わらず、シードから誰でも再計算・検証できる。
+ * (売り手/馬キューは listed_at を残す — 出品は主に自動で操作余地が小さい。)
  *
  * VIP, referral, balance size, AI preference, or admin preference MUST
  * NEVER affect these orders. Sorting happens in JS on exact values so the
@@ -26,7 +32,6 @@ export interface QueuedBuyer {
   sessionId: string;
   userId: string;
   lockedAmount: string;
-  createdAtMs: number;
   tiebreak: number;
 }
 
@@ -84,9 +89,8 @@ export async function buildBuyerQueue(
     id: string;
     user_id: string;
     locked_amount: string;
-    created_at: string;
   }>(
-    `select id, user_id, locked_amount::text as locked_amount, created_at::text as created_at
+    `select id, user_id, locked_amount::text as locked_amount
      from purchase_sessions
      where batch_run_id = $1 and status = 'PENDING_ASSIGNMENT'`,
     [batchRunId],
@@ -95,11 +99,10 @@ export async function buildBuyerQueue(
     sessionId: s.id,
     userId: s.user_id,
     lockedAmount: s.locked_amount,
-    createdAtMs: new Date(s.created_at).getTime(),
     tiebreak: purchaseTiebreakScore(batchRunId, s.id, assignmentAlgorithmVersion),
   }));
+  // 予約時刻(createdAtMs)は並びに使わない — シード由来の決定論スコアのみで抽選。
   queue.sort((a, b) => {
-    if (a.createdAtMs !== b.createdAtMs) return a.createdAtMs - b.createdAtMs;
     if (a.tiebreak !== b.tiebreak) return b.tiebreak - a.tiebreak;
     return a.sessionId < b.sessionId ? -1 : a.sessionId > b.sessionId ? 1 : 0;
   });

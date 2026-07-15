@@ -193,7 +193,7 @@ describe('purchase sessions', () => {
 });
 
 describe('deterministic queues', () => {
-  it('horse queue: listed_at asc -> day desc -> tiebreak desc -> uuid asc; buyer queue: created_at asc', async () => {
+  it('horse queue: listed_at asc -> day desc -> tiebreak desc -> uuid asc; buyer queue: seed tiebreak (time-independent)', async () => {
     const batch = await newBatch();
     const seller = await newUser();
     // older listing wins regardless of day; same-time ties by day desc
@@ -211,7 +211,9 @@ describe('deterministic queues', () => {
     const rebuilt = await buildHorseQueue(client, batch, ALGO);
     expect(rebuilt.map((q) => q.horseId)).toEqual(queue.map((q) => q.horseId));
 
-    // buyer queue ordered by creation time
+    // buyer queue: seed tiebreak desc -> session_uuid asc (reservation time
+    // must NOT affect order — 2026-07-15). Assert the returned order matches
+    // that deterministic rule and is stable on rebuild.
     const buyerA = await newUser();
     const buyerB = await newUser();
     await fund(buyerA, '200');
@@ -220,8 +222,13 @@ describe('deterministic queues', () => {
     const sessionB = await createPurchaseSession(client, { userId: buyerB, idempotencyKey: randomUUID() });
     await lockSessionsIntoBatch(client, batch);
     const buyers = await buildBuyerQueue(client, batch, ALGO);
-    const ourBuyers = buyers.filter((b) => [sessionA.sessionId, sessionB.sessionId].includes(b.sessionId));
-    expect(ourBuyers.map((b) => b.sessionId)).toEqual([sessionA.sessionId, sessionB.sessionId]);
+    const expectedOrder = [...buyers].sort(
+      (a, b) => b.tiebreak - a.tiebreak || (a.sessionId < b.sessionId ? -1 : a.sessionId > b.sessionId ? 1 : 0),
+    );
+    expect(buyers).toEqual(expectedOrder); // ordered purely by seed tiebreak, not creation time
+    expect([sessionA.sessionId, sessionB.sessionId].every((id) => buyers.some((b) => b.sessionId === id))).toBe(true);
+    const rebuiltBuyers = await buildBuyerQueue(client, batch, ALGO);
+    expect(rebuiltBuyers.map((b) => b.sessionId)).toEqual(buyers.map((b) => b.sessionId)); // deterministic
 
     // clean up pending sessions/listings for later tests
     await refundUnassignedSessions(client, batch);
