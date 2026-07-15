@@ -1,15 +1,19 @@
 import Link from 'next/link';
 import { LogoutButton } from '@/components/LogoutButton';
 import { DerbyCountdown } from '@/components/DerbyCountdown';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { APP_COPY, type Lang } from '@/lib/i18n';
 
 /**
  * Signed-in header. The brand lockup mirrors the landing page exactly
  * (bar + "SEVEN DAYS" over "DERBY") so the logo reads as one product on
- * both sides of the login. Links are grouped: game pages (EN labels),
- * then a separator, then utility pages (JP labels, dimmer). On narrow
- * screens the link row drops below the brand and scrolls horizontally.
+ * both sides of the login. Links are grouped: game pages (EN labels kept
+ * across all languages as section names), then a separator, then utility
+ * pages (localized labels, dimmer). On narrow screens the link row drops
+ * below the brand and scrolls horizontally.
  */
-export function TopNav({ isAdmin = false, unread = 0 }: { isAdmin?: boolean; unread?: number }) {
+export function TopNav({ isAdmin = false, unread = 0, lang = 'ja' }: { isAdmin?: boolean; unread?: number; lang?: Lang }) {
+  const t = APP_COPY[lang].nav;
   return (
     <nav className="topnav">
       <Link href="/dashboard" className="brand" aria-label="Seven Days Derby">
@@ -31,18 +35,19 @@ export function TopNav({ isAdmin = false, unread = 0 }: { isAdmin?: boolean; unr
         <Link href="/support">TEAM</Link>
         <span className="topnav-sep" aria-hidden="true" />
         <Link href="/notifications" className="topnav-util">
-          通知{unread > 0 ? <span className="topnav-badge">{unread > 99 ? '99+' : unread}</span> : null}
+          {t.notifications}{unread > 0 ? <span className="topnav-badge">{unread > 99 ? '99+' : unread}</span> : null}
         </Link>
-        <Link href="/account" className="topnav-util">アカウント</Link>
-        <Link href="/guide" className="topnav-util">使い方</Link>
-        <Link href="/contact" className="topnav-util">お問い合わせ</Link>
+        <Link href="/account" className="topnav-util">{t.account}</Link>
+        <Link href="/guide" className="topnav-util">{t.guide}</Link>
+        <Link href="/contact" className="topnav-util">{t.contact}</Link>
         {isAdmin && (
           <Link href="/admin" className="topnav-admin">ADMIN</Link>
         )}
       </div>
       <span className="spacer" />
       <DerbyCountdown />
-      <LogoutButton />
+      <LanguageSwitcher current={lang} />
+      <LogoutButton lang={lang} />
     </nav>
   );
 }

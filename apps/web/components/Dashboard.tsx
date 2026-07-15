@@ -1,4 +1,5 @@
 import { serverApi, serverApiOrLogin } from '@/lib/server-api';
+import { getLang } from '@/lib/i18n';
 import type { TradeSettings } from '@/components/TradeAutoControls';
 import {
   DashboardView,
@@ -18,6 +19,7 @@ interface RaceResultRow { horse_id: string; final_score: string; final_rank: num
 /** Signed-in home: fetches everything through the in-process API bridge and
  *  hands plain data to the presentational DashboardView. */
 export default async function Dashboard() {
+  const lang = await getLang();
   const me = await serverApiOrLogin<Me>('/api/v1/me');
   const [walletR, horsesR, buffR, sessionsR, racesR, buybacksR, notifR, tradeR] = await Promise.all([
     serverApi<DashWallet>('/api/v1/wallet'),
@@ -48,6 +50,7 @@ export default async function Dashboard() {
 
   return (
     <DashboardView
+      lang={lang}
       data={{
         wallet: walletR.status === 200 ? walletR.body : null,
         horses,

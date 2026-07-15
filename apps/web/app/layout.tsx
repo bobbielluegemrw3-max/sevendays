@@ -5,6 +5,7 @@ import './globals.css';
 import { getAccessToken, serverApi } from '@/lib/server-api';
 import { withSqlClient } from '@/lib/db';
 import { getMaintenanceState } from '@/lib/maintenance';
+import { getLang, type Lang } from '@/lib/i18n';
 import { TopNav } from '@/components/TopNav';
 import { Splash } from '@/components/Splash';
 import { MaintenanceScreen } from '@/components/MaintenanceScreen';
@@ -36,7 +37,7 @@ export const viewport: Viewport = {
 // 通知の未読数はメニューのバッジ用(表示だけ・失敗しても0のまま)。
 // 遷移速度(2026-07-12): Suspenseでストリーミング — ナビのデータ取得がページ本体の
 // 描画をブロックしない(フォールバックは同じナビをバッジなしで即描画)。
-async function TopNavLoader() {
+async function TopNavLoader({ lang }: { lang: Lang }) {
   const [me, notif] = await Promise.all([
     serverApi<{ is_admin?: boolean }>('/api/v1/me'),
     // スパイク対策(2026-07-12): バッジは軽量COUNT専用API(従来は50件全文取得)
@@ -44,11 +45,12 @@ async function TopNavLoader() {
   ]);
   const isAdmin = me.status === 200 && me.body.is_admin === true;
   const unread = notif.status === 200 ? notif.body.unread : 0;
-  return <TopNav isAdmin={isAdmin} unread={unread} />;
+  return <TopNav isAdmin={isAdmin} unread={unread} lang={lang} />;
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const authed = (await getAccessToken()) !== null;
+  const lang = await getLang();
 
   // メンテナンスモード(Decision 098): ONの間、管理者以外は全ページを
   // メンテナンス画面に差し替える(APIはブリッジ側で503遮断済み)。
@@ -61,7 +63,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     maintenanceAdmin = me?.status === 200 && me.body.is_admin === true;
     if (!maintenanceAdmin) {
       return (
-        <html lang="ja">
+        <html lang={lang}>
           <head>
             {/* Impact/MoonPay アフィリエイト サイト検証(value属性が必須なため直書き) */}
             <meta {...({ name: 'impact-site-verification', value: '2702f35a-9d4e-4347-8a63-8b52915e3125' } as Record<string, string>)} />
@@ -81,7 +83,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="ja">
+    <html lang={lang}>
       <head>
         {/* Impact/MoonPay アフィリエイト サイト検証(value属性が必須なため直書き) */}
         <meta {...({ name: 'impact-site-verification', value: '2702f35a-9d4e-4347-8a63-8b52915e3125' } as Record<string, string>)} />
@@ -105,8 +107,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         ) : null}
         {/* Anonymous pages (landing / login) carry their own header. */}
         {authed ? (
-          <Suspense fallback={<TopNav />}>
-            <TopNavLoader />
+          <Suspense fallback={<TopNav lang={lang} />}>
+            <TopNavLoader lang={lang} />
           </Suspense>
         ) : null}
         <main>{children}</main>

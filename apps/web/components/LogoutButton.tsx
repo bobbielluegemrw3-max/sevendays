@@ -2,8 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/client-api';
+import { APP_COPY, type Lang } from '@/lib/i18n';
 
-export function LogoutButton() {
+export function LogoutButton({ lang = 'ja' }: { lang?: Lang }) {
   const router = useRouter();
   return (
     <button
@@ -17,7 +18,7 @@ export function LogoutButton() {
           });
       }}
     >
-      ログアウト
+      {APP_COPY[lang].nav.logout}
     </button>
   );
 }
