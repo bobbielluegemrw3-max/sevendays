@@ -1,4 +1,5 @@
 import { serverApi, serverApiOrLogin } from '@/lib/server-api';
+import { getLang } from '@/lib/i18n-server';
 import { ChampionView, type HallChampion } from '@/components/champion/ChampionView';
 import type { Buyback } from '@/components/BuybacksView';
 
@@ -7,6 +8,7 @@ import type { Buyback } from '@/components/BuybacksView';
  * ループアニメ+報酬(旧buyback)+殿堂+リーグ予告。
  */
 export default async function ChampionPage() {
+  const lang = await getLang();
   const [rewards, hall] = await Promise.all([
     serverApiOrLogin<{ buybacks: Buyback[] }>('/api/v1/buybacks'),
     serverApi<{ champions: HallChampion[] }>('/api/v1/champions/hall'),
@@ -15,6 +17,7 @@ export default async function ChampionPage() {
     <ChampionView
       buybacks={rewards.buybacks}
       hall={hall.status === 200 ? hall.body.champions : []}
+      lang={lang}
     />
   );
 }

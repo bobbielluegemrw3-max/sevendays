@@ -264,6 +264,61 @@ export interface AppDict {
     hour_tpl: string; // 「{n}時間前」
     day_tpl: string; // 「{n}日前」
   };
+  /** チャンピオン(ChampionView + ChampionHero + BuybacksView + BuybackDetailView)。 */
+  champion: {
+    // ヒーロー
+    hero_note: string;
+    sound_on_aria: string;
+    sound_off_aria: string;
+    // 報酬セクション見出し
+    rewards_sub: string;
+    rewards_note_a: string; // …として <b>200 USDT</b> …
+    rewards_note_b: string;
+    // 殿堂
+    hall_sub: string;
+    hall_count_tpl: string; // 「総戴冠 {n}頭」
+    hall_sample: string;
+    filter_all: string;
+    sort_recent: string;
+    sort_oldest: string;
+    sort_name: string;
+    crowned: string; // 「戴冠」+ 日付
+    owner_label: string; // 「オーナー」+ 名
+    // リーグ
+    league_desc: string;
+    ladder_title: string;
+    class_win_tpl: string; // 「{n}勝」
+    weekly_races_v: string;
+    prize_pool_v: string;
+    retirement_v: string;
+    fanpass_v: string;
+    // 報酬一覧(BuybacksView)
+    bv_title: string;
+    bv_intro_a: string; bv_intro_bold1: string; bv_intro_b: string; bv_intro_bold2: string;
+    bv_intro_c: string; bv_intro_bold3: string; bv_intro_d: string;
+    card_day7_tpl: string; // 「Day7達成 {d}」
+    status_done: string;
+    status_progress: string;
+    card_horse_tpl: string; // 「馬 {id}」
+    count7_tpl: string; // 「{p} / 7 回」
+    detail_arrow: string;
+    empty_a: string;
+    empty_b: string;
+    // 報酬詳細(BuybackDetailView)
+    crumb: string;
+    detail_title_tpl: string; // 「チャンピオン報酬 {d}」
+    horse_link_tpl: string; // 「馬 {id} →」
+    progress_k: string;
+    of7: string; // 「 / 7 回」
+    total_received_k: string;
+    schedule_label: string;
+    due_tpl: string; // 「予定 {d}」
+    paid_tpl: string; // 「 · 支払 {t}」
+    status_paid: string;
+    status_next: string;
+    status_pending: string;
+    detail_note: string;
+  };
 }
 
 const ja: AppDict = {
@@ -488,6 +543,59 @@ const ja: AppDict = {
     min_tpl: '{n}分前',
     hour_tpl: '{n}時間前',
     day_tpl: '{n}日前',
+  },
+  champion: {
+    hero_note: 'アクティブユーザー 10,000人 到達で開幕',
+    sound_on_aria: 'サウンドをオフ',
+    sound_off_aria: 'サウンドをオン',
+    rewards_sub: 'あなたのチャンピオン報酬',
+    rewards_note_a: 'Day7を走破した馬はチャンピオンとして ',
+    rewards_note_b: ' のチャンピオン報酬を受け取り、記念NFTになります。報酬は7回の分割で、毎晩の精算時に自動で支払われます。',
+    hall_sub: 'Day7を走破した全ての馬',
+    hall_count_tpl: '総戴冠 {n}頭',
+    hall_sample: 'サンプル表示(仮データ)— 最初のチャンピオンが誕生すると、ここに実際の馬が刻まれます。',
+    filter_all: 'すべて',
+    sort_recent: '新しい順',
+    sort_oldest: '古い順',
+    sort_name: '名前順',
+    crowned: '戴冠',
+    owner_label: 'オーナー',
+    league_desc: 'Day7を走破したチャンピオン馬だけが出走できる、週次の頂上リーグ。アクティブユーザーが10,000人に到達すると開幕します。デイリーダービーとは独立した経済で運営されます。',
+    ladder_title: '7 CLASSES · 昇級ラダー',
+    class_win_tpl: '{n}勝',
+    weekly_races_v: '週1回開催・1レース最大18頭。登録されたチャンピオン馬の数に応じてレースが自動編成されます。',
+    prize_pool_v: '毎週のアイテムショップ売上の1%が賞金プールへ。勝者総取りではなく、複数の出走馬に分配されます。',
+    retirement_v: 'G1制覇、またはリーグ10走で名誉引退。引退馬は殿堂に永久に刻まれます。',
+    fanpass_v: 'マルチカメラアングルとプレミアム観戦を解放。ファン参加・ランキングなどの機能も計画中です。',
+    bv_title: 'チャンピオン報酬',
+    bv_intro_a: 'Day7を走破した馬はチャンピオンとして ',
+    bv_intro_bold1: '200 USDT',
+    bv_intro_b: ' のチャンピオン報酬を受け取ります。翌日（D+1）から ',
+    bv_intro_bold2: '7回',
+    bv_intro_c: 'に分けて自動で支払われます。7回完了で ',
+    bv_intro_bold3: '記念NFT',
+    bv_intro_d: '（Polygon / ERC-721）がミントされます。',
+    card_day7_tpl: 'Day7達成 {d}',
+    status_done: '完了',
+    status_progress: '進行中',
+    card_horse_tpl: '馬 {id}',
+    count7_tpl: '{p} / 7 回',
+    detail_arrow: '詳細 →',
+    empty_a: 'チャンピオン報酬はまだありません。',
+    empty_b: '馬がDay7を走り切るとチャンピオンとなり、報酬(200 USDT)がここに表示されます。',
+    crumb: '← チャンピオン報酬一覧',
+    detail_title_tpl: 'チャンピオン報酬 {d}',
+    horse_link_tpl: '馬 {id} →',
+    progress_k: '受取進捗 · PROGRESS',
+    of7: ' / 7 回',
+    total_received_k: '総額 · 受取済',
+    schedule_label: '支払いスケジュール · 7 PAYMENTS',
+    due_tpl: '予定 {d}',
+    paid_tpl: ' · 支払 {t}',
+    status_paid: 'PAID · 支払済',
+    status_next: '次回',
+    status_pending: '予定',
+    detail_note: '毎晩20:00の精算で1回ずつ支払われます。7回すべて完了すると、この馬の記念NFT（Polygon / ERC-721）がミントされます。',
   },
 };
 
@@ -714,6 +822,59 @@ const en: AppDict = {
     hour_tpl: '{n}h ago',
     day_tpl: '{n}d ago',
   },
+  champion: {
+    hero_note: 'Opens when active users reach 10,000',
+    sound_on_aria: 'Turn sound off',
+    sound_off_aria: 'Turn sound on',
+    rewards_sub: 'Your Champion Rewards',
+    rewards_note_a: 'A horse that clears Day 7 becomes a Champion and receives a ',
+    rewards_note_b: ' Champion Reward, then becomes a Memorial NFT. The reward is split into 7 payments, paid automatically at each nightly settlement.',
+    hall_sub: 'Every horse that cleared Day 7',
+    hall_count_tpl: '{n} crowned',
+    hall_sample: 'Sample view (placeholder data) — once the first Champion is born, real horses are engraved here.',
+    filter_all: 'All',
+    sort_recent: 'Newest',
+    sort_oldest: 'Oldest',
+    sort_name: 'By name',
+    crowned: 'Crowned',
+    owner_label: 'Owner',
+    league_desc: 'A weekly top-tier league only Champion horses (Day 7 clears) can enter. It opens when active users reach 10,000, and runs on an economy separate from the Daily Derby.',
+    ladder_title: '7 CLASSES · promotion ladder',
+    class_win_tpl: '{n} win',
+    weekly_races_v: 'Held once a week · up to 18 horses per race. Races are auto-formed based on the number of registered Champion horses.',
+    prize_pool_v: '1% of each week’s item-shop sales goes to the prize pool. Not winner-take-all — it’s split among several runners.',
+    retirement_v: 'Honorable retirement on a G1 win or 10 league starts. Retired horses are engraved in the hall forever.',
+    fanpass_v: 'Unlocks multi-camera angles and premium viewing. Fan participation and rankings are also planned.',
+    bv_title: 'Champion Reward',
+    bv_intro_a: 'A horse that clears Day 7 becomes a Champion and receives a ',
+    bv_intro_bold1: '200 USDT',
+    bv_intro_b: ' Champion Reward. From the next day (D+1) it is paid automatically in ',
+    bv_intro_bold2: '7 payments',
+    bv_intro_c: '. When all 7 are done, a ',
+    bv_intro_bold3: 'Memorial NFT',
+    bv_intro_d: ' (Polygon / ERC-721) is minted.',
+    card_day7_tpl: 'Day 7 cleared {d}',
+    status_done: 'Done',
+    status_progress: 'In progress',
+    card_horse_tpl: 'Horse {id}',
+    count7_tpl: '{p} / 7',
+    detail_arrow: 'Details →',
+    empty_a: 'No Champion Rewards yet.',
+    empty_b: 'When a horse finishes Day 7 it becomes a Champion, and its reward (200 USDT) shows here.',
+    crumb: '← Champion Rewards',
+    detail_title_tpl: 'Champion Reward {d}',
+    horse_link_tpl: 'Horse {id} →',
+    progress_k: 'Received · PROGRESS',
+    of7: ' / 7',
+    total_received_k: 'Total · received',
+    schedule_label: 'Payment schedule · 7 PAYMENTS',
+    due_tpl: 'Due {d}',
+    paid_tpl: ' · paid {t}',
+    status_paid: 'PAID',
+    status_next: 'Next',
+    status_pending: 'Scheduled',
+    detail_note: 'One payment is made each night at the 20:00 settlement. When all 7 are complete, this horse’s Memorial NFT (Polygon / ERC-721) is minted.',
+  },
 };
 
 const zh: AppDict = {
@@ -938,6 +1099,59 @@ const zh: AppDict = {
     min_tpl: '{n}分钟前',
     hour_tpl: '{n}小时前',
     day_tpl: '{n}天前',
+  },
+  champion: {
+    hero_note: '活跃用户达到 10,000 人时开赛',
+    sound_on_aria: '关闭声音',
+    sound_off_aria: '开启声音',
+    rewards_sub: '你的冠军奖励',
+    rewards_note_a: '跑完 Day7 的马成为冠军，获得 ',
+    rewards_note_b: ' 冠军奖励，并成为纪念NFT。奖励分7次发放，每晚结算时自动支付。',
+    hall_sub: '所有跑完 Day7 的马',
+    hall_count_tpl: '累计加冕 {n} 匹',
+    hall_sample: '示例展示(模拟数据)— 第一位冠军诞生后，这里会刻上真实的马。',
+    filter_all: '全部',
+    sort_recent: '最新优先',
+    sort_oldest: '最早优先',
+    sort_name: '按名称',
+    crowned: '加冕',
+    owner_label: '拥有者',
+    league_desc: '仅限跑完 Day7 的冠军马参加的每周顶级联赛。活跃用户达到 10,000 人时开幕，采用与每日德比独立的经济运营。',
+    ladder_title: '7 CLASSES · 升级阶梯',
+    class_win_tpl: '{n}胜',
+    weekly_races_v: '每周举办一次·每场最多18匹。根据已登记的冠军马数量自动编排比赛。',
+    prize_pool_v: '每周道具商店销售额的 1% 进入奖金池。并非赢家通吃，而是分配给多匹出赛马。',
+    retirement_v: '夺得 G1 或联赛出赛10场即荣誉退役。退役马将永久刻入殿堂。',
+    fanpass_v: '解锁多机位视角与高级观赛。粉丝参与、排行榜等功能也在规划中。',
+    bv_title: '冠军奖励',
+    bv_intro_a: '跑完 Day7 的马成为冠军，获得 ',
+    bv_intro_bold1: '200 USDT',
+    bv_intro_b: ' 冠军奖励。自次日（D+1）起分 ',
+    bv_intro_bold2: '7次',
+    bv_intro_c: '自动支付。7次完成后铸造 ',
+    bv_intro_bold3: '纪念NFT',
+    bv_intro_d: '（Polygon / ERC-721）。',
+    card_day7_tpl: 'Day7 达成 {d}',
+    status_done: '完成',
+    status_progress: '进行中',
+    card_horse_tpl: '马 {id}',
+    count7_tpl: '{p} / 7 次',
+    detail_arrow: '详情 →',
+    empty_a: '还没有冠军奖励。',
+    empty_b: '当马跑完 Day7 成为冠军后，奖励(200 USDT)会显示在这里。',
+    crumb: '← 冠军奖励一览',
+    detail_title_tpl: '冠军奖励 {d}',
+    horse_link_tpl: '马 {id} →',
+    progress_k: '领取进度 · PROGRESS',
+    of7: ' / 7 次',
+    total_received_k: '总额 · 已领取',
+    schedule_label: '支付计划 · 7 PAYMENTS',
+    due_tpl: '预定 {d}',
+    paid_tpl: ' · 支付 {t}',
+    status_paid: 'PAID · 已支付',
+    status_next: '下次',
+    status_pending: '预定',
+    detail_note: '每晚20:00结算时支付一次。7次全部完成后，将铸造这匹马的纪念NFT（Polygon / ERC-721）。',
   },
 };
 
@@ -1164,6 +1378,59 @@ const ko: AppDict = {
     hour_tpl: '{n}시간 전',
     day_tpl: '{n}일 전',
   },
+  champion: {
+    hero_note: '활성 사용자 10,000명 도달 시 개막',
+    sound_on_aria: '사운드 끄기',
+    sound_off_aria: '사운드 켜기',
+    rewards_sub: '나의 챔피언 보상',
+    rewards_note_a: 'Day7을 완주한 말은 챔피언으로서 ',
+    rewards_note_b: ' 의 챔피언 보상을 받고 기념 NFT가 됩니다. 보상은 7회로 나뉘어 매일 밤 정산 시 자동 지급됩니다.',
+    hall_sub: 'Day7을 완주한 모든 말',
+    hall_count_tpl: '누적 대관 {n}마리',
+    hall_sample: '샘플 표시(임시 데이터) — 첫 챔피언이 탄생하면 여기에 실제 말이 새겨집니다.',
+    filter_all: '전체',
+    sort_recent: '최신순',
+    sort_oldest: '오래된순',
+    sort_name: '이름순',
+    crowned: '대관',
+    owner_label: '소유자',
+    league_desc: 'Day7을 완주한 챔피언 말만 출전할 수 있는 주간 정상 리그. 활성 사용자가 10,000명에 도달하면 개막하며, 데일리 더비와 독립된 경제로 운영됩니다.',
+    ladder_title: '7 CLASSES · 승급 래더',
+    class_win_tpl: '{n}승',
+    weekly_races_v: '주 1회 개최 · 레이스당 최대 18마리. 등록된 챔피언 말 수에 따라 레이스가 자동 편성됩니다.',
+    prize_pool_v: '매주 아이템 상점 매출의 1%가 상금 풀로. 승자 독식이 아니라 여러 출전마에게 분배됩니다.',
+    retirement_v: 'G1 제패 또는 리그 10회 출전 시 명예 은퇴. 은퇴한 말은 전당에 영구히 새겨집니다.',
+    fanpass_v: '멀티 카메라 앵글과 프리미엄 관전을 해제. 팬 참여·랭킹 등의 기능도 계획 중입니다.',
+    bv_title: '챔피언 보상',
+    bv_intro_a: 'Day7을 완주한 말은 챔피언으로서 ',
+    bv_intro_bold1: '200 USDT',
+    bv_intro_b: ' 의 챔피언 보상을 받습니다. 다음 날(D+1)부터 ',
+    bv_intro_bold2: '7회',
+    bv_intro_c: '로 나뉘어 자동 지급됩니다. 7회 완료 시 ',
+    bv_intro_bold3: '기념 NFT',
+    bv_intro_d: '(Polygon / ERC-721)가 발행됩니다.',
+    card_day7_tpl: 'Day7 달성 {d}',
+    status_done: '완료',
+    status_progress: '진행 중',
+    card_horse_tpl: '말 {id}',
+    count7_tpl: '{p} / 7 회',
+    detail_arrow: '상세 →',
+    empty_a: '아직 챔피언 보상이 없습니다.',
+    empty_b: '말이 Day7을 완주하면 챔피언이 되고, 보상(200 USDT)이 여기에 표시됩니다.',
+    crumb: '← 챔피언 보상 목록',
+    detail_title_tpl: '챔피언 보상 {d}',
+    horse_link_tpl: '말 {id} →',
+    progress_k: '수령 진행 · PROGRESS',
+    of7: ' / 7 회',
+    total_received_k: '총액 · 수령 완료',
+    schedule_label: '지급 일정 · 7 PAYMENTS',
+    due_tpl: '예정 {d}',
+    paid_tpl: ' · 지급 {t}',
+    status_paid: 'PAID · 지급 완료',
+    status_next: '다음',
+    status_pending: '예정',
+    detail_note: '매일 밤 20:00 정산에서 1회씩 지급됩니다. 7회 모두 완료되면 이 말의 기념 NFT(Polygon / ERC-721)가 발행됩니다.',
+  },
 };
 
 const ms: AppDict = {
@@ -1388,6 +1655,59 @@ const ms: AppDict = {
     min_tpl: '{n} min lalu',
     hour_tpl: '{n} jam lalu',
     day_tpl: '{n} hari lalu',
+  },
+  champion: {
+    hero_note: 'Dibuka apabila pengguna aktif mencapai 10,000',
+    sound_on_aria: 'Matikan bunyi',
+    sound_off_aria: 'Hidupkan bunyi',
+    rewards_sub: 'Champion Reward anda',
+    rewards_note_a: 'Kuda yang melepasi Day7 menjadi Juara dan menerima Champion Reward ',
+    rewards_note_b: ' , kemudian menjadi NFT peringatan. Ganjaran dibahagi kepada 7 bayaran, dibayar automatik pada setiap penyelesaian malam.',
+    hall_sub: 'Setiap kuda yang melepasi Day7',
+    hall_count_tpl: '{n} dimahkotai',
+    hall_sample: 'Paparan sampel (data sementara) — sebaik Juara pertama lahir, kuda sebenar diukir di sini.',
+    filter_all: 'Semua',
+    sort_recent: 'Terbaru',
+    sort_oldest: 'Terlama',
+    sort_name: 'Ikut nama',
+    crowned: 'Dimahkotai',
+    owner_label: 'Pemilik',
+    league_desc: 'Liga peringkat teratas mingguan yang hanya boleh disertai kuda Juara (lepasan Day7). Ia dibuka apabila pengguna aktif mencapai 10,000, dan berjalan pada ekonomi berasingan daripada Daily Derby.',
+    ladder_title: '7 CLASSES · tangga kenaikan',
+    class_win_tpl: '{n} menang',
+    weekly_races_v: 'Diadakan sekali seminggu · sehingga 18 kuda setiap perlumbaan. Perlumbaan dibentuk automatik berdasarkan bilangan kuda Juara berdaftar.',
+    prize_pool_v: '1% daripada jualan kedai item setiap minggu masuk ke kolam hadiah. Bukan pemenang ambil semua — ia dibahagi antara beberapa peserta.',
+    retirement_v: 'Persaraan mulia apabila menang G1 atau 10 penyertaan liga. Kuda bersara diukir di dewan selama-lamanya.',
+    fanpass_v: 'Membuka sudut berbilang kamera dan tontonan premium. Penyertaan peminat dan kedudukan juga dirancang.',
+    bv_title: 'Champion Reward',
+    bv_intro_a: 'Kuda yang melepasi Day7 menjadi Juara dan menerima Champion Reward ',
+    bv_intro_bold1: '200 USDT',
+    bv_intro_b: ' . Mulai keesokan hari (D+1) ia dibayar automatik dalam ',
+    bv_intro_bold2: '7 bayaran',
+    bv_intro_c: '. Apabila kesemua 7 selesai, sebuah ',
+    bv_intro_bold3: 'NFT peringatan',
+    bv_intro_d: ' (Polygon / ERC-721) ditempa.',
+    card_day7_tpl: 'Day7 dilepasi {d}',
+    status_done: 'Selesai',
+    status_progress: 'Sedang berjalan',
+    card_horse_tpl: 'Kuda {id}',
+    count7_tpl: '{p} / 7',
+    detail_arrow: 'Butiran →',
+    empty_a: 'Belum ada Champion Reward.',
+    empty_b: 'Apabila kuda menamatkan Day7 ia menjadi Juara, dan ganjarannya (200 USDT) muncul di sini.',
+    crumb: '← Senarai Champion Reward',
+    detail_title_tpl: 'Champion Reward {d}',
+    horse_link_tpl: 'Kuda {id} →',
+    progress_k: 'Diterima · PROGRESS',
+    of7: ' / 7',
+    total_received_k: 'Jumlah · diterima',
+    schedule_label: 'Jadual bayaran · 7 PAYMENTS',
+    due_tpl: 'Dijangka {d}',
+    paid_tpl: ' · dibayar {t}',
+    status_paid: 'PAID · dibayar',
+    status_next: 'Seterusnya',
+    status_pending: 'Dijadualkan',
+    detail_note: 'Satu bayaran dibuat setiap malam pada penyelesaian 20:00. Apabila kesemua 7 selesai, NFT peringatan kuda ini (Polygon / ERC-721) ditempa.',
   },
 };
 

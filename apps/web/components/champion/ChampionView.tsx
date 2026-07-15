@@ -6,6 +6,7 @@ import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { ChampionHero } from '@/components/champion/ChampionHero';
 import { SAMPLE_CHAMPIONS } from '@/lib/champion-fixtures';
+import { APP_COPY, fill, type Lang } from '@/lib/i18n';
 import s from '../../app/champion.module.css';
 
 /**
@@ -47,17 +48,21 @@ const SAMPLE_HALL: HallChampion[] = SAMPLE_CHAMPIONS.slice(0, 8).map((h, i) => (
 const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
 const RARITY_FILTER = ['ALL', 'LEGENDARY', 'EPIC', 'RARE', 'UNCOMMON', 'COMMON'] as const;
 const rarClass = (r: string): string => (RARITIES.includes(r) ? r : 'COMMON');
-const CLASS_LADDER = ['Maiden', '1勝', '2勝', '3勝', 'G3', 'G2', 'G1'];
 
 type SortKey = 'recent' | 'oldest' | 'name';
 
 export function ChampionView({
   buybacks,
   hall,
+  lang = 'ja',
 }: {
   buybacks: Buyback[];
   hall: HallChampion[];
+  lang?: Lang;
 }) {
+  const t = APP_COPY[lang].champion;
+  // 昇級ラダー(勝数は言語別テンプレ、Maiden/G1等は競馬の固有表記で共通)
+  const CLASS_LADDER = ['Maiden', fill(t.class_win_tpl, { n: 1 }), fill(t.class_win_tpl, { n: 2 }), fill(t.class_win_tpl, { n: 3 }), 'G3', 'G2', 'G1'];
   const isSample = hall.length === 0;
   const source = isSample ? SAMPLE_HALL : hall;
 
@@ -82,7 +87,7 @@ export function ChampionView({
   return (
     <>
       {/* ① ヒーロー(ループ動画 2026-07-12: WebGL描画の録画置換) */}
-      <ChampionHero />
+      <ChampionHero lang={lang} />
 
       {/* 下段: 2カラム(左=報酬+殿堂 / 右=リーグ) */}
       <div className={s.lower}>
@@ -91,25 +96,24 @@ export function ChampionView({
           <section className={`panel ${s.rewards}`}>
             <div className={s.secTitle}>
               YOUR CHAMPION REWARDS
-              <span className={s.secSub}>あなたのチャンピオン報酬</span>
+              <span className={s.secSub}>{t.rewards_sub}</span>
             </div>
             <p className={s.rewardsNote}>
-              Day7を走破した馬はチャンピオンとして <b>200 USDT</b> のチャンピオン報酬を受け取り、記念NFTになります。
-              報酬は7回の分割で、毎晩の精算時に自動で支払われます。
+              {t.rewards_note_a}<b>200 USDT</b>{t.rewards_note_b}
             </p>
-            <BuybacksView buybacks={buybacks} />
+            <BuybacksView buybacks={buybacks} lang={lang} />
           </section>
 
           {/* ③ 殿堂 */}
           <section className="panel">
             <div className={s.secTitle}>
               HALL OF CHAMPIONS
-              <span className={s.secSub}>Day7を走破した全ての馬</span>
-              <span className={s.hallCount}>総戴冠 {source.length}頭</span>
+              <span className={s.secSub}>{t.hall_sub}</span>
+              <span className={s.hallCount}>{fill(t.hall_count_tpl, { n: source.length })}</span>
             </div>
             {isSample && (
               <div className={s.hallSample}>
-                サンプル表示(仮データ)— 最初のチャンピオンが誕生すると、ここに実際の馬が刻まれます。
+                {t.hall_sample}
               </div>
             )}
 
@@ -123,14 +127,14 @@ export function ChampionView({
                     className={rar === r ? s.rarTabOn : s.rarTab}
                     onClick={() => setRar(r)}
                   >
-                    {r === 'ALL' ? 'すべて' : r}
+                    {r === 'ALL' ? t.filter_all : r}
                   </button>
                 ))}
               </div>
               <select className={s.sortSelect} value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-                <option value="recent">新しい順</option>
-                <option value="oldest">古い順</option>
-                <option value="name">名前順</option>
+                <option value="recent">{t.sort_recent}</option>
+                <option value="oldest">{t.sort_oldest}</option>
+                <option value="name">{t.sort_name}</option>
               </select>
             </div>
 
@@ -149,8 +153,8 @@ export function ChampionView({
                       <span className={`${s.rar} ${s[`rar${rarClass(spotlight.rarity)}`]}`}>{spotlight.rarity}</span>
                     </div>
                     <div className={s.spotlightMeta}>
-                      {spotlight.cleared_at && <span>戴冠 <b>{spotlight.cleared_at}</b></span>}
-                      <span>オーナー {spotlight.owner}</span>
+                      {spotlight.cleared_at && <span>{t.crowned} <b>{spotlight.cleared_at}</b></span>}
+                      <span>{t.owner_label} {spotlight.owner}</span>
                     </div>
                   </div>
                 </div>
@@ -170,7 +174,7 @@ export function ChampionView({
                     <span className={s.typeChip}>{c.horse_type}</span>
                     <span className={s.hallOwner}>{c.owner}</span>
                   </div>
-                  {c.cleared_at && <div className={s.hallDate}>戴冠 {c.cleared_at}</div>}
+                  {c.cleared_at && <div className={s.hallDate}>{t.crowned} {c.cleared_at}</div>}
                 </div>
               ))}
             </div>
@@ -184,13 +188,12 @@ export function ChampionView({
             <span className={s.comingTag}>COMING SOON</span>
           </div>
           <p className="muted" style={{ fontSize: '0.84rem', lineHeight: 1.8 }}>
-            Day7を走破したチャンピオン馬だけが出走できる、週次の頂上リーグ。
-            アクティブユーザーが10,000人に到達すると開幕します。デイリーダービーとは独立した経済で運営されます。
+            {t.league_desc}
           </p>
 
           {/* 7クラス昇級ラダー */}
           <div className={s.ladder}>
-            <div className={s.ladderTitle}>7 CLASSES · 昇級ラダー</div>
+            <div className={s.ladderTitle}>{t.ladder_title}</div>
             {CLASS_LADDER.map((c, i) => (
               <div key={c} className={s.ladderRow}>
                 <span className={s.ladderN}>{i + 1}</span>
@@ -206,25 +209,25 @@ export function ChampionView({
             <div className={s.leagueCard}>
               <div className={s.leagueK}>WEEKLY RACES</div>
               <div className={s.leagueV}>
-                週1回開催・1レース最大18頭。登録されたチャンピオン馬の数に応じてレースが自動編成されます。
+                {t.weekly_races_v}
               </div>
             </div>
             <div className={s.leagueCard}>
               <div className={s.leagueK}>PRIZE POOL</div>
               <div className={s.leagueV}>
-                毎週のアイテムショップ売上の1%が賞金プールへ。勝者総取りではなく、複数の出走馬に分配されます。
+                {t.prize_pool_v}
               </div>
             </div>
             <div className={s.leagueCard}>
               <div className={s.leagueK}>RETIREMENT</div>
               <div className={s.leagueV}>
-                G1制覇、またはリーグ10走で名誉引退。引退馬は殿堂に永久に刻まれます。
+                {t.retirement_v}
               </div>
             </div>
             <div className={s.leagueCard}>
               <div className={s.leagueK}>FAN PASS — 3 USDT</div>
               <div className={s.leagueV}>
-                マルチカメラアングルとプレミアム観戦を解放。ファン参加・ランキングなどの機能も計画中です。
+                {t.fanpass_v}
               </div>
             </div>
           </div>

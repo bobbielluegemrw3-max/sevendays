@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { APP_COPY, type Lang } from '@/lib/i18n';
 import s from '../../app/champion.module.css';
 
 /**
@@ -13,7 +14,8 @@ import s from '../../app/champion.module.css';
  * 再生成: /dev/champion-preview を puppeteer で seek() ステップ録画 →
  * ffmpeg xfade でループ化(1920×1080キャプチャ→720pエンコード)。
  */
-export function ChampionHero() {
+export function ChampionHero({ lang = 'ja' }: { lang?: Lang }) {
+  const t = APP_COPY[lang].champion;
   // 足音(Raceページと同じ hoofbeats.mp3)。自動再生はブラウザが禁止のため
   // 既定OFF・ボタン操作(ユーザージェスチャー)でONにする
   const [soundOn, setSoundOn] = useState(false);
@@ -53,7 +55,7 @@ export function ChampionHero() {
       <button
         type="button"
         className={s.heroSound}
-        aria-label={soundOn ? 'サウンドをオフ' : 'サウンドをオン'}
+        aria-label={soundOn ? t.sound_on_aria : t.sound_off_aria}
         onClick={() => setSoundOn((v) => !v)}
       >
         {soundOn ? '♪ SOUND ON' : '♪ SOUND OFF'}
@@ -62,7 +64,7 @@ export function ChampionHero() {
         <div className={s.heroKicker}>WEEKLY COMPETITION</div>
         <div className={s.heroTitle}>CHAMPION LEAGUE</div>
         <div className={s.heroComing}>COMING SOON</div>
-        <div className={s.heroNote}>アクティブユーザー 10,000人 到達で開幕</div>
+        <div className={s.heroNote}>{t.hero_note}</div>
       </div>
     </div>
   );

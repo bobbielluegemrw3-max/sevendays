@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { localDateTime } from '@/lib/format-time';
+import { APP_COPY, fill, type Lang } from '@/lib/i18n';
 import s from '../app/buybacks.module.css';
 
 /* ============================================================================
@@ -21,7 +22,8 @@ function money(v: string): string {
   return Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v;
 }
 
-export function BuybackDetailView({ buyback }: { buyback: BuybackDetail }) {
+export function BuybackDetailView({ buyback, lang = 'ja' }: { buyback: BuybackDetail; lang?: Lang }) {
+  const t = APP_COPY[lang].champion;
   const payments = [...buyback.payments].sort((a, b) => a.payment_number - b.payment_number);
   const paidCount = payments.filter((p) => p.status === 'PAID').length;
   const paidAmt = payments.filter((p) => p.status === 'PAID').reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
@@ -32,11 +34,11 @@ export function BuybackDetailView({ buyback }: { buyback: BuybackDetail }) {
     <div className={s.wrap}>
       {/* ヘッダ */}
       <div>
-        <Link href="/champion" className={s.crumb}>← チャンピオン報酬一覧</Link>
+        <Link href="/champion" className={s.crumb}>{t.crumb}</Link>
         <div className={s.titleRow}>
-          <span className={s.title}>チャンピオン報酬 {buyback.day7_clear_date}</span>
-          <span className={`${s.badge} ${done ? s.stDone : s.stProgress}`}>{done ? '完了' : '進行中'}</span>
-          <Link href={`/horses/${buyback.horse_id}`} className={s.hidLink}>馬 {buyback.horse_id.slice(0, 10)} →</Link>
+          <span className={s.title}>{fill(t.detail_title_tpl, { d: buyback.day7_clear_date })}</span>
+          <span className={`${s.badge} ${done ? s.stDone : s.stProgress}`}>{done ? t.status_done : t.status_progress}</span>
+          <Link href={`/horses/${buyback.horse_id}`} className={s.hidLink}>{fill(t.horse_link_tpl, { id: buyback.horse_id.slice(0, 10) })}</Link>
         </div>
       </div>
 
@@ -44,11 +46,11 @@ export function BuybackDetailView({ buyback }: { buyback: BuybackDetail }) {
       <section className={s.hero}>
         <div className={s.heroTop}>
           <div>
-            <div className={s.heroK}>受取進捗 · PROGRESS</div>
-            <div className={s.heroNum}>{paidCount}<small> / 7 回</small></div>
+            <div className={s.heroK}>{t.progress_k}</div>
+            <div className={s.heroNum}>{paidCount}<small>{t.of7}</small></div>
           </div>
           <div className={s.heroRight}>
-            <div className={s.heroRightK}>総額 · 受取済</div>
+            <div className={s.heroRightK}>{t.total_received_k}</div>
             <div className={s.heroAmt}>{money(String(paidAmt))} <span>/ {money(buyback.total_amount)}</span></div>
           </div>
         </div>
@@ -57,7 +59,7 @@ export function BuybackDetailView({ buyback }: { buyback: BuybackDetail }) {
 
       {/* 支払いスケジュール */}
       <div>
-        <div className={s.secLabel}>支払いスケジュール · 7 PAYMENTS</div>
+        <div className={s.secLabel}>{t.schedule_label}</div>
         <div className={s.pays}>
           {payments.map((p) => {
             const isPaid = p.status === 'PAID';
@@ -67,16 +69,16 @@ export function BuybackDetailView({ buyback }: { buyback: BuybackDetail }) {
                 <span className={`${s.pNum} ${isPaid ? s.pNumPaid : ''}`}>{p.payment_number}</span>
                 <div className={s.pBody}>
                   <div className={s.pAmt}>{money(p.amount)} <small>USDT</small></div>
-                  <div className={s.pDue}>予定 {p.due_date}{p.paid_at ? ` · 支払 ${localDateTime(p.paid_at)}` : ''}</div>
+                  <div className={s.pDue}>{fill(t.due_tpl, { d: p.due_date })}{p.paid_at ? fill(t.paid_tpl, { t: localDateTime(p.paid_at) }) : ''}</div>
                 </div>
                 <span className={`${s.pStatus} ${isPaid ? s.pStatusPaid : isNext ? s.pStatusNext : s.pStatusPending}`}>
-                  {isPaid ? 'PAID · 支払済' : isNext ? '次回' : p.status === 'PENDING' ? '予定' : p.status}
+                  {isPaid ? t.status_paid : isNext ? t.status_next : p.status === 'PENDING' ? t.status_pending : p.status}
                 </span>
               </div>
             );
           })}
         </div>
-        <div className={s.note}>毎晩20:00の精算で1回ずつ支払われます。7回すべて完了すると、この馬の記念NFT（Polygon / ERC-721）がミントされます。</div>
+        <div className={s.note}>{t.detail_note}</div>
       </div>
     </div>
   );

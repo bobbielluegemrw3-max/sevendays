@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { APP_COPY, fill, type Lang } from '@/lib/i18n';
 import s from '../app/buybacks.module.css';
 
 /* ============================================================================
@@ -20,13 +21,13 @@ function shortId(id: string): string {
   return id.length > 13 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id;
 }
 
-export function BuybacksView({ buybacks }: { buybacks: Buyback[] }) {
+export function BuybacksView({ buybacks, lang = 'ja' }: { buybacks: Buyback[]; lang?: Lang }) {
+  const t = APP_COPY[lang].champion;
   return (
     <div className={s.wrap}>
-      <div className={s.h1}>チャンピオン報酬</div>
+      <div className={s.h1}>{t.bv_title}</div>
       <div className={s.intro}>
-        Day7を走破した馬はチャンピオンとして <b>200 USDT</b> のチャンピオン報酬を受け取ります。翌日（D+1）から <b>7回</b>に分けて自動で支払われます。
-        7回完了で <b>記念NFT</b>（Polygon / ERC-721）がミントされます。
+        {t.bv_intro_a}<b>{t.bv_intro_bold1}</b>{t.bv_intro_b}<b>{t.bv_intro_bold2}</b>{t.bv_intro_c}<b>{t.bv_intro_bold3}</b>{t.bv_intro_d}
       </div>
 
       {buybacks.length > 0 ? (
@@ -37,22 +38,22 @@ export function BuybacksView({ buybacks }: { buybacks: Buyback[] }) {
             return (
               <Link key={b.id} href={`/champion/${b.id}`} className={s.card}>
                 <div className={s.cardTop}>
-                  <span className={s.cardTitle}>Day7達成 {b.day7_clear_date}</span>
-                  <span className={`${s.badge} ${done ? s.stDone : s.stProgress}`}>{done ? '完了' : '進行中'}</span>
-                  <span className={s.cardHid}>馬 {shortId(b.horse_id)}</span>
+                  <span className={s.cardTitle}>{fill(t.card_day7_tpl, { d: b.day7_clear_date })}</span>
+                  <span className={`${s.badge} ${done ? s.stDone : s.stProgress}`}>{done ? t.status_done : t.status_progress}</span>
+                  <span className={s.cardHid}>{fill(t.card_horse_tpl, { id: shortId(b.horse_id) })}</span>
                 </div>
                 <div className={s.cardProg}>
-                  <span className={s.progLabel}>{paid} / 7 回</span>
+                  <span className={s.progLabel}>{fill(t.count7_tpl, { p: paid })}</span>
                   <span className={s.bar}><span style={{ width: `${(paid / 7) * 100}%` }} /></span>
                   <span className={s.cardTotal}>{money(b.total_amount)}<small>USDT</small></span>
-                  <span className={s.cardGo}>詳細 →</span>
+                  <span className={s.cardGo}>{t.detail_arrow}</span>
                 </div>
               </Link>
             );
           })}
         </div>
       ) : (
-        <div className={s.empty}>チャンピオン報酬はまだありません。<br />馬がDay7を走り切るとチャンピオンとなり、報酬(200 USDT)がここに表示されます。</div>
+        <div className={s.empty}>{t.empty_a}<br />{t.empty_b}</div>
       )}
     </div>
   );
