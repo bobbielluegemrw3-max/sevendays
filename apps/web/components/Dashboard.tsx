@@ -1,5 +1,5 @@
 import { serverApi, serverApiOrLogin } from '@/lib/server-api';
-import { getLang } from '@/lib/i18n';
+import { getLang } from '@/lib/i18n-server';
 import type { TradeSettings } from '@/components/TradeAutoControls';
 import {
   DashboardView,

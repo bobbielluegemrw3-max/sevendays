@@ -11,7 +11,7 @@ import s from '../app/dashboard.module.css';
 
 /** テンプレ文字列の {name} を値で埋める(多言語の語順差を吸収)。 */
 function fill(tpl: string, vars: Record<string, string | number>): string {
-  return tpl.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
+  return tpl.replace(/\{(\w+)\}/g, (_m: string, k: string) => String(vars[k] ?? ''));
 }
 
 /* ============================================================================

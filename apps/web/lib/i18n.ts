@@ -1,10 +1,15 @@
-import { cookies } from 'next/headers';
 import { LANDING_LANGS, LANG_LABEL, isLang, type Lang } from '@/lib/landing-i18n';
 
 /* ============================================================================
  * アプリ内(ログイン後)多言語化の土台。ランディングと同じ仕組みを流用する:
  * cookie `sdd_lang`(LanguageSwitcher が書き込む)を唯一の言語ソースとし、
- * サーバーで getLang() で読み、辞書 APP_COPY[lang] を各ビューへ prop で渡す。
+ * サーバーで getLang()(lib/i18n-server.ts)で読み、辞書 APP_COPY[lang] を
+ * 各ビューへ prop で渡す。
+ *
+ * 重要: このファイルはクライアントコンポーネント(例 LogoutButton)からも import
+ * される。ゆえに next/headers 等のサーバー専用APIは絶対に持ち込まない(持ち込むと
+ * クライアントバンドルに混入してビルド失敗)。cookie を読む getLang() はサーバー
+ * 専用の別ファイル lib/i18n-server.ts に分離してある。
  *
  * 方針: 新ライブラリは入れない(landing-i18n と一貫)。ページを1枚ずつ翻訳する
  * たびに AppDict にセクション(nav / dash / …)を足していく。JA は原文を正典、
@@ -14,12 +19,6 @@ import { LANDING_LANGS, LANG_LABEL, isLang, type Lang } from '@/lib/landing-i18n
  * ========================================================================== */
 
 export { LANDING_LANGS as APP_LANGS, LANG_LABEL, isLang, type Lang };
-
-/** サーバー側で選択言語を得る。cookie 未設定・不正値は日本語。 */
-export async function getLang(): Promise<Lang> {
-  const v = (await cookies()).get('sdd_lang')?.value;
-  return isLang(v) ? v : 'ja';
-}
 
 export interface AppDict {
   common: {
