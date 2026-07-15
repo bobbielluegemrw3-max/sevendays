@@ -1,4 +1,6 @@
 import { serverApiOrLogin } from '@/lib/server-api';
+import { getLang } from '@/lib/i18n-server';
+import { APP_COPY } from '@/lib/i18n';
 import { LedgerView } from '@/components/LedgerView';
 import s from '../races.module.css';
 
@@ -9,16 +11,16 @@ import s from '../races.module.css';
  * 率は表示しない(誰でも算出できる)。検証は各レースのコミット・リビールページへ。
  */
 export default async function LedgerPage() {
+  const lang = await getLang();
+  const t = APP_COPY[lang].ledger;
   await serverApiOrLogin('/api/v1/me');
   return (
     <div className={s.wrap}>
-      <div className={s.h1}>台帳 · LEDGER</div>
+      <div className={s.h1}>{t.title}</div>
       <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 0.4rem', lineHeight: 1.8 }}>
-        毎晩のレースと売買の全記録を、そのまま公開しています。ユーザーは匿名ID表示です。
-        各日の「全馬の結果と検証」から、公開シードによる再計算(コミット・リビール)で
-        結果が操作不能であることを誰でも確認できます。
+        {t.intro}
       </p>
-      <LedgerView />
+      <LedgerView lang={lang} />
     </div>
   );
 }

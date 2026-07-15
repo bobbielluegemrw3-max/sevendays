@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/client-api';
+import { APP_COPY, fill, type Lang } from '@/lib/i18n';
 import s from '../app/races.module.css';
 
 /**
@@ -39,16 +40,8 @@ interface LedgerTrade {
   seller_anon: string | null;
 }
 
-const DOW = ['日', '月', '火', '水', '木', '金', '土'] as const;
-const WEATHER_JA: Record<string, string> = { SUNNY: '晴れ', CLOUDY: '曇り', RAIN: '雨', STORM: '嵐' };
-const TRACK_JA: Record<string, string> = { FAST: '高速', GOOD: '良', SOFT: '稍重', HEAVY: '不良' };
-const SURFACE_JA: Record<string, string> = { TURF: '芝', DIRT: 'ダート' };
-
-function fmtJa(iso: string): string {
-  const [y, m, d] = iso.split('-');
-  return `${y}年${Number(m)}月${Number(d)}日`;
-}
-
+/* CSV(downloadCsv)のヘッダー・値は多言語化しない — 分析用の安定コードとして
+ * 英語のまま維持する(誰でも同じ列で率を再計算できるため)。UI表示のみ辞書化。 */
 function downloadCsv(filename: string, rows: (string | number | null)[][]): void {
   const esc = (v: string | number | null): string => {
     const t = v === null ? '' : String(v);
@@ -63,7 +56,12 @@ function downloadCsv(filename: string, rows: (string | number | null)[][]): void
   URL.revokeObjectURL(a.href);
 }
 
-export function LedgerView() {
+export function LedgerView({ lang = 'ja' }: { lang?: Lang }) {
+  const t = APP_COPY[lang].ledger;
+  const fmtFull = (iso: string): string => {
+    const [y, m, d] = iso.split('-');
+    return fill(t.date_full_tpl, { y: y!, m: Number(m), d: Number(d) });
+  };
   const [days, setDays] = useState<LedgerDay[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [trades, setTrades] = useState<LedgerTrade[] | null>(null);
@@ -122,8 +120,8 @@ export function LedgerView() {
         ...results.map((x) => [
           'RACE', x.final_rank, x.horse_name, x.day, x.final_score, x.is_burned ? 'BURNED' : 'SURVIVED', null, null, null,
         ]),
-        ...(trades ?? []).map((t) => [
-          t.is_mint ? 'MINT' : 'P2P', null, t.horse_name, t.day, null, 'SETTLED', t.price, t.buyer_anon, t.seller_anon,
+        ...(trades ?? []).map((tr) => [
+          tr.is_mint ? 'MINT' : 'P2P', null, tr.horse_name, tr.day, null, 'SETTLED', tr.price, tr.buyer_anon, tr.seller_anon,
         ]),
       ]);
     } finally {
@@ -132,10 +130,10 @@ export function LedgerView() {
   }, [selected, day, trades]);
 
   if (days === null) {
-    return <div className={s.empty}>台帳を読み込み中…</div>;
+    return <div className={s.empty}>{t.loading}</div>;
   }
   if (days.length === 0) {
-    return <div className={s.empty}>確定したレースはまだありません。最初のレース確定後、ここに全記録が公開されます。</div>;
+    return <div className={s.empty}>{t.empty_no_races}</div>;
   }
 
   // カレンダー
@@ -153,12 +151,12 @@ export function LedgerView() {
     <div className={s.recStack}>
       <div className={s.cal}>
         <div className={s.calHead}>
-          <button type="button" className={s.calNav} disabled={!prev} onClick={() => prev && setViewMonth(prev)} aria-label="前の月">‹</button>
-          <span className={s.calMonth}>{y}年{m}月</span>
-          <button type="button" className={s.calNav} disabled={!next} onClick={() => next && setViewMonth(next)} aria-label="次の月">›</button>
+          <button type="button" className={s.calNav} disabled={!prev} onClick={() => prev && setViewMonth(prev)} aria-label={t.prev_month_aria}>‹</button>
+          <span className={s.calMonth}>{fill(t.month_tpl, { y, m })}</span>
+          <button type="button" className={s.calNav} disabled={!next} onClick={() => next && setViewMonth(next)} aria-label={t.next_month_aria}>›</button>
         </div>
         <div className={s.calGrid}>
-          {DOW.map((d) => <div key={d} className={s.calDow}>{d}</div>)}
+          {t.dow.map((d, i) => <div key={i} className={s.calDow}>{d}</div>)}
           {cells.map((c, i) => {
             if (!c) return <div key={`e${i}`} className={s.calCell} />;
             const has = monthDays.has(c.iso);
@@ -180,63 +178,63 @@ export function LedgerView() {
         <>
           <div className={s.digest}>
             <div className={s.digestTop}>
-              <span className={s.digestDate}>{fmtJa(day.date)}</span>
+              <span className={s.digestDate}>{fmtFull(day.date)}</span>
               {day.weather && (
                 <span className={s.digestDow}>
-                  {WEATHER_JA[day.weather] ?? day.weather} / {TRACK_JA[day.track_condition ?? ''] ?? day.track_condition} / {SURFACE_JA[day.surface ?? ''] ?? day.surface}
+                  {t.weather[day.weather] ?? day.weather} / {t.track[day.track_condition ?? ''] ?? day.track_condition} / {t.surface[day.surface ?? ''] ?? day.surface}
                 </span>
               )}
             </div>
             <div className={s.tally}>
-              <div className={s.tStat}><span className={s.tStatN}>{day.participants.toLocaleString('en-US')}</span><span className={s.tStatK}>出走</span></div>
-              <div className={`${s.tStat} ${s.tSrv}`}><span className={s.tStatN}>{day.survived.toLocaleString('en-US')}</span><span className={s.tStatK}>生存</span></div>
-              <div className={`${s.tStat} ${s.tBurn}`}><span className={s.tStatN}>{day.burned.toLocaleString('en-US')}</span><span className={s.tStatK}>BURN</span></div>
-              <div className={`${s.tStat} ${s.tDay7}`}><span className={s.tStatN}>{day.day7.toLocaleString('en-US')}</span><span className={s.tStatK}>DAY7 走破</span></div>
-              <div className={`${s.tStat} ${s.tTrade}`}><span className={s.tStatN}>{day.matched.toLocaleString('en-US')}</span><span className={s.tStatK}>成約</span></div>
-              <div className={`${s.tStat} ${s.tTrade}`}><span className={s.tStatN}>{Number(day.matched_volume).toLocaleString('en-US')}</span><span className={s.tStatK}>成約総額 USDT</span></div>
-              <div className={s.tStat}><span className={s.tStatN}>{day.mints.toLocaleString('en-US')}</span><span className={s.tStatK}>新規発行</span></div>
+              <div className={s.tStat}><span className={s.tStatN}>{day.participants.toLocaleString('en-US')}</span><span className={s.tStatK}>{t.t_participants}</span></div>
+              <div className={`${s.tStat} ${s.tSrv}`}><span className={s.tStatN}>{day.survived.toLocaleString('en-US')}</span><span className={s.tStatK}>{t.t_survived}</span></div>
+              <div className={`${s.tStat} ${s.tBurn}`}><span className={s.tStatN}>{day.burned.toLocaleString('en-US')}</span><span className={s.tStatK}>{t.t_burn}</span></div>
+              <div className={`${s.tStat} ${s.tDay7}`}><span className={s.tStatN}>{day.day7.toLocaleString('en-US')}</span><span className={s.tStatK}>{t.t_day7}</span></div>
+              <div className={`${s.tStat} ${s.tTrade}`}><span className={s.tStatN}>{day.matched.toLocaleString('en-US')}</span><span className={s.tStatK}>{t.t_matched}</span></div>
+              <div className={`${s.tStat} ${s.tTrade}`}><span className={s.tStatN}>{Number(day.matched_volume).toLocaleString('en-US')}</span><span className={s.tStatK}>{t.t_matched_vol}</span></div>
+              <div className={s.tStat}><span className={s.tStatN}>{day.mints.toLocaleString('en-US')}</span><span className={s.tStatK}>{t.t_mints}</span></div>
               {day.burn_rate && (
                 <div className={`${s.tStat} ${s.tBurn}`}>
                   <span className={s.tStatN}>{(Number(day.burn_rate) * 100).toFixed(2)}%</span>
-                  <span className={s.tStatK}>採用BURN率(シード由来)</span>
+                  <span className={s.tStatK}>{t.t_burn_rate}</span>
                 </div>
               )}
             </div>
             <div className={s.digestStep}>
               <button type="button" className={s.stepBtn} onClick={() => void downloadDaily()} disabled={busy}>
-                {busy ? '生成中…' : 'この日のCSV'}
+                {busy ? t.csv_generating : t.csv_daily}
               </button>
-              <button type="button" className={s.stepBtn} onClick={downloadMonthly}>月次CSV</button>
-              <Link className={s.stepBtn} href={`/races/${day.race_id}`}>全馬の結果と検証 →</Link>
+              <button type="button" className={s.stepBtn} onClick={downloadMonthly}>{t.csv_monthly}</button>
+              <Link className={s.stepBtn} href={`/races/${day.race_id}`}>{t.verify_link}</Link>
             </div>
           </div>
 
           <div>
-            <div className={s.secLabel}>成約の記録(匿名) · SETTLED TRADES</div>
+            <div className={s.secLabel}>{t.trades_label}</div>
             {trades === null ? (
-              <div className={s.empty}>読み込み中…</div>
+              <div className={s.empty}>{t.trades_loading}</div>
             ) : trades.length === 0 ? (
-              <div className={s.empty}>この日の成約はありません。</div>
+              <div className={s.empty}>{t.trades_empty}</div>
             ) : (
               <div className={s.recList}>
-                {trades.slice(0, 30).map((t, i) => (
+                {trades.slice(0, 30).map((tr, i) => (
                   <div key={i} className={s.recRow}>
                     <div className={s.recBody}>
-                      <div className={s.recName}>{t.horse_name}</div>
+                      <div className={s.recName}>{tr.horse_name}</div>
                       <div className={s.recSub}>
-                        {t.is_mint
-                          ? <>新規発行(DAY0) → {t.buyer_anon}</>
-                          : <>{t.seller_anon} → {t.buyer_anon}(DAY{t.day})</>}
-                        {' — '}<b className={s.recGold}>{t.price} USDT</b>
+                        {tr.is_mint
+                          ? <>{t.mint_label_day0} → {tr.buyer_anon}</>
+                          : <>{tr.seller_anon} → {tr.buyer_anon}{fill(t.p2p_day_tpl, { day: tr.day })}</>}
+                        {' — '}<b className={s.recGold}>{tr.price} USDT</b>
                       </div>
                     </div>
-                    <span className={`${s.recBadge} ${t.is_mint ? s.recBadgeMint : s.recBadgeCyan}`}>
-                      {t.is_mint ? '新規発行' : 'P2P'}
+                    <span className={`${s.recBadge} ${tr.is_mint ? s.recBadgeMint : s.recBadgeCyan}`}>
+                      {tr.is_mint ? t.badge_mint : 'P2P'}
                     </span>
                   </div>
                 ))}
                 {trades.length > 30 && (
-                  <div className={s.empty}>ほか {trades.length - 30} 件 — 全件は「この日のCSV」に含まれます。</div>
+                  <div className={s.empty}>{fill(t.more_tpl, { n: trades.length - 30 })}</div>
                 )}
               </div>
             )}

@@ -444,6 +444,42 @@ export interface AppDict {
     // /support/map デモ注記
     demo_note: string;
   };
+  /** 透明性台帳(LedgerView + /ledger page)。
+   *  注: CSV のヘッダー・値(date/RACE/MINT/BURNED 等)は多言語化しない — 分析用の
+   *  安定コードとして英語のまま維持する(誰でも同じ列で率を再計算できるため)。 */
+  ledger: {
+    title: string;
+    intro: string;
+    loading: string;
+    empty_no_races: string;
+    dow: readonly [string, string, string, string, string, string, string];
+    month_tpl: string; // 「{y}年{m}月」
+    date_full_tpl: string; // 「{y}年{m}月{d}日」
+    prev_month_aria: string;
+    next_month_aria: string;
+    weather: Record<string, string>;
+    track: Record<string, string>;
+    surface: Record<string, string>;
+    t_participants: string;
+    t_survived: string;
+    t_burn: string;
+    t_day7: string;
+    t_matched: string;
+    t_matched_vol: string;
+    t_mints: string;
+    t_burn_rate: string;
+    csv_daily: string;
+    csv_generating: string;
+    csv_monthly: string;
+    verify_link: string;
+    trades_label: string;
+    trades_loading: string;
+    trades_empty: string;
+    mint_label_day0: string; // 「新規発行(DAY0)」
+    p2p_day_tpl: string; // 「(DAY{day})」
+    badge_mint: string;
+    more_tpl: string; // 「ほか {n} 件 — 全件は「この日のCSV」に含まれます。」
+  };
 }
 
 const ja: AppDict = {
@@ -832,6 +868,39 @@ const ja: AppDict = {
     confirm_btn: 'この位置で確定する',
     err_place: '配置に失敗しました。',
     demo_note: 'サンプル組織を表示中(仮データ・約60名)— 招待した仲間が増えると、ここは自動的にあなたの実際の組織に切り替わります。',
+  },
+  ledger: {
+    title: '台帳 · LEDGER',
+    intro: '毎晩のレースと売買の全記録を、そのまま公開しています。ユーザーは匿名ID表示です。各日の「全馬の結果と検証」から、公開シードによる再計算(コミット・リビール)で結果が操作不能であることを誰でも確認できます。',
+    loading: '台帳を読み込み中…',
+    empty_no_races: '確定したレースはまだありません。最初のレース確定後、ここに全記録が公開されます。',
+    dow: ['日', '月', '火', '水', '木', '金', '土'],
+    month_tpl: '{y}年{m}月',
+    date_full_tpl: '{y}年{m}月{d}日',
+    prev_month_aria: '前の月',
+    next_month_aria: '次の月',
+    weather: { SUNNY: '晴れ', CLOUDY: '曇り', RAIN: '雨', STORM: '嵐' },
+    track: { FAST: '高速', GOOD: '良', SOFT: '稍重', HEAVY: '不良' },
+    surface: { TURF: '芝', DIRT: 'ダート' },
+    t_participants: '出走',
+    t_survived: '生存',
+    t_burn: 'BURN',
+    t_day7: 'DAY7 走破',
+    t_matched: '成約',
+    t_matched_vol: '成約総額 USDT',
+    t_mints: '新規発行',
+    t_burn_rate: '採用BURN率(シード由来)',
+    csv_daily: 'この日のCSV',
+    csv_generating: '生成中…',
+    csv_monthly: '月次CSV',
+    verify_link: '全馬の結果と検証 →',
+    trades_label: '成約の記録(匿名) · SETTLED TRADES',
+    trades_loading: '読み込み中…',
+    trades_empty: 'この日の成約はありません。',
+    mint_label_day0: '新規発行(DAY0)',
+    p2p_day_tpl: '(DAY{day})',
+    badge_mint: '新規発行',
+    more_tpl: 'ほか {n} 件 — 全件は「この日のCSV」に含まれます。',
   },
 };
 
@@ -1222,6 +1291,39 @@ const en: AppDict = {
     err_place: 'Placement failed.',
     demo_note: 'Showing a sample organization (placeholder data, ~60 people) — as your invited friends grow, this switches automatically to your real organization.',
   },
+  ledger: {
+    title: 'LEDGER',
+    intro: 'Every night’s races and trades are published exactly as recorded. Users appear as anonymous IDs. From each day’s “All results & verification,” anyone can re-compute from the public seed (commit–reveal) and confirm results can’t be tampered with.',
+    loading: 'Loading the ledger…',
+    empty_no_races: 'No finalized races yet. After the first race is finalized, all records are published here.',
+    dow: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+    month_tpl: '{m}/{y}',
+    date_full_tpl: '{m}/{d}/{y}',
+    prev_month_aria: 'Previous month',
+    next_month_aria: 'Next month',
+    weather: { SUNNY: 'Sunny', CLOUDY: 'Cloudy', RAIN: 'Rain', STORM: 'Storm' },
+    track: { FAST: 'Fast', GOOD: 'Good', SOFT: 'Soft', HEAVY: 'Heavy' },
+    surface: { TURF: 'Turf', DIRT: 'Dirt' },
+    t_participants: 'Entrants',
+    t_survived: 'Survived',
+    t_burn: 'BURN',
+    t_day7: 'DAY7 cleared',
+    t_matched: 'Settled',
+    t_matched_vol: 'Settled volume USDT',
+    t_mints: 'New mints',
+    t_burn_rate: 'Applied BURN rate (from seed)',
+    csv_daily: 'This day’s CSV',
+    csv_generating: 'Generating…',
+    csv_monthly: 'Monthly CSV',
+    verify_link: 'All results & verification →',
+    trades_label: 'Settled trades (anonymous) · SETTLED TRADES',
+    trades_loading: 'Loading…',
+    trades_empty: 'No settled trades this day.',
+    mint_label_day0: 'New mint (DAY0)',
+    p2p_day_tpl: ' (DAY{day})',
+    badge_mint: 'New mint',
+    more_tpl: '{n} more — the full set is in “This day’s CSV.”',
+  },
 };
 
 const zh: AppDict = {
@@ -1610,6 +1712,39 @@ const zh: AppDict = {
     confirm_btn: '确认此位置',
     err_place: '安置失败。',
     demo_note: '正在显示示例组织(模拟数据·约60人)— 当你邀请的伙伴增多时，这里会自动切换为你的真实组织。',
+  },
+  ledger: {
+    title: '账本 · LEDGER',
+    intro: '每晚的比赛与买卖全记录，原样公开。用户以匿名ID显示。通过每天的「全马结果与验证」，任何人都能用公开种子重新计算(承诺-揭示)，确认结果无法被操纵。',
+    loading: '正在加载账本…',
+    empty_no_races: '还没有已确定的比赛。首场比赛确定后，全部记录会公开在这里。',
+    dow: ['日', '一', '二', '三', '四', '五', '六'],
+    month_tpl: '{y}年{m}月',
+    date_full_tpl: '{y}年{m}月{d}日',
+    prev_month_aria: '上一月',
+    next_month_aria: '下一月',
+    weather: { SUNNY: '晴', CLOUDY: '多云', RAIN: '雨', STORM: '暴风雨' },
+    track: { FAST: '快速', GOOD: '良', SOFT: '稍重', HEAVY: '不良' },
+    surface: { TURF: '草地', DIRT: '泥地' },
+    t_participants: '出赛',
+    t_survived: '存活',
+    t_burn: 'BURN',
+    t_day7: 'DAY7 跑完',
+    t_matched: '成交',
+    t_matched_vol: '成交总额 USDT',
+    t_mints: '新铸造',
+    t_burn_rate: '采用BURN率(源自种子)',
+    csv_daily: '当日CSV',
+    csv_generating: '生成中…',
+    csv_monthly: '月度CSV',
+    verify_link: '全马结果与验证 →',
+    trades_label: '成交记录(匿名) · SETTLED TRADES',
+    trades_loading: '加载中…',
+    trades_empty: '当日没有成交。',
+    mint_label_day0: '新铸造(DAY0)',
+    p2p_day_tpl: '(DAY{day})',
+    badge_mint: '新铸造',
+    more_tpl: '另有 {n} 条 — 全部包含在「当日CSV」中。',
   },
 };
 
@@ -2000,6 +2135,39 @@ const ko: AppDict = {
     err_place: '배치에 실패했습니다.',
     demo_note: '샘플 조직을 표시 중(임시 데이터·약 60명) — 초대한 동료가 늘어나면 여기는 자동으로 당신의 실제 조직으로 전환됩니다.',
   },
+  ledger: {
+    title: '원장 · LEDGER',
+    intro: '매일 밤의 레이스와 매매 전 기록을 그대로 공개합니다. 사용자는 익명 ID로 표시됩니다. 매일의 「전체 결과와 검증」에서 공개 시드로 재계산(커밋-리빌)하여 결과가 조작 불가능함을 누구나 확인할 수 있습니다.',
+    loading: '원장을 불러오는 중…',
+    empty_no_races: '아직 확정된 레이스가 없습니다. 첫 레이스가 확정되면 모든 기록이 여기에 공개됩니다.',
+    dow: ['일', '월', '화', '수', '목', '금', '토'],
+    month_tpl: '{y}년 {m}월',
+    date_full_tpl: '{y}년 {m}월 {d}일',
+    prev_month_aria: '이전 달',
+    next_month_aria: '다음 달',
+    weather: { SUNNY: '맑음', CLOUDY: '흐림', RAIN: '비', STORM: '폭풍' },
+    track: { FAST: '고속', GOOD: '양호', SOFT: '약간 무거움', HEAVY: '불량' },
+    surface: { TURF: '잔디', DIRT: '더트' },
+    t_participants: '출전',
+    t_survived: '생존',
+    t_burn: 'BURN',
+    t_day7: 'DAY7 완주',
+    t_matched: '체결',
+    t_matched_vol: '체결 총액 USDT',
+    t_mints: '신규 발행',
+    t_burn_rate: '적용 BURN율(시드 유래)',
+    csv_daily: '이 날의 CSV',
+    csv_generating: '생성 중…',
+    csv_monthly: '월간 CSV',
+    verify_link: '전체 결과와 검증 →',
+    trades_label: '체결 기록(익명) · SETTLED TRADES',
+    trades_loading: '불러오는 중…',
+    trades_empty: '이 날의 체결이 없습니다.',
+    mint_label_day0: '신규 발행(DAY0)',
+    p2p_day_tpl: '(DAY{day})',
+    badge_mint: '신규 발행',
+    more_tpl: '외 {n}건 — 전체는 「이 날의 CSV」에 포함됩니다.',
+  },
 };
 
 const ms: AppDict = {
@@ -2388,6 +2556,39 @@ const ms: AppDict = {
     confirm_btn: 'Sahkan tempat ini',
     err_place: 'Penempatan gagal.',
     demo_note: 'Memaparkan organisasi sampel (data sementara, ~60 orang) — apabila rakan yang anda jemput bertambah, ini bertukar automatik kepada organisasi sebenar anda.',
+  },
+  ledger: {
+    title: 'Lejar · LEDGER',
+    intro: 'Setiap perlumbaan dan dagangan malam diterbitkan tepat seperti direkodkan. Pengguna dipaparkan sebagai ID tanpa nama. Daripada “Semua keputusan & pengesahan” setiap hari, sesiapa boleh mengira semula daripada benih awam (commit–reveal) dan mengesahkan keputusan tidak boleh diganggu.',
+    loading: 'Memuatkan lejar…',
+    empty_no_races: 'Belum ada perlumbaan dimuktamadkan. Selepas perlumbaan pertama dimuktamadkan, semua rekod diterbitkan di sini.',
+    dow: ['Ah', 'Is', 'Se', 'Ra', 'Kh', 'Ju', 'Sa'],
+    month_tpl: '{m}/{y}',
+    date_full_tpl: '{d}/{m}/{y}',
+    prev_month_aria: 'Bulan sebelumnya',
+    next_month_aria: 'Bulan seterusnya',
+    weather: { SUNNY: 'Cerah', CLOUDY: 'Mendung', RAIN: 'Hujan', STORM: 'Ribut' },
+    track: { FAST: 'Laju', GOOD: 'Baik', SOFT: 'Lembut', HEAVY: 'Berat' },
+    surface: { TURF: 'Rumput', DIRT: 'Tanah' },
+    t_participants: 'Peserta',
+    t_survived: 'Terselamat',
+    t_burn: 'BURN',
+    t_day7: 'DAY7 dilepasi',
+    t_matched: 'Dipadankan',
+    t_matched_vol: 'Volum dipadankan USDT',
+    t_mints: 'Tempaan baharu',
+    t_burn_rate: 'Kadar BURN digunakan (daripada benih)',
+    csv_daily: 'CSV hari ini',
+    csv_generating: 'Menjana…',
+    csv_monthly: 'CSV bulanan',
+    verify_link: 'Semua keputusan & pengesahan →',
+    trades_label: 'Dagangan diselesaikan (tanpa nama) · SETTLED TRADES',
+    trades_loading: 'Memuatkan…',
+    trades_empty: 'Tiada dagangan diselesaikan hari ini.',
+    mint_label_day0: 'Tempaan baharu (DAY0)',
+    p2p_day_tpl: ' (DAY{day})',
+    badge_mint: 'Tempaan baharu',
+    more_tpl: '{n} lagi — set penuh ada dalam “CSV hari ini.”',
   },
 };
 
