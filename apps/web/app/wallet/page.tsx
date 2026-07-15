@@ -2,6 +2,13 @@ import { serverApi, serverApiOrLogin } from '@/lib/server-api';
 import { WalletView, type Wallet, type DepositInfo } from '@/components/WalletView';
 import type { HistoryEntry } from '@/components/WalletHistory';
 
+// /wallet は cookie を使う動的レンダリングなので env は実行時に読まれる。
+// ビルド時インライン化を避けるためブラケット記法。'true'/'1'(大小文字・空白許容)で ON。
+function onrampEnabledFromEnv(): boolean {
+  const v = (process.env['ONRAMP_ENABLED'] ?? '').trim().toLowerCase();
+  return v === 'true' || v === '1';
+}
+
 export default async function WalletPage() {
   const wallet = await serverApiOrLogin<Wallet>('/api/v1/wallet');
   const [deposit, history] = await Promise.all([
@@ -13,6 +20,7 @@ export default async function WalletPage() {
       wallet={wallet}
       deposit={deposit.status === 200 ? deposit.body : null}
       history={history.status === 200 ? history.body.entries : []}
+      onrampEnabled={onrampEnabledFromEnv()}
     />
   );
 }

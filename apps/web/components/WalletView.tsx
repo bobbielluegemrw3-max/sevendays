@@ -10,12 +10,10 @@ import s from '../app/wallet.module.css';
  * 表示数値は各 API の値のみ(架空値なし)。
  *
  * OnrampGuide(USDT入手ガイド)の表示ゲート:
- *   env `ONRAMP_ENABLED === 'true'` のときだけ入金アドレス直下に出す。
- *   deposit.chain_id は DEFAULT_CHAIN 定数なので常に 'POLYGON_POS' を返し、
- *   testnet/mainnet を判別できない。テストネット/デバッグ運用中に「実 USDT を
- *   買って送金」を出すと、ユーザーが実 USDT を(watcher 未稼働の)アドレスに送って
- *   失う誤送金リスクがある。ゆえに既定 OFF。メインネットで入金を本番稼働させる
- *   タイミング(または今すぐ表示したいとき)に web サービスの env を true にする。
+ *   env `ONRAMP_ENABLED` を page.tsx(動的サーバー)で読み onrampEnabled prop で受ける。
+ *   true のときだけ入金アドレス直下に出す。deposit.chain_id は DEFAULT_CHAIN 定数なので
+ *   常に 'POLYGON_POS' を返し testnet/mainnet を判別できないため、明示フラグで制御する。
+ *   ※ env はビルド時インライン化を避けるため page.tsx でブラケット記法で実行時読取。
  * ========================================================================== */
 
 export interface Wallet { available: string; locked: string }
@@ -26,10 +24,9 @@ function money(v: string): string {
 }
 
 export function WalletView({
-  wallet, deposit, history,
-}: { wallet: Wallet; deposit: DepositInfo | null; history: HistoryEntry[] }) {
+  wallet, deposit, history, onrampEnabled = false,
+}: { wallet: Wallet; deposit: DepositInfo | null; history: HistoryEntry[]; onrampEnabled?: boolean }) {
   const hasLocked = Number(wallet.locked) > 0;
-  const onrampEnabled = process.env.ONRAMP_ENABLED === 'true';
 
   return (
     <div className={s.wrap}>
