@@ -69,12 +69,15 @@ function buildNav(horses: OwnedHorse[], id: string): PagerNav | undefined {
 
 export default async function HorseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const result = await serverApi<HorseDetail>(`/api/v1/horses/${id}`);
+  // 詳細とページャ用一覧を並列取得(2026-07-16 §D: 直列2往復の解消)。
+  const [result, list] = await Promise.all([
+    serverApi<HorseDetail>(`/api/v1/horses/${id}`),
+    serverApi<{ horses: OwnedHorse[] }>('/api/v1/horses'),
+  ]);
   if (result.status !== 200) notFound();
 
   // 前/次ページャ用のデータ。取得失敗しても詳細は表示する(矢印なし)。
   let nav: PagerNav | undefined;
-  const list = await serverApi<{ horses: OwnedHorse[] }>('/api/v1/horses');
   if (list.status === 200) nav = buildNav(list.body.horses, id);
 
   return <HorseDetailView horse={result.body} nav={nav} />;

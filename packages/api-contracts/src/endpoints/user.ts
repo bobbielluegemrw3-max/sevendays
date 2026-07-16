@@ -9,7 +9,7 @@ import {
   recommendedTrainingV1,
   renderNotification,
 } from '@sevendays/domain';
-import { ensureUserAccounts, getBalance, withdrawalFundLock } from '@sevendays/ledger';
+import { ensureUserAccounts, withdrawalFundLock } from '@sevendays/ledger';
 import {
   cancelPurchaseSession,
   createPurchaseSession,
@@ -49,10 +49,27 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     path: '/api/v1/wallet',
     auth: 'user',
     handler: async (ctx) => {
-      const accounts = await ensureUserAccounts(ctx.client, ctx.userId);
+      // 1往復の高速経路(2026-07-16 §D: 旧 ensure+残高2回=直列5往復≈275ms)。
+      // 口座行はプロビジョニング後は必ず2行存在する — 欠けている初回だけ
+      // ensureUserAccounts で作成してから読み直す。
+      const readBalances = () =>
+        ctx.client.query<{ account_type: string; balance: string }>(
+          `select a.account_type::text as account_type, coalesce(b.balance, 0)::text as balance
+           from ledger_accounts a
+           left join ledger_account_balances b on b.account_id = a.id
+           where a.owner_type = 'USER' and a.owner_id = $1
+             and a.account_type in ('USER_AVAILABLE', 'USER_LOCKED')`,
+          [ctx.userId],
+        );
+      let rows = (await readBalances()).rows;
+      if (rows.length < 2) {
+        await ensureUserAccounts(ctx.client, ctx.userId);
+        rows = (await readBalances()).rows;
+      }
+      const byType = new Map(rows.map((r) => [r.account_type, r.balance]));
       return {
-        available: await getBalance(ctx.client, accounts.available),
-        locked: await getBalance(ctx.client, accounts.locked),
+        available: byType.get('USER_AVAILABLE') ?? '0',
+        locked: byType.get('USER_LOCKED') ?? '0',
         currency: 'USDT',
       };
     },
@@ -147,26 +164,26 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       // trained_for_next_race mirrors the POST /training target: today's race
       // unless today's batch already completed (then tonight's training was
       // recorded against tomorrow's race).
+      // 効力日の判定はCTEで本体クエリに畳み込み(2026-07-16 §D: 往復1本削減)。
       const today = batchDateFor(new Date());
-      const completedToday = await ctx.client.query(
-        `select 1 from batch_runs where batch_date = $1 and status = 'COMPLETED'`,
-        [today],
-      );
-      const effectiveRaceDate = completedToday.rows[0] ? addDays(today, 1) : today;
       // listing: 'SMART' | 'MANUAL' | null — 厩舎UIが「出品中(手動=今夜走らない)」を
       // 事実どおり表示するため(Decision 087監査)。limitは100→500(全件表示UIと整合)。
       const rows = await ctx.client.query(
-        `select h.id, h.name, h.status::text as status, h.current_day, h.horse_type::text as horse_type,
+        `with eff as (
+           select case when exists (select 1 from batch_runs where batch_date = $2 and status = 'COMPLETED')
+                       then ($2::date + 1) else $2::date end as race_date
+         )
+         select h.id, h.name, h.status::text as status, h.current_day, h.horse_type::text as horse_type,
                 h.rarity::text as rarity, h.condition::text as condition, h.fatigue::text as fatigue,
                 h.dna_hash, h.gifted_at::text as gifted_at,
                 exists(
                   select 1 from training_sessions t
-                  where t.horse_id = h.id and t.effective_race_date = $2
+                  where t.horse_id = h.id and t.effective_race_date = (select race_date from eff)
                 ) as trained_for_next_race,
                 (select l.source::text from market_listings l
                  where l.horse_id = h.id and l.status = 'LISTED' limit 1) as listing
          from horses h where h.owner_user_id = $1 order by h.created_at desc limit 500`,
-        [ctx.userId, effectiveRaceDate],
+        [ctx.userId, today],
       );
       // 隠し演出ルック(EASTER_EGG_PLAN.md)— 真偽フラグ/色種別のみ付与。条件は秘匿。
       const looks = await computeHiddenLooks(ctx.client, rows.rows.map((r) => r.id as string), ctx.userId);
@@ -196,14 +213,14 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       // 詳細ページが「出品中=今夜走らない」の事実と7日間の物語を表示できるように。
       // trained_for_next_race(2026-07-14): 一覧と同じ効力日規則 — 調教済みなら
       // 詳細ページの調教フォームを「調教完了」表示に切り替えるため。
+      // 効力日の判定はCTEで本体クエリに畳み込み(2026-07-16 §D: 往復1本削減)。
       const today = batchDateFor(new Date());
-      const completedToday = await ctx.client.query(
-        `select 1 from batch_runs where batch_date = $1 and status = 'COMPLETED'`,
-        [today],
-      );
-      const effectiveRaceDate = completedToday.rows[0] ? addDays(today, 1) : today;
       const rows = await ctx.client.query(
-        `select id, name, status::text as status, current_day, horse_type::text as horse_type,
+        `with eff as (
+           select case when exists (select 1 from batch_runs where batch_date = $3 and status = 'COMPLETED')
+                       then ($3::date + 1) else $3::date end as race_date
+         )
+         select id, name, status::text as status, current_day, horse_type::text as horse_type,
                 rarity::text as rarity, dna_hash, dna_modifier::text as dna_modifier,
                 ability_json, condition::text as condition, fatigue::text as fatigue,
                 mint_seed_hash, horse_generation_version, gifted_at::text as gifted_at,
@@ -211,10 +228,10 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
                  where l.horse_id = horses.id and l.status = 'LISTED' limit 1) as listing,
                 exists(
                   select 1 from training_sessions t
-                  where t.horse_id = horses.id and t.effective_race_date = $3
+                  where t.horse_id = horses.id and t.effective_race_date = (select race_date from eff)
                 ) as trained_for_next_race
          from horses where id = $1 and owner_user_id = $2`,
-        [ctx.params.id, ctx.userId, effectiveRaceDate],
+        [ctx.params.id, ctx.userId, today],
       );
       if (!rows.rows[0]) throw new ApiError('NOT_FOUND', 'Horse not found');
       // 隠し演出ルック(EASTER_EGG_PLAN.md)— 詳細ページ用の真偽フラグ。

@@ -60,11 +60,30 @@
 クライアント配下でレンダリングされるサーバーファイルも同罪(BuybacksView事例)。
 検証法 = `next build` 後に `.next/static/chunks/*.js` を韓国語文字列(例「이용 가이드」)でgrepしてゼロ件を確認。
 
+### DB往復数の削減(2026-07-16 実施 — 上記「次の一手」の実行)
+
+**実測(本番DBに読み取り専用で計測。クエリ自体は軽く、時間=純粋に往復回数×RTT)**:
+
+| シーケンス | 改善前 | 改善後 | 中身 |
+|---|---|---|---|
+| GET /horses | 直列9往復・1272ms* | **直列2往復・298ms*** | batch確認1+馬一覧1+隠しルック7 → CTE畳み込み+ルック7判定をUNION ALLで1クエリ化 |
+| GET /wallet | 直列5往復・688ms* | **1往復・142ms*** | 口座ensure3+残高2 → 口座×残高をLEFT JOINの1クエリ(口座行が無い初回のみensureにフォールバック) |
+
+\* ローカル計測(RTT 137ms)。Render Singapore(RTT≈55ms)換算では /horses ≈500ms→110ms。
+
+**ページ取得層の直列await解消(同日)**: /horses(4本直列→Promise.all)・/horses/[id](2本直列→並列)・/wallet(wallet先行→全並列)・Dashboard(me先行→全並列)。GET /horses/:id もCTE畳み込みで1往復削減。
+
+**ダッシュボードの直列往復(概算)**: 認証1+me1+並列max(/horses=9)+結果1=**12往復≈660ms** → 認証1+並列max(/horses=2)+結果1=**4往復≈220ms**(Render上のDB時間)。
+
+**接続ウォーム化**: pgプールの既定idleTimeout(10秒)で閑散時に接続が破棄され、次の表示がTCP+TLS+認証の確立を払っていた → `WEB_DB_POOL_IDLE_MS`(既定300000=5分)+keepAliveを`apps/web/lib/db.ts`に追加。
+
+**再発防止則**:
+- エンドポイント内で `await client.query` を直列に並べない — 判定はCTEで本体クエリに畳み込むか、複数判定はUNION ALLで1往復にまとめる(hidden/looks.tsが実例)。
+- ページ取得層の `serverApi` はデータ依存がない限り必ず `Promise.all`(401リダイレクトは並列内からも例外として伝播するので安全)。
+- 測り方の実例: scratchpadの `measure-page-queries.mjs` / `measure-after.mjs`(セッションプーラー直結でシーケンス再現)。
+
 ### 後回しにした候補(オーナー判断 2026-07-16・効果が見込める順)
-1. **DBデータ取得のプロファイリング(推奨・次の一手)**
-   - スケルトン表示時間の実体はサーバーのデータ取得(Render Singapore → Supabase ap-south-1、往復~50ms×クエリ数)。
-   - まず主要ページ(dashboard / horses / market)の1表示あたりのクエリ本数と直列awaitの有無を実測し、`Promise.all` 化・クエリ統合・プロセス内キャッシュ(A-1/A-4と同じ手法)を該当箇所に適用する。
-   - 測り方: 各pageの取得層にタイミングログを仮挿入 or Supabaseダッシュボードのquery statsで上位クエリを確認。
+1. ~~DBデータ取得のプロファイリング~~ → **実施済み(上記)**。残り: /races/[id] 詳細系のawait点検・Supabase query statsでの上位クエリ定点観測。
 2. **残りのクライアントJS(gzip 270KB)の内訳精査**
    - 最大チャンク ~246KB(raw)の中身を確認し、重い依存(例: 馬アート生成・チャート類)があればページ単位の dynamic import に分割。
    - 測り方: `.next/static/chunks` をサイズ順に並べ、中身の由来を文字列で特定(本書D実施済み欄と同じ手法)。

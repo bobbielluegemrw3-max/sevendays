@@ -76,6 +76,18 @@ const BURN_DROP_ITEMS = [
   'memento_horseshoe', 'memorial_wreath', 'legacy_mane', 'spirit_roar', 'stardust_sand',
 ];
 
+/** 統合クエリの1行(kind別に使うカラムだけ埋まる)。 */
+interface LookRow {
+  kind: 'NIGHT' | 'GOLDEN' | 'AURA' | 'REVENGE' | 'DOM' | 'MINT' | 'COLOR';
+  horse_id: string;
+  day7: boolean | null;
+  blue: string | null;
+  yellow: string | null;
+  green: string | null;
+  red: string | null;
+  black: string | null;
+}
+
 export async function computeHiddenLooks(
   client: SqlClient,
   horseIds: readonly string[],
@@ -86,113 +98,132 @@ export async function computeHiddenLooks(
   if (horseIds.length === 0) return out;
   for (const id of horseIds) out.set(id, EMPTY());
 
-  // ---- NIGHT: Day0新規発行の元予約の確定時刻(MYT)が秘密の1分 ----
-  const night = await client.query<{ horse_id: string }>(
-    `select a.horse_id
-     from ownership_assignments a
-     join purchase_sessions ps on ps.id = a.purchase_session_id
-     where a.horse_id = any($1) and a.market_listing_id is null
-       and extract(hour   from (ps.created_at at time zone 'UTC') + interval '8 hours') = $2
-       and extract(minute from (ps.created_at at time zone 'UTC') + interval '8 hours') = $3`,
-    [horseIds, NIGHT_HOUR_MYT, NIGHT_MINUTE_MYT],
-  );
-  for (const r of night.rows) out.get(r.horse_id)!.nightVariant = true;
-
-  // ---- GOLDEN: 生存レースの commit_hash が秘密接頭辞。かつ「その夜 viewer が
-  //      所有していた」(snapshot の所有者)ときだけ = 他人所有中の生存を化けさせない ----
-  const golden = await client.query<{ horse_id: string }>(
-    `select distinct rr.horse_id
-     from race_results rr
-     join races r on r.id = rr.race_id
-     join randomness_commits rc on rc.id = r.seed_commit_id
-     join race_participant_snapshots s on s.race_id = rr.race_id and s.horse_id = rr.horse_id
-     where rr.horse_id = any($1) and rr.is_burned = false
-       and lower(rc.commit_hash) like $2 and s.owner_user_id = $3`,
-    [horseIds, `${GOLDEN_HASH_PREFIX}%`, viewerUserId],
-  );
-  for (const r of golden.rows) out.get(r.horse_id)!.goldenStar = true;
-
-  // ---- AURA: viewer が「毎日自分で」7日間調教し切ったチャンピオン ----
-  const aura = await client.query<{ id: string }>(
-    `select h.id
-     from horses h
-     where h.id = any($1) and h.status in ('DAY7_CLEARED', 'MEMORIALIZED')
-       and (select count(distinct t.effective_race_date) from training_sessions t
-            where t.horse_id = h.id and t.user_id = $2) >= 7`,
-    [horseIds, viewerUserId],
-  );
-  for (const r of aura.rows) out.get(r.id)!.goldenAura = true;
-
-  // ---- REVENGE: 惜敗(Day5+ BURN)直後24hの予約から生まれた馬 → 炎 ----
-  const revenge = await client.query<{ horse_id: string; day7: boolean }>(
-    `select a.horse_id,
-            (h.status in ('DAY7_CLEARED', 'MEMORIALIZED')) as day7
-     from ownership_assignments a
-     join purchase_sessions ps on ps.id = a.purchase_session_id
-     join horses h on h.id = a.horse_id
-     where a.horse_id = any($1) and a.market_listing_id is null
-       and exists (
-         select 1
-         from horse_burns hb
-         join race_participant_snapshots s on s.race_id = hb.race_id and s.horse_id = hb.horse_id
-         where hb.owner_user_id_at_snapshot = h.owner_user_id
-           and s.current_day >= $2
-           and hb.created_at <= ps.created_at
-           and hb.created_at > ps.created_at - interval '24 hours'
-       )`,
-    [horseIds, REVENGE_MIN_BURN_DAY],
-  );
-  for (const r of revenge.rows) {
-    const cur = out.get(r.horse_id)!;
-    cur.revengeFlame = true;
-    if (r.day7) cur.revengeGold = true;
-  }
-
-  // ---- MILESTONE: 生まれ日(MYT)が7日、または通算Day0新規発行の通番が節目 ----
-  const dom = await client.query<{ id: string }>(
-    `select id from horses
-     where id = any($1)
-       and extract(day from (created_at at time zone 'UTC') + interval '8 hours') = $2`,
-    [horseIds, MILESTONE_BIRTH_DOM],
-  );
-  for (const r of dom.rows) out.get(r.id)!.milestone = true;
-
-  const mintIdx = await client.query<{ id: string }>(
-    `with mints as (
+  // 7判定を単一ラウンドトリップに統合(2026-07-16 §D: Web↔DBは1往復≈55msのため、
+  // 直列7クエリ=馬一覧APIの支配的コストだった)。各CTEは旧実装の各クエリと同一。
+  const rows = await client.query<LookRow>(
+    `with
+     -- NIGHT: Day0新規発行の元予約の確定時刻(MYT)が秘密の1分
+     night as (
+       select a.horse_id
+       from ownership_assignments a
+       join purchase_sessions ps on ps.id = a.purchase_session_id
+       where a.horse_id = any($1) and a.market_listing_id is null
+         and extract(hour   from (ps.created_at at time zone 'UTC') + interval '8 hours') = $2
+         and extract(minute from (ps.created_at at time zone 'UTC') + interval '8 hours') = $3
+     ),
+     -- GOLDEN: 生存レースの commit_hash が秘密接頭辞。かつ「その夜 viewer が
+     -- 所有していた」(snapshot の所有者)ときだけ = 他人所有中の生存を化けさせない
+     golden as (
+       select distinct rr.horse_id
+       from race_results rr
+       join races r on r.id = rr.race_id
+       join randomness_commits rc on rc.id = r.seed_commit_id
+       join race_participant_snapshots s on s.race_id = rr.race_id and s.horse_id = rr.horse_id
+       where rr.horse_id = any($1) and rr.is_burned = false
+         and lower(rc.commit_hash) like $4 and s.owner_user_id = $5
+     ),
+     -- AURA: viewer が「毎日自分で」7日間調教し切ったチャンピオン
+     aura as (
+       select h.id as horse_id
+       from horses h
+       where h.id = any($1) and h.status in ('DAY7_CLEARED', 'MEMORIALIZED')
+         and (select count(distinct t.effective_race_date) from training_sessions t
+              where t.horse_id = h.id and t.user_id = $5) >= 7
+     ),
+     -- REVENGE: 惜敗(Day5+ BURN)直後24hの予約から生まれた馬 → 炎
+     revenge as (
+       select a.horse_id,
+              (h.status in ('DAY7_CLEARED', 'MEMORIALIZED')) as day7
+       from ownership_assignments a
+       join purchase_sessions ps on ps.id = a.purchase_session_id
+       join horses h on h.id = a.horse_id
+       where a.horse_id = any($1) and a.market_listing_id is null
+         and exists (
+           select 1
+           from horse_burns hb
+           join race_participant_snapshots s on s.race_id = hb.race_id and s.horse_id = hb.horse_id
+           where hb.owner_user_id_at_snapshot = h.owner_user_id
+             and s.current_day >= $6
+             and hb.created_at <= ps.created_at
+             and hb.created_at > ps.created_at - interval '24 hours'
+         )
+     ),
+     -- MILESTONE: 生まれ日(MYT)が7日
+     dom as (
+       select id as horse_id from horses
+       where id = any($1)
+         and extract(day from (created_at at time zone 'UTC') + interval '8 hours') = $7
+     ),
+     -- MILESTONE: 通算Day0新規発行の通番が節目
+     mints as (
        select h.id, row_number() over (order by h.created_at, h.id) as n
        from horses h
        join ownership_assignments a on a.horse_id = h.id and a.market_listing_id is null
+     ),
+     mintidx as (
+       select id as horse_id from mints where id = any($1) and n = any($8)
+     ),
+     -- COLOR(原色ルート): その馬での「適性一致アイテム×一致条件×生存」累積
+     color as (
+       select iu.horse_id,
+         count(*) filter (where iu.item_key = any($9)  and r.weather in ('RAIN','STORM'))  as blue,
+         count(*) filter (where iu.item_key = any($10) and r.weather = 'SUNNY')            as yellow,
+         count(*) filter (where iu.item_key = any($11) and (r.surface = 'TURF' or r.track_condition in ('SOFT','HEAVY'))) as green,
+         count(*) filter (where iu.item_key = any($12) and r.weather = 'STORM')            as red,
+         count(*) filter (where iu.item_key = any($13))                                    as black
+       from item_usages iu
+       join races r on r.id = iu.race_id
+       where iu.horse_id = any($1) and iu.status = 'SETTLED' and iu.settled_outcome = 'SURVIVED'
+         and iu.user_id = $5
+       group by iu.horse_id
      )
-     select id from mints where id = any($1) and n = any($2)`,
-    [horseIds, MILESTONE_MINT_INDEXES],
+     select 'NIGHT' as kind, horse_id, null::boolean as day7,
+            null::bigint as blue, null::bigint as yellow, null::bigint as green,
+            null::bigint as red, null::bigint as black from night
+     union all select 'GOLDEN', horse_id, null, null, null, null, null, null from golden
+     union all select 'AURA', horse_id, null, null, null, null, null, null from aura
+     union all select 'REVENGE', horse_id, day7, null, null, null, null, null from revenge
+     union all select 'DOM', horse_id, null, null, null, null, null, null from dom
+     union all select 'MINT', horse_id, null, null, null, null, null, null from mintidx
+     union all select 'COLOR', horse_id, null, blue, yellow, green, red, black from color`,
+    [
+      horseIds, NIGHT_HOUR_MYT, NIGHT_MINUTE_MYT,
+      `${GOLDEN_HASH_PREFIX}%`, viewerUserId, REVENGE_MIN_BURN_DAY,
+      MILESTONE_BIRTH_DOM, MILESTONE_MINT_INDEXES,
+      RAIN_ITEMS, SUN_ITEMS, TURF_MUD_ITEMS, STORM_EPIC_ITEMS, BURN_DROP_ITEMS,
+    ],
   );
-  for (const r of mintIdx.rows) out.get(r.id)!.milestone = true;
 
-  // ---- COLOR(原色ルート): その馬での「適性一致アイテム×一致条件×生存」累積 ----
-  const color = await client.query<{
-    horse_id: string; blue: number; yellow: number; green: number; red: number; black: number;
-  }>(
-    `select iu.horse_id,
-       count(*) filter (where iu.item_key = any($2) and r.weather in ('RAIN','STORM'))   as blue,
-       count(*) filter (where iu.item_key = any($3) and r.weather = 'SUNNY')             as yellow,
-       count(*) filter (where iu.item_key = any($4) and (r.surface = 'TURF' or r.track_condition in ('SOFT','HEAVY'))) as green,
-       count(*) filter (where iu.item_key = any($5) and r.weather = 'STORM')             as red,
-       count(*) filter (where iu.item_key = any($6))                                     as black
-     from item_usages iu
-     join races r on r.id = iu.race_id
-     where iu.horse_id = any($1) and iu.status = 'SETTLED' and iu.settled_outcome = 'SURVIVED'
-       and iu.user_id = $7
-     group by iu.horse_id`,
-    [horseIds, RAIN_ITEMS, SUN_ITEMS, TURF_MUD_ITEMS, STORM_EPIC_ITEMS, BURN_DROP_ITEMS, viewerUserId],
-  );
-  for (const r of color.rows) {
-    const cur = out.get(r.horse_id)!;
-    // 優先度: rarer first
-    if (Number(r.black) >= COLOR_NEED.black) cur.colorVariant = 'black';
-    else if (Number(r.red) >= COLOR_NEED.red) cur.colorVariant = 'red';
-    else if (Number(r.blue) >= COLOR_NEED.blue) cur.colorVariant = 'blue';
-    else if (Number(r.yellow) >= COLOR_NEED.yellow) cur.colorVariant = 'yellow';
-    else if (Number(r.green) >= COLOR_NEED.green) cur.colorVariant = 'green';
+  for (const r of rows.rows) {
+    const cur = out.get(r.horse_id);
+    if (!cur) continue;
+    switch (r.kind) {
+      case 'NIGHT':
+        cur.nightVariant = true;
+        break;
+      case 'GOLDEN':
+        cur.goldenStar = true;
+        break;
+      case 'AURA':
+        cur.goldenAura = true;
+        break;
+      case 'REVENGE':
+        cur.revengeFlame = true;
+        if (r.day7) cur.revengeGold = true;
+        break;
+      case 'DOM':
+      case 'MINT':
+        cur.milestone = true;
+        break;
+      case 'COLOR':
+        // 優先度: rarer first
+        if (Number(r.black) >= COLOR_NEED.black) cur.colorVariant = 'black';
+        else if (Number(r.red) >= COLOR_NEED.red) cur.colorVariant = 'red';
+        else if (Number(r.blue) >= COLOR_NEED.blue) cur.colorVariant = 'blue';
+        else if (Number(r.yellow) >= COLOR_NEED.yellow) cur.colorVariant = 'yellow';
+        else if (Number(r.green) >= COLOR_NEED.green) cur.colorVariant = 'green';
+        break;
+    }
   }
 
   return out;

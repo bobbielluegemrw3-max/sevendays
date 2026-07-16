@@ -5,11 +5,14 @@ import type { HiddenBadge } from '@/components/HiddenBadges';
 interface Session { id: string; status: string }
 
 export default async function StablePage() {
-  const { horses } = await serverApiOrLogin<{ horses: StableHorse[] }>('/api/v1/horses');
-  const me = await serverApi<{ stable_name?: string | null }>('/api/v1/me');
-  const sessionsRes = await serverApi<{ sessions: Session[] }>('/api/v1/purchase');
+  // 4本を並列取得(2026-07-16 §D: 直列4往復→1往復ぶんの待ちに短縮)。
   // 隠し実績バッジ(EASTER_EGG_PLAN.md)— 取得失敗しても厩舎は表示する。
-  const badgesRes = await serverApi<{ badges: HiddenBadge[] }>('/api/v1/hidden-badges');
+  const [{ horses }, me, sessionsRes, badgesRes] = await Promise.all([
+    serverApiOrLogin<{ horses: StableHorse[] }>('/api/v1/horses'),
+    serverApi<{ stable_name?: string | null }>('/api/v1/me'),
+    serverApi<{ sessions: Session[] }>('/api/v1/purchase'),
+    serverApi<{ badges: HiddenBadge[] }>('/api/v1/hidden-badges'),
+  ]);
   const pendingCount =
     sessionsRes.status === 200
       ? sessionsRes.body.sessions.filter((s) => s.status === 'PENDING_ASSIGNMENT').length

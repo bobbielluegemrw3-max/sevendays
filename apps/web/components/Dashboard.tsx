@@ -20,8 +20,10 @@ interface RaceResultRow { horse_id: string; final_score: string; final_rank: num
  *  hands plain data to the presentational DashboardView. */
 export default async function Dashboard() {
   const lang = await getLang();
-  const me = await serverApiOrLogin<Me>('/api/v1/me');
-  const [walletR, horsesR, buffR, sessionsR, racesR, buybacksR, notifR, tradeR] = await Promise.all([
+  // me も並列に含める(2026-07-16 §D: 直列1往復の解消。401時のredirectは
+  // Promise.all内からも例外として伝播するので挙動は従来と同じ)。
+  const [me, walletR, horsesR, buffR, sessionsR, racesR, buybacksR, notifR, tradeR] = await Promise.all([
+    serverApiOrLogin<Me>('/api/v1/me'),
     serverApi<DashWallet>('/api/v1/wallet'),
     serverApi<{ horses: DashHorse[] }>('/api/v1/horses'),
     serverApi<DashBuff>('/api/v1/revenge-buffs/current'),

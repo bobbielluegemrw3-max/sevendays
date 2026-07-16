@@ -18,7 +18,16 @@ function getPool(): Pool {
     // its own dedicated connection.
     // スパイク対策(2026-07-12): インスタンスのプラン/台数に合わせて環境変数で調整
     // (Supabaseプーラー側の上限と合わせること)。既定10。
-    pool = new Pool({ connectionString, max: Number(process.env.WEB_DB_POOL_MAX ?? 10) });
+    pool = new Pool({
+      connectionString,
+      max: Number(process.env.WEB_DB_POOL_MAX ?? 10),
+      // 体感速度(2026-07-16 §D): pgの既定idleTimeout=10秒だと閑散時に接続が
+      // 毎回破棄され、次の表示がTCP+TLS+認証(DBがムンバイ=数往復)を払う。
+      // 5分保持+keepaliveでウォーム接続を維持(プーラー側上限に対しては
+      // max=WEB_DB_POOL_MAX が上限なので変わらない)。
+      idleTimeoutMillis: Number(process.env.WEB_DB_POOL_IDLE_MS ?? 300000),
+      keepAlive: true,
+    });
   }
   return pool;
 }

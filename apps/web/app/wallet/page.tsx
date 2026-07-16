@@ -8,8 +8,9 @@ import { getLang } from '@/lib/i18n-server';
 interface WalletHorse { status: string; current_day: number }
 
 export default async function WalletPage() {
-  const wallet = await serverApiOrLogin<Wallet>('/api/v1/wallet');
-  const [deposit, history, horsesR, lang] = await Promise.all([
+  // 全部を1段の並列取得に(2026-07-16 §D: wallet先行の直列1往復を解消)。
+  const [wallet, deposit, history, horsesR, lang] = await Promise.all([
+    serverApiOrLogin<Wallet>('/api/v1/wallet'),
     serverApi<DepositInfo>('/api/v1/wallet/deposit', { method: 'POST' }),
     serverApi<{ entries: HistoryEntry[] }>('/api/v1/wallet/history'),
     serverApi<{ horses: WalletHorse[] }>('/api/v1/horses'),
