@@ -162,6 +162,7 @@
 
 /* ---- ④ 資産(KPI 3タイル) -------------------------------------------------- */
 .assets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.totalRow { grid-column: 1 / -1; min-width: 0; }
 .kpi { border-radius: 14px; padding: 13px 15px; text-decoration: none; display: block; min-width: 0; }
 .kpi :global(.k) { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; }
 .kpi :global(.v) { font-family: var(--font-display); font-weight: 700; font-size: 22px; margin-top: 3px; font-variant-numeric: tabular-nums; }

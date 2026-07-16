@@ -5,6 +5,7 @@ import { NftHorseArt } from '@/components/NftHorseArt';
 import { PwaSetupTile } from '@/components/PwaSetupTile';
 import { PromoRedeemForm } from '@/components/PromoRedeemForm';
 import { TradeAutoTile, TradeModeModal, type TradeSettings } from '@/components/TradeAutoControls';
+import { TotalAssetsCard } from '@/components/TotalAssetsCard';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { APP_COPY, type Lang, type AppDict } from '@/lib/i18n';
 import s from '../app/dashboard.module.css';
@@ -199,8 +200,13 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
       {/* ===== ③.5 引換コード(Decision 095: セミナー特典馬) ===== */}
       <PromoRedeemForm t={APP_COPY[lang].promo} />
 
-      {/* ===== ④ 資産(残高 / 評価額 / Revenge Buff) ===== */}
+      {/* ===== ④ 資産(総資産 / 残高 / 評価額 / Revenge Buff) ===== */}
       <section className={s.assets}>
+        {wallet ? (
+          <div className={s.totalRow}>
+            <TotalAssetsCard available={wallet.available} locked={wallet.locked} stableValue={stableValue} t={t} />
+          </div>
+        ) : null}
         <Link href="/wallet" className={`${s.kpi} ${s.kpiBal}`}>
           <div className="k">{t.balance_k}</div>
           <div className="v">{wallet ? money(wallet.available) : '—'}</div>

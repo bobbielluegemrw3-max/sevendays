@@ -66,6 +66,12 @@ export interface AppDict {
     balance_locked_tpl: string; // 「 · ロック中 {v}」
     stable_val_k: string;
     stable_val_s_tpl: string; // 「USDT · {n}頭の現在価値」
+    // 総資産カード(2026-07-16: 残高+評価額+ロック=総資産。/dashboardと/wallet共用)
+    total_k: string;
+    total_bal: string;
+    total_stable: string;
+    total_locked: string;
+    total_note: string;
     buff_none: string;
     buff_active_s: string;
     buff_none_s: string;
@@ -555,6 +561,11 @@ const ja: AppDict = {
     balance_locked_tpl: ' · ロック中 {v}',
     stable_val_k: '厩舎の評価額',
     stable_val_s_tpl: 'USDT · {n}頭の現在価値',
+    total_k: '総資産 TOTAL ASSETS',
+    total_bal: '残高',
+    total_stable: '厩舎の評価額',
+    total_locked: 'ロック中',
+    total_note: '評価額は本日の公開価格テーブル基準。馬は毎晩のレースでBURN(消滅)する可能性があります。',
     buff_none: 'なし',
     buff_active_s: '次回割当に自動で加点',
     buff_none_s: 'Burnで獲得する次走ボーナス',
@@ -1051,6 +1062,11 @@ const en: AppDict = {
     balance_locked_tpl: ' · locked {v}',
     stable_val_k: 'Stable value',
     stable_val_s_tpl: 'USDT · current value of {n} horses',
+    total_k: 'TOTAL ASSETS',
+    total_bal: 'Balance',
+    total_stable: 'Stable value',
+    total_locked: 'Locked',
+    total_note: 'Stable value uses today’s public price table. Horses can be burned (lost) in any nightly race.',
     buff_none: 'None',
     buff_active_s: 'Auto-added to your next assignment',
     buff_none_s: 'A next-race bonus earned from a Burn',
@@ -1547,6 +1563,11 @@ const zh: AppDict = {
     balance_locked_tpl: ' · 锁定中 {v}',
     stable_val_k: '马房估值',
     stable_val_s_tpl: 'USDT · {n}匹的现值',
+    total_k: '总资产 TOTAL ASSETS',
+    total_bal: '余额',
+    total_stable: '马房估值',
+    total_locked: '锁定中',
+    total_note: '估值以今日公开价格表为准。赛马可能在每晚的比赛中被BURN(消失)。',
     buff_none: '无',
     buff_active_s: '下次分配自动加分',
     buff_none_s: 'Burn 时获得的下一场加成',
@@ -2043,6 +2064,11 @@ const ko: AppDict = {
     balance_locked_tpl: ' · 잠금 {v}',
     stable_val_k: '마구간 평가액',
     stable_val_s_tpl: 'USDT · {n}마리의 현재 가치',
+    total_k: '총자산 TOTAL ASSETS',
+    total_bal: '잔액',
+    total_stable: '마구간 평가액',
+    total_locked: '잠금 중',
+    total_note: '평가액은 오늘의 공개 가격표 기준입니다. 말은 매일 밤 레이스에서 BURN(소멸)될 수 있습니다.',
     buff_none: '없음',
     buff_active_s: '다음 배정에 자동 가산',
     buff_none_s: 'Burn으로 얻는 다음 레이스 보너스',
@@ -2539,6 +2565,11 @@ const ms: AppDict = {
     balance_locked_tpl: ' · dikunci {v}',
     stable_val_k: 'Nilai kandang',
     stable_val_s_tpl: 'USDT · nilai semasa {n} ekor',
+    total_k: 'JUMLAH ASET · TOTAL ASSETS',
+    total_bal: 'Baki',
+    total_stable: 'Nilai kandang',
+    total_locked: 'Dikunci',
+    total_note: 'Nilai kandang berdasarkan jadual harga awam hari ini. Kuda boleh di-BURN (hilang) dalam mana-mana perlumbaan malam.',
     buff_none: 'Tiada',
     buff_active_s: 'Ditambah automatik pada penetapan seterusnya',
     buff_none_s: 'Bonus perlumbaan seterusnya daripada Burn',

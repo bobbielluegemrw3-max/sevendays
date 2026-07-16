@@ -1,6 +1,8 @@
 import { WalletHistory, type HistoryEntry } from '@/components/WalletHistory';
 import { WithdrawForm } from '@/components/WithdrawForm';
 import { OnrampGuide } from '@/components/OnrampGuide';
+import { TotalAssetsCard } from '@/components/TotalAssetsCard';
+import type { AppDict } from '@/lib/i18n';
 import s from '../app/wallet.module.css';
 
 /* ============================================================================
@@ -21,13 +23,29 @@ function money(v: string): string {
 }
 
 export function WalletView({
-  wallet, deposit, history,
-}: { wallet: Wallet; deposit: DepositInfo | null; history: HistoryEntry[] }) {
+  wallet, deposit, history, stableValue, assetsCopy,
+}: {
+  wallet: Wallet;
+  deposit: DepositInfo | null;
+  history: HistoryEntry[];
+  /** 現役馬の評価額合計(公開価格テーブル基準)。総資産カード用。 */
+  stableValue: number;
+  /** 総資産カードの文言(dashセクション共用)。 */
+  assetsCopy: AppDict['dash'];
+}) {
   const hasLocked = Number(wallet.locked) > 0;
 
   return (
     <div className={s.wrap}>
       <div className={s.h1}>ウォレット</div>
+
+      {/* 総資産(残高+評価額+ロック) — 「増えたか減ったか」への一目回答 */}
+      <TotalAssetsCard
+        available={wallet.available}
+        locked={wallet.locked}
+        stableValue={stableValue}
+        t={assetsCopy}
+      />
 
       {/* 残高 */}
       <div className={s.balances}>

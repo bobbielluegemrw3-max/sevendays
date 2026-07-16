@@ -30,8 +30,9 @@ export function RaceDetailView({
         <Link href="/races" className={s.crumb}>← レース一覧</Link>
         <div className={s.titleRow}>
           <span className={s.title}>レース {race.batch_date}</span>
-          <span className={`${s.badge} ${race.status === 'COMPLETED' ? s.stCompleted : s.stOpen}`}>
-            {race.status === 'COMPLETED' ? 'COMPLETED · 確定' : race.status}
+          {/* 終端状態は FINALIZED(COMPLETED は中間状態) — どちらも「確定」表示 */}
+          <span className={`${s.badge} ${race.status === 'FINALIZED' || race.status === 'COMPLETED' ? s.stCompleted : s.stOpen}`}>
+            {race.status === 'FINALIZED' || race.status === 'COMPLETED' ? `${race.status} · 確定` : race.status}
           </span>
           <span className={s.titleMeta}>
             出走 {race.participant_count != null ? race.participant_count.toLocaleString('en-US') : '—'} 頭 · {race.race_engine_version}

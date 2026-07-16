@@ -36,7 +36,9 @@ export default async function Dashboard() {
   const races = racesR.status === 200 ? racesR.body.races : [];
 
   // Last completed race + this player's results in it.
-  const lastRace = races.find((r) => r.status === 'COMPLETED') ?? null;
+  // 本番のレース終端状態は FINALIZED(COMPLETED は Step17 で FINALIZED に進む
+  // 中間状態 — 2026-07-16 本番不具合: COMPLETED だけ探すと常に空だった)。
+  const lastRace = races.find((r) => r.status === 'FINALIZED' || r.status === 'COMPLETED') ?? null;
   let myResults: DashResult[] = [];
   if (lastRace && horses.length > 0) {
     const resultsR = await serverApi<{ results: RaceResultRow[] }>(`/api/v1/races/${lastRace.id}/results`);
