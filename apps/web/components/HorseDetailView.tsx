@@ -360,7 +360,8 @@ export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: Page
                 <span className={s.freeTag}>無料 · 1日1回</span>
               </div>
               <div className={s.trainDesc}>
-                今夜のスコアに直接加点(馬タイプとの相性で+3〜5)。攻めれば疲労が溜まり、回復調教で癒せます —
+                今夜のスコアに直接加点(馬タイプとの相性で+3〜5)。レースの疲労+5は毎晩の自然回復−5とちょうど相殺 —
+                疲労が増えるのは攻めの調教(+8)を選んだ夜だけで、回復調教なら癒せます。
                 疲労はスコアとコンディションを蝕むので、7日間の采配が価値を伸ばす鍵です。
               </div>
               <div className={s.trainForm}>
@@ -430,7 +431,10 @@ export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: Page
                 <span className={s.track}><span className={s.fillCyan} style={{ width: `${pct(horse.condition)}%` }} /></span>
               </div>
             </div>
-            <div className={`${s.mini} ${s.miniFtg}`}>
+            <div
+              className={`${s.mini} ${s.miniFtg}`}
+              title="レースの疲労+5は毎晩の自然回復−5と相殺します。疲労が増えるのは攻めの調教(+8)を選んだ夜だけで、回復調教(−4)で癒せます。"
+            >
               <div className={s.miniK}>FATIGUE 疲労</div>
               <div className={s.miniRow}>
                 <span className={s.miniNum}>{stat(horse.fatigue)}</span>

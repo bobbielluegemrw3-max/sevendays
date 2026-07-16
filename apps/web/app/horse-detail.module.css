@@ -14,7 +14,8 @@
    - リテラル子孫 class(.dayBig 内の .l / .v)は :global() で受ける(過去の事故点)。
    - 表示切替系は詳細度を1段上げる方針(本ページは切替が少ない)。
    - TrainingForm が使う .tCards / .tCard / .tCardOn / .tCardK / .tReco / .tCardBonus /
-     .tCardSub / .tCardGood / .tLuckNote は名前を変えないこと(コンポーネント側が参照)。
+     .tCardCond / .tCardSub / .tCardGood / .tLuckNote / .tRecoNote は名前を変えないこと
+     (コンポーネント側が参照)。
    - 色/フォントは globals.css の :root トークン。
    ========================================================================== */
 
@@ -151,9 +152,12 @@
 .tReco { font-size: 8px; font-weight: 700; letter-spacing: 0.06em; color: #04141a; background: linear-gradient(100deg, var(--cyan), #5ff5ff); border-radius: 4px; padding: 1px 5px; }
 .tCardBonus { font-size: 10.5px; color: var(--muted); }
 .tCardBonus b { font-family: var(--font-display); font-size: 12.5px; color: var(--cyan); }
+.tCardCond { font-size: 10.5px; color: var(--muted); }
+.tCardCond b { font-family: var(--font-display); font-size: 11.5px; color: var(--good); }
 .tCardSub { font-family: var(--font-mono); font-size: 9px; color: var(--magenta-soft); }
 .tCardGood { color: var(--good); }
 .tLuckNote { font-family: var(--font-mono); font-size: 10px; color: var(--gold-bright); line-height: 1.6; margin-top: 8px; }
+.tRecoNote { font-family: var(--font-mono); font-size: 10px; color: var(--muted); line-height: 1.6; margin-top: 8px; }
 
 /* ---- アクション列: 結末 / 出品カード ------------------------------------- */
 .outcome { border-radius: 16px; padding: 18px; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 12px; }

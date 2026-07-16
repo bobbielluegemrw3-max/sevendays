@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CONDITION_FATIGUE_V1,
+  RECOMMENDED_RECOVERY_FATIGUE_THRESHOLD,
   recommendedTrainingV1,
   trainingModifierV1,
   type HorseType,
@@ -25,11 +26,36 @@ const TRAINING_TYPES: { value: TrainingType; label: string }[] = [
   { value: 'RECOVERY_TRAINING', label: '回復調教' },
 ];
 
-/** レース日の疲労純増(調教コスト+レース5−自然回復5−回復調教の追加回復)。 */
-function fatigueDelta(t: TrainingType): number {
+/**
+ * レース日の疲労純増を、この馬の現在値からクランプ込みで実計算する
+ * (調教コスト+レース5−自然回復5−回復調教の追加回復、0..100に切詰め)。
+ * 固定値表示だと疲労0の馬に「−4癒す」と出て嘘になる(0未満には下がらない)。
+ */
+function fatigueDelta(t: TrainingType, current: number): number {
   const p = CONDITION_FATIGUE_V1;
   const extra = t === 'RECOVERY_TRAINING' ? p.recoveryTrainingAdditionalRecovery : 0;
-  return p.trainingCost[t] + p.raceFatigueCost - p.dailyNaturalRecovery - extra;
+  const raw = current + p.trainingCost[t] + p.raceFatigueCost - p.dailyNaturalRecovery - extra;
+  return Math.min(p.max, Math.max(p.min, raw)) - current;
+}
+
+/** おすすめバッジの根拠(recommendedTrainingV1 と同じ公開定数から生成)。 */
+function recommendReason(type: HorseType, fatigue: number): string {
+  if (fatigue >= RECOMMENDED_RECOVERY_FATIGUE_THRESHOLD) {
+    return `疲労が${RECOMMENDED_RECOVERY_FATIGUE_THRESHOLD}以上 — まず癒すのが最優先です`;
+  }
+  const best = trainingModifierV1(type, recommendedTrainingV1(type, fatigue));
+  switch (type) {
+    case 'SPRINTER':
+      return `このタイプはスピード調教のスコア加点が最大(+${best})です`;
+    case 'POWER':
+      return `このタイプはパワー調教のスコア加点が最大(+${best})です`;
+    case 'ENDURANCE':
+      return `このタイプは回復調教のスコア加点が最大(+${best})です`;
+    case 'BALANCED':
+      return `加点は3種とも+${best} — 調子+${CONDITION_FATIGUE_V1.trainingEffect.RECOVERY_TRAINING}で疲労も溜めない回復調教が守りの最適解です`;
+    case 'LUCK':
+      return `回復調教は加点が最大(+${best})のうえ、調子を上げて疲労も溜めません`;
+  }
 }
 
 export function TrainingForm({
@@ -87,7 +113,8 @@ export function TrainingForm({
       <div className={s.tCards}>
         {TRAINING_TYPES.map((t) => {
           const bonus = trainingModifierV1(type, t.value);
-          const delta = fatigueDelta(t.value);
+          const condEffect = CONDITION_FATIGUE_V1.trainingEffect[t.value];
+          const delta = fatigueDelta(t.value, fatigue);
           const on = trainingType === t.value;
           return (
             <button
@@ -102,13 +129,19 @@ export function TrainingForm({
                 {recommended === t.value ? <span className={s.tReco}>おすすめ</span> : null}
               </span>
               <span className={s.tCardBonus}>今夜のスコア <b>+{bonus}</b></span>
-              <span className={`${s.tCardSub} ${delta < 0 ? s.tCardGood : ''}`}>
-                {delta < 0 ? `疲労を癒す(${delta})` : `疲労が溜まる(+${delta})`}
+              <span className={s.tCardCond}>調子 <b>+{condEffect}</b></span>
+              <span className={`${s.tCardSub} ${delta <= 0 ? s.tCardGood : ''}`}>
+                {delta < 0
+                  ? `疲労を癒す(${delta})`
+                  : delta === 0
+                    ? '疲労を溜めない(±0)'
+                    : `疲労が溜まる(+${delta})`}
               </span>
             </button>
           );
         })}
       </div>
+      <div className={s.tRecoNote}>おすすめの理由: {recommendReason(type, fatigue)}</div>
       {type === 'LUCK' ? (
         <div className={s.tLuckNote}>
           LUCKタイプはどの調教でも、今夜の運の振れ幅が上向きになります(−2〜+4)。
