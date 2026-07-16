@@ -342,7 +342,10 @@
 .badgeFlavor { font-size: 0.72rem; line-height: 1.55; color: var(--muted, #b7b3d0); }
 
 /* 隠し演出(EASTER_EGG_PLAN.md): 金星オーバーレイ */
-.artWrap { position: relative; display: block; }
+/* width/height 100% 必須(2026-07-16 修正): このラッパー導入(92723b0)で canvas の
+   height:100% の基準が消え、正方形描画のまま .hart(高さ132px・overflow hidden)に
+   収まらず馬の脚が下で切れていた。 */
+.artWrap { position: relative; display: block; width: 100%; height: 100%; }
 .goldenStar { position: absolute; top: 6px; right: 8px; z-index: 3; color: #ffd977;
   font-size: 15px; line-height: 1; text-shadow: 0 0 8px #ffcf4bcc, 0 0 3px #fff8; pointer-events: none; }
 
