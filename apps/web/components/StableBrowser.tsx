@@ -255,7 +255,7 @@ export function StableBrowser({ kind, horses }: { kind: 'active' | 'past'; horse
         </select>
         {kind === 'active' ? (
           <select className={s.select} value={rar} onChange={(e) => { setRar(e.target.value); reset(); }} aria-label="レアリティ絞り込み">
-            <option value="ALL">レアリティ: すべて</option>
+            <option value="ALL">全レアリティ</option>
             <option value="LEGENDARY">LEGENDARY</option>
             <option value="EPIC">EPIC</option>
             <option value="RARE">RARE</option>

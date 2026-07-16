@@ -291,10 +291,12 @@
   text-align: center; color: var(--muted); font-size: 13px;
 }
 
-/* 狭い端末: 検索を全幅、件数は左寄せ */
+/* 狭い端末: 検索を全幅、件数は左寄せ。
+   セレクトは文字幅以下に縮めない(shrink 0)— 縮むと「レアリティ: す」のように
+   選択中ラベルが切れる。入り切らない分は .controls の wrap で折り返す。 */
 @media (max-width: 560px) {
   .search { flex-basis: 100%; }
-  .select { flex: 1; min-width: 0; }
+  .select { flex: 1 0 auto; }
   .count { margin-left: 0; width: 100%; }
 }
 
