@@ -7,6 +7,7 @@ import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { pct, horseValue, rarClass } from '@/components/stable-shared';
 import type { StableHorse } from '@/components/StableView';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
 
 /* ============================================================================
@@ -19,6 +20,7 @@ import s from '../app/stable.module.css';
  * ========================================================================== */
 
 const RANK: Record<string, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
+type T = AppDict['stable'];
 const PAGE_SIZES = [24, 48, 96, 99999];
 
 /* ---- 隠し演出の原色オーバーレイ色(全身を1色に染める) ---------------------- */
@@ -28,7 +30,7 @@ export const COLOR_OVERLAY: Record<string, string> = {
 };
 
 /* ---- 部品 ----------------------------------------------------------------- */
-function StableArt({ horse }: { horse: StableHorse }) {
+function StableArt({ horse, t }: { horse: StableHorse; t: T }) {
   // 隠し演出(EASTER_EGG_PLAN.md): 真夜中の馬は夜色ルック。原色ルートは全身着色。
   const look = horse.night_variant ? NIGHT_LOOK : deriveNftLook(horse.dna_hash, horse.name);
   const color = horse.color_variant ? COLOR_OVERLAY[horse.color_variant] : null;
@@ -41,11 +43,11 @@ function StableArt({ horse }: { horse: StableHorse }) {
           style={{ background: color, mixBlendMode: horse.color_variant === 'black' ? 'multiply' : 'color' }}
         />
       ) : null}
-      {horse.golden_star ? <span className={s.goldenStar} title="黄金の夜の生還馬">★</span> : null}
+      {horse.golden_star ? <span className={s.goldenStar} title={t.tip_golden}>★</span> : null}
       {horse.revenge_flame ? (
-        <span className={`${s.revengeFlame} ${horse.revenge_gold ? s.revengeGold : ''}`} title="リベンジの焔">焔</span>
+        <span className={`${s.revengeFlame} ${horse.revenge_gold ? s.revengeGold : ''}`} title={t.tip_flame}>焔</span>
       ) : null}
-      {horse.milestone ? <span className={s.milestoneMark} title="記念の一頭">7</span> : null}
+      {horse.milestone ? <span className={s.milestoneMark} title={t.tip_milestone}>7</span> : null}
     </span>
   );
 }
@@ -62,15 +64,15 @@ function DayRail({ day }: { day: number }) {
   );
 }
 
-function ActiveCard({ h }: { h: StableHorse }) {
+function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
   const untrained = !h.trained_for_next_race;
   const rar = rarClass(h.rarity);
   const trainCls = untrained ? s.trainNo : s.trainYes;
-  const trainText = untrained ? '未調教' : '調教済';
+  const trainText = untrained ? t.badge_untrained : t.badge_trained;
   return (
     <Link href={`/horses/${h.id}`} className={`${s.hcard} ${untrained ? s.untrained : ''}`}>
       <div className={s.hart}>
-        <StableArt horse={h} />
+        <StableArt horse={h} t={t} />
         <span className={`${s.rar} ${rar} ${s.artBadge} ${s.artRarity}`}>{h.rarity}</span>
         <span className={`${s.trainBadge} ${trainCls} ${s.artBadge} ${s.artTrain}`}>{trainText}</span>
       </div>
@@ -79,7 +81,7 @@ function ActiveCard({ h }: { h: StableHorse }) {
           <span className={s.hname}>{h.name}</span>
           <span className={`${s.rar} ${rar} ${s.inlineRarity}`}>{h.rarity}</span>
           {/* Decision 087監査: スマート出品中は走るが今夜売れる可能性がある — 事実を小さく明示 */}
-          {h.listing === 'SMART' ? <span className={s.smartTag}>出品中</span> : null}
+          {h.listing === 'SMART' ? <span className={s.smartTag}>{t.smart_tag}</span> : null}
           <span className={s.htype}>{h.horse_type}</span>
         </div>
         <DayRail day={h.current_day} />
@@ -88,8 +90,8 @@ function ActiveCard({ h }: { h: StableHorse }) {
           <span className={s.hmeter}><span className="k">FTG</span><span className={s.track}><span className={s.fillMag} style={{ width: `${pct(h.fatigue)}%` }} /></span></span>
         </div>
         <div className={s.hfoot}>
-          <span className={s.hvalue}>現在価値 <b>{horseValue(h.current_day)}</b> USDT</span>
-          <span className={`${s.hcta} ${untrained ? s.hctaTrain : s.hctaDetail}`}>{untrained ? '調教する →' : '詳細 →'}</span>
+          <span className={s.hvalue}>{t.value_now} <b>{horseValue(h.current_day)}</b> USDT</span>
+          <span className={`${s.hcta} ${untrained ? s.hctaTrain : s.hctaDetail}`}>{untrained ? t.cta_train : t.cta_detail}</span>
           <span className={`${s.trainBadge} ${trainCls} ${s.inlineTrain}`}>{trainText}</span>
         </div>
       </div>
@@ -101,14 +103,14 @@ function ActiveCard({ h }: { h: StableHorse }) {
  * 手動出品中(Market Lock)の馬 — 「出品中」セクション専用カード(Decision 087監査)。
  * 今夜は出走しない事実を明示し、無駄になる調教CTAは出さない。管理は/marketへ。
  */
-export function ListedCard({ h }: { h: StableHorse }) {
+export function ListedCard({ h, t }: { h: StableHorse; t: T }) {
   const rar = rarClass(h.rarity);
   return (
     <Link href="/market" className={`${s.hcard} ${s.listedCard}`}>
       <div className={s.hart}>
-        <StableArt horse={h} />
+        <StableArt horse={h} t={t} />
         <span className={`${s.rar} ${rar} ${s.artBadge} ${s.artRarity}`}>{h.rarity}</span>
-        <span className={`${s.listedBadge} ${s.artBadge} ${s.artTrain}`}>出品中</span>
+        <span className={`${s.listedBadge} ${s.artBadge} ${s.artTrain}`}>{t.badge_listed}</span>
       </div>
       <div className={s.hbody}>
         <div className={s.hrow1}>
@@ -116,11 +118,11 @@ export function ListedCard({ h }: { h: StableHorse }) {
           <span className={`${s.rar} ${rar} ${s.inlineRarity}`}>{h.rarity}</span>
           <span className={s.htype}>{h.horse_type}</span>
         </div>
-        <div className={s.listedNote}>今夜は出走しません(Day・価値は凍結)</div>
+        <div className={s.listedNote}>{t.listed_card_note}</div>
         <div className={s.hfoot}>
-          <span className={s.hvalue}>出品価格 <b>{horseValue(h.current_day)}</b> USDT</span>
-          <span className={`${s.hcta} ${s.hctaDetail}`}>出品を管理 →</span>
-          <span className={`${s.listedBadge} ${s.inlineTrain}`}>出品中</span>
+          <span className={s.hvalue}>{t.value_listed} <b>{horseValue(h.current_day)}</b> USDT</span>
+          <span className={`${s.hcta} ${s.hctaDetail}`}>{t.cta_manage}</span>
+          <span className={`${s.listedBadge} ${s.inlineTrain}`}>{t.badge_listed}</span>
         </div>
       </div>
     </Link>
@@ -130,40 +132,40 @@ export function ListedCard({ h }: { h: StableHorse }) {
 /**
  * チャンピオンコレクション — Day7走破馬を金枠NFTとして飾るギャラリーカード。
  */
-export function ChampionCard({ h }: { h: StableHorse }) {
+export function ChampionCard({ h, t }: { h: StableHorse; t: T }) {
   const memorial = h.status === 'MEMORIALIZED';
   return (
     <Link href={`/horses/${h.id}`} className={s.champCard}>
       <div className={s.champInner}>
-        <div className={s.champArt}><StableArt horse={h} /></div>
+        <div className={s.champArt}><StableArt horse={h} t={t} /></div>
         <div className={s.champName}>{h.name}</div>
         <div className={s.champTag}>{memorial ? 'MEMORIAL NFT' : 'CHAMPION'}</div>
         <div className={s.champSub}>
-          {memorial ? '7日完走 · 記念NFT' : '7日走破 · 報酬受取中'}
+          {memorial ? t.champ_sub_memorial : t.champ_sub_cleared}
         </div>
       </div>
     </Link>
   );
 }
 
-function pastMeta(status: string): { mod: string; badge: string; label: string; note: string } {
+function pastMeta(status: string, t: T): { mod: string; badge: string; label: string; note: string } {
   switch (status) {
     case 'DAY7_CLEARED':
-      return { mod: s.pcleared!, badge: s.stCleared!, label: 'チャンピオン', note: '7日走破 · チャンピオン報酬 受取中' };
+      return { mod: s.pcleared!, badge: s.stCleared!, label: t.past_champion, note: t.past_note_cleared };
     case 'MEMORIALIZED':
-      return { mod: s.pmemorial!, badge: s.stMemorial!, label: '記念馬 · NFT', note: '7日完走 · 記念NFT' };
+      return { mod: s.pmemorial!, badge: s.stMemorial!, label: t.past_memorial, note: t.past_note_memorial };
     case 'BURNED':
     default:
-      return { mod: s.pburned!, badge: s.stBurned!, label: 'BURNED · 消滅', note: 'レースで消滅' };
+      return { mod: s.pburned!, badge: s.stBurned!, label: t.past_burned, note: t.past_note_burned };
   }
 }
 
-function PastCard({ h }: { h: StableHorse }) {
-  const m = pastMeta(h.status);
+function PastCard({ h, t }: { h: StableHorse; t: T }) {
+  const m = pastMeta(h.status, t);
   return (
     <Link href={`/horses/${h.id}`} className={`${s.pcard} ${m.mod}`}>
       <div className={s.part}>
-        <div className={s.partInner}><StableArt horse={h} /></div>
+        <div className={s.partInner}><StableArt horse={h} t={t} /></div>
         <span className={`${s.pstatusBadge} ${m.badge} ${s.pstatus}`}>{m.label}</span>
       </div>
       <div className={s.pbody}>
@@ -193,7 +195,7 @@ const PAST_SORTS: Record<string, (a: StableHorse, b: StableHorse) => number> = {
 };
 
 /* ---- 本体 ----------------------------------------------------------------- */
-export function StableBrowser({ kind, horses }: { kind: 'active' | 'past'; horses: StableHorse[] }) {
+export function StableBrowser({ kind, horses, t }: { kind: 'active' | 'past'; horses: StableHorse[]; t: T }) {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState(kind === 'active' ? 'value_desc' : 'rarity');
   const [rar, setRar] = useState('ALL');            // active: レアリティ / past: 状態
@@ -234,24 +236,24 @@ export function StableBrowser({ kind, horses }: { kind: 'active' | 'past'; horse
           className={s.search}
           value={q}
           onChange={(e) => { setQ(e.target.value); reset(); }}
-          placeholder={kind === 'active' ? '馬名で検索…' : '過去馬を名前で検索…'}
-          aria-label="検索"
+          placeholder={kind === 'active' ? t.search_active : t.search_past}
+          aria-label={t.search_aria}
         />
         <AppSelect
           className={s.select}
           value={sort}
           onChange={(v) => { setSort(v); reset(); }}
-          ariaLabel="並び替え"
+          ariaLabel={t.sort_aria}
           options={kind === 'active' ? [
-            { value: 'value_desc', label: '価値が高い順' },
-            { value: 'value_asc', label: '価値が低い順' },
-            { value: 'rarity', label: 'レアリティ順' },
-            { value: 'cond', label: 'コンディション順' },
-            { value: 'untrained', label: '未調教を先頭' },
-            { value: 'name', label: '名前順' },
+            { value: 'value_desc', label: t.sort_value_desc },
+            { value: 'value_asc', label: t.sort_value_asc },
+            { value: 'rarity', label: t.sort_rarity },
+            { value: 'cond', label: t.sort_cond },
+            { value: 'untrained', label: t.sort_untrained },
+            { value: 'name', label: t.sort_name },
           ] : [
-            { value: 'rarity', label: 'レアリティ順' },
-            { value: 'name', label: '名前順' },
+            { value: 'rarity', label: t.sort_rarity },
+            { value: 'name', label: t.sort_name },
           ]}
         />
         {kind === 'active' ? (
@@ -259,9 +261,9 @@ export function StableBrowser({ kind, horses }: { kind: 'active' | 'past'; horse
             className={s.select}
             value={rar}
             onChange={(v) => { setRar(v); reset(); }}
-            ariaLabel="レアリティ絞り込み"
+            ariaLabel={t.filter_aria}
             options={[
-              { value: 'ALL', label: '全レアリティ' },
+              { value: 'ALL', label: t.filter_all },
               { value: 'LEGENDARY', label: 'LEGENDARY' },
               { value: 'EPIC', label: 'EPIC' },
               { value: 'RARE', label: 'RARE' },
@@ -277,31 +279,31 @@ export function StableBrowser({ kind, horses }: { kind: 'active' | 'past'; horse
             onClick={() => { setUntrainedOnly((v) => !v); reset(); }}
             aria-pressed={untrainedOnly}
           >
-            未調教のみ
+            {t.untrained_only}
           </button>
         ) : null}
-        <span className={s.count}>{shown === total ? `全${total}頭` : `${total}頭中 ${shown}頭が該当`}</span>
+        <span className={s.count}>{shown === total ? fill(t.count_all_tpl, { n: total }) : fill(t.count_match_tpl, { t: total, s: shown })}</span>
       </div>
 
       {slice.length > 0 ? (
         <div className={kind === 'active' ? s.gallery : s.pastGrid}>
-          {slice.map((h) => (kind === 'active' ? <ActiveCard key={h.id} h={h} /> : <PastCard key={h.id} h={h} />))}
+          {slice.map((h) => (kind === 'active' ? <ActiveCard key={h.id} h={h} t={t} /> : <PastCard key={h.id} h={h} t={t} />))}
         </div>
       ) : (
-        <div className={s.noMatch}>条件に一致する馬がいません。検索やフィルタを調整してください。</div>
+        <div className={s.noMatch}>{t.no_match}</div>
       )}
 
       {!all && pageCount > 1 ? (
         <div className={s.pager}>
-          <button type="button" className={s.pagerBtn} disabled={safePage === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← 前へ</button>
+          <button type="button" className={s.pagerBtn} disabled={safePage === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>{t.pager_prev}</button>
           <span className={s.pageLabel}>{safePage + 1} / {pageCount}</span>
-          <button type="button" className={s.pagerBtn} disabled={safePage >= pageCount - 1} onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}>次へ →</button>
+          <button type="button" className={s.pagerBtn} disabled={safePage >= pageCount - 1} onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}>{t.pager_next}</button>
           <AppSelect
             className={s.selectSm}
             value={String(pageSize)}
             onChange={(v) => { setPageSize(Number(v)); reset(); }}
-            ariaLabel="1ページの表示件数"
-            options={PAGE_SIZES.map((n) => ({ value: String(n), label: n >= 9999 ? '全件表示' : `${n}件/頁` }))}
+            ariaLabel={t.page_size_aria}
+            options={PAGE_SIZES.map((n) => ({ value: String(n), label: n >= 9999 ? t.page_size_all : fill(t.page_size_tpl, { n }) }))}
           />
         </div>
       ) : null}

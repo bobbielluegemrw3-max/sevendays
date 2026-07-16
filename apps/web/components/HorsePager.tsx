@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
 
 /* ============================================================================
@@ -32,7 +33,7 @@ export interface PagerNav {
   allTrained: boolean;
 }
 
-export function HorsePager({ nav }: { nav: PagerNav }) {
+export function HorsePager({ nav, t }: { nav: PagerNav; t: AppDict['horse'] }) {
   const router = useRouter();
   const { groupLabel, prev, next, index, total, nextUntrained, untrainedRemaining, allTrained } = nav;
 
@@ -55,8 +56,8 @@ export function HorsePager({ nav }: { nav: PagerNav }) {
         <Link
           href={`/horses/${prev.id}`}
           className={`${s.pagerBtn} ${s.pagerPrev}`}
-          aria-label={`前の馬・${prev.name}`}
-          title={`前の馬 · ${prev.name}`}
+          aria-label={fill(t.pgr_prev_tpl, { name: prev.name })}
+          title={fill(t.pgr_prev_tpl, { name: prev.name })}
           prefetch
         >
           ‹
@@ -66,21 +67,21 @@ export function HorsePager({ nav }: { nav: PagerNav }) {
       )}
 
       <div className={s.pagerTop}>
-        <span className={s.pagerPos} aria-label={`${groupLabel} ${total}頭中 ${index}頭目`}>
+        <span className={s.pagerPos}>
           {groupLabel} · {index} / {total}
         </span>
         {nextUntrained ? (
           <Link
             href={`/horses/${nextUntrained.id}`}
             className={s.pagerJump}
-            title={`未調教の次の馬・${nextUntrained.name}`}
+            title={fill(t.pgr_next_tpl, { name: nextUntrained.name })}
             prefetch
           >
-            未調教の次へ →
-            {untrainedRemaining > 0 ? <span className={s.pagerJumpN}>あと{untrainedRemaining}</span> : null}
+            {t.pgr_jump}
+            {untrainedRemaining > 0 ? <span className={s.pagerJumpN}>{fill(t.pgr_rest_tpl, { n: untrainedRemaining })}</span> : null}
           </Link>
         ) : allTrained ? (
-          <span className={s.pagerDone}>✓ 本日ぶん調教完了</span>
+          <span className={s.pagerDone}>{t.pgr_all_done}</span>
         ) : null}
       </div>
 
@@ -88,8 +89,8 @@ export function HorsePager({ nav }: { nav: PagerNav }) {
         <Link
           href={`/horses/${next.id}`}
           className={`${s.pagerBtn} ${s.pagerNext}`}
-          aria-label={`次の馬・${next.name}`}
-          title={`次の馬 · ${next.name}`}
+          aria-label={fill(t.pgr_next_tpl, { name: next.name })}
+          title={fill(t.pgr_next_tpl, { name: next.name })}
           prefetch
         >
           ›

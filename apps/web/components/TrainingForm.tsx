@@ -11,6 +11,7 @@ import {
   type TrainingType,
 } from '@sevendays/domain';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
 
 /**
@@ -20,11 +21,7 @@ import s from '../app/horse-detail.module.css';
  * 公開ルール(trainingModifierV1 / CONDITION_FATIGUE_V1)由来 — 架空値なし。
  */
 
-const TRAINING_TYPES: { value: TrainingType; label: string }[] = [
-  { value: 'SPEED_TRAINING', label: 'スピード調教' },
-  { value: 'POWER_TRAINING', label: 'パワー調教' },
-  { value: 'RECOVERY_TRAINING', label: '回復調教' },
-];
+const TRAINING_TYPE_ORDER: TrainingType[] = ['SPEED_TRAINING', 'POWER_TRAINING', 'RECOVERY_TRAINING'];
 
 /**
  * レース日の疲労純増を、この馬の現在値からクランプ込みで実計算する
@@ -39,22 +36,22 @@ function fatigueDelta(t: TrainingType, current: number): number {
 }
 
 /** おすすめバッジの根拠(recommendedTrainingV1 と同じ公開定数から生成)。 */
-function recommendReason(type: HorseType, fatigue: number): string {
+function recommendReason(type: HorseType, fatigue: number, t: AppDict['horse']): string {
   if (fatigue >= RECOMMENDED_RECOVERY_FATIGUE_THRESHOLD) {
-    return `疲労が${RECOMMENDED_RECOVERY_FATIGUE_THRESHOLD}以上 — まず癒すのが最優先です`;
+    return fill(t.reason_high_ftg_tpl, { n: RECOMMENDED_RECOVERY_FATIGUE_THRESHOLD });
   }
   const best = trainingModifierV1(type, recommendedTrainingV1(type, fatigue));
   switch (type) {
     case 'SPRINTER':
-      return `このタイプはスピード調教のスコア加点が最大(+${best})です`;
+      return fill(t.reason_sprinter_tpl, { n: best });
     case 'POWER':
-      return `このタイプはパワー調教のスコア加点が最大(+${best})です`;
+      return fill(t.reason_power_tpl, { n: best });
     case 'ENDURANCE':
-      return `このタイプは回復調教のスコア加点が最大(+${best})です`;
+      return fill(t.reason_endurance_tpl, { n: best });
     case 'BALANCED':
-      return `加点は3種とも+${best} — 調子+${CONDITION_FATIGUE_V1.trainingEffect.RECOVERY_TRAINING}で疲労も溜めない回復調教が守りの最適解です`;
+      return fill(t.reason_balanced_tpl, { n: best, c: CONDITION_FATIGUE_V1.trainingEffect.RECOVERY_TRAINING });
     case 'LUCK':
-      return `回復調教は加点が最大(+${best})のうえ、調子を上げて疲労も溜めません`;
+      return fill(t.reason_luck_tpl, { n: best });
   }
 }
 
@@ -62,14 +59,21 @@ export function TrainingForm({
   horseId,
   horseType,
   fatigue,
+  t,
   trained = false,
 }: {
   horseId: string;
   horseType: string;
   fatigue: number;
+  t: AppDict['horse'];
   /** 次のレース向けの調教が済んでいる(2026-07-14: 完了表示でボタンを閉じる)。 */
   trained?: boolean;
 }) {
+  const typeLabel: Record<TrainingType, string> = {
+    SPEED_TRAINING: t.tt_speed,
+    POWER_TRAINING: t.tt_power,
+    RECOVERY_TRAINING: t.tt_recovery,
+  };
   const router = useRouter();
   const type = horseType as HorseType;
   const recommended = recommendedTrainingV1(type, fatigue);
@@ -83,7 +87,7 @@ export function TrainingForm({
     return (
       <div className={s.tStack}>
         <button type="button" disabled>
-          ✓ 調教完了 — 次のレースに適用されます
+          {t.train_done}
         </button>
       </div>
     );
@@ -99,11 +103,11 @@ export function TrainingForm({
     );
     setBusy(false);
     if (result.status !== 200) {
-      setError(errorMessage(result.body) ?? 'トレーニングの登録に失敗しました');
+      setError(errorMessage(result.body) ?? t.train_fail);
       return;
     }
     setMessage(
-      `${(result.body as { effective_race_date: string }).effective_race_date} のレースに適用されます。`,
+      fill(t.train_applied_tpl, { date: (result.body as { effective_race_date: string }).effective_race_date }),
     );
     router.refresh();
   }
@@ -111,46 +115,44 @@ export function TrainingForm({
   return (
     <div className={s.tStack}>
       <div className={s.tCards}>
-        {TRAINING_TYPES.map((t) => {
-          const bonus = trainingModifierV1(type, t.value);
-          const condEffect = CONDITION_FATIGUE_V1.trainingEffect[t.value];
-          const delta = fatigueDelta(t.value, fatigue);
-          const on = trainingType === t.value;
+        {TRAINING_TYPE_ORDER.map((value) => {
+          const bonus = trainingModifierV1(type, value);
+          const condEffect = CONDITION_FATIGUE_V1.trainingEffect[value];
+          const delta = fatigueDelta(value, fatigue);
+          const on = trainingType === value;
           return (
             <button
-              key={t.value}
+              key={value}
               type="button"
               className={`${s.tCard} ${on ? s.tCardOn : ''}`}
-              onClick={() => setTrainingType(t.value)}
+              onClick={() => setTrainingType(value)}
               aria-pressed={on}
             >
               <span className={s.tCardK}>
-                {t.label}
-                {recommended === t.value ? <span className={s.tReco}>おすすめ</span> : null}
+                {typeLabel[value]}
+                {recommended === value ? <span className={s.tReco}>{t.reco}</span> : null}
               </span>
-              <span className={s.tCardBonus}>今夜のスコア <b>+{bonus}</b></span>
-              <span className={s.tCardCond}>調子 <b>+{condEffect}</b></span>
+              <span className={s.tCardBonus}>{t.bonus_k} <b>+{bonus}</b></span>
+              <span className={s.tCardCond}>{t.cond_eff_k} <b>+{condEffect}</b></span>
               <span className={`${s.tCardSub} ${delta <= 0 ? s.tCardGood : ''}`}>
                 {delta < 0
-                  ? `疲労を癒す(${delta})`
+                  ? fill(t.ftg_heal_tpl, { n: delta })
                   : delta === 0
-                    ? '疲労を溜めない(±0)'
-                    : `疲労が溜まる(+${delta})`}
+                    ? t.ftg_zero
+                    : fill(t.ftg_gain_tpl, { n: delta })}
               </span>
             </button>
           );
         })}
       </div>
-      <div className={s.tRecoNote}>おすすめの理由: {recommendReason(type, fatigue)}</div>
+      <div className={s.tRecoNote}>{t.reco_reason_k}{recommendReason(type, fatigue, t)}</div>
       {type === 'LUCK' ? (
-        <div className={s.tLuckNote}>
-          LUCKタイプはどの調教でも、今夜の運の振れ幅が上向きになります(−2〜+4)。
-        </div>
+        <div className={s.tLuckNote}>{t.luck_note}</div>
       ) : null}
       {error ? <p className="error">{error}</p> : null}
       {message ? <p className="ok">{message}</p> : null}
       <button type="button" disabled={busy} onClick={() => void submit()}>
-        {busy ? '調教中…' : 'この調教にする(今夜20:00まで・1日1回)'}
+        {busy ? t.train_busy : t.train_submit}
       </button>
     </div>
   );

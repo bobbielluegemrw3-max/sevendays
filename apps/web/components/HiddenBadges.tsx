@@ -23,12 +23,12 @@ const TONE_COLOR: Record<string, string> = {
   spirit: '#ff8fe4',
 };
 
-export function HiddenBadges({ badges }: { badges: HiddenBadge[] }) {
+export function HiddenBadges({ badges, title = '獲得した称号' }: { badges: HiddenBadge[]; title?: string }) {
   if (badges.length === 0) return null;
   return (
     <section className={s.badgeStrip}>
       <div className={s.badgeStripHead}>
-        <span className={s.badgeStripTitle}>獲得した称号</span>
+        <span className={s.badgeStripTitle}>{title}</span>
         <span className={s.badgeStripCount}>{badges.length}</span>
       </div>
       <div className={s.badgeGrid}>

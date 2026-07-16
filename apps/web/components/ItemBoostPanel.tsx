@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { AppSelect } from '@/components/AppSelect';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import {
   BAND_LABEL,
   BAND_ORDER,
@@ -20,10 +21,12 @@ import s from '../app/items.module.css';
 export function ItemBoostPanel({
   horseId,
   currentDay,
+  t,
   preview = false,
 }: {
   horseId: string;
   currentDay: number;
+  t: AppDict['horse'];
   preview?: boolean;
 }) {
   const router = useRouter();
@@ -78,7 +81,7 @@ export function ItemBoostPanel({
       });
       if (buy.status !== 200) {
         setBusy(false);
-        setError(errorMessage(buy.body) ?? '購入に失敗しました');
+        setError(errorMessage(buy.body) ?? t.boost_buy_fail);
         return;
       }
     }
@@ -88,12 +91,12 @@ export function ItemBoostPanel({
     );
     setBusy(false);
     if (apply.status !== 200) {
-      setError(errorMessage(apply.body) ?? 'アイテムの適用に失敗しました');
+      setError(errorMessage(apply.body) ?? t.boost_apply_fail);
       await reload();
       return;
     }
     setMessage(
-      `${(apply.body as { effective_race_date: string }).effective_race_date} のレースに適用されます。`,
+      fill(t.boost_applied_tpl, { date: (apply.body as { effective_race_date: string }).effective_race_date }),
     );
     await reload();
     router.refresh();
@@ -105,33 +108,30 @@ export function ItemBoostPanel({
     const r = await apiFetch(`/api/v1/horses/${horseId}/item/cancel`, { method: 'POST', body: {} });
     setBusy(false);
     if (r.status !== 200) {
-      setError(errorMessage(r.body) ?? '取り消しに失敗しました');
+      setError(errorMessage(r.body) ?? t.boost_cancel_fail);
       return;
     }
-    setMessage('アイテムを在庫に戻しました。');
+    setMessage(t.boost_canceled);
     await reload();
     router.refresh();
   }
 
   return (
     <div className={s.boost}>
-      <div className={s.boostTitle}>ブーストアイテム<span className={s.boostPaid}>任意 · ショップ購入制</span></div>
-      <div className={s.boostDesc}>
-        調教とは別の上乗せ(なくても走れます)。1頭・1レース・1個まで。
-        効果はアイテムの適性と今夜のレース条件(天候×馬場×コース・レース後公開)で決まります。
-      </div>
+      <div className={s.boostTitle}>{t.boost_title}<span className={s.boostPaid}>{t.boost_paid}</span></div>
+      <div className={s.boostDesc}>{t.boost_desc}</div>
 
       {pendingHere ? (
         <div className={s.boostApplied}>
           <img className={s.thumb} src={`/items/${pendingHere.item_key}.webp`} alt="" width={42} height={42} />
-          <span className={s.pendingBadge}>適用予定</span>
+          <span className={s.pendingBadge}>{t.boost_pending}</span>
           <b>{byKey.get(pendingHere.item_key)?.name_ja ?? pendingHere.item_key}</b>
           <span style={{ color: 'var(--faint)', fontSize: '0.75rem' }}>
-            {pendingHere.effective_race_date} のレース
+            {fill(t.boost_pending_race_tpl, { date: pendingHere.effective_race_date })}
           </span>
           <span style={{ flex: 1 }} />
           <button type="button" className="secondary" disabled={busy} onClick={() => void cancelPending()}>
-            取り消す
+            {t.boost_cancel}
           </button>
         </div>
       ) : (
@@ -140,9 +140,9 @@ export function ItemBoostPanel({
             className={s.boostSelect}
             value={selected}
             onChange={setSelected}
-            ariaLabel="ブーストアイテムを選ぶ"
+            ariaLabel={t.boost_pick_aria}
             options={[
-              { value: '', label: 'アイテムを選ぶ…' },
+              { value: '', label: t.boost_pick },
               ...BAND_ORDER.flatMap((band) =>
                 usable
                   .filter((c) => c.band === band)
@@ -150,7 +150,7 @@ export function ItemBoostPanel({
                     const owned = ownedByKey.get(c.key) ?? 0;
                     return {
                       value: c.key,
-                      label: `${c.name_ja}${owned > 0 ? `(所持 ${owned})` : `(${c.price} USDT)`}`,
+                      label: `${c.name_ja}${owned > 0 ? fill(t.boost_owned_tpl, { n: owned }) : fill(t.boost_price_tpl, { p: c.price })}`,
                       group: BAND_LABEL[band],
                     };
                   }),
@@ -158,7 +158,7 @@ export function ItemBoostPanel({
             ]}
           />
           <button type="button" disabled={busy || !selected} onClick={() => void applySelected()}>
-            {selected && (ownedByKey.get(selected) ?? 0) > 0 ? '使う' : '買って使う'}
+            {selected && (ownedByKey.get(selected) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}
           </button>
         </div>
       )}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
 
 /**
@@ -11,13 +12,20 @@ import s from '../app/stable.module.css';
  * スキップされる — 「エースだけ手動、残りは一括」が自然に成立する。
  */
 
-const TYPE_JA: Record<string, string> = {
-  SPEED_TRAINING: 'スピード',
-  POWER_TRAINING: 'パワー',
-  RECOVERY_TRAINING: '回復',
-};
-
-export function BulkTrainButton({ untrainedCount, preview = false }: { untrainedCount: number; preview?: boolean }) {
+export function BulkTrainButton({
+  untrainedCount,
+  t,
+  preview = false,
+}: {
+  untrainedCount: number;
+  t: AppDict['stable'];
+  preview?: boolean;
+}) {
+  const typeLabel: Record<string, string> = {
+    SPEED_TRAINING: t.type_speed,
+    POWER_TRAINING: t.type_power,
+    RECOVERY_TRAINING: t.type_recovery,
+  };
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -31,7 +39,7 @@ export function BulkTrainButton({ untrainedCount, preview = false }: { untrained
     setError(null);
     if (preview) {
       setBusy(false);
-      setMessage(`${untrainedCount}頭を調教しました(プレビュー)。`);
+      setMessage(fill(t.bulk_done_tpl, { n: untrainedCount, parts: 'preview' }));
       return;
     }
     const result = await apiFetch<{ trained: number; by_type: Record<string, number> }>(
@@ -40,14 +48,14 @@ export function BulkTrainButton({ untrainedCount, preview = false }: { untrained
     );
     setBusy(false);
     if (result.status !== 200) {
-      setError(errorMessage(result.body) ?? '一括調教に失敗しました');
+      setError(errorMessage(result.body) ?? t.bulk_fail);
       return;
     }
     const body = result.body as { trained: number; by_type: Record<string, number> };
     const parts = Object.entries(body.by_type)
-      .map(([t, n]) => `${TYPE_JA[t] ?? t}${n}`)
+      .map(([k, n]) => `${typeLabel[k] ?? k}${n}`)
       .join('・');
-    setMessage(body.trained > 0 ? `${body.trained}頭を調教しました(${parts})。` : '調教できる馬はいませんでした。');
+    setMessage(body.trained > 0 ? fill(t.bulk_done_tpl, { n: body.trained, parts }) : t.bulk_none);
     router.refresh();
   }
 
@@ -55,12 +63,10 @@ export function BulkTrainButton({ untrainedCount, preview = false }: { untrained
     <div className={s.bulkTrain}>
       {untrainedCount > 0 ? (
         <button type="button" className={s.bulkTrainBtn} disabled={busy} onClick={() => void run()}>
-          {busy ? '調教中…' : `⚡ 未調教の${untrainedCount}頭をまとめて調教`}
+          {busy ? t.bulk_busy : fill(t.bulk_btn_tpl, { n: untrainedCount })}
         </button>
       ) : null}
-      <span className={s.bulkTrainNote}>
-        馬タイプに最適な調教を自動選択(疲労が高い馬は回復)。個別にこだわる馬は先にカードから調教を。
-      </span>
+      <span className={s.bulkTrainNote}>{t.bulk_note}</span>
       {error ? <p className="error">{error}</p> : null}
       {message ? <p className="ok">{message}</p> : null}
     </div>

@@ -5,6 +5,8 @@ import { BulkTrainButton } from '@/components/BulkTrainButton';
 import { ChampionCard, ListedCard, StableBrowser } from '@/components/StableBrowser';
 import { RarityLegend } from '@/components/RarityLegend';
 import { HiddenBadges, type HiddenBadge } from '@/components/HiddenBadges';
+import { APP_COPY, type Lang } from '@/lib/i18n';
+import { fill } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
 
 /* ============================================================================
@@ -45,8 +47,9 @@ export interface StableData {
   hiddenBadges?: HiddenBadge[];
 }
 
-export function StableView({ data }: { data: StableData }) {
+export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lang }) {
   const { horses, pendingCount } = data;
+  const t = APP_COPY[lang].stable;
 
   const active = horses.filter((h) => h.status === 'ACTIVE');
   // 手動出品中(Market Lock)は今夜走らない — 「出走中」と分けて事実どおり見せる
@@ -55,24 +58,30 @@ export function StableView({ data }: { data: StableData }) {
   const champions = horses.filter((h) => h.status === 'DAY7_CLEARED' || h.status === 'MEMORIALIZED');
   const burned = horses.filter((h) => h.status === 'BURNED');
   const stableValue = active.reduce((sum, h) => sum + Number(horseValue(h.current_day)), 0);
+  // 頭数サマリー(チャンピオン0頭のときは省略 — 従来と同じ)
+  const subParts = [
+    fill(t.sub_active_tpl, { n: active.length }),
+    ...(champions.length > 0 ? [fill(t.sub_champ_tpl, { n: champions.length })] : []),
+    fill(t.sub_burned_tpl, { n: burned.length }),
+  ];
+  // {amt} の前後に分割して金額だけ太字にする(語順の言語差を吸収)
+  const [welcome1, welcome2] = t.welcome_text_tpl.split('{amt}');
 
   return (
     <div className={s.app}>
       {/* ===== ヘッダ(頭数 + 評価額合計) ===== */}
       <div className={s.header}>
         <div>
-          <div className={s.headTitle}>{data.stableName ?? 'マイ厩舎'}</div>
-          <div className={s.headSub}>
-            現役 {active.length}頭{champions.length > 0 ? ` · チャンピオン ${champions.length}頭` : ''} · 消滅 {burned.length}頭
-          </div>
+          <div className={s.headTitle}>{data.stableName ?? t.default_name}</div>
+          <div className={s.headSub}>{subParts.join(' · ')}</div>
         </div>
         <div className={s.headStats}>
           <div className={`${s.stat} ${s.statCount}`}>
-            <div className="k">保有 HORSES</div>
-            <div className="v">{horses.length}<small>頭</small></div>
+            <div className="k">{t.stat_horses_k}</div>
+            <div className="v">{horses.length}</div>
           </div>
           <div className={`${s.stat} ${s.statValue}`}>
-            <div className="k">評価額合計</div>
+            <div className="k">{t.stat_value_k}</div>
             <div className="v">{money(stableValue)}<small>USDT</small></div>
           </div>
         </div>
@@ -80,53 +89,51 @@ export function StableView({ data }: { data: StableData }) {
 
       {/* ===== 獲得した称号(隠し実績・EASTER_EGG_PLAN.md) ===== */}
       {data.hiddenBadges && data.hiddenBadges.length > 0 ? (
-        <HiddenBadges badges={data.hiddenBadges} />
+        <HiddenBadges badges={data.hiddenBadges} title={t.badges_title} />
       ) : null}
 
       {/* ===== 「馬を迎える」CTA ===== */}
       <section className={s.welcome}>
         <div>
-          <div className={s.welcomeTitle}>新しい馬を迎える</div>
+          <div className={s.welcomeTitle}>{t.welcome_title}</div>
           <div className={s.welcomeText}>
-            マーケットで購入予約(1頭につき最大 <b>{money(PURCHASE_LOCK_AMOUNT)} USDT</b> ロック)をすると、今夜20:00のレースで馬が割り当てられます。
-            {pendingCount > 0 ? <span className={s.welcomePending}> 現在 {pendingCount}件 割当待ち。</span> : null}
+            {welcome1}<b>{money(PURCHASE_LOCK_AMOUNT)} USDT</b>{welcome2}
+            {pendingCount > 0 ? <span className={s.welcomePending}>{fill(t.welcome_pending_tpl, { n: pendingCount })}</span> : null}
           </div>
         </div>
-        <Link href="/market" className={s.welcomeCta}>馬を迎える ▶</Link>
+        <Link href="/market" className={s.welcomeCta}>{t.welcome_cta}</Link>
       </section>
 
       {/* ===== 出走中(手動出品中を除く実数・検索/ソート/絞り込み/ページング) ===== */}
       <section>
         <div className={s.secHead}>
-          <span className={`${s.secLabel} ${s.secLabelActive}`}>出走中 · TONIGHT&apos;S RUNNERS</span>
+          <span className={`${s.secLabel} ${s.secLabelActive}`}>{t.sec_running}</span>
           <span className={s.secCount}>{racing.length}</span>
-          <span className={s.secNote}><span className={s.live}>●</span> 今夜20:00 一斉発走</span>
+          <span className={s.secNote}><span className={s.live}>●</span> {t.sec_note_running}</span>
         </div>
         {racing.length > 0 ? (
           <>
-            <BulkTrainButton untrainedCount={racing.filter((h) => !h.trained_for_next_race).length} />
-            <StableBrowser kind="active" horses={racing} />
+            <BulkTrainButton untrainedCount={racing.filter((h) => !h.trained_for_next_race).length} t={t} />
+            <StableBrowser kind="active" horses={racing} t={t} />
           </>
         ) : (
           <div className={s.emptyBox}>
-            {pendingCount > 0
-              ? `割当待ち ${pendingCount} 件 — 今夜のレースで馬が誕生します。`
-              : '出走中の馬はいません。上の「馬を迎える」から参加しましょう。'}
+            {pendingCount > 0 ? fill(t.empty_pending_tpl, { n: pendingCount }) : t.empty_none}
           </div>
         )}
-        <div className={s.legendWrap}><RarityLegend /></div>
+        <div className={s.legendWrap}><RarityLegend t={t} /></div>
       </section>
 
       {/* ===== 出品中(Market Lock=今夜走らない・調教CTAなし) ===== */}
       {listed.length > 0 ? (
         <section>
           <div className={s.secHead}>
-            <span className={`${s.secLabel} ${s.secLabelListed}`}>出品中 · ON THE MARKET</span>
+            <span className={`${s.secLabel} ${s.secLabelListed}`}>{t.sec_listed}</span>
             <span className={s.secCount}>{listed.length}</span>
-            <span className={s.secNote}>今夜は出走しません(Day・価値は凍結)· 管理は<Link href="/market" className={s.secLink}>マーケット</Link></span>
+            <span className={s.secNote}>{t.listed_note_pre}<Link href="/market" className={s.secLink}>{t.listed_note_link}</Link></span>
           </div>
           <div className={s.gallery}>
-            {listed.map((h) => <ListedCard key={h.id} h={h} />)}
+            {listed.map((h) => <ListedCard key={h.id} h={h} t={t} />)}
           </div>
         </section>
       ) : null}
@@ -135,12 +142,12 @@ export function StableView({ data }: { data: StableData }) {
       {champions.length > 0 ? (
         <section>
           <div className={s.secHead}>
-            <span className={`${s.secLabel} ${s.secLabelChamp}`}>チャンピオンコレクション · MY NFTS</span>
+            <span className={`${s.secLabel} ${s.secLabelChamp}`}>{t.sec_champ}</span>
             <span className={s.secCount}>{champions.length}</span>
-            <span className={s.secNote}>Day7走破の栄光 — 200 USDT報酬+記念NFT</span>
+            <span className={s.secNote}>{t.sec_note_champ}</span>
           </div>
           <div className={s.champGrid}>
-            {champions.map((h) => <ChampionCard key={h.id} h={h} />)}
+            {champions.map((h) => <ChampionCard key={h.id} h={h} t={t} />)}
           </div>
         </section>
       ) : null}
@@ -149,11 +156,11 @@ export function StableView({ data }: { data: StableData }) {
       {burned.length > 0 ? (
         <section>
           <div className={s.secHead}>
-            <span className={`${s.secLabel} ${s.secLabelPast}`}>消滅の記録 · BURNED</span>
+            <span className={`${s.secLabel} ${s.secLabelPast}`}>{t.sec_burned}</span>
             <span className={s.secCount}>{burned.length}</span>
-            <span className={s.secNote}>レースで消滅した馬たち</span>
+            <span className={s.secNote}>{t.sec_note_burned}</span>
           </div>
-          <StableBrowser kind="past" horses={burned} />
+          <StableBrowser kind="past" horses={burned} t={t} />
         </section>
       ) : null}
     </div>

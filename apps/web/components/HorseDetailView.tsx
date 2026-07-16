@@ -1,14 +1,6 @@
 import Link from 'next/link';
 import type { JSX } from 'react';
-import {
-  PRICE_TABLE_V1,
-  SURFACE_JA,
-  TRACK_JA,
-  WEATHER_JA,
-  type Surface,
-  type TrackCondition,
-  type Weather,
-} from '@sevendays/domain';
+import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { HorsePager, type PagerNav } from '@/components/HorsePager';
 import { TrainingForm } from '@/components/TrainingForm';
@@ -16,6 +8,8 @@ import { ItemBoostPanel } from '@/components/ItemBoostPanel';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
 import { RarityLegend } from '@/components/RarityLegend';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
+import { APP_COPY, type Lang } from '@/lib/i18n';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
 
 /* ============================================================================
@@ -73,15 +67,31 @@ export interface HorseDetail {
 }
 
 const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
+type TH = AppDict['horse'];
+type TC = AppDict['conds'];
 
-/** 能力の日本語ラベル(生キーのままでは読めない — 087監査 #5)。 */
-const ABILITY_JA: Record<string, string> = {
-  base_speed: 'スピード',
-  base_power: 'パワー',
-  base_stamina: 'スタミナ',
-  base_guts: '根性',
-  base_luck: '運',
-};
+/** テンプレの {v} の前後で分割して値だけ太字にする(語順の言語差を吸収)。 */
+function boldV(tpl: string, v: string): JSX.Element {
+  const [a, b] = tpl.split('{v}');
+  return (
+    <>
+      {a}
+      <b>{v}</b>
+      {b}
+    </>
+  );
+}
+
+/** 能力ラベル(生キーのままでは読めない — 087監査 #5)。辞書から生成。 */
+function abilityLabels(t: TH): Record<string, string> {
+  return {
+    base_speed: t.ab_speed,
+    base_power: t.ab_power,
+    base_stamina: t.ab_stamina,
+    base_guts: t.ab_guts,
+    base_luck: t.ab_luck,
+  };
+}
 /** 能力の仕様上の上限(ABILITY_DISTRIBUTION_V1.max)— バーは絶対スケールで描く。 */
 const ABILITY_MAX = 100;
 /** Day7 走破の買い戻し額(価格表の外側・チャンピオン報酬)。 */
@@ -110,9 +120,10 @@ function short(hash: string, head = 6, tail = 4): string {
   if (!hash || hash.length <= head + tail + 1) return hash;
   return `${hash.slice(0, head)}…${hash.slice(-tail)}`;
 }
-function conditionsText(r: HorseRaceResult): string {
+function conditionsText(r: HorseRaceResult, tc: TC): string {
   if (!r.weather || !r.track_condition || !r.surface) return '—';
-  return `${WEATHER_JA[r.weather as Weather] ?? r.weather} · ${TRACK_JA[r.track_condition as TrackCondition] ?? r.track_condition} · ${SURFACE_JA[r.surface as Surface] ?? r.surface}`;
+  const name = (k: string) => (tc as Record<string, string>)[k] ?? k;
+  return `${name(r.weather)} · ${name(r.track_condition)} · ${name(r.surface)}`;
 }
 
 /* ---- 状態モデル ----------------------------------------------------------- */
@@ -128,40 +139,41 @@ function modeOf(horse: HorseDetail): Mode {
 }
 
 interface StatusBadgeInfo { cls: string; label: string; }
-function statusBadge(mode: Mode): StatusBadgeInfo {
+function statusBadge(mode: Mode, t: TH): StatusBadgeInfo {
   switch (mode) {
-    case 'LISTED': return { cls: s.stListed!, label: '出品中' };
-    case 'BURNED': return { cls: s.stBurned!, label: 'BURNED · 消滅' };
-    case 'DAY7_CLEARED': return { cls: s.stCleared!, label: 'チャンピオン' };
-    case 'MEMORIALIZED': return { cls: s.stMemorial!, label: '記念馬 · NFT' };
+    case 'LISTED': return { cls: s.stListed!, label: t.st_listed };
+    case 'BURNED': return { cls: s.stBurned!, label: t.st_burned };
+    case 'DAY7_CLEARED': return { cls: s.stCleared!, label: t.st_champion };
+    case 'MEMORIALIZED': return { cls: s.stMemorial!, label: t.st_memorial };
     case 'ACTIVE':
-    default: return { cls: s.stActive!, label: '出走中' };
+    default: return { cls: s.stActive!, label: t.st_active };
   }
 }
 
 interface MastValue { k: string; v: string; unit: string; muted: boolean; }
-function mastValue(horse: HorseDetail, mode: Mode): MastValue {
+function mastValue(horse: HorseDetail, mode: Mode, t: TH): MastValue {
   const d = horse.current_day;
   switch (mode) {
-    case 'LISTED': return { k: '出品価格 · LISTED', v: horseValue(d), unit: 'USDT', muted: false };
-    case 'BURNED': return { k: '結末 · OUTCOME', v: '消滅', unit: '', muted: true };
-    case 'DAY7_CLEARED': return { k: '報酬 · REWARD', v: CHAMPION_VALUE, unit: 'USDT', muted: false };
-    case 'MEMORIALIZED': return { k: '結末 · OUTCOME', v: '記念NFT', unit: '', muted: false };
+    case 'LISTED': return { k: t.k_listed, v: horseValue(d), unit: 'USDT', muted: false };
+    case 'BURNED': return { k: t.k_outcome, v: t.v_burned, unit: '', muted: true };
+    case 'DAY7_CLEARED': return { k: t.k_reward, v: CHAMPION_VALUE, unit: 'USDT', muted: false };
+    case 'MEMORIALIZED': return { k: t.k_outcome, v: t.v_memorial, unit: '', muted: false };
     case 'ACTIVE':
-    default: return { k: '現在価値 · CURRENT VALUE', v: horseValue(d), unit: 'USDT', muted: false };
+    default: return { k: t.k_value, v: horseValue(d), unit: 'USDT', muted: false };
   }
 }
 
-function dayNote(horse: HorseDetail, mode: Mode): string {
+function dayNote(horse: HorseDetail, mode: Mode, t: TH): string {
   const d = horse.current_day;
   switch (mode) {
     case 'ACTIVE':
-      if (d >= 6) return `Day ${d} を走行中。今夜のレースを走破すれば7日完走 — チャンピオン報酬 200 USDT ＋記念NFT。`;
-      return `Day ${d} を走行中。今夜のレースを生き延びれば Day ${Math.min(7, d + 1)} へ、価値も上昇します。${horse.listing === 'SMART' ? ' スマート出品中 — 今夜売れた場合はレース後に新オーナーへ引き渡されます。' : ''}`;
-    case 'LISTED': return `マーケットに出品中 — 今夜は出走しません(Day ${d}・価値は凍結)。取り下げは翌バッチから反映されます。`;
-    case 'BURNED': return `Day ${d} のレースで成績下位に入り Burn(消滅)しました。`;
-    case 'DAY7_CLEARED': return '7日間を走り切ったチャンピオン。報酬 200 USDT を受け取り中です。';
-    case 'MEMORIALIZED': return '7日間を走り切った記念馬。厩舎に永久保存されます。';
+      if (d >= 6) return fill(t.note_active_d6_tpl, { d });
+      return fill(t.note_active_tpl, { d, next: Math.min(7, d + 1) })
+        + (horse.listing === 'SMART' ? t.note_smart_suffix : '');
+    case 'LISTED': return fill(t.note_listed_tpl, { d });
+    case 'BURNED': return fill(t.note_burned_tpl, { d });
+    case 'DAY7_CLEARED': return t.note_cleared;
+    case 'MEMORIALIZED': return t.note_memorial;
   }
 }
 
@@ -188,42 +200,42 @@ function DayRail({ horse, mode }: { horse: HorseDetail; mode: Mode }) {
 }
 
 /* ---- バリューラダー(価値の階段) ------------------------------------------- */
-function ValueLadder({ horse, mode }: { horse: HorseDetail; mode: Mode }) {
+function ValueLadder({ horse, mode, t }: { horse: HorseDetail; mode: Mode; t: TH }) {
   const day = horse.current_day;
 
   let headline: JSX.Element;
   if (mode === 'ACTIVE') {
     headline = day >= 6 ? (
       <>
-        <span className={s.ladNow}>現在 <b>{PRICE_TABLE_V1[6]}</b> USDT</span>
+        <span className={s.ladNow}>{boldV(t.lad_now_tpl, PRICE_TABLE_V1[6]!)}</span>
         <span className={s.ladArrow}>→</span>
-        <span className={`${s.ladNext} ${s.ladNextChamp}`}><span className={s.ladNextK}>今夜走破すれば</span> <b>{CHAMPION_VALUE}</b> USDT ＋記念NFT</span>
+        <span className={`${s.ladNext} ${s.ladNextChamp}`}><span className={s.ladNextK}>{t.lad_champ_k}</span> <b>{CHAMPION_VALUE}</b> USDT {t.lad_champ_suffix}</span>
       </>
     ) : (
       <>
-        <span className={s.ladNow}>現在 <b>{horseValue(day)}</b> USDT</span>
+        <span className={s.ladNow}>{boldV(t.lad_now_tpl, horseValue(day))}</span>
         <span className={s.ladArrow}>→</span>
-        <span className={s.ladNext}><span className={s.ladNextK}>今夜生き残れば</span> <b>{PRICE_TABLE_V1[day + 1]}</b> USDT</span>
+        <span className={s.ladNext}><span className={s.ladNextK}>{t.lad_next_k}</span> <b>{PRICE_TABLE_V1[day + 1]}</b> USDT</span>
       </>
     );
   } else if (mode === 'LISTED') {
     headline = (
       <>
-        <span className={s.ladNow}>出品価格 <b>{horseValue(day)}</b> USDT</span>
-        <span className={s.ladNext}><span className={`${s.ladNextK} ${s.ladNextKWarn}`}>今夜は出走しません(価値は凍結)</span></span>
+        <span className={s.ladNow}>{boldV(t.lad_listed_now_tpl, horseValue(day))}</span>
+        <span className={s.ladNext}><span className={`${s.ladNextK} ${s.ladNextKWarn}`}>{t.lad_listed_note}</span></span>
       </>
     );
   } else if (mode === 'BURNED') {
     headline = (
       <>
-        <span className={`${s.ladNow} ${s.ladNowBurn}`}>Day {day} で消滅</span>
-        <span className={s.ladNext}><span className={`${s.ladNextK} ${s.ladNextKFaint}`}>この先の価値には進めませんでした</span></span>
+        <span className={`${s.ladNow} ${s.ladNowBurn}`}>{fill(t.lad_burn_now_tpl, { d: day })}</span>
+        <span className={s.ladNext}><span className={`${s.ladNextK} ${s.ladNextKFaint}`}>{t.lad_burn_note}</span></span>
       </>
     );
   } else if (mode === 'DAY7_CLEARED') {
-    headline = <span className={s.ladNow}>7日走破 · チャンピオン報酬 <b>{CHAMPION_VALUE}</b> USDT 受取中</span>;
+    headline = <span className={s.ladNow}>{boldV(t.lad_cleared_tpl, CHAMPION_VALUE)}</span>;
   } else {
-    headline = <span className={s.ladNow}>7日完走 · 記念NFT · 報酬 {CHAMPION_VALUE} USDT 受取済</span>;
+    headline = <span className={s.ladNow}>{boldV(t.lad_memorial_tpl, CHAMPION_VALUE)}</span>;
   }
 
   const cols: JSX.Element[] = [];
@@ -232,11 +244,11 @@ function ValueLadder({ horse, mode }: { horse: HorseDetail; mode: Mode }) {
     let pin: JSX.Element | null = null;
     if (mode === 'ACTIVE' || mode === 'LISTED') {
       if (i < day) cls = s.barPast!;
-      else if (i === day) { cls = s.barNow!; pin = <span className={`${s.ladPin} ${s.pinNow}`}>現在</span>; }
-      else if (i === day + 1 && mode === 'ACTIVE') { cls = s.barNext!; pin = <span className={`${s.ladPin} ${s.pinNext}`}>今夜</span>; }
+      else if (i === day) { cls = s.barNow!; pin = <span className={`${s.ladPin} ${s.pinNow}`}>{t.pin_now}</span>; }
+      else if (i === day + 1 && mode === 'ACTIVE') { cls = s.barNext!; pin = <span className={`${s.ladPin} ${s.pinNext}`}>{t.pin_next}</span>; }
     } else if (mode === 'BURNED') {
       if (i < day) cls = s.barPast!;
-      else if (i === day) { cls = s.barBurn!; pin = <span className={`${s.ladPin} ${s.pinBurn}`}>消滅</span>; }
+      else if (i === day) { cls = s.barBurn!; pin = <span className={`${s.ladPin} ${s.pinBurn}`}>{t.pin_burn}</span>; }
     } else {
       cls = s.barPast!;
     }
@@ -253,44 +265,54 @@ function ValueLadder({ horse, mode }: { horse: HorseDetail; mode: Mode }) {
   // Day7 チャンピオン列
   let ccls = s.barChampFuture!;
   let cpin: JSX.Element | null = null;
-  if (mode === 'DAY7_CLEARED' || mode === 'MEMORIALIZED') { ccls = s.barChamp!; cpin = <span className={`${s.ladPin} ${s.pinChamp}`}>走破</span>; }
-  else if (mode === 'ACTIVE' && day >= 6) { ccls = s.barChamp!; cpin = <span className={`${s.ladPin} ${s.pinChamp}`}>今夜</span>; }
+  if (mode === 'DAY7_CLEARED' || mode === 'MEMORIALIZED') { ccls = s.barChamp!; cpin = <span className={`${s.ladPin} ${s.pinChamp}`}>{t.pin_clear}</span>; }
+  else if (mode === 'ACTIVE' && day >= 6) { ccls = s.barChamp!; cpin = <span className={`${s.ladPin} ${s.pinChamp}`}>{t.pin_next}</span>; }
   cols.push(
     <div key="champ" className={s.ladCol}>
       <div className={`${s.ladPrice} ${s.ladPriceGold}`}>{CHAMPION_VALUE}</div>
       <div className={`${s.ladBar} ${ccls}`} style={{ height: '100%' }}>{cpin}</div>
-      <div className={`${s.ladDay} ${s.ladDayChamp}`}>走破</div>
+      <div className={`${s.ladDay} ${s.ladDayChamp}`}>{t.lad_champ_day}</div>
     </div>,
   );
 
   return (
     <div>
-      <div className={s.secLabel}>価値の階段 · VALUE LADDER</div>
+      <div className={s.secLabel}>{t.lad_sec}</div>
       <div className={s.ladWrap}>
         <div className={s.ladHead}>{headline}</div>
         <div className={s.ladBars}>{cols}</div>
-        <div className={s.ladNote}>
-          価値は7日間の価格表(PRICE TABLE)で決まる公開値。毎晩のレースを生き残るほど上がり、7日走り切ると 200 USDT で買い戻されチャンピオンNFTになります。
-        </div>
+        <div className={s.ladNote}>{t.lad_note}</div>
       </div>
     </div>
   );
 }
 
 /* ---- メイン --------------------------------------------------------------- */
-export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: PagerNav | undefined }) {
+export function HorseDetailView({
+  horse,
+  nav,
+  lang = 'ja',
+}: {
+  horse: HorseDetail;
+  nav?: PagerNav | undefined;
+  lang?: Lang;
+}) {
+  const t = APP_COPY[lang].horse;
+  const tc = APP_COPY[lang].conds;
+  const ts = APP_COPY[lang].stable;
   // 隠し演出(EASTER_EGG_PLAN.md): 真夜中の馬は夜色ルック。
   const look = horse.night_variant ? NIGHT_LOOK : deriveNftLook(horse.dna_hash, horse.name);
   const mode = modeOf(horse);
-  const badge = statusBadge(mode);
-  const mv = mastValue(horse, mode);
+  const badge = statusBadge(mode, t);
+  const mv = mastValue(horse, mode, t);
+  const abLabel = abilityLabels(t);
   const abilities = Object.entries(horse.ability_json ?? {});
   const history = horse.history ?? [];
   const isActive = mode === 'ACTIVE';
 
   return (
     <div className={s.wrap}>
-      <Link href="/horses" className={s.crumb}>← マイ厩舎</Link>
+      <Link href="/horses" className={s.crumb}>{t.crumb}</Link>
 
       {/* MASTHEAD */}
       <div className={s.mast}>
@@ -300,8 +322,8 @@ export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: Page
             <span className={`${s.badge} ${rarClass(horse.rarity)}`}>{horse.rarity}</span>
             <span className={`${s.badge} ${s.typeBadge}`}>{horse.horse_type}</span>
             <span className={`${s.badge} ${badge.cls}`}>{badge.label}</span>
-            {horse.listing === 'SMART' ? <span className={`${s.badge} ${s.stSmart}`}>出品中 · スマート</span> : null}
-            {horse.gifted_at ? <span className={`${s.badge} ${s.stGifted}`}>贈られた馬</span> : null}
+            {horse.listing === 'SMART' ? <span className={`${s.badge} ${s.stSmart}`}>{t.st_smart}</span> : null}
+            {horse.gifted_at ? <span className={`${s.badge} ${s.stGifted}`}>{t.st_gifted}</span> : null}
           </div>
         </div>
         <div className={s.mastR}>
@@ -325,12 +347,12 @@ export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: Page
                   style={{ background: HERO_COLOR[horse.color_variant], mixBlendMode: horse.color_variant === 'black' ? 'multiply' : 'color' }}
                 />
               ) : null}
-              {horse.golden_star ? <span className={s.heroGoldenStar} title="黄金の夜の生還馬">★</span> : null}
+              {horse.golden_star ? <span className={s.heroGoldenStar} title={ts.tip_golden}>★</span> : null}
               {horse.night_variant ? <span className={s.heroNightTag}>MIDNIGHT</span> : null}
               {horse.revenge_flame ? (
-                <span className={`${s.heroFlameTag} ${horse.revenge_gold ? s.heroFlameGold : ''}`}>リベンジの焔</span>
+                <span className={`${s.heroFlameTag} ${horse.revenge_gold ? s.heroFlameGold : ''}`}>{t.mark_flame}</span>
               ) : null}
-              {horse.milestone ? <span className={s.heroMilestone}>記念の一頭</span> : null}
+              {horse.milestone ? <span className={s.heroMilestone}>{t.mark_milestone}</span> : null}
               <div className={s.scrim} />
               <div className={s.artCap}>
                 <div>
@@ -343,11 +365,11 @@ export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: Page
                 </div>
               </div>
               {/* 前/次の馬へ(厩舎に戻らず回れる) */}
-              {nav ? <HorsePager nav={nav} /> : null}
+              {nav ? <HorsePager nav={nav} t={t} /> : null}
             </div>
             <div className={s.heroFoot}>
               <DayRail horse={horse} mode={mode} />
-              <div className={s.dayNote}>{dayNote(horse, mode)}</div>
+              <div className={s.dayNote}>{dayNote(horse, mode, t)}</div>
             </div>
           </div>
         </div>
@@ -356,76 +378,61 @@ export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: Page
           {isActive ? (
             <div className={s.trainCard}>
               <div className={s.trainTop}>
-                <span className={s.trainTitle}>今日の調教</span>
-                <span className={s.freeTag}>無料 · 1日1回</span>
+                <span className={s.trainTitle}>{t.train_title}</span>
+                <span className={s.freeTag}>{t.free_tag}</span>
               </div>
-              <div className={s.trainDesc}>
-                今夜のスコアに直接加点(馬タイプとの相性で+3〜5)。レースの疲労+5は毎晩の自然回復−5とちょうど相殺 —
-                疲労が増えるのは攻めの調教(+8)を選んだ夜だけで、回復調教なら癒せます。
-                疲労はスコアとコンディションを蝕むので、7日間の采配が価値を伸ばす鍵です。
-              </div>
+              <div className={s.trainDesc}>{t.train_desc}</div>
               <div className={s.trainForm}>
                 <TrainingForm
                   horseId={horse.id}
                   horseType={horse.horse_type}
                   fatigue={Number(horse.fatigue)}
                   trained={horse.trained_for_next_race === true}
+                  t={t}
                 />
-                <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} />
+                <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} t={t} />
               </div>
-              <div className={s.trainNote}>今夜20:00のスナップショット確定までに実施すると、今夜のレースに反映されます。</div>
+              <div className={s.trainNote}>{t.train_note}</div>
               {/* 馬の転送(Decision 094): ACTIVEかつ出品中でない馬のみ */}
               {horse.listing === null ? (
-                <HorseTransferForm horseId={horse.id} horseName={horse.name} />
+                <HorseTransferForm horseId={horse.id} horseName={horse.name} t={t} />
               ) : null}
             </div>
           ) : mode === 'LISTED' ? (
             <div className={`${s.outcome} ${s.outListed}`}>
-              <div className={s.outHead}>出品中 — 今夜は走りません</div>
-              <div className={s.outText}>
-                マーケットに出品中のため、今夜のレースには出走しません(Day {horse.current_day}・価値は凍結)。
-                出品中は調教とアイテムは使えません。売れると価格の98%(手数料2%)を受け取り、通知とメールでお知らせします。
-              </div>
-              <Link href="/market" className={s.outCta}>出品を管理 →</Link>
+              <div className={s.outHead}>{t.out_listed_head}</div>
+              <div className={s.outText}>{fill(t.out_listed_text_tpl, { d: horse.current_day })}</div>
+              <Link href="/market" className={s.outCta}>{t.out_manage}</Link>
             </div>
           ) : mode === 'BURNED' ? (
             <div className={`${s.outcome} ${s.outBurned}`}>
-              <div className={s.outHead}>BURNED — 消滅</div>
-              <div className={s.outText}>
-                Day {horse.current_day} のレースで成績下位に入り、Burn(消滅)しました。
-                Burn＝毎晩の下位の馬が消える仕組みで、生き残った馬の価値を支えます。この馬は厩舎の記録としてのみ残ります。
-              </div>
+              <div className={s.outHead}>{t.out_burned_head}</div>
+              <div className={s.outText}>{fill(t.out_burned_text_tpl, { d: horse.current_day })}</div>
             </div>
           ) : mode === 'DAY7_CLEARED' ? (
             <div className={`${s.outcome} ${s.outGold}`}>
-              <div className={s.outHead}>チャンピオン — 7日走破</div>
-              <div className={s.outText}>
-                7日間を走り切ったチャンピオンです。チャンピオン報酬 200 USDT(7日分割)を受け取り中。
-                走破後は記念NFTとして厩舎に残ります。
-              </div>
+              <div className={s.outHead}>{t.out_cleared_head}</div>
+              <div className={s.outText}>{t.out_cleared_text}</div>
             </div>
           ) : (
             <div className={`${s.outcome} ${s.outGold}`}>
-              <div className={s.outHead}>記念馬 — NFT</div>
-              <div className={s.outText}>
-                7日間を走り切った証。記念NFTとして厩舎に永久保存されます。
-                チャンピオン報酬 200 USDT の受け取りは完了しています。
-              </div>
+              <div className={s.outHead}>{t.out_memorial_head}</div>
+              <div className={s.outText}>{t.out_memorial_text}</div>
             </div>
           )}
         </div>
       </div>
 
       {/* VALUE LADDER */}
-      <ValueLadder horse={horse} mode={mode} />
+      <ValueLadder horse={horse} mode={mode} t={t} />
 
       {/* LOWER ROW: 状態と能力 | 戦績 */}
       <div className={s.lowRow}>
         <div>
-          <div className={s.secLabel}>状態と能力 · VITALS & ABILITY</div>
+          <div className={s.secLabel}>{t.vit_sec}</div>
           <div className={s.vitals}>
             <div className={`${s.mini} ${s.miniCond}`}>
-              <div className={s.miniK}>CONDITION コンディション</div>
+              <div className={s.miniK}>{t.cond_k}</div>
               <div className={s.miniRow}>
                 <span className={s.miniNum}>{stat(horse.condition)}</span>
                 <span className={s.track}><span className={s.fillCyan} style={{ width: `${pct(horse.condition)}%` }} /></span>
@@ -433,9 +440,9 @@ export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: Page
             </div>
             <div
               className={`${s.mini} ${s.miniFtg}`}
-              title="レースの疲労+5は毎晩の自然回復−5と相殺します。疲労が増えるのは攻めの調教(+8)を選んだ夜だけで、回復調教(−4)で癒せます。"
+              title={t.ftg_tip}
             >
-              <div className={s.miniK}>FATIGUE 疲労</div>
+              <div className={s.miniK}>{t.ftg_k}</div>
               <div className={s.miniRow}>
                 <span className={s.miniNum}>{stat(horse.fatigue)}</span>
                 <span className={s.track}><span className={s.fillMag} style={{ width: `${pct(horse.fatigue)}%` }} /></span>
@@ -445,7 +452,7 @@ export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: Page
           <div className={s.abilityBox}>
             {abilities.map(([key, val]) => (
               <div key={key} className={s.abRow}>
-                <span className={s.abLabel}>{ABILITY_JA[key] ?? key}</span>
+                <span className={s.abLabel}>{abLabel[key] ?? key}</span>
                 <span className={s.track}>
                   <span className={s.fillCyan} style={{ width: `${Math.max(3, Math.min(100, (Number(val) / ABILITY_MAX) * 100))}%` }} />
                 </span>
@@ -453,42 +460,42 @@ export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: Page
               </div>
             ))}
           </div>
-          <div className={s.legendWrap}><RarityLegend /></div>
+          <div className={s.legendWrap}><RarityLegend t={ts} /></div>
         </div>
 
         {history.length > 0 ? (
           <div>
-            <div className={s.secLabel}>戦績 · RACE HISTORY</div>
+            <div className={s.secLabel}>{t.hist_sec}</div>
             <div className={s.histBox}>
               {history.map((r, i) => (
                 <div key={r.batch_date} className={`${s.histRow} ${r.is_burned ? s.histBurned : ''}`}>
-                  <span className={s.histDay}>第{i + 1}戦</span>
+                  <span className={s.histDay}>{fill(t.race_n_tpl, { n: i + 1 })}</span>
                   <span className={s.histDate}>{r.batch_date.slice(5).replace('-', '/')}</span>
                   <span className={s.histRank}>
                     <b>{r.final_rank.toLocaleString('en-US')}</b>
-                    <small> / {r.participant_count.toLocaleString('en-US')}頭</small>
+                    <small>{fill(t.heads_tpl, { n: r.participant_count.toLocaleString('en-US') })}</small>
                   </span>
                   <span className={s.histScore}>SCORE {score2(r.final_score)}</span>
-                  <span className={s.histCond}>{conditionsText(r)}</span>
+                  <span className={s.histCond}>{conditionsText(r, tc)}</span>
                   <span className={s.histRes}>
-                    {r.is_burned ? <span className={s.burnTag}>BURN</span> : <span className={s.survTag}>生存</span>}
+                    {r.is_burned ? <span className={s.burnTag}>BURN</span> : <span className={s.survTag}>{t.surv_tag}</span>}
                   </span>
                 </div>
               ))}
             </div>
-            <div className={s.histNote}>全結果はコミット済みシードから決定論計算 — 台帳(LEDGER)とレース詳細で誰でも検証できます。</div>
+            <div className={s.histNote}>{t.hist_note}</div>
           </div>
         ) : (
           <div>
-            <div className={s.secLabel}>戦績 · RACE HISTORY</div>
-            <div className={s.histEmpty}>まだレースを走っていません。最初のレースは今夜20:00です。</div>
+            <div className={s.secLabel}>{t.hist_sec}</div>
+            <div className={s.histEmpty}>{t.hist_empty}</div>
           </div>
         )}
       </div>
 
       {/* PROVENANCE */}
       <div>
-        <div className={`${s.secLabel} ${s.secLabelDim}`}>検証情報 · PROVENANCE</div>
+        <div className={`${s.secLabel} ${s.secLabelDim}`}>{t.prov_sec}</div>
         <div className={s.prov}>
           <div className={s.provRow}>
             <span className={s.provK}>DNA HASH</span>
@@ -502,7 +509,7 @@ export function HorseDetailView({ horse, nav }: { horse: HorseDetail; nav?: Page
             <span className={s.provK}>GEN VERSION</span>
             <span className={s.provV}>{horse.horse_generation_version}</span>
           </div>
-          <div className={s.provNote}>見た目と能力は dna_hash から決定論生成。誰でも同じ入力から同じ結果を再計算・検証できます。</div>
+          <div className={s.provNote}>{t.prov_note}</div>
         </div>
       </div>
     </div>

@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import { serverApi } from '@/lib/server-api';
+import { getLang } from '@/lib/i18n-server';
+import { APP_COPY } from '@/lib/i18n';
 import { HorseDetailView, type HorseDetail } from '@/components/HorseDetailView';
 import type { PagerNav } from '@/components/HorsePager';
 
@@ -12,9 +14,6 @@ interface OwnedHorse {
   rarity: string; listing: string | null; trained_for_next_race: boolean;
 }
 type Group = 'racing' | 'listed' | 'champion' | 'burned' | 'other';
-const GROUP_LABEL: Record<Group, string> = {
-  racing: '出走中', listed: '出品中', champion: 'チャンピオン', burned: '消滅', other: '厩舎',
-};
 function groupOf(h: OwnedHorse): Group {
   if (h.status === 'ACTIVE') return h.listing === 'MANUAL' ? 'listed' : 'racing';
   if (h.status === 'DAY7_CLEARED' || h.status === 'MEMORIALIZED') return 'champion';
@@ -25,7 +24,7 @@ const RANK: Record<string, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3,
 const byValue = (a: OwnedHorse, b: OwnedHorse) =>
   b.current_day - a.current_day || (RANK[b.rarity] ?? 0) - (RANK[a.rarity] ?? 0);
 
-function buildNav(horses: OwnedHorse[], id: string): PagerNav | undefined {
+function buildNav(horses: OwnedHorse[], id: string, groupLabel: Record<Group, string>): PagerNav | undefined {
   const current = horses.find((h) => h.id === id);
   if (!current) return undefined;
   const g = groupOf(current);
@@ -56,7 +55,7 @@ function buildNav(horses: OwnedHorse[], id: string): PagerNav | undefined {
   if (group.length <= 1 && !nextUntrained) return undefined;
 
   return {
-    groupLabel: GROUP_LABEL[g],
+    groupLabel: groupLabel[g],
     prev: p ? { id: p.id, name: p.name } : null,
     next: n ? { id: n.id, name: n.name } : null,
     index: i + 1,
@@ -70,15 +69,22 @@ function buildNav(horses: OwnedHorse[], id: string): PagerNav | undefined {
 export default async function HorseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   // 詳細とページャ用一覧を並列取得(2026-07-16 §D: 直列2往復の解消)。
-  const [result, list] = await Promise.all([
+  const [result, list, lang] = await Promise.all([
     serverApi<HorseDetail>(`/api/v1/horses/${id}`),
     serverApi<{ horses: OwnedHorse[] }>('/api/v1/horses'),
+    getLang(),
   ]);
   if (result.status !== 200) notFound();
 
   // 前/次ページャ用のデータ。取得失敗しても詳細は表示する(矢印なし)。
+  const th = APP_COPY[lang].horse;
   let nav: PagerNav | undefined;
-  if (list.status === 200) nav = buildNav(list.body.horses, id);
+  if (list.status === 200) {
+    nav = buildNav(list.body.horses, id, {
+      racing: th.grp_racing, listed: th.grp_listed, champion: th.grp_champion,
+      burned: th.grp_burned, other: th.grp_other,
+    });
+  }
 
-  return <HorseDetailView horse={result.body} nav={nav} />;
+  return <HorseDetailView horse={result.body} nav={nav} lang={lang} />;
 }
