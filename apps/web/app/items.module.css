@@ -117,7 +117,6 @@
 /* ---- ギフト ---- */
 .giftHead { margin-top: 1.1rem; }
 .giftForm { display: grid; grid-template-columns: minmax(200px, 1.4fr) minmax(150px, 1fr) 90px auto; gap: 0.6rem; align-items: end; }
-.giftQty select { text-align: center; }
 @media (max-width: 640px) { .giftForm { grid-template-columns: 1fr 1fr; } .giftForm > label:first-child { grid-column: 1 / -1; } .giftForm > button { grid-column: 1 / -1; } }
 .giftNote { color: var(--faint); font-size: 0.75rem; margin-top: 0.5rem; line-height: 1.6; }
 
@@ -203,7 +202,12 @@
 .boostTitle { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.2rem; }
 .boostDesc { color: var(--faint); font-size: 0.76rem; margin-bottom: 0.6rem; line-height: 1.6; }
 .boostRow { display: flex; flex-wrap: wrap; gap: 0.55rem; align-items: center; }
-.boostRow select { flex: 1; min-width: 220px; }
+/* AppSelectトリガー(旧 .boostRow select)。レイアウト+globals同等の見た目を自前定義 */
+.boostSelect {
+  flex: 1; min-width: 220px;
+  background: var(--bg); color: var(--text); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); padding: 0.6rem 0.7rem; font-size: 0.95rem; font-family: inherit;
+}
 .boostApplied {
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; padding: 0.55rem 0.8rem;
   border: 1px solid rgba(201, 168, 106, 0.4); border-radius: var(--radius-sm);

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { AppSelect } from '@/components/AppSelect';
 import {
   MAX_CONCURRENT_PURCHASE_SESSIONS,
   PURCHASE_LOCK_AMOUNT,
@@ -127,15 +128,16 @@ export function ReservePanel({
             <div className={s.reserveAction}>
               <span className={s.reserveMax}>いま予約できるのは <b>最大 {maxN} 頭</b></span>
               <label className={s.reserveSelectWrap}>
-                <select
+                <AppSelect
                   className={s.reserveSelect}
-                  value={chosen}
-                  onChange={(e) => setCount(Number(e.target.value))}
-                >
-                  {Array.from({ length: maxN }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>{n} 頭</option>
-                  ))}
-                </select>
+                  value={String(chosen)}
+                  onChange={(v) => setCount(Number(v))}
+                  ariaLabel="予約する頭数"
+                  options={Array.from({ length: maxN }, (_, i) => i + 1).map((n) => ({
+                    value: String(n),
+                    label: `${n} 頭`,
+                  }))}
+                />
               </label>
               <button type="button" className={s.reserveCta} onClick={() => setConfirming(true)}>
                 購入予約する

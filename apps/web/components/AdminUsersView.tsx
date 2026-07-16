@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { AppSelect } from '@/components/AppSelect';
 import { localDate, localDateTimeSec } from '@/lib/format-time';
 import s from '../app/admin.module.css';
 
@@ -416,15 +417,23 @@ export function AdminUsersView() {
             {/* 管理アクション */}
             <div className={s.sec}>管理アクション</div>
             <div className={s.controls}>
-              <select className={s.sel} value={grantItemKey} onChange={(e) => setGrantItemKey(e.target.value)}>
-                <option value="">アイテムを選択…</option>
-                {catalog.map((c) => (
-                  <option key={c.key} value={c.key}>{c.name_ja}({c.band})</option>
-                ))}
-              </select>
-              <select className={s.sel} value={grantQty} onChange={(e) => setGrantQty(Number(e.target.value))}>
-                {[1, 2, 3, 5, 10].map((n) => <option key={n} value={n}>{n}個</option>)}
-              </select>
+              <AppSelect
+                className={s.sel}
+                value={grantItemKey}
+                onChange={setGrantItemKey}
+                ariaLabel="付与するアイテム"
+                options={[
+                  { value: '', label: 'アイテムを選択…' },
+                  ...catalog.map((c) => ({ value: c.key, label: `${c.name_ja}(${c.band})` })),
+                ]}
+              />
+              <AppSelect
+                className={s.sel}
+                value={String(grantQty)}
+                onChange={(v) => setGrantQty(Number(v))}
+                ariaLabel="付与する個数"
+                options={[1, 2, 3, 5, 10].map((n) => ({ value: String(n), label: `${n}個` }))}
+              />
               <button
                 type="button"
                 className={s.btn}

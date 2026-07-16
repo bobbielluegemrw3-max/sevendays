@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { statusKind } from '@/components/admin-shared';
+import { AppSelect } from '@/components/AppSelect';
 import { localDateTime, localDateTimeSec } from '@/lib/format-time';
 import s from '../app/admin.module.css';
 
@@ -55,10 +56,16 @@ export function AdminAuditLog({ audit }: { audit: AuditRow[] }) {
         <div>
           <div className={s.controls}>
             <input className={s.inp} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder="アクション・対象で検索…" aria-label="監査ログを検索" />
-            <select className={s.sel} value={actor} onChange={(e) => { setActor(e.target.value); reset(); }} aria-label="アクター種別">
-              <option value="ALL">すべてのアクター</option>
-              {actors.map((a) => <option key={a} value={a}>{a}</option>)}
-            </select>
+            <AppSelect
+              className={s.sel}
+              value={actor}
+              onChange={(v) => { setActor(v); reset(); }}
+              ariaLabel="アクター種別"
+              options={[
+                { value: 'ALL', label: 'すべてのアクター' },
+                ...actors.map((a) => ({ value: a, label: a })),
+              ]}
+            />
             <span className={s.cnt}>{shown === total ? `全${total}件` : `${total}件中 ${shown}件`}</span>
           </div>
           {slice.length > 0 ? (

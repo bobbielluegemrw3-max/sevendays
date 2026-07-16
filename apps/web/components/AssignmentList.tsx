@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { AppSelect } from '@/components/AppSelect';
 import { localDate } from '@/lib/format-time';
 import s from '../app/purchase.module.css';
 
@@ -59,11 +60,17 @@ export function AssignmentList({ assignments }: { assignments: Assignment[] }) {
     <div>
       <div className={s.controls}>
         <input className={s.search} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder="馬の名前で検索…" aria-label="馬の名前で検索" />
-        <select className={s.select} value={filt} onChange={(e) => { setFilt(e.target.value); reset(); }} aria-label="種別で絞り込み">
-          <option value="ALL">すべて</option>
-          <option value="DAY0">新規発行で入手</option>
-          <option value="P2P">マーケット売買</option>
-        </select>
+        <AppSelect
+          className={s.select}
+          value={filt}
+          onChange={(v) => { setFilt(v); reset(); }}
+          ariaLabel="種別で絞り込み"
+          options={[
+            { value: 'ALL', label: 'すべて' },
+            { value: 'DAY0', label: '新規発行で入手' },
+            { value: 'P2P', label: 'マーケット売買' },
+          ]}
+        />
         <span className={s.count}>{shown === total ? `全${total}件` : `${total}件中 ${shown}件`}</span>
       </div>
 

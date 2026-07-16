@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { AppSelect } from '@/components/AppSelect';
 import { localDateTime } from '@/lib/format-time';
 import s from '../app/wallet.module.css';
 
@@ -193,12 +194,18 @@ export function WalletHistory({ entries }: { entries: HistoryEntry[] }) {
       <div className={s.controls}>
         <input className={s.search} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder="履歴を検索…" aria-label="履歴を検索" />
         {!rawView && (
-          <select className={s.select} value={filt} onChange={(e) => { setFilt(e.target.value); reset(); }} aria-label="絞り込み">
-            <option value="ALL">すべて</option>
-            <option value="in">収入(+)</option>
-            <option value="out">支出(−)</option>
-            <option value="move">ロックの移動</option>
-          </select>
+          <AppSelect
+            className={s.select}
+            value={filt}
+            onChange={(v) => { setFilt(v); reset(); }}
+            ariaLabel="絞り込み"
+            options={[
+              { value: 'ALL', label: 'すべて' },
+              { value: 'in', label: '収入(+)' },
+              { value: 'out', label: '支出(−)' },
+              { value: 'move', label: 'ロックの移動' },
+            ]}
+          />
         )}
         <span className={s.count}>{shown === total ? `全${total}件` : `${total}件中 ${shown}件`}</span>
         <button

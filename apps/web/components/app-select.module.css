@@ -1,0 +1,153 @@
+/* ==========================================================================
+   AppSelect — カスタムドロップダウン(モバイル=ボトムシート/デスクトップ=アンカー)
+   トリガーの見た目は呼び出し元クラス(既存の .select 等)が定義し、ここでは
+   「ボタンをselect風に戻す」構造リセットだけを .triggerBase が担う。
+   className を渡さない呼び出し元には .triggerSolo(globals.cssのselect既定と
+   同じ見た目)が付く。メニュー/シートは全てこのモジュールの新設クラス。
+   ========================================================================== */
+
+/* ---- トリガー(ボタン→select風リセット) ---- */
+.triggerBase {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  font-weight: 400;
+  letter-spacing: normal;
+  box-shadow: none;
+  transition: none;
+  cursor: pointer;
+}
+.triggerBase:hover { filter: none; }
+.triggerBase:active { transform: none; }
+.triggerBase:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* className未指定の呼び出し元: globals.css の input/select 既定と同じ見た目 */
+.triggerSolo {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.7rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+/* iOSズーム対策(globals.cssのselect用ルールと同じ意図・見た目の一貫性) */
+@media (max-width: 767px) {
+  .triggerBase { font-size: 16px !important; }
+}
+
+.triggerLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chev { flex: none; opacity: 0.7; transition: transform 0.15s ease; }
+.chevOpen { transform: rotate(180deg); }
+
+/* ---- オーバーレイ ---- */
+.layer { position: fixed; inset: 0; z-index: 1200; }
+.backdrop { position: absolute; inset: 0; background: transparent; }
+
+/* ---- メニュー(デスクトップ: アンカー式) ---- */
+.menu {
+  position: fixed;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #0b0a14;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px -10px rgba(0, 0, 0, 0.75);
+  max-height: min(320px, 60vh);
+  overflow-y: auto;
+  max-width: min(92vw, 360px);
+  animation: menuPop 0.12s ease-out;
+}
+@keyframes menuPop {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sheetHead { display: none; }
+
+.groupHead {
+  padding: 10px 12px 4px;
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
+
+.item {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: inherit;
+  font-weight: 400;
+  letter-spacing: normal;
+  box-shadow: none;
+  cursor: pointer;
+  text-align: left;
+  transition: none;
+}
+.item:hover { background: rgba(0, 234, 255, 0.08); filter: none; }
+.item:active { transform: none; }
+.itemOn { color: var(--cyan); }
+.check { width: 16px; display: inline-flex; justify-content: center; flex: none; color: var(--cyan); }
+.itemLabel { flex: 1; min-width: 0; }
+
+/* ---- モバイル: ボトムシート ---- */
+@media (max-width: 560px) {
+  .backdrop { background: rgba(0, 0, 0, 0.6); animation: bdFade 0.15s ease-out; }
+  @keyframes bdFade { from { opacity: 0; } to { opacity: 1; } }
+  .menu {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    border-radius: 18px 18px 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    padding: 6px 10px calc(14px + env(safe-area-inset-bottom));
+    max-height: 70vh;
+    animation: sheetUp 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  @keyframes sheetUp {
+    from { transform: translateY(28px); opacity: 0.6; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .sheetHead { display: block; padding: 6px 0 8px; text-align: center; }
+  .sheetHandle {
+    width: 42px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border-strong);
+    margin: 0 auto 9px;
+  }
+  .sheetTitle {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  .item { padding: 13px 12px; font-size: 15px; }
+  .groupHead { font-size: 10px; }
+}

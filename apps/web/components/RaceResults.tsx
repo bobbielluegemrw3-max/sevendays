@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { AppSelect } from '@/components/AppSelect';
 import s from '../app/races.module.css';
 
 /* ============================================================================
@@ -51,11 +52,17 @@ export function RaceResults({ results }: { results: RaceResult[] }) {
 
       <div className={s.controls}>
         <input className={s.search} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder="馬IDで検索…" aria-label="馬IDで検索" />
-        <select className={s.select} value={filt} onChange={(e) => { setFilt(e.target.value); reset(); }} aria-label="絞り込み">
-          <option value="ALL">すべて</option>
-          <option value="SURVIVED">生存のみ</option>
-          <option value="BURNED">Burnのみ</option>
-        </select>
+        <AppSelect
+          className={s.select}
+          value={filt}
+          onChange={(v) => { setFilt(v); reset(); }}
+          ariaLabel="絞り込み"
+          options={[
+            { value: 'ALL', label: 'すべて' },
+            { value: 'SURVIVED', label: '生存のみ' },
+            { value: 'BURNED', label: 'Burnのみ' },
+          ]}
+        />
         <span className={s.count}>{shown === total ? `全${total.toLocaleString('en-US')}件` : `${total.toLocaleString('en-US')}件中 ${shown.toLocaleString('en-US')}件`}</span>
       </div>
 
@@ -79,9 +86,13 @@ export function RaceResults({ results }: { results: RaceResult[] }) {
           <button type="button" className={s.pagerBtn} disabled={safePage === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← 前へ</button>
           <span className={s.pageLabel}>{safePage + 1} / {pageCount}</span>
           <button type="button" className={s.pagerBtn} disabled={safePage >= pageCount - 1} onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}>次へ →</button>
-          <select className={s.selectSm} value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); reset(); }} aria-label="表示件数">
-            {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}件/頁</option>)}
-          </select>
+          <AppSelect
+            className={s.selectSm}
+            value={String(pageSize)}
+            onChange={(v) => { setPageSize(Number(v)); reset(); }}
+            ariaLabel="表示件数"
+            options={PAGE_SIZES.map((n) => ({ value: String(n), label: `${n}件/頁` }))}
+          />
         </div>
       ) : null}
     </div>

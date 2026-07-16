@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { AppSelect } from '@/components/AppSelect';
 import { APP_COPY, type Lang } from '@/lib/i18n';
 import s from '../app/dashboard.module.css';
 import d from '../app/support.module.css';
@@ -186,21 +187,24 @@ export function TradeAutoTile({ settings, preview = false, lang = 'ja' }: { sett
         {local.auto_list && local.auto_reserve ? (
           <label className={s.autoMax}>
             {t.max_label}
-            <select
+            <AppSelect
               className={s.autoMaxSelect}
               value={local.auto_reserve_max === null ? 'MAX' : String(local.auto_reserve_max)}
-              onChange={(e) =>
+              onChange={(v) =>
                 void apply({
                   ...local,
-                  auto_reserve_max: e.target.value === 'MAX' ? null : Number(e.target.value),
+                  auto_reserve_max: v === 'MAX' ? null : Number(v),
                 })
               }
-            >
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>{n}{t.max_unit}</option>
-              ))}
-              <option value="MAX">MAX</option>
-            </select>
+              ariaLabel={t.max_label}
+              options={[
+                ...Array.from({ length: 10 }, (_, i) => i + 1).map((n) => ({
+                  value: String(n),
+                  label: `${n}${t.max_unit}`,
+                })),
+                { value: 'MAX', label: 'MAX' },
+              ]}
+            />
           </label>
         ) : null}
       </div>

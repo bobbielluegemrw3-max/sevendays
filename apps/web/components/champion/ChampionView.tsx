@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { AppSelect } from '@/components/AppSelect';
 import { BuybacksView, type Buyback } from '@/components/BuybacksView';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook } from '@/lib/nft-visual';
@@ -131,11 +132,17 @@ export function ChampionView({
                   </button>
                 ))}
               </div>
-              <select className={s.sortSelect} value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-                <option value="recent">{t.sort_recent}</option>
-                <option value="oldest">{t.sort_oldest}</option>
-                <option value="name">{t.sort_name}</option>
-              </select>
+              <AppSelect
+                className={s.sortSelect}
+                value={sort}
+                onChange={(v) => setSort(v as SortKey)}
+                ariaLabel={t.sort_aria}
+                options={[
+                  { value: 'recent', label: t.sort_recent },
+                  { value: 'oldest', label: t.sort_oldest },
+                  { value: 'name', label: t.sort_name },
+                ]}
+              />
             </div>
 
             {/* 最新チャンピオンのスポットライト */}

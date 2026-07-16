@@ -282,6 +282,7 @@ export interface AppDict {
     sort_recent: string;
     sort_oldest: string;
     sort_name: string;
+    sort_aria: string;
     crowned: string; // 「戴冠」+ 日付
     owner_label: string; // 「オーナー」+ 名
     // リーグ
@@ -762,6 +763,7 @@ const ja: AppDict = {
     sort_recent: '新しい順',
     sort_oldest: '古い順',
     sort_name: '名前順',
+    sort_aria: '並び替え',
     crowned: '戴冠',
     owner_label: 'オーナー',
     league_desc: 'Day7を走破したチャンピオン馬だけが出走できる、週次の頂上リーグ。アクティブユーザーが10,000人に到達すると開幕します。デイリーダービーとは独立した経済で運営されます。',
@@ -1257,6 +1259,7 @@ const en: AppDict = {
     sort_recent: 'Newest',
     sort_oldest: 'Oldest',
     sort_name: 'By name',
+    sort_aria: 'Sort',
     crowned: 'Crowned',
     owner_label: 'Owner',
     league_desc: 'A weekly top-tier league only Champion horses (Day 7 clears) can enter. It opens when active users reach 10,000, and runs on an economy separate from the Daily Derby.',
@@ -1752,6 +1755,7 @@ const zh: AppDict = {
     sort_recent: '最新优先',
     sort_oldest: '最早优先',
     sort_name: '按名称',
+    sort_aria: '排序',
     crowned: '加冕',
     owner_label: '拥有者',
     league_desc: '仅限跑完 Day7 的冠军马参加的每周顶级联赛。活跃用户达到 10,000 人时开幕，采用与 Daily Derby 独立的经济运营。',
@@ -2247,6 +2251,7 @@ const ko: AppDict = {
     sort_recent: '최신순',
     sort_oldest: '오래된순',
     sort_name: '이름순',
+    sort_aria: '정렬',
     crowned: '대관',
     owner_label: '소유자',
     league_desc: 'Day7을 완주한 챔피언 말만 출전할 수 있는 주간 정상 리그. 활성 사용자가 10,000명에 도달하면 개막하며, 데일리 더비와 독립된 경제로 운영됩니다.',
@@ -2742,6 +2747,7 @@ const ms: AppDict = {
     sort_recent: 'Terbaru',
     sort_oldest: 'Terlama',
     sort_name: 'Ikut nama',
+    sort_aria: 'Susunan',
     crowned: 'Dimahkotai',
     owner_label: 'Pemilik',
     league_desc: 'Liga peringkat teratas mingguan yang hanya boleh disertai kuda Juara (lepasan Day7). Ia dibuka apabila pengguna aktif mencapai 10,000, dan berjalan pada ekonomi berasingan daripada Daily Derby.',

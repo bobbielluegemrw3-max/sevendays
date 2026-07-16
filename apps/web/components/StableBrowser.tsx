@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { AppSelect } from '@/components/AppSelect';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { pct, horseValue, rarClass } from '@/components/stable-shared';
@@ -236,32 +237,38 @@ export function StableBrowser({ kind, horses }: { kind: 'active' | 'past'; horse
           placeholder={kind === 'active' ? '馬名で検索…' : '過去馬を名前で検索…'}
           aria-label="検索"
         />
-        <select className={s.select} value={sort} onChange={(e) => { setSort(e.target.value); reset(); }} aria-label="並び替え">
-          {kind === 'active' ? (
-            <>
-              <option value="value_desc">価値が高い順</option>
-              <option value="value_asc">価値が低い順</option>
-              <option value="rarity">レアリティ順</option>
-              <option value="cond">コンディション順</option>
-              <option value="untrained">未調教を先頭</option>
-              <option value="name">名前順</option>
-            </>
-          ) : (
-            <>
-              <option value="rarity">レアリティ順</option>
-              <option value="name">名前順</option>
-            </>
-          )}
-        </select>
+        <AppSelect
+          className={s.select}
+          value={sort}
+          onChange={(v) => { setSort(v); reset(); }}
+          ariaLabel="並び替え"
+          options={kind === 'active' ? [
+            { value: 'value_desc', label: '価値が高い順' },
+            { value: 'value_asc', label: '価値が低い順' },
+            { value: 'rarity', label: 'レアリティ順' },
+            { value: 'cond', label: 'コンディション順' },
+            { value: 'untrained', label: '未調教を先頭' },
+            { value: 'name', label: '名前順' },
+          ] : [
+            { value: 'rarity', label: 'レアリティ順' },
+            { value: 'name', label: '名前順' },
+          ]}
+        />
         {kind === 'active' ? (
-          <select className={s.select} value={rar} onChange={(e) => { setRar(e.target.value); reset(); }} aria-label="レアリティ絞り込み">
-            <option value="ALL">全レアリティ</option>
-            <option value="LEGENDARY">LEGENDARY</option>
-            <option value="EPIC">EPIC</option>
-            <option value="RARE">RARE</option>
-            <option value="UNCOMMON">UNCOMMON</option>
-            <option value="COMMON">COMMON</option>
-          </select>
+          <AppSelect
+            className={s.select}
+            value={rar}
+            onChange={(v) => { setRar(v); reset(); }}
+            ariaLabel="レアリティ絞り込み"
+            options={[
+              { value: 'ALL', label: '全レアリティ' },
+              { value: 'LEGENDARY', label: 'LEGENDARY' },
+              { value: 'EPIC', label: 'EPIC' },
+              { value: 'RARE', label: 'RARE' },
+              { value: 'UNCOMMON', label: 'UNCOMMON' },
+              { value: 'COMMON', label: 'COMMON' },
+            ]}
+          />
         ) : null}
         {kind === 'active' ? (
           <button
@@ -289,9 +296,13 @@ export function StableBrowser({ kind, horses }: { kind: 'active' | 'past'; horse
           <button type="button" className={s.pagerBtn} disabled={safePage === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← 前へ</button>
           <span className={s.pageLabel}>{safePage + 1} / {pageCount}</span>
           <button type="button" className={s.pagerBtn} disabled={safePage >= pageCount - 1} onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}>次へ →</button>
-          <select className={s.selectSm} value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); reset(); }} aria-label="1ページの表示件数">
-            {PAGE_SIZES.map((n) => <option key={n} value={n}>{n >= 9999 ? '全件表示' : `${n}件/頁`}</option>)}
-          </select>
+          <AppSelect
+            className={s.selectSm}
+            value={String(pageSize)}
+            onChange={(v) => { setPageSize(Number(v)); reset(); }}
+            ariaLabel="1ページの表示件数"
+            options={PAGE_SIZES.map((n) => ({ value: String(n), label: n >= 9999 ? '全件表示' : `${n}件/頁` }))}
+          />
         </div>
       ) : null}
     </>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { AppSelect } from '@/components/AppSelect';
 import {
   BAND_LABEL,
   BAND_ORDER,
@@ -135,26 +136,27 @@ export function ItemBoostPanel({
         </div>
       ) : (
         <div className={s.boostRow}>
-          <select value={selected} onChange={(e) => setSelected(e.target.value)}>
-            <option value="">アイテムを選ぶ…</option>
-            {BAND_ORDER.map((band) => {
-              const group = usable.filter((c) => c.band === band);
-              if (group.length === 0) return null;
-              return (
-                <optgroup key={band} label={BAND_LABEL[band]}>
-                  {group.map((c) => {
+          <AppSelect
+            className={s.boostSelect}
+            value={selected}
+            onChange={setSelected}
+            ariaLabel="ブーストアイテムを選ぶ"
+            options={[
+              { value: '', label: 'アイテムを選ぶ…' },
+              ...BAND_ORDER.flatMap((band) =>
+                usable
+                  .filter((c) => c.band === band)
+                  .map((c) => {
                     const owned = ownedByKey.get(c.key) ?? 0;
-                    return (
-                      <option key={c.key} value={c.key}>
-                        {c.name_ja}
-                        {owned > 0 ? `(所持 ${owned})` : `(${c.price} USDT)`}
-                      </option>
-                    );
-                  })}
-                </optgroup>
-              );
-            })}
-          </select>
+                    return {
+                      value: c.key,
+                      label: `${c.name_ja}${owned > 0 ? `(所持 ${owned})` : `(${c.price} USDT)`}`,
+                      group: BAND_LABEL[band],
+                    };
+                  }),
+              ),
+            ]}
+          />
           <button type="button" disabled={busy || !selected} onClick={() => void applySelected()}>
             {selected && (ownedByKey.get(selected) ?? 0) > 0 ? '使う' : '買って使う'}
           </button>

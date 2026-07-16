@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { AppSelect } from '@/components/AppSelect';
 import {
   BAND_LABEL,
   BAND_ORDER,
@@ -363,23 +364,32 @@ export function ItemsView({
               </label>
               <label>
                 贈るアイテム
-                <select value={giftKey} onChange={(e) => { setGiftKey(e.target.value); setGiftQty(1); }} required>
-                  <option value="">選択…</option>
-                  {giftable.map((e) => (
-                    <option key={e.item_key} value={e.item_key}>
-                      {byKey.get(e.item_key)?.name_ja ?? e.item_key}(所持 {e.n})
-                    </option>
-                  ))}
-                </select>
+                <AppSelect
+                  value={giftKey}
+                  onChange={(v) => { setGiftKey(v); setGiftQty(1); }}
+                  ariaLabel="贈るアイテム"
+                  options={[
+                    { value: '', label: '選択…' },
+                    ...giftable.map((e) => ({
+                      value: e.item_key,
+                      label: `${byKey.get(e.item_key)?.name_ja ?? e.item_key}(所持 ${e.n})`,
+                    })),
+                  ]}
+                />
               </label>
               {/* ★ まとめ贈り: 個数(所持数が上限) */}
               <label className={s.giftQty}>
                 個数
-                <select value={qty} onChange={(e) => setGiftQty(Number(e.target.value))} disabled={!giftKey}>
-                  {Array.from({ length: Math.max(1, giftMax) }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
+                <AppSelect
+                  value={String(qty)}
+                  onChange={(v) => setGiftQty(Number(v))}
+                  disabled={!giftKey}
+                  ariaLabel="個数"
+                  options={Array.from({ length: Math.max(1, giftMax) }, (_, i) => i + 1).map((n) => ({
+                    value: String(n),
+                    label: String(n),
+                  }))}
+                />
               </label>
               <button type="submit" disabled={busyKey === 'gift' || !giftKey || !giftEmail}>
                 {giftKey && qty > 1 ? `${qty}個 贈る` : '贈る'}
