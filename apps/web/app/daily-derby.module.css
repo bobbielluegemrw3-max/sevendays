@@ -911,3 +911,50 @@
 .waitInviteT { font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; color: var(--text); }
 .waitInviteD { font-size: 0.78rem; color: var(--muted); line-height: 1.7; }
 .waitInviteA { font-family: var(--font-mono); font-size: 0.72rem; color: var(--cyan); }
+
+/* ---------- 見逃しリプレイ(2026-07-16) ---------- */
+.replayBar {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgba(255, 92, 92, 0.4);
+  background: rgba(255, 92, 92, 0.08);
+  border-radius: 10px;
+}
+/* デスクトップは右上の SOUND ON(絶対配置)と重ならないよう右に余白を取る */
+@media (min-width: 561px) {
+  .replayBar { padding-right: 8.5rem; }
+}
+.replayTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #ff5c5c;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+.replayDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff5c5c;
+  animation: liveDot 1.4s ease-in-out infinite;
+}
+.replayText { font-size: 0.74rem; color: var(--muted); }
+.replayBtn {
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 0.3rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+.replayBtn:hover { color: var(--cyan); border-color: var(--border-strong); filter: none; }

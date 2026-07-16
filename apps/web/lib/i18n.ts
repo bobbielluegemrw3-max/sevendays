@@ -39,6 +39,8 @@ export interface AppDict {
   };
   dash: {
     result_label: string;
+    /** 日付つきの結果ラベル(2026-07-16: ショー直後に「昨夜」は違和感 — {date}に formatMonthDay を埋める)。 */
+    result_label_tpl: string;
     result_detail: string;
     res_survived: string;
     res_burned: string;
@@ -537,6 +539,7 @@ const ja: AppDict = {
   nav: { notifications: '通知', account: 'アカウント', guide: '使い方', contact: 'お問い合わせ', logout: 'ログアウト' },
   dash: {
     result_label: '昨夜の結果',
+    result_label_tpl: '{date}の結果',
     result_detail: 'レース詳細 →',
     res_survived: '生存',
     res_burned: 'Burn(消滅)',
@@ -1038,6 +1041,7 @@ const en: AppDict = {
   nav: { notifications: 'Notifications', account: 'Account', guide: 'Guide', contact: 'Contact', logout: 'Log out' },
   dash: {
     result_label: 'Last night’s result',
+    result_label_tpl: 'Results — {date}',
     result_detail: 'Race details →',
     res_survived: 'Survived',
     res_burned: 'Burned',
@@ -1539,6 +1543,7 @@ const zh: AppDict = {
   nav: { notifications: '通知', account: '账户', guide: '使用方法', contact: '联系我们', logout: '退出登录' },
   dash: {
     result_label: '昨晚的结果',
+    result_label_tpl: '{date}的结果',
     result_detail: '比赛详情 →',
     res_survived: '存活',
     res_burned: 'Burn(消灭)',
@@ -2040,6 +2045,7 @@ const ko: AppDict = {
   nav: { notifications: '알림', account: '계정', guide: '이용 방법', contact: '문의', logout: '로그아웃' },
   dash: {
     result_label: '어젯밤 결과',
+    result_label_tpl: '{date} 결과',
     result_detail: '레이스 상세 →',
     res_survived: '생존',
     res_burned: 'Burn(소멸)',
@@ -2541,6 +2547,7 @@ const ms: AppDict = {
   nav: { notifications: 'Notifikasi', account: 'Akaun', guide: 'Panduan', contact: 'Hubungi', logout: 'Log keluar' },
   dash: {
     result_label: 'Keputusan malam tadi',
+    result_label_tpl: 'Keputusan {date}',
     result_detail: 'Butiran perlumbaan →',
     res_survived: 'Terselamat',
     res_burned: 'Burn (musnah)',

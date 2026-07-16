@@ -46,6 +46,7 @@ export function DerbyPreview() {
   const [paused, setPaused] = useState(false);
   const [failed, setFailed] = useState(false);
   const [quiet, setQuiet] = useState(false);
+  const [replaySim, setReplaySim] = useState(false);
   const [tonightVariant, setTonightVariant] = useState<0 | 1 | 2>(1);
   const [myHorsesOverride, setMyHorsesOverride] = useState<ReturnType<typeof fixtureMyHorses> | null>(null);
   const [debugVerdict, setDebugVerdict] = useState<
@@ -65,6 +66,7 @@ export function DerbyPreview() {
     if (q.get('paused') === '1') setPaused(true);
     if (q.get('failed') === '1') setFailed(true);
     if (q.get('quiet') === '1') setQuiet(true);
+    if (q.get('replay') === '1') setReplaySim(true);
     const tn = q.get('tonight');
     if (tn === '0' || tn === '1' || tn === '2') setTonightVariant(Number(tn) as 0 | 1 | 2);
     // 視覚QA: ?herd=100 で大量所有(100頭等)の見え方を確認
@@ -174,6 +176,18 @@ export function DerbyPreview() {
         >
           {quiet ? '静かな夜(点呼) ✕' : '静かな夜(点呼)'}
         </button>
+        <button
+          type="button"
+          className="secondary"
+          style={{
+            padding: '0.35rem 0.7rem',
+            fontSize: '0.68rem',
+            borderColor: replaySim ? 'var(--gold, #c9a86a)' : undefined,
+          }}
+          onClick={() => setReplaySim((v) => !v)}
+        >
+          {replaySim ? 'リプレイ表示 ✕' : 'リプレイ表示'}
+        </button>
         {([[0, '出走馬: 現行'], [1, '出走馬: 案1カード'], [2, '出走馬: 案2パドック']] as const).map(([v, label]) => (
           <button
             key={v}
@@ -221,6 +235,8 @@ export function DerbyPreview() {
         // 審判の実結線(2026-07-16 #5)の再現: 実イベント相当のフィクスチャ。
         // herd/単体審判のオーバーライド中は無効化(点呼・審判はmyHorsesから)。
         myEvents={myHorsesOverride ? null : fixtureNightResults()}
+        replay={replaySim}
+        onReplaySkip={() => setReplaySim(false)}
         tonightVariant={tonightVariant}
         debugVerdict={debugVerdict}
         conditions={fixtureConditions(new Date().toISOString().slice(0, 10))}

@@ -41,6 +41,38 @@ interface DerbyStatus {
   tonight_field?: { entrants: number; burn_slots_min: number; burn_slots_max: number } | null;
 }
 
+/* ---- 見逃しリプレイ(オーナー要望 2026-07-16) ------------------------------
+   20:00のライブを見られなかったユーザーに、当夜のうち(MYT日付が変わるまで)
+   1回だけショーを録画のように自動再生する。「1回」の判定は端末ローカル
+   (localStorage・厳密なユーザー単位より気軽さ優先 — 消えても実害なし)。
+   ライブ中に/racesを開いていた人は視聴済み扱いでリプレイしない。 */
+const REPLAY_LEAD_SECONDS = 6; // 短いカウントダウンの溜め → 0通過でファンファーレ
+
+function replayStorageKey(): string {
+  // バッチ日付(MYT)。phase=COMPLETEDの間しか使わないので「今日」でよい。
+  return `sdd_derby_replay:${new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10)}`;
+}
+function replaySeen(): boolean {
+  try {
+    return window.localStorage.getItem(replayStorageKey()) === '1';
+  } catch {
+    return true; // storage不可(プライベートモード等)は「視聴済み」に倒す
+  }
+}
+function markReplaySeen(): void {
+  try {
+    const key = replayStorageKey();
+    // 1日1キー — 過去日のキーはここで掃除する
+    for (let i = window.localStorage.length - 1; i >= 0; i--) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith('sdd_derby_replay:') && k !== key) window.localStorage.removeItem(k);
+    }
+    window.localStorage.setItem(key, '1');
+  } catch {
+    /* 記録できない環境では毎回ライブ判定に任せる */
+  }
+}
+
 export function DerbyLive() {
   const [status, setStatus] = useState<DerbyStatus | null>(null);
   // ショー最後の全結果サマリー(バッチ完了後に1回取得。記録APIと同一データ)。
@@ -48,6 +80,10 @@ export function DerbyLive() {
   // サーバー時刻 − ローカル時刻(ms)。ローカル時計のズレを補正する。
   const offsetRef = useRef(0);
   const [, forceTick] = useState(0);
+  // 見逃しリプレイ: 開始時刻(ms)。null=リプレイしていない。
+  const [replayStart, setReplayStart] = useState<number | null>(null);
+  const replayChecked = useRef(false);
+  const liveElapsedRef = useRef(-1);
 
   const poll = useCallback(async () => {
     const r = await apiFetch<DerbyStatus>('/api/v1/daily-derby/status');
@@ -78,6 +114,36 @@ export function DerbyLive() {
       cancelled = true;
     };
   }, [status?.phase, nightResults]);
+
+  // 見逃しリプレイ①: ライブ中に開いていた人は視聴済み扱い(後でリプレイしない)。
+  useEffect(() => {
+    if (!status) return;
+    const el = liveElapsedRef.current;
+    if ((status.phase === 'LIVE' || status.phase === 'COMPLETED') && el >= 0 && el < SHOW_TOTAL) {
+      markReplaySeen();
+    }
+  }, [status]);
+
+  // 見逃しリプレイ②: 初回status到着時に1回だけ判定 — ショーが終わった後に
+  // 来た未視聴ユーザーへ自動再生を開始する。開始した時点で「1回」を消費。
+  useEffect(() => {
+    if (!status || replayChecked.current) return;
+    replayChecked.current = true;
+    if (status.phase !== 'COMPLETED') return; // 今夜のショーが未完/失敗/待機
+    if (liveElapsedRef.current >= 0 && liveElapsedRef.current <= SHOW_TOTAL) return; // ライブがまだ流れている
+    if (replaySeen()) return;
+    markReplaySeen();
+    setReplayStart(Date.now());
+  }, [status]);
+
+  // 見逃しリプレイ③: 再生し切ったら通常表示(全結果サマリー)へ戻す。
+  useEffect(() => {
+    if (replayStart === null) return;
+    const id = setInterval(() => {
+      if ((Date.now() - replayStart) / 1000 - REPLAY_LEAD_SECONDS > SHOW_TOTAL + 2) setReplayStart(null);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [replayStart]);
 
   // 表示は1秒刻み、ポーリングはショー窓の内外で間隔を変える。
   useEffect(() => {
@@ -136,9 +202,19 @@ export function DerbyLive() {
   if (status.phase === 'COMPLETED' && -secondsToStart > SHOW_TOTAL + 3600) {
     secondsToStart = -(SHOW_TOTAL + 1);
   }
+  // リプレイ判定用にライブの経過秒を記録(効果①②が読む)
+  liveElapsedRef.current = -secondsToStart;
 
-  return (
+  // 見逃しリプレイ: ローカルのリプレイ時計でステージを駆動する(録画再生)。
+  const replayMode = replayStart !== null;
+  if (replayStart !== null) {
+    secondsToStart = REPLAY_LEAD_SECONDS - (Date.now() - replayStart) / 1000;
+  }
+
+  const stage = (
     <DailyDerbyStage
+      replay={replayMode}
+      onReplaySkip={() => setReplayStart(null)}
       secondsToStart={secondsToStart}
       counts={status.counts ?? EMPTY_COUNTS}
       tickerEvents={status.ticker}
@@ -169,6 +245,8 @@ export function DerbyLive() {
       }
     />
   );
+
+  return stage;
 }
 
 /** ナビ用: 次のダービーまでの秒数(ローカル計算でよい範囲)。 */

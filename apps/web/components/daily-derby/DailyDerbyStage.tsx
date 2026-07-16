@@ -67,6 +67,10 @@ export interface DailyDerbyStageProps {
   tonightField?: { entrants: number; burnSlotsMin: number; burnSlotsMax: number } | null;
   /** 明日の予報(ADR-012)。ショー最終幕(YOUR RESULTSの後)で発表する。 */
   tomorrowForecast?: DerbyConditionsView | null;
+  /** 見逃しリプレイ再生中(2026-07-16): REPLAYバー表示+タイトルのLIVEバッジをREPLAYに。 */
+  replay?: boolean;
+  /** リプレイの「スキップして結果へ」ボタン(replay時のみ使用)。 */
+  onReplaySkip?: (() => void) | undefined;
   /** 視覚QA専用: マウント時に審判を強制表示(プレビューのみ使用)。 */
   debugVerdict?: 'burn' | 'survive' | 'day7' | 'match_sell' | 'match_buy' | undefined;
   /** 出走馬カードの案切替(検討用 2026-07-10): 0=現行チップ / 1=出走カード / 2=パドック。 */
@@ -124,6 +128,8 @@ export function DailyDerbyStage({
   tonightForecast = null,
   tonightField = null,
   tomorrowForecast = null,
+  replay = false,
+  onReplaySkip,
   debugVerdict,
   tonightVariant = 1,
 }: DailyDerbyStageProps) {
@@ -483,6 +489,20 @@ export function DailyDerbyStage({
 
   return (
     <div className={`${s.stage} ${stageHit ? s.stageHit : ''}`}>
+      {replay && (
+        <div className={s.replayBar}>
+          <span className={s.replayTag}>
+            <span className={s.replayDot} />
+            REPLAY
+          </span>
+          <span className={s.replayText}>今夜のダービー(録画)— 見逃し再生は今夜1回だけ</span>
+          {onReplaySkip && (
+            <button type="button" className={s.replayBtn} onClick={onReplaySkip}>
+              スキップして結果へ →
+            </button>
+          )}
+        </div>
+      )}
       <button
         type="button"
         className={s.soundBtn}
@@ -516,6 +536,7 @@ export function DailyDerbyStage({
             conditions={conditions}
             myLane={myLane}
             quiet={quiet}
+            replay={replay}
           />
         ) : (
           <PersonalOrDone night={nightResults} forecast={tomorrowForecast} field={tonightField} />
@@ -799,6 +820,7 @@ function LiveShow({
   conditions,
   myLane,
   quiet,
+  replay = false,
 }: {
   elapsed: number;
   counts: DerbyCounts;
@@ -808,6 +830,7 @@ function LiveShow({
   conditions: DerbyConditionsView | null;
   myLane: readonly VerdictInfo[];
   quiet: boolean;
+  replay?: boolean;
 }) {
   if (elapsed >= COMPLETE_AT) {
     return (
@@ -840,7 +863,7 @@ function LiveShow({
         <div className={s.liveTitleText}>THE DAILY DERBY</div>
         <div className={s.liveBadge}>
           <span className={s.liveDot} />
-          LIVE
+          {replay ? 'REPLAY' : 'LIVE'}
         </div>
         <div className={s.liveRule} />
       </div>

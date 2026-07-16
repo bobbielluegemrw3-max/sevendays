@@ -17,3 +17,18 @@ export type { AppDict } from '@/lib/i18n';
 export function fill(tpl: string, vars: Record<string, string | number>): string {
   return tpl.replace(/\{(\w+)\}/g, (_m: string, k: string) => String(vars[k] ?? ''));
 }
+
+const MONTH_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+
+/** 'YYYY-MM-DD' → 言語ごとの「◯月✕日」表記(結果ラベル等の日付面)。 */
+export function formatMonthDay(lang: string, isoDate: string): string {
+  const m = Number(isoDate.slice(5, 7));
+  const d = Number(isoDate.slice(8, 10));
+  if (!Number.isFinite(m) || !Number.isFinite(d)) return isoDate;
+  switch (lang) {
+    case 'en': return `${MONTH_EN[m - 1]} ${d}`;
+    case 'ms': return `${d} ${MONTH_EN[m - 1]}`;
+    case 'ko': return `${m}월 ${d}일`;
+    default: return `${m}月${d}日`; // ja / zh
+  }
+}

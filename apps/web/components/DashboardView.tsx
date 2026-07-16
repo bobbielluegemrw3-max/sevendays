@@ -8,6 +8,7 @@ import { TradeAutoTile, TradeModeModal, type TradeSettings } from '@/components/
 import { TotalAssetsCard } from '@/components/TotalAssetsCard';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { APP_COPY, type Lang, type AppDict } from '@/lib/i18n';
+import { formatMonthDay } from '@/lib/i18n-shared';
 import s from '../app/dashboard.module.css';
 
 /** テンプレ文字列の {name} を値で埋める(多言語の語順差を吸収)。 */
@@ -117,10 +118,12 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
 
   return (
     <div className={s.app}>
-      {/* ===== ① 昨夜の結果 ===== */}
+      {/* ===== ① レース結果(日付つき — 2026-07-16: ショー直後に「昨夜」は違和感) ===== */}
       <section className={s.result}>
         <div className={s.tileHead}>
-          <span className={s.tileLabel}>{t.result_label}</span>
+          <span className={s.tileLabel}>
+            {lastRace ? fill(t.result_label_tpl, { date: formatMonthDay(lang, lastRace.batch_date) }) : t.result_label}
+          </span>
           {lastRace ? <Link href={`/races/${lastRace.id}`} className={s.tileLink}>{t.result_detail}</Link> : null}
         </div>
         {myResults.length > 0 ? (
