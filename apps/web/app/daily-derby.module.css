@@ -924,10 +924,8 @@
   background: rgba(255, 92, 92, 0.08);
   border-radius: 10px;
 }
-/* デスクトップは右上の SOUND ON(絶対配置)と重ならないよう右に余白を取る */
-@media (min-width: 561px) {
-  .replayBar { padding-right: 8.5rem; }
-}
+/* バーはステージ枠の外(上)に描画される — SOUND ON との衝突回避のための
+   右余白ハックは不要になった(2026-07-16 修正)。 */
 .replayTag {
   display: inline-flex;
   align-items: center;

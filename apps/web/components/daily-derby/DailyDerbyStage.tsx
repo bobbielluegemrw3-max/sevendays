@@ -488,7 +488,9 @@ export function DailyDerbyStage({
     : undefined;
 
   return (
-    <div className={`${s.stage} ${stageHit ? s.stageHit : ''}`}>
+    <>
+      {/* リプレイバーはステージ枠の外(上)に置く — 枠内だと右上の SOUND ON
+          (絶対配置)と衝突して崩れる(2026-07-16 本番で実発生)。 */}
       {replay && (
         <div className={s.replayBar}>
           <span className={s.replayTag}>
@@ -503,6 +505,7 @@ export function DailyDerbyStage({
           )}
         </div>
       )}
+    <div className={`${s.stage} ${stageHit ? s.stageHit : ''}`}>
       <button
         type="button"
         className={s.soundBtn}
@@ -553,6 +556,7 @@ export function DailyDerbyStage({
       {showTicker && tickerEvents.length > 0 && <Ticker events={tickerEvents} />}
       {verdict && <DerbyVerdict verdict={verdict} queued={verdictQueued} />}
     </div>
+    </>
   );
 }
 
