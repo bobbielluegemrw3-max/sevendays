@@ -10,7 +10,10 @@ import { SHOW_TOTAL } from '@/lib/daily-derby';
  * ショー中(開始〜約100秒+余韻)は LIVE バナーに変わり /races へ誘導する。
  */
 
-const LIVE_WINDOW_SECONDS = SHOW_TOTAL + 200; // 演出+個人結果の余韻
+// 演出が終わったらすみやかに通常カウントダウンへ戻す(オーナー指摘 2026-07-16 #6:
+// 旧値+200秒はショー終了後も数分間LIVEが点きっぱなしに見えた)。+60秒は
+// ワーカーの開始ラグ(30秒tick+起動)でショー実体が後ろにずれる分の余裕。
+const LIVE_WINDOW_SECONDS = SHOW_TOTAL + 60;
 
 function secondsToNext(): number {
   const now = Date.now();

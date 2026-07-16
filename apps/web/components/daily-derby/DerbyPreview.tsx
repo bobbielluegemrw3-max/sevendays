@@ -218,6 +218,9 @@ export function DerbyPreview() {
         nightResults={fixtureNightResults()}
         failed={failed}
         myHorses={myHorsesOverride ?? fixtureMyHorses()}
+        // 審判の実結線(2026-07-16 #5)の再現: 実イベント相当のフィクスチャ。
+        // herd/単体審判のオーバーライド中は無効化(点呼・審判はmyHorsesから)。
+        myEvents={myHorsesOverride ? null : fixtureNightResults()}
         tonightVariant={tonightVariant}
         debugVerdict={debugVerdict}
         conditions={fixtureConditions(new Date().toISOString().slice(0, 10))}
@@ -227,7 +230,8 @@ export function DerbyPreview() {
 
       <p className="faint" style={{ fontSize: '0.78rem', marginTop: '0.8rem' }}>
         20:00 通過でファンファーレ、レース実走中は蹄音が鳴ります(ステージ右上でミュート可)。
-        通し再生では自分の審判(実NFT馬の表示)は20:00通過の約31秒後(ログ濁流中)に自動発火します。
+        通し再生では自分の審判は実イベント(フィクスチャ)からスケジュール発火します —
+        BURNは約32秒後・生存は約42秒後・DAY7は約60秒後・売買成立はP2Pターン中。
         「審判:」ボタンでいつでも単体表示できます(もう一度押すと閉じる)。
       </p>
     </div>

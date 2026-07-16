@@ -24,13 +24,7 @@ import {
 } from '@/lib/daily-derby';
 import type { DerbyConditionsView, MyDerbyHorse } from '@/lib/daily-derby';
 import { SegmentClock } from '@/components/daily-derby/SegmentClock';
-import {
-  DerbyVerdict,
-  fixtureDropKey,
-  fixtureMaskedEmail,
-  fixtureUsedItemKey,
-  type VerdictInfo,
-} from '@/components/daily-derby/DerbyVerdict';
+import { DerbyVerdict, type VerdictInfo } from '@/components/daily-derby/DerbyVerdict';
 import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { NightResultsList, nightResultsCount } from '@/components/daily-derby/NightResultsList';
 import { NftHorseArt } from '@/components/NftHorseArt';
@@ -59,10 +53,12 @@ export interface DailyDerbyStageProps {
   failed?: boolean;
   fanfareSrc?: string;
   hoofbeatsSrc?: string;
-  /** 自分の馬名(ログ濁流で該当行をハイライト+チャイム)。 */
-  myHorseNames?: readonly string[];
-  /** 審判演出つきの自分の馬(dna/Day込み)。指定時は myHorseNames を上書き。 */
+  /** 自分の馬(dna/Day込み)。待機パドック・点呼のフォールバックに使う。 */
   myHorses?: readonly MyDerbyHorse[];
+  /** 当夜の自分の実イベント(審判演出の実結線 2026-07-16 #5)。
+   *  レースFINALIZED後にAPIから届く。null=まだ確定していない。
+   *  従来の「濁流のフィクション行と実馬名の偶然一致」方式は本番で発火せず廃止。 */
+  myEvents?: DerbyNightResults | null;
   /** 当夜のレース条件(Decision 082)。タイトル直後に一瞬テキスト表示する。 */
   conditions?: DerbyConditionsView | null;
   /** 今夜の予報(日中の待機パドック掲示板用・確定条件が出るまでの代役) */
@@ -123,17 +119,16 @@ export function DailyDerbyStage({
   fanfareSrc = '/sounds/fanfare.mp3',
   hoofbeatsSrc = '/sounds/hoofbeats.mp3',
   myHorses = [],
+  myEvents = null,
   conditions = null,
   tonightForecast = null,
   tonightField = null,
   tomorrowForecast = null,
   debugVerdict,
   tonightVariant = 1,
-  myHorseNames = [],
 }: DailyDerbyStageProps) {
   const elapsed = -secondsToStart;
   const [soundOn, setSoundOn] = useState(true);
-  const effectiveNames = myHorses.length > 0 ? myHorses.map((h) => h.name) : myHorseNames;
   const [verdict, setVerdict] = useState<VerdictInfo | null>(null);
   const [verdictQueued, setVerdictQueued] = useState(0);
   /* ①MY LANE: 発火済みの自分イベントを時系列で保持(濁流右の専用レーン)。 */
@@ -189,7 +184,6 @@ export function DailyDerbyStage({
   const prevElapsed = useRef(elapsed);
   const primed = useRef(false);
   const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
-  const lastOwnSoundAt = useRef(0);
 
   /* 音源カタログ(オーナー支給の実音源、2026-07-07)。 */
   const soundCatalog = useMemo(
@@ -257,6 +251,7 @@ export function DailyDerbyStage({
   }, [playOneShot, hit]);
 
   /* リプレイ/翌日待機へ戻ったらMY LANEと審判の既読をリセット(ループ視聴)。 */
+  const scheduleJoined = useRef(false);
   const wasPreShow = useRef(secondsToStart > 0);
   useEffect(() => {
     const isPreShow = secondsToStart > 0;
@@ -264,6 +259,7 @@ export function DailyDerbyStage({
       setMyLane([]);
       seenVerdicts.current.clear();
       verdictQueue.current = [];
+      scheduleJoined.current = false;
     }
     wasPreShow.current = isPreShow;
   }, [secondsToStart > 0]);
@@ -274,47 +270,130 @@ export function DailyDerbyStage({
     [],
   );
 
-  /* 自分該当行(DERBY_DRAMA): 審判対象行(BURN/生存/DAY7/P2Pマッチング)は
-     自分の馬の実NFTアートを見せるオーバーレイへ(1馬×1種につき1回)。
-     その他の該当行(価値上昇・出品など)はチャイムのみ。 */
-  const playOwnLine = useCallback(
-    (info: { name: string; tone: string }) => {
+  /* 審判キューへの投入(共通): 上限超過分はオーバーレイを省略してMY LANEへ直接記帳。 */
+  const enqueueVerdict = useCallback(
+    (ev: VerdictInfo) => {
       if (debugActive.current) return; // QA強制表示中は自然キューを積まない
-      const isVerdictTone =
-        info.tone === 'burn' || info.tone === 'survive' || info.tone === 'day7' || info.tone === 'match';
-      if (isVerdictTone) {
-        const seenKey = `${info.tone}:${info.name}`;
-        if (seenVerdicts.current.has(seenKey)) return;
-        seenVerdicts.current.add(seenKey);
-        const horse = myHorses.find((h) => h.name === info.name);
-        const kind =
-          info.tone === 'burn' ? 'burn' : info.tone === 'day7' ? 'day7' : info.tone === 'match' ? 'match' : 'survive';
-        const today = new Date().toISOString().slice(0, 10);
-        const ev: VerdictInfo = {
-          name: info.name,
-          kind,
-          horse,
-          dropKey: kind === 'burn' ? fixtureDropKey(info.name, today) : null,
-          usedItemKey: kind === 'burn' ? fixtureUsedItemKey(info.name, today) : null,
-          matchSide: kind === 'match' ? 'sell' : undefined,
-          counterpart: kind === 'match' ? fixtureMaskedEmail(info.name, today) : undefined,
-        };
-        // 大量所有対策: 待ち行列が上限なら審判は省略し、MY LANEに直接記帳
-        if (verdictQueue.current.length >= VERDICT_QUEUE_MAX) {
-          setMyLane((prev) => [...prev, ev]);
-          return;
-        }
-        verdictQueue.current.push(ev);
-        if (verdictShowing.current) setVerdictQueued(verdictQueue.current.length);
-        else showNextVerdict();
+      if (verdictQueue.current.length >= VERDICT_QUEUE_MAX) {
+        setMyLane((prev) => [...prev, ev]);
         return;
       }
-      if (performance.now() - lastOwnSoundAt.current < 400) return; // 連発抑制
-      lastOwnSoundAt.current = performance.now();
-      playOneShot(info.tone === 'burn' ? 'ownBurn' : 'ownGood');
+      verdictQueue.current.push(ev);
+      if (verdictShowing.current) setVerdictQueued(verdictQueue.current.length);
+      else showNextVerdict();
     },
-    [playOneShot, myHorses, showNextVerdict],
+    [showNextVerdict],
   );
+
+  /* ---- 審判演出の実結線(2026-07-16 #5) ----------------------------------
+     当夜の実イベント(myEvents)を、該当セクションの時間帯に1件ずつ発火する。
+     - 生存: SURVIVORSセクション / BURN: BURN RESOLUTIONセクション /
+       DAY7: DAY7 CLEARセクション / 売買成立: P2P MATCHINGセクション
+     - 静かな夜(点呼)は点呼スロットに同期(その馬の大写し中に審判が重なる)
+     - 途中参加は12秒以上過去のイベントを再生せずMY LANEにだけ記帳 */
+  const raceRunners = useMemo<readonly MyDerbyHorse[]>(() => {
+    if (myEvents && (myEvents.survived.length > 0 || myEvents.burned.length > 0)) {
+      return [
+        ...myEvents.survived.map((r) => ({ name: r.name, dnaHash: r.dna_hash, currentDay: r.from_day })),
+        ...myEvents.burned.map((r) => ({ name: r.name, dnaHash: r.dna_hash, currentDay: r.day ?? 1 })),
+      ];
+    }
+    // イベント未確定の間のフォールバック(今夜走った=currentDay>=1のACTIVE馬)
+    return myHorses.filter((h) => (h.currentDay ?? 1) >= 1);
+  }, [myEvents, myHorses]);
+  const quiet = counts.horses < QUIET_NIGHT_HORSES && (raceRunners.length > 0 || myHorses.length > 0);
+  const rollSlot = Math.min(9, Math.max(3.5, (MARKET_OPEN.startAt - LOGS_FROM) / Math.max(1, raceRunners.length)));
+
+  const verdictSchedule = useMemo<ReadonlyArray<{ fireAt: number; info: VerdictInfo }>>(() => {
+    if (!myEvents) return [];
+    const out: { fireAt: number; info: VerdictInfo }[] = [];
+    // exactOptionalPropertyTypes: undefinedの明示代入は不可 — 条件付きspreadで回避
+    const horseOf = (name: string, dna: string, day: number | null): MyDerbyHorse => ({
+      name,
+      dnaHash: dna,
+      ...(day !== null ? { currentDay: day } : {}),
+    });
+    const sec = (key: string) => LOG_SECTIONS.find((x) => x.key === key)!;
+    // レースターン(生存/BURN/DAY7)。点呼の夜はスロット同期、濁流の夜はセクション同期。
+    const raceTurnAt = (name: string, sectionKey: string, idxInSection: number): number => {
+      if (quiet) {
+        const i = raceRunners.findIndex((h) => h.name === name);
+        if (i >= 0) return LOGS_FROM + i * rollSlot + rollSlot * 0.55;
+      }
+      const s = sec(sectionKey);
+      return s.startAt + 1.5 + idxInSection * 3.4;
+    };
+    myEvents.survived.filter((r) => !r.day7).forEach((r, i) => {
+      out.push({
+        fireAt: raceTurnAt(r.name, 'SURVIVE', i),
+        info: {
+          name: r.name, kind: 'survive', horse: horseOf(r.name, r.dna_hash, r.from_day),
+          dropKey: null, usedItemKey: null,
+        },
+      });
+    });
+    myEvents.burned.forEach((r, i) => {
+      out.push({
+        fireAt: raceTurnAt(r.name, 'BURN', i),
+        info: {
+          name: r.name, kind: 'burn', horse: horseOf(r.name, r.dna_hash, r.day),
+          dropKey: r.drop_item_key, usedItemKey: r.used_item_key,
+        },
+      });
+    });
+    myEvents.survived.filter((r) => r.day7).forEach((r, i) => {
+      out.push({
+        fireAt: raceTurnAt(r.name, 'DAY7', i),
+        info: {
+          name: r.name, kind: 'day7', horse: horseOf(r.name, r.dna_hash, r.from_day),
+          dropKey: null, usedItemKey: null,
+        },
+      });
+    });
+    const match = sec('MATCH');
+    myEvents.sold.forEach((r, i) => {
+      out.push({
+        fireAt: match.startAt + 1.5 + i * 3.4,
+        info: {
+          name: r.name, kind: 'match', horse: horseOf(r.name, r.dna_hash, r.day),
+          dropKey: null, usedItemKey: null, matchSide: 'sell', counterpart: r.counterpart,
+        },
+      });
+    });
+    myEvents.bought.forEach((r, i) => {
+      out.push({
+        fireAt: sec('MINT').startAt + 1.5 + i * 3.4,
+        info: {
+          name: r.name, kind: 'match', horse: horseOf(r.name, r.dna_hash, r.day),
+          dropKey: null, usedItemKey: null, matchSide: 'buy', counterpart: r.counterpart ?? undefined,
+        },
+      });
+    });
+    return out.sort((a, b) => a.fireAt - b.fireAt);
+  }, [myEvents, quiet, raceRunners, rollSlot]);
+
+  useEffect(() => {
+    if (verdictSchedule.length === 0 || elapsed < LOGS_FROM) return;
+    const keyOf = (sv: { info: VerdictInfo }) => `${sv.info.kind}:${sv.info.matchSide ?? ''}:${sv.info.name}`;
+    // 途中参加/リロード: 大きく過ぎたイベントは再生せずMY LANEにだけ記帳する
+    if (!scheduleJoined.current) {
+      scheduleJoined.current = true;
+      const stale = verdictSchedule.filter(
+        (sv) => elapsed - sv.fireAt > 12 && !seenVerdicts.current.has(keyOf(sv)),
+      );
+      if (stale.length > 0) {
+        for (const sv of stale) seenVerdicts.current.add(keyOf(sv));
+        setMyLane((prev) => [...prev, ...stale.map((sv) => sv.info)]);
+      }
+    }
+    if (elapsed >= COMPLETE_AT) return; // ショー後は全結果サマリーが担う
+    for (const sv of verdictSchedule) {
+      if (sv.fireAt <= elapsed && !seenVerdicts.current.has(keyOf(sv))) {
+        seenVerdicts.current.add(keyOf(sv));
+        enqueueVerdict(sv.info);
+      }
+    }
+  }, [elapsed, verdictSchedule, enqueueVerdict]);
 
   /* iOS/Safariはユーザー操作の文脈外の音声再生をブロックし、許可は音声要素
      ごとに別。最初のタップで全音源を無音再生→即停止してロック解除(priming)。 */
@@ -401,7 +480,6 @@ export function DailyDerbyStage({
   const chapter = !failed && elapsed < SHOW_TOTAL
     ? CHAPTERS.find((c) => elapsed >= c.at && elapsed < c.at + CHAPTER_SECONDS)
     : undefined;
-  const quiet = counts.horses < QUIET_NIGHT_HORSES && myHorses.length > 0;
 
   return (
     <div className={`${s.stage} ${stageHit ? s.stageHit : ''}`}>
@@ -432,12 +510,12 @@ export function DailyDerbyStage({
           <LiveShow
             elapsed={elapsed}
             counts={counts}
-            myHorseNames={effectiveNames}
-            myHorses={myHorses}
+            runners={raceRunners}
+            rollSlot={rollSlot}
+            debutCount={myHorses.length}
             conditions={conditions}
             myLane={myLane}
             quiet={quiet}
-            onMine={playOwnLine}
           />
         ) : (
           <PersonalOrDone night={nightResults} forecast={tomorrowForecast} field={tonightField} />
@@ -715,21 +793,21 @@ function PreShowCountdown({
 function LiveShow({
   elapsed,
   counts,
-  myHorseNames,
-  myHorses,
+  runners,
+  rollSlot,
+  debutCount,
   conditions,
   myLane,
   quiet,
-  onMine,
 }: {
   elapsed: number;
   counts: DerbyCounts;
-  myHorseNames: readonly string[];
-  myHorses: readonly MyDerbyHorse[];
+  runners: readonly MyDerbyHorse[];
+  rollSlot: number;
+  debutCount: number;
   conditions: DerbyConditionsView | null;
   myLane: readonly VerdictInfo[];
   quiet: boolean;
-  onMine: (info: { name: string; tone: string }) => void;
 }) {
   if (elapsed >= COMPLETE_AT) {
     return (
@@ -745,11 +823,11 @@ function LiveShow({
       <LogPhase
         elapsed={elapsed}
         counts={counts}
-        myHorseNames={myHorseNames}
-        myHorses={myHorses}
+        runners={runners}
+        rollSlot={rollSlot}
+        debutCount={debutCount}
         myLane={myLane}
         quiet={quiet}
-        onMine={onMine}
       />
     );
   }
@@ -927,12 +1005,25 @@ function RollcallEmpty({ debutCount }: { debutCount: number }) {
   );
 }
 
-/* ⑦点呼モード: 静かな夜は濁流の代わりに自分の馬を1頭ずつ大写し(4秒交代)。
- * 対象は「今夜実際に走った馬」(currentDay>=1)のみ — 今夜ミントされた馬は
- * 明晩デビューなので点呼に出さない(2026-07-14 初ライブの指摘)。 */
-function Rollcall({ elapsed, myHorses }: { elapsed: number; myHorses: readonly MyDerbyHorse[] }) {
-  const idx = Math.max(0, Math.floor((elapsed - LOGS_FROM) / 4)) % myHorses.length;
-  const horse = myHorses[idx]!;
+/* ⑦点呼モード: 静かな夜は濁流の代わりに自分の馬を1頭ずつ大写し。
+ * 対象は「今夜実際に走った馬」— 実イベント確定後はBURNされた馬も含む
+ * (2026-07-16 #5: 従来はACTIVE馬のみでBURN馬が点呼から消え、かつ残り時間を
+ * ループで埋めていた=2周する夜があった)。1周だけ回して最後の馬で保持し、
+ * 各馬の審判(生存/BURN)はスロットに同期して重なる。 */
+function Rollcall({
+  elapsed,
+  runners,
+  slot,
+}: {
+  elapsed: number;
+  runners: readonly MyDerbyHorse[];
+  slot: number;
+}) {
+  const idx = Math.min(
+    Math.max(0, Math.floor((elapsed - LOGS_FROM) / slot)),
+    runners.length - 1,
+  );
+  const horse = runners[idx]!;
   const dna = horse.dnaHash
     ?? `0x${Array.from(horse.name).map((ch) => ch.charCodeAt(0).toString(16)).join('').padEnd(64, 'a').slice(0, 64)}`;
   return (
@@ -942,7 +1033,7 @@ function Rollcall({ elapsed, myHorses }: { elapsed: number; myHorses: readonly M
       </div>
       <div className={s.rollName}>{horse.name}</div>
       <div className={s.rollSub}>
-        点呼 {idx + 1} / {myHorses.length} — 静かな夜
+        点呼 {idx + 1} / {runners.length} — 静かな夜
       </div>
     </div>
   );
@@ -951,39 +1042,29 @@ function Rollcall({ elapsed, myHorses }: { elapsed: number; myHorses: readonly M
 function LogPhase({
   elapsed: propElapsed,
   counts,
-  myHorseNames,
-  myHorses,
+  runners,
+  rollSlot,
+  debutCount,
   myLane,
   quiet,
-  onMine,
 }: {
   elapsed: number;
   counts: DerbyCounts;
-  myHorseNames: readonly string[];
-  myHorses: readonly MyDerbyHorse[];
+  runners: readonly MyDerbyHorse[];
+  rollSlot: number;
+  debutCount: number;
   myLane: readonly VerdictInfo[];
   quiet: boolean;
-  onMine: (info: { name: string; tone: string }) => void;
 }) {
   // 正典のなめらかなログの流れ: ショー時計(1秒刻み)を60fpsに補間して描画する
   const elapsed = useShowClock(propElapsed);
-  const myNames = useMemo(() => new Set(myHorseNames), [myHorseNames]);
   // 2026-07-14: 行数は当夜の実件数でキャップ(案①「件数だけ実数」の結線)。
-  const lines = logWindow(elapsed, 44, myNames, counts);
-  // 自分該当行が新しく現れたらチャイム/審判キューへ(1行につき1回)
-  const seenMine = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    for (const line of lines) {
-      if (line.mine && !seenMine.current.has(line.id)) {
-        seenMine.current.add(line.id);
-        onMine({ name: line.name ?? '', tone: line.tone });
-      }
-    }
-  }, [lines, onMine]);
+  // 2026-07-16 #5: 濁流はフィクション(案①)なので実馬名との突合はしない —
+  // 個人の実結果は myEvents のスケジュール発火(審判オーバーレイ+MY LANE)が担う。
+  const lines = logWindow(elapsed, 44, undefined, counts);
   // ⑦静かな夜は結果ターン(TURN1)を点呼モードに切り替える。
-  // 点呼対象は今夜走った馬のみ(currentDay>=1。今夜ミント=明晩デビューは除外)。
-  const runners = myHorses.filter((h) => (h.currentDay ?? 1) >= 1);
-  const rollcall = quiet && elapsed < MARKET_OPEN.startAt && myHorses.length > 0;
+  // 走った馬ゼロ(全馬明晩デビュー)の夜は点呼の代わりに空状態カードを出す。
+  const rollcall = quiet && elapsed < MARKET_OPEN.startAt;
   return (
     <div className={s.logPhase}>
       <div className={s.logHead}>
@@ -997,9 +1078,9 @@ function LogPhase({
       <div className={s.floodGrid}>
         {rollcall ? (
           runners.length > 0 ? (
-            <Rollcall elapsed={elapsed} myHorses={runners} />
+            <Rollcall elapsed={elapsed} runners={runners} slot={rollSlot} />
           ) : (
-            <RollcallEmpty debutCount={myHorses.length} />
+            <RollcallEmpty debutCount={debutCount} />
           )
         ) : (
           <div className={s.logStream} aria-live="off">

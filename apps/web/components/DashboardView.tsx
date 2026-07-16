@@ -219,7 +219,13 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
         </Link>
         <div className={`${s.kpi} ${s.kpiBuff}`}>
           <div className="k">REVENGE BUFF</div>
-          <div className="v">{buff ? `${buff.buff_rarity} +${buff.buff_bonus_score}` : t.buff_none}</div>
+          {/* 加点はNUMERIC(20,8)の生文字列(+4.00000000)だと0が多すぎてモバイル幅を
+              はみ出す(オーナー指摘 2026-07-16 #7)— 末尾0を落として表示 */}
+          <div className="v">
+            {buff
+              ? `${buff.buff_rarity} +${Number(buff.buff_bonus_score).toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+              : t.buff_none}
+          </div>
           <div className="s">{buff ? t.buff_active_s : t.buff_none_s}</div>
         </div>
       </section>

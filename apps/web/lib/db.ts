@@ -23,9 +23,11 @@ function getPool(): Pool {
       max: Number(process.env.WEB_DB_POOL_MAX ?? 10),
       // 体感速度(2026-07-16 §D): pgの既定idleTimeout=10秒だと閑散時に接続が
       // 毎回破棄され、次の表示がTCP+TLS+認証(DBがムンバイ=数往復)を払う。
-      // 5分保持+keepaliveでウォーム接続を維持(プーラー側上限に対しては
-      // max=WEB_DB_POOL_MAX が上限なので変わらない)。
-      idleTimeoutMillis: Number(process.env.WEB_DB_POOL_IDLE_MS ?? 300000),
+      // ★保持は60秒まで(同日修正): セッションプーラーの上限は pool_size=15 と
+      // 実測で判明(EMAXCONNSESSION)。web(10)+worker(5)で丁度15のため、長時間の
+      // アイドル保持は他クライアント(管理スクリプト等)を締め出す。60秒でも
+      // 「閲覧中のユーザーの次のページ」はウォームなまま。
+      idleTimeoutMillis: Number(process.env.WEB_DB_POOL_IDLE_MS ?? 60000),
       keepAlive: true,
     });
   }

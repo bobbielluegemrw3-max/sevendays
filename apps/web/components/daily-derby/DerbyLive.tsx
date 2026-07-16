@@ -34,6 +34,8 @@ interface DerbyStatus {
   personal: unknown;
   my_horse_names: string[];
   my_horses?: { name: string; dna_hash: string; current_day: number; trained_for_next_race?: boolean }[];
+  /** 当夜の自分の実イベント(2026-07-16 #5 審判の実結線)。レースFINALIZED後に届く。 */
+  my_events?: DerbyNightResults | null;
   tonight_forecast?: { weather: string; track: string; surface: string } | null;
   tomorrow_forecast?: { weather: string; track: string; surface: string } | null;
   tonight_field?: { entrants: number; burn_slots_min: number; burn_slots_max: number } | null;
@@ -142,7 +144,7 @@ export function DerbyLive() {
       tickerEvents={status.ticker}
       nightResults={nightResults}
       failed={status.phase === 'FAILED_SAFE_MODE'}
-      myHorseNames={status.my_horse_names}
+      myEvents={status.my_events ?? null}
       myHorses={(status.my_horses ?? []).map((h) => ({
         name: h.name,
         dnaHash: h.dna_hash,

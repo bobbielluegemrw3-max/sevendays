@@ -292,6 +292,127 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         [ctx.userId, effectiveRaceDate],
       );
 
+      // 審判演出の実結線(2026-07-16 #5): 従来はログ濁流のフィクション行と実馬名の
+      // 「偶然一致」で個人演出を発火させる設計だったため、本番では一度も発火せず、
+      // 偶然一致すると誤った結果(生存馬にBURN等)を映す危険すらあった。当夜の
+      // 自分の実イベントをここで返し、クライアントがスケジュール発火する。
+      // レースがFINALIZEDになるまでは null(中間状態の生存誤判定を防ぐ)。
+      // 1往復のUNION ALL(SCALING_PLAYBOOK §Dの往復規律)。WAITING中は照会しない。
+      let myEvents: Record<string, unknown> | null = null;
+      if (shared.phase === 'LIVE' || shared.phase === 'COMPLETED') {
+        const ev = await ctx.client.query<{
+          kind: string;
+          name: string | null;
+          dna_hash: string | null;
+          day: number | null;
+          used_item_key: string | null;
+          drop_item_key: string | null;
+          price: string | null;
+          is_mint: boolean | null;
+          cp_email: string | null;
+          cp_stable: string | null;
+        }>(
+          `with race as (
+             select r.id, r.batch_run_id
+             from races r join batch_runs b on b.id = r.batch_run_id
+             where b.batch_date = $2 and r.status = 'FINALIZED'
+             limit 1
+           )
+           select 'READY' as kind, null as name, null as dna_hash, null::int as day,
+                  null as used_item_key, null as drop_item_key, null as price,
+                  null::boolean as is_mint, null as cp_email, null as cp_stable
+           from race
+           union all
+           select 'BURN', h.name, h.dna_hash, s.current_day,
+                  iu.item_key, ui.item_key, null, null, null, null
+           from horse_burns hb
+           join race on race.id = hb.race_id
+           join horses h on h.id = hb.horse_id
+           left join race_participant_snapshots s on s.race_id = hb.race_id and s.horse_id = hb.horse_id
+           left join item_usages iu on iu.horse_id = hb.horse_id
+             and iu.effective_race_date = $2::date and iu.status <> 'CANCELLED'
+           left join user_items ui on ui.source_burn_event_id = hb.burn_event_id
+           where hb.owner_user_id_at_snapshot = $1
+           union all
+           select 'SURVIVE', h.name, h.dna_hash, s.current_day,
+                  null, null, null, null, null, null
+           from race_participant_snapshots s
+           join race on race.id = s.race_id
+           join horses h on h.id = s.horse_id
+           left join horse_burns hb on hb.race_id = s.race_id and hb.horse_id = s.horse_id
+           where s.owner_user_id = $1 and hb.id is null
+           union all
+           select 'SOLD', h.name, h.dna_hash, l.current_day,
+                  null, null, a.assigned_price::text, null, u.email, u.stable_name
+           from ownership_assignments a
+           join race on race.batch_run_id = a.batch_run_id
+           join horses h on h.id = a.horse_id
+           join users u on u.id = a.buyer_user_id
+           left join market_listings l on l.id = a.market_listing_id
+           where a.seller_user_id = $1 and a.status = 'SETTLED'
+           union all
+           select 'BOUGHT', h.name, h.dna_hash, coalesce(l.current_day, 0),
+                  null, null, a.assigned_price::text,
+                  (a.market_listing_id is null), u.email, u.stable_name
+           from ownership_assignments a
+           join race on race.batch_run_id = a.batch_run_id
+           join horses h on h.id = a.horse_id
+           left join users u on u.id = a.seller_user_id
+           left join market_listings l on l.id = a.market_listing_id
+           where a.buyer_user_id = $1 and a.status = 'SETTLED'`,
+          [ctx.userId, today],
+        );
+        if (ev.rows.some((r) => r.kind === 'READY')) {
+          const mask = (email: string | null): string =>
+            !email
+              ? '—'
+              : email.endsWith('@user.sevendays')
+                ? 'ウォレットユーザー'
+                : `${email.slice(0, 2)}***`;
+          const cp = (r: { cp_email: string | null; cp_stable: string | null }) =>
+            r.cp_stable ?? mask(r.cp_email);
+          myEvents = {
+            burned: ev.rows
+              .filter((r) => r.kind === 'BURN')
+              .map((r) => ({
+                name: r.name,
+                dna_hash: r.dna_hash,
+                day: r.day,
+                used_item_key: r.used_item_key,
+                drop_item_key: r.drop_item_key,
+              })),
+            survived: ev.rows
+              .filter((r) => r.kind === 'SURVIVE')
+              .map((r) => ({
+                name: r.name,
+                dna_hash: r.dna_hash,
+                from_day: r.day ?? 0,
+                to_day: Math.min(7, (r.day ?? 0) + 1),
+                day7: r.day === 6,
+              })),
+            sold: ev.rows
+              .filter((r) => r.kind === 'SOLD')
+              .map((r) => ({
+                name: r.name,
+                dna_hash: r.dna_hash,
+                price: r.price,
+                day: r.day,
+                counterpart: cp(r),
+              })),
+            bought: ev.rows
+              .filter((r) => r.kind === 'BOUGHT')
+              .map((r) => ({
+                name: r.name,
+                dna_hash: r.dna_hash,
+                price: r.price,
+                day: r.day,
+                is_mint: r.is_mint === true,
+                counterpart: r.is_mint === true ? null : cp(r),
+              })),
+          };
+        }
+      }
+
       return {
         ...shared,
         server_time: now.toISOString(),
@@ -299,6 +420,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         personal: null, // 旧フィールド互換(2026-07-12撤去 — 実個人結果は my-results/:date)
         my_horse_names: myHorses.rows.map((r) => r.name),
         my_horses: myHorses.rows,
+        my_events: myEvents,
       };
     },
   });
