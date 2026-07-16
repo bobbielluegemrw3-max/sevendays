@@ -71,7 +71,7 @@ export function AccountView({
             {emailUnset ? <span className={s.vUnset}>{t.email_unset}</span> : me.email}
           </div>
           {/* 厩舎名(Decision 097): 公開アイデンティティ */}
-          <StableNameForm current={me.stable_name ?? null} lang={lang} />
+          <StableNameForm current={me.stable_name ?? null} t={APP_COPY[lang].stableName} />
           <div className={s.profileMeta}>
             <span>{t.reg_label}{localDate(me.created_at)}</span>
             <span className={s.dayPill}>{fill(t.play_tpl, { n: days })}</span>
@@ -103,8 +103,8 @@ export function AccountView({
         <section className={s.sec}>
           <div className={s.secLabel}>{t.settings_label} <span className={s.en}>· SETTINGS</span></div>
           <div className={s.settingsStack}>
-            {trade ? <TradeAutoTile settings={trade} lang={lang} /> : null}
-            <PwaSetupTile lang={lang} />
+            {trade ? <TradeAutoTile settings={trade} t={APP_COPY[lang].trade} /> : null}
+            <PwaSetupTile t={APP_COPY[lang].pwa} />
           </div>
         </section>
       </div>
@@ -116,7 +116,7 @@ export function AccountView({
           {t.linking_lead}
         </div>
         <div className={s.linkBody}>
-          <AccountLinking userId={me.id} wallets={wallets.map((w) => w.wallet_address)} lang={lang} />
+          <AccountLinking userId={me.id} wallets={wallets.map((w) => w.wallet_address)} t={APP_COPY[lang].linking} />
         </div>
       </section>
 

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
-import { APP_COPY, type Lang } from '@/lib/i18n';
+import type { AppDict } from '@/lib/i18n-shared';
 import s from '@/app/dashboard.module.css';
 
 /**
@@ -12,8 +12,7 @@ import s from '@/app/dashboard.module.css';
  * 運営厩舎から馬が1頭その場で届く。控えめなトグル — コードを
  * 持たない大多数のユーザーには1行のリンクにしか見えない。
  */
-export function PromoRedeemForm({ lang = 'ja' }: { lang?: Lang }) {
-  const t = APP_COPY[lang].promo;
+export function PromoRedeemForm({ t }: { t: AppDict['promo'] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');

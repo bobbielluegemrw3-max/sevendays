@@ -4,6 +4,8 @@ import { PurchaseView, type Session } from '@/components/PurchaseView';
 import { ReservePanel } from '@/components/ReservePanel';
 import { TradeAutoTile, TradeModeModal, type TradeSettings } from '@/components/TradeAutoControls';
 import type { Assignment } from '@/components/AssignmentList';
+import { APP_COPY } from '@/lib/i18n';
+import { getLang } from '@/lib/i18n-server';
 
 /**
  * /market — 購入ファネル(Decision 085)。3幕構成:
@@ -23,6 +25,7 @@ export default async function MarketPage() {
   ]);
   const pendingCount = sessions.sessions.filter((s) => s.status === 'PENDING_ASSIGNMENT').length;
   const tradeSettings = trade.status === 200 ? trade.body : null;
+  const tradeCopy = APP_COPY[await getLang()].trade;
   return (
     <MarketPlaceView
       data={place}
@@ -31,12 +34,12 @@ export default async function MarketPage() {
         <>
           <ReservePanel available={wallet.available} pendingCount={pendingCount} />
           {/* AUTOトグルはダッシュボードとここの2箇所(Decision 086) */}
-          {tradeSettings ? <TradeAutoTile settings={tradeSettings} /> : null}
+          {tradeSettings ? <TradeAutoTile settings={tradeSettings} t={tradeCopy} /> : null}
           <PurchaseView
             sessions={sessions.sessions}
             assignments={assignments.status === 200 ? assignments.body.assignments : []}
           />
-          {tradeSettings ? <TradeModeModal settings={tradeSettings} /> : null}
+          {tradeSettings ? <TradeModeModal settings={tradeSettings} t={tradeCopy} /> : null}
         </>
       }
     />

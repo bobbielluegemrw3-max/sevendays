@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/client-api';
 import { localDate } from '@/lib/format-time';
-import { APP_COPY, fill, type Lang, type AppDict } from '@/lib/i18n';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/notifications.module.css';
 
 /* ============================================================================
@@ -106,8 +106,7 @@ function timeAgo(value: string, t: AppDict['notif']): string {
 const dateOf = (iso: string): string => localDate(iso); // 現地日でグルーピング(2026-07-14)
 const dateLabel = (d: string): string => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 
-export function NotificationsList({ notifications, preview = false, lang = 'ja' }: { notifications: Notification[]; preview?: boolean; lang?: Lang }) {
-  const t = APP_COPY[lang].notif;
+export function NotificationsList({ notifications, preview = false, t }: { notifications: Notification[]; preview?: boolean; t: AppDict['notif'] }) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState<'ALL' | Cat>('ALL');
   const [unreadOnly, setUnreadOnly] = useState(false);

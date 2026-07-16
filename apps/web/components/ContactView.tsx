@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { apiFetch, errorMessage } from '@/lib/client-api';
-import { APP_COPY, type Lang } from '@/lib/i18n';
+import type { AppDict } from '@/lib/i18n-shared';
 import s from '../app/contact.module.css';
 
 /* /contact — サポート窓口(2026-07-12 リデザイン)。
@@ -11,8 +11,7 @@ import s from '../app/contact.module.css';
  * ③フォーム+返信のご案内(PC2カラム)。送信内容はサポートの受付キューに入り、
  * 返信は登録メールアドレスへ届く。 */
 
-export function ContactView({ lang = 'ja' }: { lang?: Lang }) {
-  const t = APP_COPY[lang].contact;
+export function ContactView({ t }: { t: AppDict['contact'] }) {
   const FAQS = [
     { q: t.faq_burn, href: '/guide#race' },
     { q: t.faq_buy, href: '/guide#buy' },

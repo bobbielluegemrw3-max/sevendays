@@ -20,7 +20,7 @@ export default async function LedgerPage() {
       <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 0.4rem', lineHeight: 1.8 }}>
         {t.intro}
       </p>
-      <LedgerView lang={lang} />
+      <LedgerView t={APP_COPY[lang].ledger} />
     </div>
   );
 }

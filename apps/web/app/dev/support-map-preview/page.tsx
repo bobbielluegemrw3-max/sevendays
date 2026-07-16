@@ -1,5 +1,6 @@
 import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { SupportMapView } from '@/components/SupportMapView';
+import { APP_COPY } from '@/lib/i18n';
 import type { SupportTreeInput } from '@/lib/support-tree';
 
 /**
@@ -56,6 +57,7 @@ export default async function SupportMapPreview() {
   return (
     <SupportMapView
       preview
+      t={APP_COPY.ja.support}
       data={{
         selfUserId: '00000000-0000-4000-8000-000000000000',
         selfDisplay: 'go***@gmail.com',

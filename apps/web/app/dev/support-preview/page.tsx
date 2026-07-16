@@ -1,5 +1,6 @@
 import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { SupportDashboardView } from '@/components/SupportDashboardView';
+import { APP_COPY } from '@/lib/i18n';
 
 /**
  * Dev-only visual preview of the Support Bonus DASHBOARD (design
@@ -11,6 +12,7 @@ export default async function SupportPreview() {
   const iso = (d: number, h = 12) => new Date(Date.UTC(2026, 6, d, h)).toISOString();
   return (
     <SupportDashboardView
+      t={APP_COPY.ja.support}
       data={{
         summary: {
           referral_code: 'a1b2c3d4e5f6',

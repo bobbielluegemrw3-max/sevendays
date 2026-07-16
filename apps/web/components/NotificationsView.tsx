@@ -21,7 +21,7 @@ export function NotificationsView({ notifications, preview = false, lang = 'ja' 
         {unread > 0 ? <span className={s.unreadPill}>{fill(t.unread_tpl, { n: unread })}</span> : null}
         <span className={s.readNote}>{t.read_note}</span>
       </div>
-      <NotificationsList notifications={notifications} preview={preview} lang={lang} />
+      <NotificationsList notifications={notifications} preview={preview} t={t} />
     </div>
   );
 }

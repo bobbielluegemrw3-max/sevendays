@@ -20,10 +20,10 @@ import { LANDING_LANGS, LANG_LABEL, isLang, type Lang } from '@/lib/landing-i18n
 
 export { LANDING_LANGS as APP_LANGS, LANG_LABEL, isLang, type Lang };
 
-/** テンプレ文字列の {name} を値で埋める(多言語の語順差を吸収)。client 安全。 */
-export function fill(tpl: string, vars: Record<string, string | number>): string {
-  return tpl.replace(/\{(\w+)\}/g, (_m: string, k: string) => String(vars[k] ?? ''));
-}
+/** fill はクライアント安全な lib/i18n-shared.ts へ移設(サーバー互換の再export)。
+ * クライアントコンポーネントは本ファイルではなく i18n-shared から import すること
+ * (本ファイルを import すると5言語辞書がクライアントバンドルに混入する)。 */
+export { fill } from '@/lib/i18n-shared';
 
 export interface AppDict {
   common: {

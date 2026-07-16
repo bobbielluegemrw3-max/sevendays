@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { UserIdentity } from '@supabase/supabase-js';
 import { apiFetch, errorMessage, siteOrigin, supabaseBrowser } from '@/lib/client-api';
-import { APP_COPY, fill, type Lang } from '@/lib/i18n';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 
 interface Eip1193Provider {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;
@@ -27,8 +27,7 @@ function toHex(text: string): string {
  * - MetaMask: personal_sign proof -> user_wallets; Web3 sessions for a
  *   linked wallet resolve to this game account at the API bridge.
  */
-export function AccountLinking({ userId, wallets, lang = 'ja' }: { userId: string; wallets: string[]; lang?: Lang }) {
-  const t = APP_COPY[lang].linking;
+export function AccountLinking({ userId, wallets, t }: { userId: string; wallets: string[]; t: AppDict['linking'] }) {
   const router = useRouter();
   const [identities, setIdentities] = useState<UserIdentity[] | null>(null);
   const [busy, setBusy] = useState(false);

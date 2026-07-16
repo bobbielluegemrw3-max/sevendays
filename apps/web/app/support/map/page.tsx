@@ -41,7 +41,7 @@ export default async function SupportMapPage() {
       ) : null}
       <SupportMapView
         preview={isDemo}
-        lang={lang}
+        t={t}
         data={{
           selfUserId: me.id,
           selfDisplay: t.self,

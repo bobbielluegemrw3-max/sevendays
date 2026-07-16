@@ -2,9 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/client-api';
-import { APP_COPY, type Lang } from '@/lib/i18n';
 
-export function LogoutButton({ lang = 'ja' }: { lang?: Lang }) {
+/** label はサーバー親(TopNav)が APP_COPY[lang].nav.logout を渡す(辞書の
+ * クライアント混入を避ける i18n-shared 分離方針)。 */
+export function LogoutButton({ label }: { label: string }) {
   const router = useRouter();
   return (
     <button
@@ -18,7 +19,7 @@ export function LogoutButton({ lang = 'ja' }: { lang?: Lang }) {
           });
       }}
     >
-      {APP_COPY[lang].nav.logout}
+      {label}
     </button>
   );
 }

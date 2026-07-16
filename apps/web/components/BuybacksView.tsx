@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { APP_COPY, fill, type Lang } from '@/lib/i18n';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/buybacks.module.css';
 
 /* ============================================================================
@@ -21,8 +21,7 @@ function shortId(id: string): string {
   return id.length > 13 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id;
 }
 
-export function BuybacksView({ buybacks, lang = 'ja' }: { buybacks: Buyback[]; lang?: Lang }) {
-  const t = APP_COPY[lang].champion;
+export function BuybacksView({ buybacks, t }: { buybacks: Buyback[]; t: AppDict['champion'] }) {
   return (
     <div className={s.wrap}>
       <div className={s.h1}>{t.bv_title}</div>

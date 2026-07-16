@@ -3,15 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
-import { APP_COPY, type Lang } from '@/lib/i18n';
+import type { AppDict } from '@/lib/i18n-shared';
 import s from '@/app/account.module.css';
 
 /**
  * 厩舎名の設定(Decision 097)。公開名 — マイ厩舎タイトル・成約相手・
  * 組織マップ・ギフト差出人に表示される。2〜20文字・一意・1日1回変更。
  */
-export function StableNameForm({ current, lang = 'ja' }: { current: string | null; lang?: Lang }) {
-  const t = APP_COPY[lang].stableName;
+export function StableNameForm({ current, t }: { current: string | null; t: AppDict['stableName'] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(current ?? '');

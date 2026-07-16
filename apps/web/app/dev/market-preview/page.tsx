@@ -3,6 +3,7 @@ import { MarketPlaceView } from '@/components/MarketPlaceView';
 import { PurchaseView } from '@/components/PurchaseView';
 import { ReservePanel } from '@/components/ReservePanel';
 import { TradeAutoTile, TradeModeModal } from '@/components/TradeAutoControls';
+import { APP_COPY } from '@/lib/i18n';
 
 /**
  * Dev-only visual preview of /market (Decision 076 + 085 funnel) with
@@ -63,11 +64,13 @@ export default async function MarketPreview({
           <TradeAutoTile
             preview
             settings={{ chosen: true, auto_list: true, auto_reserve: true, auto_reserve_max: 1 }}
+            t={APP_COPY.ja.trade}
           />
           {flags.choose ? (
             <TradeModeModal
               preview
               settings={{ chosen: false, auto_list: false, auto_reserve: false, auto_reserve_max: 1 }}
+              t={APP_COPY.ja.trade}
             />
           ) : null}
           <PurchaseView

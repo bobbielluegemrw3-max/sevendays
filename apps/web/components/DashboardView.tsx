@@ -197,7 +197,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
       )}
 
       {/* ===== ③.5 引換コード(Decision 095: セミナー特典馬) ===== */}
-      <PromoRedeemForm lang={lang} />
+      <PromoRedeemForm t={APP_COPY[lang].promo} />
 
       {/* ===== ④ 資産(残高 / 評価額 / Revenge Buff) ===== */}
       <section className={s.assets}>
@@ -264,13 +264,13 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
       ) : null}
 
       {/* ===== 売買の自動化(Decision 086: トグルはここと/marketの2箇所) ===== */}
-      {data.trade ? <TradeAutoTile settings={data.trade} lang={lang} /> : null}
+      {data.trade ? <TradeAutoTile settings={data.trade} t={APP_COPY[lang].trade} /> : null}
 
       {/* ===== アプリ化&通知ON の導線(通知一覧はメニューのバッジ+通知ページへ集約) ===== */}
-      <PwaSetupTile lang={lang} />
+      <PwaSetupTile t={APP_COPY[lang].pwa} />
 
       {/* ===== 出品方式の必須選択(未選択ユーザーにブロッキング表示) ===== */}
-      {data.trade ? <TradeModeModal settings={data.trade} lang={lang} /> : null}
+      {data.trade ? <TradeModeModal settings={data.trade} t={APP_COPY[lang].trade} /> : null}
     </div>
   );
 }

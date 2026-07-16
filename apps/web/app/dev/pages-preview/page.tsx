@@ -1,4 +1,5 @@
 import { requireDevPreviewAccess } from '@/lib/dev-preview';
+import { APP_COPY } from '@/lib/i18n';
 import { HorseDetailView, type HorseDetail } from '@/components/HorseDetailView';
 import { RacesView } from '@/components/RacesView';
 import { RaceDetailView } from '@/components/RaceDetailView';
@@ -196,6 +197,7 @@ export default async function PagesPreview() {
           { id: 'bb-1', horse_id: 'f003aaaa', status: 'IN_PROGRESS', total_amount: '200.00', day7_clear_date: '2026-07-03', payments_paid: 3 },
           { id: 'bb-2', horse_id: 'f004bbbb', status: 'COMPLETED', total_amount: '200.00', day7_clear_date: '2026-06-25', payments_paid: 7 },
         ]}
+        t={APP_COPY.ja.champion}
       />
 
       {sect('/champion/[id] チャンピオン報酬詳細')}

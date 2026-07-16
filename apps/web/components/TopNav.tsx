@@ -47,7 +47,7 @@ export function TopNav({ isAdmin = false, unread = 0, lang = 'ja' }: { isAdmin?:
       <span className="spacer" />
       <DerbyCountdown />
       <LanguageSwitcher current={lang} />
-      <LogoutButton lang={lang} />
+      <LogoutButton label={t.logout} />
     </nav>
   );
 }

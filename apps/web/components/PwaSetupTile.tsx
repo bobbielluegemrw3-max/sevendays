@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/client-api';
-import { APP_COPY, type Lang } from '@/lib/i18n';
+import type { AppDict } from '@/lib/i18n-shared';
 import s from '../app/dashboard.module.css';
 
 type PwaState = 'loading' | 'done' | 'enable' | 'register' | 'blocked' | 'ios-install' | 'install';
@@ -78,8 +78,7 @@ function ShareIcon() {
  *   (許可済み・未登録は「登録を完了する」ボタン = guri事案の自己修復経路)
  * - 許可済みなら毎回サーバーと突合して自動同期。SW(/sw.js)はプッシュ受信のみ担う。
  */
-export function PwaSetupTile({ lang = 'ja' }: { lang?: Lang }) {
-  const t = APP_COPY[lang].pwa;
+export function PwaSetupTile({ t }: { t: AppDict['pwa'] }) {
   const [state, setState] = useState<PwaState>('loading');
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [mobile, setMobile] = useState(false);

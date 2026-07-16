@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/client-api';
-import { APP_COPY, fill, type Lang } from '@/lib/i18n';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/races.module.css';
 
 /**
@@ -56,8 +56,7 @@ function downloadCsv(filename: string, rows: (string | number | null)[][]): void
   URL.revokeObjectURL(a.href);
 }
 
-export function LedgerView({ lang = 'ja' }: { lang?: Lang }) {
-  const t = APP_COPY[lang].ledger;
+export function LedgerView({ t }: { t: AppDict['ledger'] }) {
   const fmtFull = (iso: string): string => {
     const [y, m, d] = iso.split('-');
     return fill(t.date_full_tpl, { y: y!, m: Number(m), d: Number(d) });

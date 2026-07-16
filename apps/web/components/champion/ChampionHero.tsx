@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { APP_COPY, type Lang } from '@/lib/i18n';
+import type { AppDict } from '@/lib/i18n-shared';
 import s from '../../app/champion.module.css';
 
 /**
@@ -14,8 +14,7 @@ import s from '../../app/champion.module.css';
  * 再生成: /dev/champion-preview を puppeteer で seek() ステップ録画 →
  * ffmpeg xfade でループ化(1920×1080キャプチャ→720pエンコード)。
  */
-export function ChampionHero({ lang = 'ja' }: { lang?: Lang }) {
-  const t = APP_COPY[lang].champion;
+export function ChampionHero({ t }: { t: AppDict['champion'] }) {
   // 足音(Raceページと同じ hoofbeats.mp3)。自動再生はブラウザが禁止のため
   // 既定OFF・ボタン操作(ユーザージェスチャー)でONにする
   const [soundOn, setSoundOn] = useState(false);

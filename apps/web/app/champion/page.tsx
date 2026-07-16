@@ -1,5 +1,6 @@
 import { serverApi, serverApiOrLogin } from '@/lib/server-api';
 import { getLang } from '@/lib/i18n-server';
+import { APP_COPY } from '@/lib/i18n';
 import { ChampionView, type HallChampion } from '@/components/champion/ChampionView';
 import type { Buyback } from '@/components/BuybacksView';
 
@@ -17,7 +18,7 @@ export default async function ChampionPage() {
     <ChampionView
       buybacks={rewards.buybacks}
       hall={hall.status === 200 ? hall.body.champions : []}
-      lang={lang}
+      t={APP_COPY[lang].champion}
     />
   );
 }

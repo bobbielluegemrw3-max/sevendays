@@ -1,5 +1,6 @@
 import { serverApiOrLogin } from '@/lib/server-api';
 import { getLang } from '@/lib/i18n-server';
+import { APP_COPY } from '@/lib/i18n';
 import { SupportDashboardView } from '@/components/SupportDashboardView';
 import type { BonusRow, NetworkNode, SupportSummary } from '@/components/SupportView';
 
@@ -14,7 +15,7 @@ export default async function SupportPage() {
   return (
     <SupportDashboardView
       data={{ summary, bonuses: bonuses.bonuses, networkCount: network.nodes.length }}
-      lang={lang}
+      t={APP_COPY[lang].support}
     />
   );
 }

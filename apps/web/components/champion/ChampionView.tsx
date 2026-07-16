@@ -7,7 +7,7 @@ import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { ChampionHero } from '@/components/champion/ChampionHero';
 import { SAMPLE_CHAMPIONS } from '@/lib/champion-fixtures';
-import { APP_COPY, fill, type Lang } from '@/lib/i18n';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../../app/champion.module.css';
 
 /**
@@ -55,13 +55,12 @@ type SortKey = 'recent' | 'oldest' | 'name';
 export function ChampionView({
   buybacks,
   hall,
-  lang = 'ja',
+  t,
 }: {
   buybacks: Buyback[];
   hall: HallChampion[];
-  lang?: Lang;
+  t: AppDict['champion'];
 }) {
-  const t = APP_COPY[lang].champion;
   // 昇級ラダー(勝数は言語別テンプレ、Maiden/G1等は競馬の固有表記で共通)
   const CLASS_LADDER = ['Maiden', fill(t.class_win_tpl, { n: 1 }), fill(t.class_win_tpl, { n: 2 }), fill(t.class_win_tpl, { n: 3 }), 'G3', 'G2', 'G1'];
   const isSample = hall.length === 0;
@@ -88,7 +87,7 @@ export function ChampionView({
   return (
     <>
       {/* ① ヒーロー(ループ動画 2026-07-12: WebGL描画の録画置換) */}
-      <ChampionHero lang={lang} />
+      <ChampionHero t={t} />
 
       {/* 下段: 2カラム(左=報酬+殿堂 / 右=リーグ) */}
       <div className={s.lower}>
@@ -102,7 +101,7 @@ export function ChampionView({
             <p className={s.rewardsNote}>
               {t.rewards_note_a}<b>200 USDT</b>{t.rewards_note_b}
             </p>
-            <BuybacksView buybacks={buybacks} lang={lang} />
+            <BuybacksView buybacks={buybacks} t={t} />
           </section>
 
           {/* ③ 殿堂 */}

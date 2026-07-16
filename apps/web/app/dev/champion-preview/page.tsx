@@ -1,5 +1,6 @@
 import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { ChampionView } from '@/components/champion/ChampionView';
+import { APP_COPY } from '@/lib/i18n';
 
 /** Dev-only visual preview of /champion (sample hall + rewards). 404 in prod. */
 export default async function ChampionPreview() {
@@ -11,6 +12,7 @@ export default async function ChampionPreview() {
         { id: 'bb-2222222222222', horse_id: 'h-2', status: 'COMPLETED', total_amount: '200.00', day7_clear_date: '2026-06-20', payments_paid: 7 },
       ]}
       hall={[]}
+      t={APP_COPY.ja.champion}
     />
   );
 }

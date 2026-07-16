@@ -10,7 +10,7 @@ import {
   type SupportTreeInput,
 } from '@/lib/support-tree';
 import type { PoolMember } from '@/components/SupportView';
-import { APP_COPY, fill, type Lang } from '@/lib/i18n';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/support-map.module.css';
 import d from '../app/support.module.css';
 
@@ -70,8 +70,7 @@ function synthDetail(node: SupportTreeInput, direct: number, subtree: number): M
   };
 }
 
-export function SupportMapView({ data, preview = false, lang = 'ja' }: { data: SupportMapData; preview?: boolean; lang?: Lang }) {
-  const t = APP_COPY[lang].support;
+export function SupportMapView({ data, preview = false, t }: { data: SupportMapData; preview?: boolean; t: AppDict['support'] }) {
   const router = useRouter();
   const [mode, setMode] = useState<'map' | 'list'>('map');
   const [zoom, setZoom] = useState(1);

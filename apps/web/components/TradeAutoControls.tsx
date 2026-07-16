@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { AppSelect } from '@/components/AppSelect';
-import { APP_COPY, type Lang } from '@/lib/i18n';
+import type { AppDict } from '@/lib/i18n-shared';
 import s from '../app/dashboard.module.css';
 import d from '../app/support.module.css';
 
@@ -33,8 +33,7 @@ async function save(
 
 /* ============================== 必須選択モーダル ============================== */
 
-export function TradeModeModal({ settings, preview = false, lang = 'ja' }: { settings: TradeSettings; preview?: boolean; lang?: Lang }) {
-  const t = APP_COPY[lang].trade;
+export function TradeModeModal({ settings, preview = false, t }: { settings: TradeSettings; preview?: boolean; t: AppDict['trade'] }) {
   const router = useRouter();
   const [open, setOpen] = useState(!settings.chosen);
   const [busy, setBusy] = useState(false);
@@ -120,8 +119,7 @@ function Toggle({ on, disabled, onClick }: { on: boolean; disabled?: boolean; on
   );
 }
 
-export function TradeAutoTile({ settings, preview = false, lang = 'ja' }: { settings: TradeSettings; preview?: boolean; lang?: Lang }) {
-  const t = APP_COPY[lang].trade;
+export function TradeAutoTile({ settings, preview = false, t }: { settings: TradeSettings; preview?: boolean; t: AppDict['trade'] }) {
   const router = useRouter();
   const [local, setLocal] = useState(settings);
   const [busy, setBusy] = useState(false);

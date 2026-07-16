@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { BonusRow, SupportSummary } from '@/components/SupportView';
 import { localDateTime } from '@/lib/format-time';
-import { APP_COPY, fill, type Lang } from '@/lib/i18n';
+import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/support.module.css';
 
 /**
@@ -27,8 +27,7 @@ const fmtUsdt = (v: string): string =>
 const tierColor = (t: number): string =>
   ['#c9a86a', '#00eaff', '#5ff5ff', '#7ee0ff', '#a9c6ff', '#c9a8ff', '#ff8fe4', '#ff5ce0'][t] ?? '#8f8ac2';
 
-export function SupportDashboardView({ data, lang = 'ja' }: { data: SupportDashboardData; lang?: Lang }) {
-  const t = APP_COPY[lang].support;
+export function SupportDashboardView({ data, t }: { data: SupportDashboardData; t: AppDict['support'] }) {
   const { summary } = data;
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState('https://sevendaysderby.com');
