@@ -315,6 +315,10 @@ Amendment (2026-07-06, Owner): the user-facing name is サポートボーナス 
 
 106. Weekly jackpot — built now, released later. Implemented as part of V2 and LIVE ON TESTNET during the trial season; whether it goes to mainnet production is the owner's call after the lawyer's confirmation (per the standing instruction in 105). Training tickets are the lottery entries (count-proportional — big stables are favored, owner-approved); one draw a week, announced in the night show's final act; the draw uses the same commit-reveal machinery as races (publicly verifiable). Prizes are USDT funded exclusively from the marketing budget account (its balance is the structural ceiling); winners are announced masked. Testnet placeholder parameters (all runtime-configurable): weekly, 100 USDT, single winner, tickets reset weekly. Production prize size, winner structure and ticket expiry are decided by the owner at release time.
 
+## Decision 107 (2026-07-17, Owner)
+
+107. V2 training roll is FINAL on first confirm — no redo. Supersedes the "redo until snapshot" clause of Decision 104 for V2 rolled training only. Rationale: if a redo re-rolls (or lets the player probe the deterministic roll of every menu combination and keep the best), the downside risk becomes fake and the simulated progression curve of Decision 101 (one roll per race cycle) no longer holds; the confirm button must be the real gamble moment. Rules: one training confirm per horse per race cycle (date x slot), resolved at confirm time from a deterministic seed, immutable and undeletable afterwards (DB-guarded); the misclick guard is the existing confirm dialog plus public-range preview; the A2 "ticket fires on first confirm only" clause becomes trivially "every confirm" since every confirm is the first. The V1 production season's rollless redo (delete+insert, A2) is untouched — it retires with V1 at the mainnet reset.
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:

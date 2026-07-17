@@ -6,9 +6,12 @@ import {
   TRAINING_TYPES,
   PURCHASE_MAX_PER_REQUEST,
   PURCHASE_LOCK_AMOUNT,
+  TRAINING_COMBO_SIZE_V2,
+  TRAINING_MENU_KEYS_V2,
   isRaceEngineV2,
   recommendedTrainingV1,
   renderNotification,
+  type TrainingMenuV2,
 } from '@sevendays/domain';
 import { ensureUserAccounts, withdrawalFundLock } from '@sevendays/ledger';
 import {
@@ -22,6 +25,7 @@ import { verifyWalletLink } from '@sevendays/blockchain';
 import { evaluateHiddenBadges } from '../hidden/achievements.js';
 import { computeHiddenLooks } from '../hidden/looks.js';
 import {
+  resolveTrainingRollV2,
   tonightBand,
   totalValueV0,
   type TotalValueInputV0,
@@ -603,20 +607,38 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
 
   // Daily training selection (Decision 066). One per horse per
   // effective_race_date (DB unique); the day's intake closes at Batch Lock.
+  // V2 (Decisions 104/107): `menus` (1-2) rolls the result AT CONFIRM and is
+  // final — no redo. The V1 `training_type` path keeps its redo semantics.
   registry.register({
     method: 'POST',
     path: '/api/v1/horses/:id/training',
     auth: 'user',
-    input: z.object({ training_type: z.string() }),
+    input: z.object({
+      training_type: z.string().optional(),
+      menus: z.array(z.string()).min(1).max(TRAINING_COMBO_SIZE_V2).optional(),
+    }),
     handler: async (ctx, input) => {
-      if (!(TRAINING_TYPES as readonly string[]).includes(input.training_type)) {
-        throw new ApiError(
-          'INVALID_TRAINING_TYPE',
-          `training_type must be one of: ${TRAINING_TYPES.join(', ')}`,
-        );
+      if (input.menus === undefined) {
+        if (
+          input.training_type === undefined ||
+          !(TRAINING_TYPES as readonly string[]).includes(input.training_type)
+        ) {
+          throw new ApiError(
+            'INVALID_TRAINING_TYPE',
+            `training_type must be one of: ${TRAINING_TYPES.join(', ')}`,
+          );
+        }
       }
-      const horse = await ctx.client.query<{ owner_user_id: string; name: string; status: string }>(
-        `select owner_user_id, name, status::text as status from horses where id = $1`,
+      const horse = await ctx.client.query<{
+        owner_user_id: string;
+        name: string;
+        status: string;
+        horse_type: HorseType;
+        dna_hash: string;
+      }>(
+        `select owner_user_id, name, status::text as status,
+                horse_type::text as horse_type, dna_hash
+         from horses where id = $1`,
         [ctx.params.id],
       );
       if (!horse.rows[0]) throw new ApiError('HORSE_NOT_FOUND', 'Horse not found');
@@ -642,6 +664,138 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         throw new ApiError('MARKETPLACE_LOCKED', "Training intake is closed during Daily Settlement");
       }
 
+      // ---- V2 path (Decisions 104/107): menus + confirm-time roll --------
+      if (input.menus !== undefined) {
+        const active = await ctx.client.query<{ version: string }>(
+          `select version from race_engine_versions
+           where activated_at is not null and deactivated_at is null`,
+        );
+        if (active.rows.length !== 1 || !isRaceEngineV2(active.rows[0]!.version)) {
+          throw new ApiError('TRAINING_V2_NOT_AVAILABLE', 'Menu training opens with the V2 season');
+        }
+        const menus = input.menus as TrainingMenuV2[];
+        for (const m of menus) {
+          if (!(TRAINING_MENU_KEYS_V2 as readonly string[]).includes(m)) {
+            throw new ApiError(
+              'INVALID_TRAINING_TYPE',
+              `menus must be from: ${TRAINING_MENU_KEYS_V2.join(', ')}`,
+            );
+          }
+        }
+
+        // 対象サイクル = 次に走るレース: 朝→夜→翌朝 の順で未COMPLETEDの最初のもの
+        const todayV2 = batchDateFor(new Date());
+        const candidates: { date: string; slot: 'MORNING' | 'NIGHT' }[] = [
+          { date: todayV2, slot: 'MORNING' },
+          { date: todayV2, slot: 'NIGHT' },
+          { date: addDays(todayV2, 1), slot: 'MORNING' },
+        ];
+        let target = candidates[candidates.length - 1]!;
+        for (const c of candidates) {
+          const done = await ctx.client.query(
+            `select 1 from batch_runs where batch_date = $1 and slot = $2::race_slot and status = 'COMPLETED'`,
+            [c.date, c.slot],
+          );
+          if (!done.rows[0]) {
+            target = c;
+            break;
+          }
+        }
+
+        const frozen = await ctx.client.query(
+          `select 1 from race_participant_snapshots s
+           join races r on r.id = s.race_id
+           join batch_runs b on b.id = r.batch_run_id
+           where s.horse_id = $1 and b.batch_date = $2 and b.slot = $3::race_slot`,
+          [ctx.params.id, target.date, target.slot],
+        );
+        if (frozen.rows[0]) {
+          throw new ApiError('RACE_SNAPSHOT_ALREADY_CREATED', 'The race snapshot is already frozen');
+        }
+
+        // Decision 107: 確定は1サイクル1回きり — やり直し不可
+        const existingV2 = await ctx.client.query(
+          `select 1 from training_sessions
+           where horse_id = $1 and effective_race_date = $2 and slot = $3::race_slot`,
+          [ctx.params.id, target.date, target.slot],
+        );
+        if (existingV2.rows[0]) {
+          throw new ApiError(
+            'TRAINING_ALREADY_EXISTS',
+            'Training for this race cycle is already confirmed — the roll is final (Decision 107)',
+          );
+        }
+
+        // 確定の瞬間にロール(決定論シード: 馬×サイクル。リトライは同一結果)
+        const roll = resolveTrainingRollV2({
+          dnaHash: horse.rows[0].dna_hash,
+          horseType: horse.rows[0].horse_type,
+          menus,
+          rollSeed: `${ctx.params.id}:${target.date}:${target.slot}`,
+        });
+
+        try {
+          await ctx.client.query('begin');
+          await ctx.client.query(
+            `insert into training_sessions
+               (horse_id, user_id, training_date, effective_race_date, slot,
+                menus_v2, per_menu_v2, synergy_v2, delta_v2, rests_decay_v2)
+             values ($1, $2, $3, $4, $5::race_slot, $6, $7, $8, $9, $10)`,
+            [
+              ctx.params.id,
+              ctx.userId,
+              todayV2,
+              target.date,
+              target.slot,
+              menus,
+              JSON.stringify(roll.perMenu),
+              roll.synergy,
+              roll.delta,
+              roll.restsDecay,
+            ],
+          );
+          const rendered = renderNotification('TRAINING_COMPLETED', {
+            horse_name: horse.rows[0].name,
+            training_type: menus.join('+'),
+          });
+          await insertNotification(ctx.client, {
+            userId: ctx.userId,
+            type: 'TRAINING_COMPLETED',
+            dedupeKey: `notif:TRAINING_COMPLETED:${ctx.params.id}:${target.date}:${target.slot}`,
+            payload: { ...rendered, horse_id: ctx.params.id, menus, delta: roll.delta },
+          });
+          await ctx.client.query('commit');
+        } catch (error) {
+          await ctx.client.query('rollback').catch(() => undefined);
+          if (/uq_training_horse_race_slot|duplicate key/i.test((error as Error).message)) {
+            throw new ApiError(
+              'TRAINING_ALREADY_EXISTS',
+              'Training for this race cycle is already confirmed — the roll is final (Decision 107)',
+            );
+          }
+          throw error;
+        }
+
+        const ticketsV2 = await ctx.client.query<{ n: number }>(
+          `select count(*)::int as n from training_sessions where user_id = $1`,
+          [ctx.userId],
+        );
+        return {
+          horse_id: ctx.params.id,
+          menus,
+          per_menu: roll.perMenu,
+          synergy: roll.synergy,
+          delta: roll.delta,
+          rests_decay: roll.restsDecay,
+          effective_race_date: target.date,
+          slot: target.slot,
+          first_confirm: true,
+          training_tickets: ticketsV2.rows[0]?.n ?? 0,
+        };
+      }
+
+      // ---- V1 path (unchanged — rollless redo, Decision 066 / A2) --------
+      const trainingType = input.training_type!;
       // While OPEN the training targets the next race to run: today's race
       // unless today's batch already completed (post-race evening).
       const today = batchDateFor(new Date());
@@ -684,25 +838,25 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         await ctx.client.query(
           `insert into training_sessions (horse_id, user_id, training_type, training_date, effective_race_date)
            values ($1, $2, $3::training_type, $4, $5)`,
-          [ctx.params.id, ctx.userId, input.training_type, today, effectiveRaceDate],
+          [ctx.params.id, ctx.userId, trainingType, today, effectiveRaceDate],
         );
         if (firstConfirm) {
           const rendered = renderNotification('TRAINING_COMPLETED', {
             horse_name: horse.rows[0].name,
-            training_type: input.training_type,
+            training_type: trainingType,
           });
           await insertNotification(ctx.client, {
             userId: ctx.userId,
             type: 'TRAINING_COMPLETED',
             dedupeKey: `notif:TRAINING_COMPLETED:${ctx.params.id}:${effectiveRaceDate}`,
-            payload: { ...rendered, horse_id: ctx.params.id, training_type: input.training_type },
+            payload: { ...rendered, horse_id: ctx.params.id, training_type: trainingType },
           });
         }
         await ctx.client.query('commit');
       } catch (error) {
         await ctx.client.query('rollback').catch(() => undefined);
         // 同時やり直しの衝突・凍結競合は409で返す(500にしない)
-        if (/uq_training_horse_race_date|duplicate key|TRAINING_FROZEN/i.test((error as Error).message)) {
+        if (/uq_training_horse_race_slot|duplicate key|TRAINING_FROZEN/i.test((error as Error).message)) {
           throw new ApiError('TRAINING_CONFLICT', 'Training changed concurrently — try again');
         }
         throw error;
@@ -714,7 +868,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
 
       return {
         horse_id: ctx.params.id,
-        training_type: input.training_type,
+        training_type: trainingType,
         effective_race_date: effectiveRaceDate,
         first_confirm: firstConfirm,
         training_tickets: tickets.rows[0]?.n ?? 0,
@@ -843,7 +997,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         const inserted = await ctx.client.query<{ id: string }>(
           `insert into training_sessions (horse_id, user_id, training_type, training_date, effective_race_date)
            values ($1, $2, $3::training_type, $4, $5)
-           on conflict (horse_id, effective_race_date) do nothing
+           on conflict (horse_id, effective_race_date, slot) do nothing
            returning id`,
           [horse.id, ctx.userId, training, today, effectiveRaceDate],
         );

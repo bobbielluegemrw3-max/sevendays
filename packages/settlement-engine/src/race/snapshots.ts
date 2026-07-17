@@ -373,8 +373,9 @@ async function createParticipantSnapshotsV2(
       `select id, menus_v2, per_menu_v2, synergy_v2::text as synergy_v2,
               delta_v2::text as delta_v2, rests_decay_v2
        from training_sessions
-       where horse_id = $1 and effective_race_date = $2 and snapshot_included_at is null`,
-      [horse.id, input.batchDate],
+       where horse_id = $1 and effective_race_date = $2 and slot = $3::race_slot
+         and snapshot_included_at is null`,
+      [horse.id, input.batchDate, input.slot ?? 'NIGHT'],
     );
     const trainingRow = training.rows[0] ?? null;
     // A V1-shaped row (no menus) in a V2 race has no Total Value effect but is

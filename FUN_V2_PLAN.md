@@ -321,6 +321,18 @@
   PGliteテスト4件PASS(作成/編集/キャンセル・500予算割当・スキップ規則・冪等・reconcile)。
   **残(-3b)**: 購入ページUI(パッケージバッジ・自由入力)・auto_reserve のプール型再定義・
   「YOUR NEW STABLE」個人結果ショー・market post-batch のレース単位スイープ
-- [ ] V2実装-4: 新調教UI(104) → -5: ジャックポット(106仮値) →
+- [x] V2実装-4a: **新調教API**(2026-07-17/18): **Decision 107 起票(オーナー決定)= V2ロール調教は
+  確定即最終・やり直し不可**(再ロール/組合せ試し替えの搾取を封じ、シムの1レース1ロール前提を守る。
+  V1のロール無しやり直しは不変・リセットで退役)。
+  migration `20260717060000_v2_training_slot.sql`(本番適用済み) = training_sessions に slot
+  (既定NIGHT)・ユニークを (horse, date, slot) へ・**V2行はDELETE不可のDBガード(TRAINING_FINAL)**・
+  updateガードにslot/V2列追補。
+  API: POST /horses/:id/training に `menus`(1〜2・V2エンジンアクティブ時のみ=
+  TRAINING_V2_NOT_AVAILABLE)— 対象サイクル=朝→夜→翌朝の順で未COMPLETEDの最初のレース・
+  確定の瞬間に resolveTrainingRollV2(決定論シード=馬×サイクル・リトライ同一結果)・
+  結果(perMenu/synergy/delta/restsDecay)を即返却・再確定は TRAINING_ALREADY_EXISTS。
+  スナップショットのV2調教読みもslot対応。train-allのconflict targetを新ユニークに追従。
+  PGliteテスト5件PASS。**残(-4b)**: 調教UI(メニュー選択・公開レンジ表示・ロール演出・5言語)
+- [ ] V2実装-5: ジャックポット(106仮値) →
   -6: 新アイテムカタログ起草(104-5) → -7: 表示のLV置換 → テストネット試運転開始
 - [ ] テストネット試運転 → メインネットリセット → ローンチ
