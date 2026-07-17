@@ -212,6 +212,30 @@ export async function buybackReserveBackstop(
   });
 }
 
+/**
+ * Weekly jackpot prize (Decision 106/108):
+ * PLATFORM_MARKETING_BUDGET -> USER_AVAILABLE. The marketing budget balance is
+ * the structural ceiling — the ledger's no-negative-balance rule makes an
+ * over-budget payout impossible; the engine additionally cancels the whole
+ * draw up front when the balance is short (Decision 108).
+ */
+export async function jackpotPayout(
+  client: SqlClient,
+  args: Ref & { userId: string; amount: Money },
+): Promise<PostedTransaction> {
+  const user = await ensureUserAccounts(client, args.userId);
+  const budget = await getPlatformAccountId(client, 'PLATFORM_MARKETING_BUDGET');
+  return postTransaction(client, {
+    type: 'JACKPOT_PAYOUT',
+    idempotencyKey: args.idempotencyKey,
+    ...refFields(args),
+    entries: [
+      { accountId: budget, direction: 'DEBIT', amount: args.amount },
+      { accountId: user.available, direction: 'CREDIT', amount: args.amount },
+    ],
+  });
+}
+
 /** Buyback payment: PLATFORM_BUYBACK_RESERVE -> USER_AVAILABLE. */
 export async function buybackPayment(
   client: SqlClient,

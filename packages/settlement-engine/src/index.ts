@@ -18,4 +18,5 @@ export * from './economy/listings.js';
 export * from './economy/coverage-gate.js';
 export * from './economy/report.js';
 export * from './recovery/recovery.js';
+export * from './jackpot/draws.js';
 export * from './batch/production.js';

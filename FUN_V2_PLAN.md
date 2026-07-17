@@ -346,6 +346,23 @@
   確定済みロール)を追加し、HorseDetailView がV2アクティブ時に自動で切替。
   5言語キー(tv2_* 21キー×ja/en/zh/ko/ms)。/dev/pages-preview にQAフィクスチャ3種
   (選択中/確定済み/REST)— devサーバーで描画確認済み。ソフトキャップ/減衰の実定数も脚注表示
-- [ ] V2実装-5: ジャックポット(106仮値) →
-  -6: 新アイテムカタログ起草(104-5) → -7: 表示のLV置換 → テストネット試運転開始
+- [x] V2実装-5: **週次ジャックポット**(2026-07-18): **Decision 108 起票(オーナー決定)=
+  週=月曜MORNING〜日曜NIGHTのレースサイクル(MYT)・チケットは (effective_race_date, slot) で帰属
+  (決定論・リプレイ検証可能)・原資不足の週は中止+アラート(繰越なし)・チケット0は不成立
+  (賞金据え置き)・除外アカウントなし**。
+  migration `20260718010000_v2_jackpot.sql`(本番適用済み・追加のみ) = `JACKPOT_PAYOUT` txタイプ /
+  `jackpot_draws`(週ユニーク・resolved後は行凍結ガード)/ `jackpot_winners`(不変)/
+  `jackpot_seed_escrow`(サービス専用)/ system_settings `jackpot` 行(**enabled既定false** —
+  有効化は残高整合後の運用判断=§7-5・本番公開は弁護士ゲート)。
+  結線: PAY_MLM_REWARDS 内にV2ゲートで合流(バックストップ102-8と同方式)—
+  週の最初のV2バッチが commit-reveal シードをコミット(エスクロー)し、日曜NIGHTバッチが
+  reveal→当選導出(`pickJackpotWinners` 純関数・ユーザーID昇順の累積チケット空間・
+  複数当選者は個別ユーザー保証)→ `jackpotPayout`(MARKETING_BUDGET→USER_AVAILABLE・
+  冪等キー `jackpot:{drawId}:{userId}`)→ JACKPOT_WON通知。実効パラメータ(賞金/人数)は
+  支払い前に行へ凍結=クラッシュ再試行中の設定変更が結果を変えない。
+  admin: GET /admin/jackpot/overview(設定+今週チケット+履歴+当選者)・
+  POST /admin/jackpot/config(**SUPER_ADMIN限定** — enabledは公開スイッチのため)。
+  PGliteテスト10件PASS(commit-reveal検証・決定論当選・冪等再実行・不成立/中止/無効化・
+  週帰属・行凍結)。**ショー最終幕のJP演出とユーザー向け表示は-7で**
+- [ ] V2実装-6: 新アイテムカタログ起草(104-5) → -7: 表示のLV置換 → テストネット試運転開始
 - [ ] テストネット試運転 → メインネットリセット → ローンチ

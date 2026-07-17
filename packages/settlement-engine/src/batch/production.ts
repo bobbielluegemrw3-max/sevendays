@@ -26,6 +26,7 @@ import { createParticipantSnapshots } from '../race/snapshots.js';
 import { runRaceScores } from '../race/scores.js';
 import { finalizeAndBurn } from '../burn/execute.js';
 import { payPendingCelebrations } from '../champion/celebration.js';
+import { ensureJackpotDraw, resolveJackpotDrawIfDue } from '../jackpot/draws.js';
 import { processSurvivorsAndDay7 } from '../buyback/day7.js';
 import { processDueBuybackPayments } from '../buyback/payments.js';
 import { createMemorialNfts } from '../buyback/memorial.js';
@@ -305,6 +306,20 @@ export function buildProductionHandlers(): StepHandlers {
         buffPolicyVersion: lockedVersion(ctx, 'buff_policies'),
       });
       await payPendingCelebrations(ctx.client);
+      // V2 (Decision 106/108): the weekly jackpot rides this money step —
+      // every V2 batch makes sure the current week's draw is committed
+      // (seed escrowed before tickets accumulate), and the Sunday NIGHT
+      // batch resolves it: tickets counted, winners drawn from the revealed
+      // seed, prizes paid from the marketing budget. Gated on the locked
+      // engine version like the buyback backstop (102-8).
+      if (isRaceEngineV2(lockedVersion(ctx, 'race_engine_versions'))) {
+        await ensureJackpotDraw(ctx.client, { batchDate: ctx.batchDate });
+        await resolveJackpotDrawIfDue(ctx.client, {
+          batchDate: ctx.batchDate,
+          slot: ctx.slot,
+          batchRunId: ctx.batchRunId,
+        });
+      }
     },
 
     // Steps 17-19 — survivors advance, Day7 clears, buyback schedules.

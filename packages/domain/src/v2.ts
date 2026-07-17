@@ -102,3 +102,26 @@ export const JACKPOT_DEFAULTS_V2 = {
   /** チケットは週次リセット。 */
   ticketReset: 'WEEKLY',
 } as const;
+
+/**
+ * ジャックポット実行時設定(Decision 106「実行時設定可能」/ 108)。
+ * system_settings の汎用KVストア(Decision 098)に1行で保持。
+ * enabled は既定 false — 有効化は広告費口座残高と整合させてからの運用判断
+ * (テストネット試運転チェックリスト §7-5)。prize_usdt は**当選者1名あたり**。
+ */
+export const JACKPOT_SETTINGS_KEY = 'jackpot';
+export interface JackpotSettingsV2 {
+  enabled: boolean;
+  prize_usdt: string;
+  winners: number;
+}
+
+/** 抽選の終端状態(Decision 108): 支払済/チケット0不成立/原資不足中止/無効化スキップ。 */
+export const JACKPOT_DRAW_STATUSES_V2 = [
+  'COMMITTED',
+  'PAID',
+  'VOID_NO_TICKETS',
+  'CANCELLED_BUDGET',
+  'SKIPPED_DISABLED',
+] as const;
+export type JackpotDrawStatusV2 = (typeof JACKPOT_DRAW_STATUSES_V2)[number];

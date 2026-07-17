@@ -319,6 +319,10 @@ Amendment (2026-07-06, Owner): the user-facing name is サポートボーナス 
 
 107. V2 training roll is FINAL on first confirm — no redo. Supersedes the "redo until snapshot" clause of Decision 104 for V2 rolled training only. Rationale: if a redo re-rolls (or lets the player probe the deterministic roll of every menu combination and keep the best), the downside risk becomes fake and the simulated progression curve of Decision 101 (one roll per race cycle) no longer holds; the confirm button must be the real gamble moment. Rules: one training confirm per horse per race cycle (date x slot), resolved at confirm time from a deterministic seed, immutable and undeletable afterwards (DB-guarded); the misclick guard is the existing confirm dialog plus public-range preview; the A2 "ticket fires on first confirm only" clause becomes trivially "every confirm" since every confirm is the first. The V1 production season's rollless redo (delete+insert, A2) is untouched — it retires with V1 at the mainnet reset.
 
+## Decision 108 (2026-07-18, Owner)
+
+108. Weekly jackpot draw details (completes Decision 106 for implementation). Week = the race cycles from Monday MORNING through Sunday NIGHT (MYT); a ticket is a training confirm attributed to a cycle inside that week by its (effective_race_date, slot) — deterministic and replay-verifiable, independent of the wall-clock confirm time. The draw resolves in the Sunday NIGHT batch and is announced in that night show's final act. If the marketing budget balance is below the configured prize at draw time, that week's draw is cancelled (no payout movement, admin alert, no jackpot act in the show); tickets still reset weekly. A week with zero tickets is void: the prize does not carry over — next week's prize is the configured amount as usual and no money leaves the marketing budget. No account exclusions: every user with tickets is eligible, including admin accounts (the testnet trial runs with staff accounts; revisit at production release per 106).
+
 ## Open Items for Implementation Phase
 
 These are implementation artifacts, not business rule gaps:

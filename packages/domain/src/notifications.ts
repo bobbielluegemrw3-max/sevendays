@@ -32,6 +32,8 @@ export const NOTIFICATION_TYPES_V1 = [
   'SUPPORT_CELEBRATION_PAID',
   // Decision 094: 馬の転送(ギフト)
   'HORSE_GIFT_RECEIVED',
+  // Decision 106/108: 週次ジャックポット当選(当選者本人への個別通知)
+  'JACKPOT_WON',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES_V1)[number];
@@ -125,6 +127,10 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   HORSE_GIFT_RECEIVED: {
     title: '馬が届きました。',
     body: '{sender} さんから {horse_name} が贈られました。今夜からあなたの厩舎で出走します。',
+  },
+  JACKPOT_WON: {
+    title: 'ジャックポット当選!',
+    body: '今週のジャックポットに当選しました。賞金 {amount} USDT がウォレットに支払われました。',
   },
 };
 

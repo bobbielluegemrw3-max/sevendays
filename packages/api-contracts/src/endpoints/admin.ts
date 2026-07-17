@@ -3,7 +3,7 @@ import {
   computeEconomyMetrics,
   currentEconomyStatus,
 } from '@sevendays/economy-engine';
-import { ADMIN_ROLES } from '@sevendays/domain';
+import { ADMIN_ROLES, JACKPOT_SETTINGS_KEY } from '@sevendays/domain';
 import { approveWithdrawal, rejectWithdrawal } from '@sevendays/blockchain';
 import {
   approveRecovery,
@@ -11,6 +11,7 @@ import {
   soloRecover,
   runBatch,
   buildProductionHandlers,
+  loadJackpotSettings,
 } from '@sevendays/settlement-engine';
 import {
   ensureUserAccounts,
@@ -19,7 +20,7 @@ import {
   postSingleApproverAdjustment,
   SINGLE_APPROVAL_ADJUSTMENT_LIMIT_USDT,
 } from '@sevendays/ledger';
-import { Money } from '@sevendays/shared';
+import { Money, addDays, batchDateFor, mytWeekStart, sha256Hex } from '@sevendays/shared';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry, HandlerContext } from '../router.js';
 
@@ -895,6 +896,95 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
       );
       await audit(ctx, 'ADMIN_MARKETING_TRANSFER_APPROVED', 'marketing_budget_transfer', t.id);
       return { id: t.id, status: 'APPROVED' };
+    },
+  });
+
+  // 週次ジャックポット(Decision 106/108)。原資=広告費口座のみ・残高が構造上の上限。
+  // enabled は本番公開のスイッチ(弁護士ゲート)なので設定変更は SUPER_ADMIN 限定。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/admin/jackpot/overview',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const settings = await loadJackpotSettings(ctx.client);
+      const balance = await ctx.client.query<{ balance: string }>(
+        `select coalesce(b.balance, 0)::text as balance
+         from ledger_accounts a
+         left join ledger_account_balances b on b.account_id = a.id
+         where a.owner_type = 'PLATFORM' and a.account_type = 'PLATFORM_MARKETING_BUDGET'`,
+      );
+      const weekStart = mytWeekStart(batchDateFor(new Date()));
+      const weekEnd = addDays(weekStart, 6);
+      const tickets = await ctx.client.query<{ users: number; tickets: number }>(
+        `select count(distinct user_id)::int as users, count(*)::int as tickets
+         from training_sessions where effective_race_date between $1 and $2`,
+        [weekStart, weekEnd],
+      );
+      const draws = await ctx.client.query(
+        `select d.id, d.week_start_date::text as week_start_date, d.week_end_date::text as week_end_date,
+                d.status, d.prize_amount::text as prize_amount, d.winners_target, d.total_tickets,
+                d.resolved_at::text as resolved_at, rc.commit_hash, rc.reveal_seed
+         from jackpot_draws d
+         join randomness_commits rc on rc.id = d.seed_commit_id
+         order by d.week_start_date desc
+         limit 12`,
+      );
+      const winners = await ctx.client.query(
+        `select w.draw_id, w.user_id, u.email, w.ticket_index, w.amount::text as amount
+         from jackpot_winners w
+         join users u on u.id = w.user_id
+         where w.draw_id in (select id from jackpot_draws order by week_start_date desc limit 12)
+         order by w.draw_id, w.ticket_index`,
+      );
+      return {
+        settings,
+        marketing_budget: balance.rows[0]?.balance ?? '0',
+        current_week: {
+          week_start_date: weekStart,
+          week_end_date: weekEnd,
+          tickets: tickets.rows[0]?.tickets ?? 0,
+          users: tickets.rows[0]?.users ?? 0,
+        },
+        draws: draws.rows,
+        winners: winners.rows,
+      };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/jackpot/config',
+    auth: 'admin',
+    input: z.object({
+      enabled: z.boolean(),
+      prize_usdt: z.number().positive().max(1000000),
+      winners: z.number().int().min(1).max(100),
+    }),
+    handler: async (ctx, input) => {
+      requireAdminRole(ctx);
+      if (ctx.auth.kind !== 'admin' || !ctx.auth.roles.includes('SUPER_ADMIN')) {
+        throw new ApiError('FORBIDDEN', 'Jackpot config requires SUPER_ADMIN');
+      }
+      const value = {
+        enabled: input.enabled,
+        prize_usdt: Money.of(input.prize_usdt).toFixed8(),
+        winners: input.winners,
+      };
+      await ctx.client.query(
+        `insert into system_settings (key, value, updated_by)
+         values ($1, $2, $3)
+         on conflict (key) do update
+           set value = excluded.value, updated_at = now(), updated_by = excluded.updated_by`,
+        [JACKPOT_SETTINGS_KEY, JSON.stringify(value), ctx.userId],
+      );
+      // audit_logs.reference_id は uuid のため、設定変更は after_hash に新値を刻む
+      await ctx.client.query(
+        `insert into audit_logs (actor_type, actor_id, action, reference_type, after_hash)
+         values ('ADMIN', $1, 'ADMIN_JACKPOT_CONFIG', 'system_settings', $2)`,
+        [ctx.userId, sha256Hex(JSON.stringify(value))],
+      );
+      return { settings: value };
     },
   });
 

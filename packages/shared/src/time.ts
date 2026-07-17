@@ -33,6 +33,26 @@ export function batchStartUtc(mytDate: string): Date {
   return new Date(`${mytDate}T12:00:00.000Z`);
 }
 
+/**
+ * Weekday index of a MYT calendar date: 0 = Monday … 6 = Sunday.
+ * Jackpot week math (Decision 108) is Monday-based.
+ */
+export function mytWeekdayIndex(dateString: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    throw new TypeError(`Expected YYYY-MM-DD: "${dateString}"`);
+  }
+  // getUTCDay: 0 = Sunday … 6 = Saturday → shift to Monday-based.
+  return (new Date(`${dateString}T00:00:00.000Z`).getUTCDay() + 6) % 7;
+}
+
+/**
+ * Monday of the week containing the given MYT calendar date (Decision 108:
+ * a jackpot week is the race cycles Monday MORNING through Sunday NIGHT).
+ */
+export function mytWeekStart(dateString: string): string {
+  return addDays(dateString, -mytWeekdayIndex(dateString));
+}
+
 /** Add whole days to a YYYY-MM-DD date string (calendar arithmetic, DST-free). */
 export function addDays(dateString: string, days: number): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
