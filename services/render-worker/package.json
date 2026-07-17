@@ -13,6 +13,7 @@
     "@sevendays/api-contracts": "workspace:*",
     "@sevendays/blockchain": "workspace:*",
     "@sevendays/database": "workspace:*",
+    "@sevendays/domain": "workspace:*",
     "@sevendays/shared": "workspace:*"
   },
   "devDependencies": {

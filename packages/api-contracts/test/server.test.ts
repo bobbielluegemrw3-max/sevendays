@@ -60,7 +60,11 @@ describe('worker server', () => {
       body: JSON.stringify({ batch_date: '2030-01-01' }),
     });
     expect(allowed.status).toBe(200);
-    expect(await allowed.json()).toEqual({ paymentsMade: 0, schedulesCompleted: 0 });
+    expect(await allowed.json()).toEqual({
+      paymentsMade: 0,
+      schedulesCompleted: 0,
+      backstopAmount: '0.00000000',
+    });
 
     // Registered in the registry, but NOT this worker's path.
     const foreign = await fetch(`${base}/internal/batch/start`, {

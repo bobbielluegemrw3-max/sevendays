@@ -188,6 +188,30 @@ export async function reserveAllocation(
   });
 }
 
+/**
+ * Buyback-reserve backstop (Decision 102-8): explicit top-up
+ * PLATFORM_OPERATING_RESERVE -> PLATFORM_BUYBACK_RESERVE, posted as a regular
+ * batch action immediately before due payments whenever the reserve is short.
+ * Makes unpaid buybacks structurally impossible (jitter can push a cohort past
+ * the buyback break-even; the operating reserve absorbs the swing).
+ */
+export async function buybackReserveBackstop(
+  client: SqlClient,
+  args: Ref & { amount: Money },
+): Promise<PostedTransaction> {
+  const operating = await getPlatformAccountId(client, 'PLATFORM_OPERATING_RESERVE');
+  const reserve = await getPlatformAccountId(client, 'PLATFORM_BUYBACK_RESERVE');
+  return postTransaction(client, {
+    type: 'BUYBACK_RESERVE_BACKSTOP',
+    idempotencyKey: args.idempotencyKey,
+    ...refFields(args),
+    entries: [
+      { accountId: operating, direction: 'DEBIT', amount: args.amount },
+      { accountId: reserve, direction: 'CREDIT', amount: args.amount },
+    ],
+  });
+}
+
 /** Buyback payment: PLATFORM_BUYBACK_RESERVE -> USER_AVAILABLE. */
 export async function buybackPayment(
   client: SqlClient,

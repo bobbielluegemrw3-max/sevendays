@@ -30,11 +30,13 @@ const dateInput = z.object({
 
 // Cloud Scheduler cannot compute dates: omitted batch_date means "today in
 // MYT" (Decision 047 — the batch day is the MYT calendar day).
+// slot (Decision 102): MORNING|NIGHT; omitted means NIGHT — the V1 cadence.
 const schedulableDateInput = z.object({
   batch_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'batch_date must be YYYY-MM-DD')
     .optional(),
+  slot: z.enum(['MORNING', 'NIGHT']).optional(),
 });
 
 export function registerInternalEndpoints(registry: ApiRegistry): void {
@@ -49,7 +51,9 @@ export function registerInternalEndpoints(registry: ApiRegistry): void {
       // (/internal/push/race-reminder)。ここはワーカーが窓を逃した夜のフォールバック。
       // broadcast_keyで冪等(再実行でも1晩1回)、VAPID未設定ではスキップ、
       // いかなる失敗もバッチを止めない。
-      const transport = buildWebPushTransport();
+      // 朝レース(V2)のプッシュ文言・キー設計は表示フェーズで行う — ここでは
+      // 夜レースのみ既存のフォールバックを維持(キーが夜前提のため)。
+      const transport = (input.slot ?? 'NIGHT') === 'NIGHT' ? buildWebPushTransport() : null;
       if (transport) {
         try {
           if (!(await hasBroadcast(ctx.client, `race-soon:${batchDate}`))) {
@@ -65,6 +69,7 @@ export function registerInternalEndpoints(registry: ApiRegistry): void {
       }
       const result = await runBatch(ctx.client, {
         batchDate,
+        slot: input.slot ?? 'NIGHT',
         handlers: buildProductionHandlers(),
       });
       return result;
@@ -118,8 +123,12 @@ export function registerInternalEndpoints(registry: ApiRegistry): void {
       input: dateInput.extend({ batch_run_id: z.string().uuid() }),
       handler: async (ctx, input) => {
         const handlers = buildProductionHandlers();
-        const locked = await ctx.client.query<{ locked: Record<string, string> | null }>(
-          `select locked_policy_versions_json as locked from batch_runs where id = $1`,
+        const locked = await ctx.client.query<{
+          locked: Record<string, string> | null;
+          slot: 'MORNING' | 'NIGHT';
+        }>(
+          `select locked_policy_versions_json as locked, slot::text as slot
+           from batch_runs where id = $1`,
           [input.batch_run_id],
         );
         if (!locked.rows[0]) throw new ApiError('NOT_FOUND', 'Batch not found');
@@ -130,6 +139,7 @@ export function registerInternalEndpoints(registry: ApiRegistry): void {
             client: ctx.client,
             batchRunId: input.batch_run_id,
             batchDate: input.batch_date,
+            slot: locked.rows[0].slot,
             stepNumber: 0,
             stepKey: key,
             idempotencyKey: `manual:${input.batch_run_id}:${key}`,

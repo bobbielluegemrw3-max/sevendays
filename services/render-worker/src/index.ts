@@ -2,6 +2,7 @@ import { buildApiRegistry, createWorkerServer } from '@sevendays/api-contracts';
 import { createPool, withPoolClient } from '@sevendays/database';
 import { Money, batchDateFor, batchStartUtc } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
+import { isRaceEngineV2, raceSlotStartUtcV2 } from '@sevendays/domain';
 import {
   POLYGON_POS_USDT,
   amoyTestConfig,
@@ -119,6 +120,21 @@ const chainEnabled = Boolean(process.env.CHAIN_RPC_URL);
 const lastRun: Record<string, number> = {};
 let lastPostBatchDate: string | null = null;
 
+// V2判定(Decision 102): アクティブなレースエンジンがv2なら朝レースを起動する。
+// 5分キャッシュ — 切替はテストネットリセット時の一度きりで、5分の遅延は無害。
+let v2ActiveCache: { value: boolean; at: number } | null = null;
+async function isV2EngineActive(): Promise<boolean> {
+  if (v2ActiveCache && Date.now() - v2ActiveCache.at < 300_000) return v2ActiveCache.value;
+  const r = await withClient((client) =>
+    client.query<{ version: string }>(
+      `select version from race_engine_versions where activated_at is not null and deactivated_at is null`,
+    ),
+  );
+  const value = r.rows.length === 1 && isRaceEngineV2(r.rows[0]!.version);
+  v2ActiveCache = { value, at: Date.now() };
+  return value;
+}
+
 function every(key: string, ms: number): boolean {
   const now = Date.now();
   if ((lastRun[key] ?? 0) + ms > now) return false;
@@ -155,17 +171,23 @@ async function tick(): Promise<void> {
       await dispatchInternal('/internal/push/race-reminder', { batch_date: todayForPush });
     }
 
-    // Daily Settlement Batch: due at 20:00 MYT (Decision 047) for the MYT
-    // calendar day; the batch_runs existence check makes this self-healing
-    // (a FAILED batch is NOT retried here — that is Admin Recovery's job).
+    // Settlement batches: NIGHT due at 20:00 MYT (Decision 047); MORNING
+    // (Decision 102) due at 8:00 MYT but ONLY while race_engine_v2.0 is the
+    // active engine — the single DB-sourced switch for the V2 cadence, so
+    // the current one-race production season is untouched until the
+    // testnet-reset rollout activates v2. The batch_runs existence check
+    // makes each trigger self-healing (a FAILED batch is NOT retried here —
+    // that is Admin Recovery's job).
     const today = batchDateFor(new Date());
-    if (Date.now() >= batchStartUtc(today).getTime()) {
+    const slots: Array<'MORNING' | 'NIGHT'> = (await isV2EngineActive()) ? ['MORNING', 'NIGHT'] : ['NIGHT'];
+    for (const slot of slots) {
+      if (Date.now() < raceSlotStartUtcV2(today, slot).getTime()) continue;
       const existing = await withClient((client) =>
-        client.query(`select 1 from batch_runs where batch_date = $1`, [today]),
+        client.query(`select 1 from batch_runs where batch_date = $1 and slot = $2::race_slot`, [today, slot]),
       );
       if (existing.rows.length === 0) {
-        console.log(`[scheduler] daily batch due for ${today}`);
-        await dispatchInternal('/internal/batch/start', { batch_date: today });
+        console.log(`[scheduler] ${slot} batch due for ${today}`);
+        await dispatchInternal('/internal/batch/start', { batch_date: today, slot });
       }
     }
 

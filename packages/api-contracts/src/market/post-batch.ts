@@ -45,8 +45,11 @@ export async function runMarketPostBatch(
   client: SqlClient,
   batchDate: string,
 ): Promise<PostBatchResult> {
+  // slot=NIGHT固定: バッチ後スイープは現行=夜レース後の運用(Decision 086)。
+  // V2のレース単位スイープはプール購入改修(Decision 103)で再設計する。
   const batch = await client.query<{ id: string; status: string }>(
-    `select id, status::text as status from batch_runs where batch_date = $1`,
+    `select id, status::text as status from batch_runs
+     where batch_date = $1 and slot = 'NIGHT'`,
     [batchDate],
   );
   if (!batch.rows[0] || batch.rows[0].status !== 'COMPLETED') {

@@ -126,17 +126,34 @@ export function buildProductionHandlers(): StepHandlers {
     // commit and escrow are created atomically with the race: a race can
     // never exist without a committed seed hash.
     CREATE_RACES: async (ctx) => {
-      // ADR-012: 翌夜の条件シードを先にコミットする(予報の後出し防止)。
-      // 冪等(forecast_dateユニーク) — リトライ・再開でも1日1行。
+      // ADR-012: 次レースの条件シードを先にコミットする(予報の後出し防止)。
+      // 冪等((forecast_date, slot)ユニーク) — リトライ・再開でも1レース1行。
+      // V2(Decision 102)はチェーンが時系列になる: MORNINGバッチが同日NIGHTを、
+      // NIGHTバッチが翌日MORNINGをコミット。V1は従来どおり翌日NIGHTのみ。
       {
         const fseed = generateSecureSeedHex();
         const { forecast } = deriveNightForecastV1(fseed);
+        const v2 = isRaceEngineV2(lockedVersion(ctx, 'race_engine_versions'));
+        const target = !v2
+          ? { dateOffset: 1, slot: 'NIGHT' }
+          : ctx.slot === 'MORNING'
+            ? { dateOffset: 0, slot: 'NIGHT' }
+            : { dateOffset: 1, slot: 'MORNING' };
         await ctx.client.query(
           `insert into night_forecasts
-             (forecast_date, seed, commit_hash, forecast_weather, forecast_track, forecast_surface)
-           values ($1::date + 1, $2, $3, $4::weather, $5::track_condition, $6::surface)
-           on conflict (forecast_date) do nothing`,
-          [ctx.batchDate, fseed, sha256Hex(fseed), forecast.weather, forecast.track, forecast.surface],
+             (forecast_date, slot, seed, commit_hash, forecast_weather, forecast_track, forecast_surface)
+           values ($1::date + $2::int, $3::race_slot, $4, $5, $6::weather, $7::track_condition, $8::surface)
+           on conflict (forecast_date, slot) do nothing`,
+          [
+            ctx.batchDate,
+            target.dateOffset,
+            target.slot,
+            fseed,
+            sha256Hex(fseed),
+            forecast.weather,
+            forecast.track,
+            forecast.surface,
+          ],
         );
       }
       const existing = await ctx.client.query<{ id: string }>(
@@ -192,6 +209,7 @@ export function buildProductionHandlers(): StepHandlers {
         liquidityPolicyVersion: lockedVersion(ctx, 'liquidity_policies'),
         priceTableVersion: lockedVersion(ctx, 'price_tables'),
         batchDate: ctx.batchDate,
+        slot: ctx.slot,
       });
     },
 
@@ -212,11 +230,11 @@ export function buildProductionHandlers(): StepHandlers {
     // Step 9 — reveal: move the seed from escrow into the public commit row
     // (the DB trigger verifies SHA-256(seed) == commit_hash).
     REVEAL_RACE_SEEDS: async (ctx) => {
-      // ADR-012: 今夜の条件を決めた予報シードもレース後に公開扱いへ(冪等)。
+      // ADR-012: このレースの条件を決めた予報シードもレース後に公開扱いへ(冪等)。
       await ctx.client.query(
         `update night_forecasts set revealed_at = coalesce(revealed_at, now())
-          where forecast_date = $1::date`,
-        [ctx.batchDate],
+          where forecast_date = $1::date and slot = $2::race_slot`,
+        [ctx.batchDate, ctx.slot],
       );
       const raceId = await raceForBatch(ctx.client, ctx.batchRunId);
       const escrow = await ctx.client.query<{ seed: string }>(
@@ -316,8 +334,18 @@ export function buildProductionHandlers(): StepHandlers {
     },
 
     // Step 20 — due buyback payments (retryable).
+    // V2 (Decision 102-8): the reserve backstop runs first — if the buyback
+    // reserve is short of this batch's due payments, an explicit ledger
+    // transfer tops it up from the operating reserve, so unpaid buybacks are
+    // structurally impossible. Gated on the locked engine version: the rule
+    // is part of the approved V2 package and activates with it.
     PAY_DUE_BUYBACKS: async (ctx) => {
-      await processDueBuybackPayments(ctx.client, { batchDate: ctx.batchDate });
+      await processDueBuybackPayments(ctx.client, {
+        batchDate: ctx.batchDate,
+        backstop: isRaceEngineV2(lockedVersion(ctx, 'race_engine_versions'))
+          ? { batchRunId: ctx.batchRunId }
+          : null,
+      });
     },
 
     // Steps 21-22 — deterministic profit-taking selection + listings.
@@ -576,7 +604,7 @@ export async function verifyReplayInputs(
   // ADR-012: 条件シード(night_forecasts)がある夜は、環境の再導出もそのシードから。
   const fc = await client.query<{ seed: string }>(
     `select nf.seed from night_forecasts nf
-     join batch_runs b on b.batch_date = nf.forecast_date
+     join batch_runs b on b.batch_date = nf.forecast_date and b.slot = nf.slot
      join races r on r.batch_run_id = b.id
      where r.id = $1`,
     [raceId],
@@ -662,7 +690,7 @@ async function verifyReplayInputsV2(
   // ADR-012: 条件シード(night_forecasts)がある夜は、環境の再導出もそのシードから。
   const fc = await client.query<{ seed: string }>(
     `select nf.seed from night_forecasts nf
-     join batch_runs b on b.batch_date = nf.forecast_date
+     join batch_runs b on b.batch_date = nf.forecast_date and b.slot = nf.slot
      join races r on r.batch_run_id = b.id
      where r.id = $1`,
     [raceId],

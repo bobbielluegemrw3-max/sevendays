@@ -1,6 +1,6 @@
 import { newUuid, sha256Parts } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import type { BatchStatus, BatchStepStatus } from '@sevendays/domain';
+import type { BatchStatus, BatchStepStatus, RaceSlotV2 } from '@sevendays/domain';
 import { lockPolicyVersions, type PolicyTable } from '@sevendays/economy-engine';
 import { reconcile } from '@sevendays/ledger';
 import { createBatchRun } from './create.js';
@@ -36,51 +36,58 @@ interface StepRow {
 
 export interface RunBatchOptions {
   batchDate: string;
+  /** Race slot (Decision 102). Defaults to NIGHT — the V1 cadence. */
+  slot?: RaceSlotV2;
   handlers?: StepHandlers;
 }
 
 export async function runBatch(client: SqlClient, options: RunBatchOptions): Promise<BatchResult> {
   const { batchDate } = options;
+  const slot = options.slot ?? 'NIGHT';
 
   // Single-runner guarantee (audit fix F-A): a session-scoped advisory lock
   // prevents two runners (scheduler retry + manual trigger) from executing
   // the same batch concurrently. A crashed runner's lock is released
   // automatically when its connection dies, so takeover needs no lease table.
   const lock = await client.query<{ acquired: boolean }>(
-    `select pg_try_advisory_lock(hashtext('sevendays_batch:' || $1)) as acquired`,
-    [batchDate],
+    `select pg_try_advisory_lock(hashtext('sevendays_batch:' || $1 || ':' || $2)) as acquired`,
+    [batchDate, slot],
   );
   if (!lock.rows[0]?.acquired) {
     throw new BatchError(
       'INVALID_BATCH_STATE',
-      `Batch ${batchDate} is already being executed by another runner`,
+      `Batch ${batchDate} ${slot} is already being executed by another runner`,
     );
   }
   try {
-    return await runBatchLocked(client, options);
+    return await runBatchLocked(client, options, slot);
   } finally {
     await client
-      .query(`select pg_advisory_unlock(hashtext('sevendays_batch:' || $1))`, [batchDate])
+      .query(`select pg_advisory_unlock(hashtext('sevendays_batch:' || $1 || ':' || $2))`, [batchDate, slot])
       .catch(() => undefined);
   }
 }
 
-async function runBatchLocked(client: SqlClient, options: RunBatchOptions): Promise<BatchResult> {
+async function runBatchLocked(
+  client: SqlClient,
+  options: RunBatchOptions,
+  slot: RaceSlotV2,
+): Promise<BatchResult> {
   const { batchDate } = options;
   const handlers = options.handlers ?? {};
   const traceId = newUuid();
-  const batchRunId = await createBatchRun(client, batchDate);
+  const batchRunId = await createBatchRun(client, batchDate, slot);
 
   const runStatus = await getBatchStatus(client, batchRunId);
   if (runStatus === 'COMPLETED') {
-    return { batchRunId, batchDate, status: 'COMPLETED' };
+    return { batchRunId, batchDate, slot, status: 'COMPLETED' };
   }
   if (runStatus === 'FAILED') {
     // FAILED means a non-retryable step failed — recovery only.
     const failed = await firstFailedStep(client, batchRunId);
     throw new BatchError(
       'RECOVERY_REQUIRED',
-      `Batch ${batchDate} is FAILED at step ${failed?.step_key ?? '?'}; Admin Recovery required`,
+      `Batch ${batchDate} ${slot} is FAILED at step ${failed?.step_key ?? '?'}; Admin Recovery required`,
     );
   }
 
@@ -115,6 +122,7 @@ async function runBatchLocked(client: SqlClient, options: RunBatchOptions): Prom
       client,
       batchRunId,
       batchDate,
+      slot,
       stepNumber: step.step_number,
       stepKey: step.step_key,
       idempotencyKey: step.idempotency_key,
@@ -144,6 +152,7 @@ async function runBatchLocked(client: SqlClient, options: RunBatchOptions): Prom
       return {
         batchRunId,
         batchDate,
+        slot,
         status: batchStatus,
         failedStepKey: step.step_key,
         failedStepNumber: step.step_number,
@@ -156,7 +165,7 @@ async function runBatchLocked(client: SqlClient, options: RunBatchOptions): Prom
     `update batch_runs set status = 'COMPLETED', completed_at = now(), failed_at = null where id = $1`,
     [batchRunId],
   );
-  return { batchRunId, batchDate, status: 'COMPLETED' };
+  return { batchRunId, batchDate, slot, status: 'COMPLETED' };
 }
 
 const noop = async (): Promise<void> => {

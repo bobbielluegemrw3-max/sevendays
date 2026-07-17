@@ -128,6 +128,7 @@ export const TRANSACTION_TYPES = [
   'ITEM_SUPPORT_FUNDING',
   'ITEM_REVENUE_SETTLEMENT',
   'ADMIN_ADJUSTMENT',
+  'BUYBACK_RESERVE_BACKSTOP',
 ] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 

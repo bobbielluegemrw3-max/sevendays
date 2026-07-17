@@ -7,6 +7,7 @@ import {
   isRaceEngineV2,
   type AbilityName,
   type HorseType,
+  type RaceSlotV2,
   type Rarity,
   type Surface,
   type TrackCondition,
@@ -58,6 +59,8 @@ export interface CreateSnapshotsInput {
   priceTableVersion: string;
   /** effective_race_date for training lookup (MYT batch date). */
   batchDate: string;
+  /** Race slot (Decision 102). Defaults to NIGHT — the V1 cadence. */
+  slot?: RaceSlotV2;
 }
 
 interface HorseRow {
@@ -80,8 +83,8 @@ async function deriveAndFreezeConditions(
   input: CreateSnapshotsInput,
 ): Promise<{ weather: Weather; track: TrackCondition; surface: Surface }> {
   const fc = await client.query<{ seed: string }>(
-    `select seed from night_forecasts where forecast_date = $1::date`,
-    [input.batchDate],
+    `select seed from night_forecasts where forecast_date = $1::date and slot = $2::race_slot`,
+    [input.batchDate, input.slot ?? 'NIGHT'],
   );
   const derived = fc.rows[0]
     ? deriveNightForecastV1(fc.rows[0].seed).actual

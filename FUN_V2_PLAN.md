@@ -296,7 +296,19 @@
   (各±2・発明なし)。調教ロールは確定時解決済みの前提でスナップショットは読むだけ。
   PGliteテスト4件(漸化/ソフトキャップ跨ぎ/REST/冪等/LUCK運レンジ/リプレイ検証/不変ガード/
   非アクティブ登録)全PASS
-- [ ] V2実装-2: バッチ2回制(102・(batch_date,slot)キー・買戻しバックストップ)
+- [x] V2実装-2: **バッチ2回制のコア**(2026-07-17): migration `20260717040000_v2_two_races.sql`
+  (本番適用済み) = `race_slot` enum + `batch_runs`/`night_forecasts` を (date, slot) ユニークへ
+  (既存行・V1新規行は slot=NIGHT デフォルト=挙動不変)。
+  結線: createBatchRun/runBatch/StepContext に slot(冪等キーは `batch:{date}:{slot}:{nn}:{KEY}`・
+  advisory lock もslot付き)/ 予報チェーンは**V2で時系列化**(MORNINGが同日NIGHT・NIGHTが翌日MORNINGを
+  コミット。V1は従来どおり翌日NIGHT — ロック済みエンジンバージョンで分岐)/ reveal・リプレイ検証の
+  予報結合もslot対応 / **買戻し準備金バックストップ(102-8)**: PAY_DUE_BUYBACKS の冒頭で不足分を
+  運営準備金から明示Ledger移動(`BUYBACK_RESERVE_BACKSTOP` tx・キー `buyback-backstop:{batchRunId}`・
+  V2エンジンロック時のみ発動)/ worker: 朝バッチトリガーは**DBのアクティブエンジンがv2の時のみ**
+  (5分キャッシュ)— 本番の切替スイッチは `activatePolicy('race_engine_v2.0')` の一点。
+  `/internal/batch/start` に slot 入力(省略=NIGHT)。PGliteテスト6件PASS。
+  **残(後続フェーズへ)**: my-results/透明性台帳/ショー/status APIのレース単位表示(-7)・
+  朝レースのプッシュ通知文言・market post-batchのレース単位スイープ(-3のプール購入改修と同時)
 - [ ] V2実装-3: プール購入(103) → -4: 新調教UI(104) → -5: ジャックポット(106仮値) →
   -6: 新アイテムカタログ起草(104-5) → -7: 表示のLV置換 → テストネット試運転開始
 - [ ] テストネット試運転 → メインネットリセット → ローンチ

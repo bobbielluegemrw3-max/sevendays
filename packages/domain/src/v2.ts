@@ -82,6 +82,15 @@ export const RACE_SLOT_HOUR_UTC_V2: Readonly<Record<RaceSlotV2, number>> = {
   NIGHT: 12, // 20:00 MYT = 12:00 UTC(現行と同じ)
 };
 
+/** スロットの発走時刻(MYT暦日+スロット → UTC instant)。 */
+export function raceSlotStartUtcV2(mytDate: string, slot: RaceSlotV2): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(mytDate)) {
+    throw new TypeError(`Expected YYYY-MM-DD: "${mytDate}"`);
+  }
+  const hour = String(RACE_SLOT_HOUR_UTC_V2[slot]).padStart(2, '0');
+  return new Date(`${mytDate}T${hour}:00:00.000Z`);
+}
+
 /** ジャックポット(Decision 106・テストネット仮値。本番値は公開判断時にオーナー決定)。 */
 export const JACKPOT_DEFAULTS_V2 = {
   prizeUsdt: '100.00',

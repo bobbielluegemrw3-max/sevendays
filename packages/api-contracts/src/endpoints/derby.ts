@@ -209,7 +209,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
               forecast_track::text as forecast_track,
               forecast_surface::text as forecast_surface
        from night_forecasts
-       where forecast_date in ($1::date, $1::date + 1)`,
+       where forecast_date in ($1::date, $1::date + 1) and slot = 'NIGHT'`,
       [today],
     );
     const forecastOf = (date: string) => {

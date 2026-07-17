@@ -1,7 +1,7 @@
 import { Money, insertNotification } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
 import { renderNotification } from '@sevendays/domain';
-import { buybackPayment } from '@sevendays/ledger';
+import { buybackPayment, buybackReserveBackstop, getBalance, getPlatformAccountId } from '@sevendays/ledger';
 
 /**
  * Batch Step 20 — Process due Buyback Payments.
@@ -9,17 +9,47 @@ import { buybackPayment } from '@sevendays/ledger';
  * ledger with stable idempotency keys; PAID is final (DB-guarded).
  * Schedules created in the current batch have payment 1 due at D+1, so
  * they are naturally not paid until the next batch date.
+ *
+ * V2 (Decision 102-8): when `backstop` is set, the reserve is topped up from
+ * the operating reserve BEFORE paying, whenever it is short of this batch's
+ * due total — unpaid buybacks become structurally impossible. The top-up is
+ * an explicit, audited ledger transaction with a per-batch idempotency key.
  */
 
 export interface PaymentRunResult {
   paymentsMade: number;
   schedulesCompleted: number;
+  /** Amount topped up by the Decision 102-8 backstop ('0' when none ran). */
+  backstopAmount: string;
 }
 
 export async function processDueBuybackPayments(
   client: SqlClient,
-  input: { batchDate: string },
+  input: { batchDate: string; backstop?: { batchRunId: string } | null },
 ): Promise<PaymentRunResult> {
+  let backstopAmount = Money.of('0');
+  if (input.backstop) {
+    const dueTotal = await client.query<{ total: string }>(
+      `select coalesce(sum(p.amount), 0)::text as total
+       from buyback_schedule_payments p
+       where p.status = 'SCHEDULED' and p.due_date <= $1`,
+      [input.batchDate],
+    );
+    const due = Money.of(dueTotal.rows[0]!.total);
+    const reserveBalance = Money.of(
+      await getBalance(client, await getPlatformAccountId(client, 'PLATFORM_BUYBACK_RESERVE')),
+    );
+    if (due.gt(reserveBalance)) {
+      const shortfall = due.sub(reserveBalance);
+      await buybackReserveBackstop(client, {
+        amount: shortfall,
+        idempotencyKey: `buyback-backstop:${input.backstop.batchRunId}`,
+        referenceType: 'batch_run',
+        referenceId: input.backstop.batchRunId,
+      });
+      backstopAmount = shortfall;
+    }
+  }
   const due = await client.query<{
     id: string;
     buyback_schedule_id: string;
@@ -87,5 +117,9 @@ export async function processDueBuybackPayments(
             where p.buyback_schedule_id = s.id and p.status = 'PAID') = 7`,
   );
 
-  return { paymentsMade, schedulesCompleted: completed.affectedRows ?? 0 };
+  return {
+    paymentsMade,
+    schedulesCompleted: completed.affectedRows ?? 0,
+    backstopAmount: backstopAmount.toFixed8(),
+  };
 }

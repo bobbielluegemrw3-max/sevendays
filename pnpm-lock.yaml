@@ -561,6 +561,9 @@ importers:
       '@sevendays/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@sevendays/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@sevendays/shared':
         specifier: workspace:*
         version: link:../../packages/shared
