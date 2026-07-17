@@ -104,7 +104,14 @@ export function registerInternalEndpoints(registry: ApiRegistry): void {
     input: schedulableDateInput,
     handler: async (ctx, input) => {
       const batchDate = input.batch_date ?? batchDateFor(new Date());
-      return runMarketPostBatch(ctx.client, batchDate);
+      const slot = input.slot ?? 'NIGHT';
+      // V2実装-7a: メール文言の「次のレース」表現のためだけのエンジン判定
+      const active = await ctx.client.query<{ version: string }>(
+        `select version from race_engine_versions
+         where activated_at is not null and deactivated_at is null`,
+      );
+      const v2 = active.rows.length === 1 && active.rows[0]!.version.startsWith('race_engine_v2');
+      return runMarketPostBatch(ctx.client, batchDate, slot, v2);
     },
   });
 

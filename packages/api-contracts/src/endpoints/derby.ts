@@ -24,6 +24,23 @@ function nextDerbyAt(now: Date): string {
   return candidate.toISOString();
 }
 
+// V2実装-7a(Decision 102): 1日2レース。「今のサイクル」= 12:00 UTC(20:00 MYT)
+// より前なら朝(00:00 UTC = 8:00 MYT)、以降なら夜。次の発走はその連鎖の次。
+function currentSlotV2(now: Date): 'MORNING' | 'NIGHT' {
+  return now.getUTCHours() < 12 ? 'MORNING' : 'NIGHT';
+}
+
+function nextDerbyAtV2(now: Date): string {
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth();
+  const d = now.getUTCDate();
+  for (const hour of [0, 12]) {
+    const candidate = new Date(Date.UTC(y, m, d, hour, 0, 0, 0));
+    if (candidate.getTime() > now.getTime()) return candidate.toISOString();
+  }
+  return new Date(Date.UTC(y, m, d + 1, 0, 0, 0, 0)).toISOString();
+}
+
 export function registerDerbyEndpoints(registry: ApiRegistry): void {
   // Hall of Champions (ADR-011): every Day7 clearer, newest first. Owner is
   // masked (R3 display rules); no balances.
@@ -87,14 +104,23 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
     now: Date,
     today: string,
   ): Promise<Record<string, unknown>> {
+    // V2実装-7a: アクティブエンジンがv2なら「今のサイクル」(朝/夜)単位で読む。
+    // V1は従来どおりNIGHT一本(挙動不変)。
+    const activeEngine = await client.query<{ version: string }>(
+      `select version from race_engine_versions
+       where activated_at is not null and deactivated_at is null`,
+    );
+    const v2 =
+      activeEngine.rows.length === 1 && activeEngine.rows[0]!.version.startsWith('race_engine_v2');
+    const slot: 'MORNING' | 'NIGHT' = v2 ? currentSlotV2(now) : 'NIGHT';
     const batch = await client.query<{
       id: string;
       status: string;
       created_at: string;
     }>(
       `select id, status::text as status, created_at::text as created_at
-       from batch_runs where batch_date = $1`,
-      [today],
+       from batch_runs where batch_date = $1 and slot = $2::race_slot`,
+      [today, slot],
     );
     const batchRow = batch.rows[0] ?? null;
     const phase = !batchRow
@@ -198,28 +224,38 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
     //  - 今夜分(=today)… 日中の待機パドックの掲示板用(2026-07-13追加。前夜の
     //    バッチが発表済みの「今夜の予報」— 従来は誰にも見えていなかった)
     //  - 明日分(=today+1)… ショー最終幕の「明日の予報」発表用
+    // V2: 予報チェーンは時系列(MORNING→同日NIGHT・NIGHT→翌日MORNING)。
+    // 「今のサイクル」と「次のサイクル」の2件を読む。V1は従来どおり夜×2日分。
+    const currentCycle = { date: today, slot };
+    const nextCycle = !v2
+      ? { date: addDays(today, 1), slot: 'NIGHT' as const }
+      : slot === 'MORNING'
+        ? { date: today, slot: 'NIGHT' as const }
+        : { date: addDays(today, 1), slot: 'MORNING' as const };
     const fc = await client.query<{
       forecast_date: string;
+      slot: string;
       forecast_weather: string;
       forecast_track: string;
       forecast_surface: string;
     }>(
-      `select forecast_date::text as forecast_date,
+      `select forecast_date::text as forecast_date, slot::text as slot,
               forecast_weather::text as forecast_weather,
               forecast_track::text as forecast_track,
               forecast_surface::text as forecast_surface
        from night_forecasts
-       where forecast_date in ($1::date, $1::date + 1) and slot = 'NIGHT'`,
-      [today],
+       where (forecast_date = $1::date and slot = $2::race_slot)
+          or (forecast_date = $3::date and slot = $4::race_slot)`,
+      [currentCycle.date, currentCycle.slot, nextCycle.date, nextCycle.slot],
     );
-    const forecastOf = (date: string) => {
-      const row = fc.rows.find((r) => r.forecast_date === date);
+    const forecastOf = (cycle: { date: string; slot: string }) => {
+      const row = fc.rows.find((r) => r.forecast_date === cycle.date && r.slot === cycle.slot);
       return row
         ? { weather: row.forecast_weather, track: row.forecast_track, surface: row.forecast_surface }
         : null;
     };
-    const tonightForecast = forecastOf(today);
-    const tomorrowForecast = forecastOf(addDays(today, 1));
+    const tonightForecast = forecastOf(currentCycle);
+    const tomorrowForecast = forecastOf(nextCycle);
 
     // 次のレースの「全体の出走枠」(Decision 093候補・少頭数有利の可視化):
     // ACTIVE馬 − 手動出品中(Market Lockは欠場)。今夜の購入予約で生まれる馬は
@@ -236,7 +272,10 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
 
     return {
       tonight_field: { entrants, burn_slots_min: slots.min, burn_slots_max: slots.max },
-      next_derby_at: nextDerbyAt(now),
+      next_derby_at: v2 ? nextDerbyAtV2(now) : nextDerbyAt(now),
+      engine_v2: v2,
+      slot,
+      next_cycle: nextCycle,
       phase,
       live_started_at: batchRow?.created_at ?? null,
       conditions: raceRow?.surface
@@ -267,29 +306,53 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       const today = batchDateFor(now);
 
       const ttl = Number(process.env.DERBY_STATUS_CACHE_MS ?? 2000);
+      // キャッシュはサイクル単位で分割(V1は実質NIGHTのみだが、朝夕でキーが変わる
+      // だけでV1の読み自体は不変)。
+      const cacheKey = `${today}:${currentSlotV2(now)}`;
       let shared: Record<string, unknown>;
-      if (statusShared && statusShared.key === today && Date.now() - statusShared.at < ttl) {
+      if (statusShared && statusShared.key === cacheKey && Date.now() - statusShared.at < ttl) {
         shared = statusShared.body;
       } else {
         shared = await computeSharedStatus(ctx.client, now, today);
-        statusShared = { key: today, at: Date.now(), body: shared };
+        statusShared = { key: cacheKey, at: Date.now(), body: shared };
       }
+      const sharedV2 = shared.engine_v2 === true;
+      const sharedSlot = (shared.slot as 'MORNING' | 'NIGHT' | undefined) ?? 'NIGHT';
+      const sharedNextCycle =
+        (shared.next_cycle as { date: string; slot: 'MORNING' | 'NIGHT' } | undefined) ??
+        { date: addDays(today, 1), slot: 'NIGHT' as const };
 
       // For the YOU-highlight in the log flood (owner plan A). 個人依存はこの1クエリのみ。
       // trained_for_next_race(2026-07-13 待機パドック): 追加往復なしのEXISTSで
       // 「次のレースに向けて調教済みか」を同じ1クエリに載せる。効力日は
       // GET /horses と同じ規則(当日バッチ完了後は翌日扱い)— sharedのphaseで判定。
-      const effectiveRaceDate = shared.phase === 'COMPLETED' ? addDays(today, 1) : today;
+      // V2: 対象は「次に走るサイクル」(完了後は次サイクルへ)。V1は従来規則。
+      const effectiveCycle =
+        shared.phase === 'COMPLETED'
+          ? sharedV2
+            ? sharedNextCycle
+            : { date: addDays(today, 1), slot: 'NIGHT' as const }
+          : { date: today, slot: sharedSlot };
       const myHorses = await ctx.client.query<{
         name: string; dna_hash: string; current_day: number; trained_for_next_race: boolean;
       }>(
-        `select h.name, h.dna_hash, h.current_day,
-                exists(
-                  select 1 from training_sessions t
-                  where t.horse_id = h.id and t.effective_race_date = $2
-                ) as trained_for_next_race
-         from horses h where h.owner_user_id = $1 and h.status = 'ACTIVE' limit 200`,
-        [ctx.userId, effectiveRaceDate],
+        sharedV2
+          ? `select h.name, h.dna_hash, h.current_day,
+                    exists(
+                      select 1 from training_sessions t
+                      where t.horse_id = h.id and t.effective_race_date = $2
+                        and t.slot = $3::race_slot
+                    ) as trained_for_next_race
+             from horses h where h.owner_user_id = $1 and h.status = 'ACTIVE' limit 200`
+          : `select h.name, h.dna_hash, h.current_day,
+                    exists(
+                      select 1 from training_sessions t
+                      where t.horse_id = h.id and t.effective_race_date = $2
+                    ) as trained_for_next_race
+             from horses h where h.owner_user_id = $1 and h.status = 'ACTIVE' limit 200`,
+        sharedV2
+          ? [ctx.userId, effectiveCycle.date, effectiveCycle.slot]
+          : [ctx.userId, effectiveCycle.date],
       );
 
       // 審判演出の実結線(2026-07-16 #5): 従来はログ濁流のフィクション行と実馬名の
@@ -316,6 +379,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
              select r.id, r.batch_run_id
              from races r join batch_runs b on b.id = r.batch_run_id
              where b.batch_date = $2 and r.status = 'FINALIZED'
+               ${sharedV2 ? `and b.slot = '${sharedSlot}'::race_slot` : ''}
+             order by r.created_at desc
              limit 1
            )
            select 'READY' as kind, null as name, null as dna_hash, null::int as day,
@@ -330,7 +395,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
            join horses h on h.id = hb.horse_id
            left join race_participant_snapshots s on s.race_id = hb.race_id and s.horse_id = hb.horse_id
            left join item_usages iu on iu.horse_id = hb.horse_id
-             and iu.effective_race_date = $2::date and iu.status <> 'CANCELLED'
+             and iu.race_id = hb.race_id and iu.status <> 'CANCELLED'
            left join user_items ui on ui.source_burn_event_id = hb.burn_event_id
            where hb.owner_user_id_at_snapshot = $1
            union all
@@ -462,9 +527,12 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
                 r.track_condition::text as track_condition, r.surface::text as surface
          from races r join batch_runs b on b.id = r.batch_run_id
          where b.batch_date = $1 and r.status = 'FINALIZED'
+         order by r.created_at desc
          limit 1`,
         [requested],
       );
+      // V2実装-7a: 同日2レースの日は「その日の最新レース」を表示する(暫定 —
+      // サイクル別アーカイブUIは試運転のフィードバックで拡張)。
       const raceRow = race.rows[0] ?? null;
       if (!raceRow) return { date: requested, ...empty };
       // その日のレース条件(オーナー指示 2026-07-10: 記録カレンダーに必ず表示)
@@ -501,11 +569,11 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
          join horses h on h.id = hb.horse_id
          left join race_participant_snapshots s on s.race_id = hb.race_id and s.horse_id = hb.horse_id
          left join item_usages iu on iu.horse_id = hb.horse_id
-           and iu.effective_race_date = $2::date and iu.status <> 'CANCELLED'
+           and iu.race_id = hb.race_id and iu.status <> 'CANCELLED'
          left join user_items ui on ui.source_burn_event_id = hb.burn_event_id
-         where hb.race_id = $3 and hb.owner_user_id_at_snapshot = $1
+         where hb.race_id = $2 and hb.owner_user_id_at_snapshot = $1
          order by h.name`,
-        [ctx.userId, requested, raceRow.id],
+        [ctx.userId, raceRow.id],
       );
 
       const survived = await ctx.client.query<{
@@ -625,7 +693,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         surface: string | null;
         burn_rate: string | null;
       }>(
-        `select b.batch_date::text as date, r.id as race_id,
+        `select b.batch_date::text as date, b.slot::text as slot, r.id as race_id,
                 r.participant_count as participants,
                 r.weather::text as weather, r.track_condition::text as track_condition,
                 r.surface::text as surface,
@@ -644,7 +712,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
          from batch_runs b
          join races r on r.batch_run_id = b.id
          where r.status = 'FINALIZED'
-         order by b.batch_date desc
+         order by b.batch_date desc, b.slot desc
          limit 60`,
         [],
       );
@@ -669,7 +737,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       const race = await ctx.client.query<{ id: string; batch_run_id: string }>(
         `select r.id, r.batch_run_id
          from races r join batch_runs b on b.id = r.batch_run_id
-         where b.batch_date = $1 and r.status = 'FINALIZED' limit 1`,
+         where b.batch_date = $1 and r.status = 'FINALIZED'
+         order by r.created_at desc limit 1`,
         [ctx.params.date],
       );
       const raceRow = race.rows[0] ?? null;
@@ -712,7 +781,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       }
       const race = await ctx.client.query<{ id: string }>(
         `select r.id from races r join batch_runs b on b.id = r.batch_run_id
-         where b.batch_date = $1 and r.status = 'FINALIZED' limit 1`,
+         where b.batch_date = $1 and r.status = 'FINALIZED'
+         order by r.created_at desc limit 1`,
         [ctx.params.date],
       );
       const raceRow = race.rows[0] ?? null;

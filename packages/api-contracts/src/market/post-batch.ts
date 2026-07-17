@@ -44,13 +44,23 @@ export interface PostBatchResult {
 export async function runMarketPostBatch(
   client: SqlClient,
   batchDate: string,
+  // V2実装-7a: レース単位スイープ。省略=NIGHT(V1の従来挙動そのまま)。
+  slot: 'MORNING' | 'NIGHT' = 'NIGHT',
+  // V2ゲート(呼び出し側がアクティブエンジンで判定)— メール文言の「次のレース」表現用
+  v2 = false,
 ): Promise<PostBatchResult> {
-  // slot=NIGHT固定: バッチ後スイープは現行=夜レース後の運用(Decision 086)。
-  // V2のレース単位スイープはプール購入改修(Decision 103)で再設計する。
+  // 冪等キー互換: NIGHTは従来キーのまま(進行中シーズンの二重送信を防ぐ)。
+  // MORNING(V2のみ)はスロット修飾キー。
+  const keySuffix = slot === 'NIGHT' ? '' : `:${slot}`;
+  const nextRaceLabel = v2
+    ? slot === 'MORNING'
+      ? '今夜20:00(MYT)'
+      : '明朝8:00(MYT)'
+    : '明晩20:00(MYT)';
   const batch = await client.query<{ id: string; status: string }>(
     `select id, status::text as status from batch_runs
-     where batch_date = $1 and slot = 'NIGHT'`,
-    [batchDate],
+     where batch_date = $1 and slot = $2::race_slot`,
+    [batchDate, slot],
   );
   if (!batch.rows[0] || batch.rows[0].status !== 'COMPLETED') {
     return { skipped: 'batch not completed', soldMails: 0, autoReserveUsers: 0, autoReserveSessions: 0 };
@@ -84,7 +94,7 @@ export async function runMarketPostBatch(
   let soldMails = 0;
   for (const [sellerId, entry] of bySeller) {
     if (!isRealEmail(entry.email)) continue;
-    if (!(await claimMail(client, `sold-mail:${batchDate}:${sellerId}`))) continue;
+    if (!(await claimMail(client, `sold-mail:${batchDate}${keySuffix}:${sellerId}`))) continue;
     const total = entry.horses.reduce((sum, h) => sum.add(h.proceeds), Money.of('0'));
     const lines = entry.horses.map((h) => `・${h.name} — ${h.proceeds.toFixed8()} USDT`);
     await sendCsEmail({
@@ -93,7 +103,7 @@ export async function runMarketPostBatch(
       body: [
         'オーナー様',
         '',
-        `今夜のマッチングで、あなたの馬が売れました(${batchDate})。`,
+        `このレースのマッチングで、あなたの馬が売れました(${batchDate}${slot === 'MORNING' ? ' 朝' : ''})。`,
         ...lines,
         '',
         `合計 ${total.toFixed8()} USDT(手数料2%控除後)がウォレットに反映されています。`,
@@ -141,7 +151,7 @@ export async function runMarketPostBatch(
       for (let i = 0; i < target; i += 1) {
         const result = await createPurchaseSession(client, {
           userId: user.user_id,
-          idempotencyKey: `autoreserve:${batchDate}:${user.user_id}#${i + 1}`,
+          idempotencyKey: `autoreserve:${batchDate}${keySuffix}:${user.user_id}#${i + 1}`,
         });
         if (!result.alreadyExists) created += 1;
       }
@@ -154,19 +164,19 @@ export async function runMarketPostBatch(
       await insertNotification(client, {
         userId: user.user_id,
         type: 'AUTO_RESERVED',
-        dedupeKey: `notif:AUTO_RESERVED:${batchDate}:${user.user_id}`,
+        dedupeKey: `notif:AUTO_RESERVED:${batchDate}${keySuffix}:${user.user_id}`,
         payload: { ...rendered, count: created, total },
       });
-      if (isRealEmail(user.email) && (await claimMail(client, `autoreserve-mail:${batchDate}:${user.user_id}`))) {
+      if (isRealEmail(user.email) && (await claimMail(client, `autoreserve-mail:${batchDate}${keySuffix}:${user.user_id}`))) {
         await sendCsEmail({
           toEmail: user.email,
-          subject: `自動購入予約を作成しました(${created}頭)— 明晩20:00に処理されます`,
+          subject: `自動購入予約を作成しました(${created}頭)— ${nextRaceLabel}に処理されます`,
           body: [
             'オーナー様',
             '',
             `設定にもとづき、購入予約を自動で作成しました(${batchDate} のバッチ後)。`,
             `・頭数: ${created}頭 / 最大ロック合計: ${total} USDT`,
-            '・明晩20:00(MYT)の一斉マッチングで処理されます(割当価格との差額は自動返金)',
+            `・${nextRaceLabel}の一斉マッチングで処理されます(割当価格との差額は自動返金)`,
             '・精算前であればマーケットページからキャンセル(全額返金)できます',
             '',
             '自動購入予約はダッシュボードまたはマーケットページのAUTO設定からいつでもOFFにできます。',

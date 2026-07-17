@@ -118,7 +118,8 @@ async function memorialJob(client: SqlClient): Promise<Record<string, unknown>> 
 // ------------------------------------------------------------- scheduler
 const chainEnabled = Boolean(process.env.CHAIN_RPC_URL);
 const lastRun: Record<string, number> = {};
-let lastPostBatchDate: string | null = null;
+// V2実装-7a: スイープはサイクル単位(date:slot)。V1はNIGHTのみで従来と同じ1日1回。
+const sweptCycles = new Set<string>();
 
 // V2判定(Decision 102): アクティブなレースエンジンがv2なら朝レースを起動する。
 // 5分キャッシュ — 切替はテストネットリセット時の一度きりで、5分の遅延は無害。
@@ -191,20 +192,27 @@ async function tick(): Promise<void> {
       }
     }
 
-    // バッチ後スイープ(Decision 086): 当日バッチがCOMPLETEDになったら1回
-    // (自動購入予約+売却メール)。エンドポイントは完全冪等なので、
+    // バッチ後スイープ(Decision 086/-7a): 各サイクルのバッチがCOMPLETEDになったら
+    // 1回(自動購入予約+売却メール)。エンドポイントは完全冪等なので、
     // ワーカー再起動での再実行は無害。COMPLETEDまでは5分おきに確認する。
-    if (
-      lastPostBatchDate !== today &&
-      Date.now() >= batchStartUtc(today).getTime() &&
-      every('market-post-batch', 300_000)
-    ) {
-      const done = await withClient((client) =>
-        client.query(`select 1 from batch_runs where batch_date = $1 and status = 'COMPLETED'`, [today]),
-      );
-      if (done.rows.length > 0) {
-        await dispatchInternal('/internal/market/post-batch', { batch_date: today });
-        lastPostBatchDate = today;
+    if (every('market-post-batch', 300_000)) {
+      for (const slot of slots) {
+        const cycleKey = `${today}:${slot}`;
+        if (sweptCycles.has(cycleKey)) continue;
+        if (Date.now() < raceSlotStartUtcV2(today, slot).getTime()) continue;
+        const done = await withClient((client) =>
+          client.query(
+            `select 1 from batch_runs where batch_date = $1 and slot = $2::race_slot and status = 'COMPLETED'`,
+            [today, slot],
+          ),
+        );
+        if (done.rows.length > 0) {
+          await dispatchInternal('/internal/market/post-batch', { batch_date: today, slot });
+          sweptCycles.add(cycleKey);
+          if (sweptCycles.size > 8) {
+            for (const key of sweptCycles) if (!key.startsWith(today)) sweptCycles.delete(key);
+          }
+        }
       }
     }
 
