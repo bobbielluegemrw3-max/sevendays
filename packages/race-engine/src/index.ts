@@ -9,3 +9,4 @@ export * from './replay.js';
 export * from './burn.js';
 export * from './buff.js';
 export * from './item.js';
+export * from './total-value.js';

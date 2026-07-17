@@ -3,7 +3,6 @@ import { PURCHASE_LOCK_AMOUNT } from '@sevendays/domain';
 import { money, horseValue } from '@/components/stable-shared';
 import { BulkTrainButton } from '@/components/BulkTrainButton';
 import { ChampionCard, ListedCard, StableBrowser } from '@/components/StableBrowser';
-import { RarityLegend } from '@/components/RarityLegend';
 import { HiddenBadges, type HiddenBadge } from '@/components/HiddenBadges';
 import { APP_COPY, type Lang } from '@/lib/i18n';
 import { fill } from '@/lib/i18n-shared';
@@ -25,6 +24,12 @@ export interface StableHorse {
   id: string; name: string; status: string; current_day: number;
   horse_type: string; rarity: string; condition: string; fatigue: string;
   dna_hash: string; trained_for_next_race: boolean;
+  /** 総合値V0(0-100)。ACTIVE以外は null(FUN_V2_PLAN.md §3 A1)。 */
+  total_value?: number | null;
+  /** 今夜の安全圏(出走馬のみ・目安)。 */
+  tonight_rank?: number | null;
+  tonight_entrants?: number | null;
+  tonight_band?: 'SAFE' | 'MID' | 'RISK' | null;
   /** 'SMART' | 'MANUAL' | null — 出品中の事実表示(Decision 087監査)。 */
   listing: string | null;
   /** 隠し演出(EASTER_EGG_PLAN.md)。 */
@@ -121,7 +126,6 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
             {pendingCount > 0 ? fill(t.empty_pending_tpl, { n: pendingCount }) : t.empty_none}
           </div>
         )}
-        <div className={s.legendWrap}><RarityLegend t={t} /></div>
       </section>
 
       {/* ===== 出品中(Market Lock=今夜走らない・調教CTAなし) ===== */}

@@ -19,6 +19,12 @@ import {
 import { verifyWalletLink } from '@sevendays/blockchain';
 import { evaluateHiddenBadges } from '../hidden/achievements.js';
 import { computeHiddenLooks } from '../hidden/looks.js';
+import {
+  tonightBand,
+  totalValueV0,
+  type TotalValueInputV0,
+} from '@sevendays/race-engine';
+import type { HorseType, Rarity, TrainingType } from '@sevendays/domain';
 import { ApiError } from '../errors.js';
 import { sendCsEmail } from '../cs/mail.js';
 import type { ApiRegistry } from '../router.js';
@@ -26,8 +32,67 @@ import type { ApiRegistry } from '../router.js';
 /** 馬転送の送り手上限(Decision 094・24時間ローリング)。 */
 const HORSE_TRANSFERS_PER_DAY = 3;
 
+/** 総合値V0の入力をDB行から組み立てる(FUN_V2_PLAN.md §3 A1)。 */
+function totalValueInputFromRow(r: {
+  ability_json: Record<string, number>;
+  horse_type: string;
+  rarity: string;
+  dna_modifier: string;
+  condition: string;
+  fatigue: string;
+  tonight_training: string | null;
+}): TotalValueInputV0 {
+  return {
+    abilityJson: r.ability_json,
+    horseType: r.horse_type as HorseType,
+    rarity: r.rarity as Rarity,
+    dnaModifier: Number(r.dna_modifier),
+    condition: Number(r.condition),
+    fatigue: Number(r.fatigue),
+    training: (r.tonight_training as TrainingType | null) ?? null,
+  };
+}
+
 /** User APIs (07_API.md) — JWT auth; reads are RLS-shaped (own rows only). */
 export function registerUserEndpoints(registry: ApiRegistry): void {
+  // 「今夜の安全圏」用: 今夜の出走馬(ACTIVE・手動出品を除く)の総合値分布。
+  // 全ユーザー共通なのでプロセス内キャッシュ(既定60秒・テストは env で 0 に)。
+  // FUN_V2_PLAN.md §3 A1 — 順位は目安(BURN選定には運が絡む)。降順ソート済み。
+  let tonightDist: { key: string; at: number; values: number[] } | null = null;
+  async function tonightDistribution(
+    client: import('@sevendays/shared').SqlClient,
+    effectiveRaceDate: string,
+  ): Promise<number[]> {
+    const ttl = Number(process.env.TOTAL_VALUE_DIST_CACHE_MS ?? 60000);
+    if (tonightDist && tonightDist.key === effectiveRaceDate && Date.now() - tonightDist.at < ttl) {
+      return tonightDist.values;
+    }
+    const rows = await client.query<{
+      ability_json: Record<string, number>;
+      horse_type: string;
+      rarity: string;
+      dna_modifier: string;
+      condition: string;
+      fatigue: string;
+      tonight_training: string | null;
+    }>(
+      `select h.ability_json, h.horse_type::text as horse_type, h.rarity::text as rarity,
+              h.dna_modifier::text as dna_modifier, h.condition::text as condition,
+              h.fatigue::text as fatigue,
+              (select t.training_type::text from training_sessions t
+                where t.horse_id = h.id and t.effective_race_date = $1 limit 1) as tonight_training
+         from horses h
+        where h.status = 'ACTIVE'
+          and not exists (select 1 from market_listings ml
+                          where ml.horse_id = h.id and ml.status = 'LISTED' and ml.source = 'MANUAL')`,
+      [effectiveRaceDate],
+    );
+    const values = rows.rows
+      .map((r) => totalValueV0(totalValueInputFromRow(r)))
+      .sort((a, b) => b - a);
+    tonightDist = { key: effectiveRaceDate, at: Date.now(), values };
+    return values;
+  }
   registry.register({
     method: 'GET',
     path: '/api/v1/me',
@@ -168,7 +233,12 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       const today = batchDateFor(new Date());
       // listing: 'SMART' | 'MANUAL' | null — 厩舎UIが「出品中(手動=今夜走らない)」を
       // 事実どおり表示するため(Decision 087監査)。limitは100→500(全件表示UIと整合)。
-      const rows = await ctx.client.query(
+      const rows = await ctx.client.query<{
+        id: string; name: string; status: string; current_day: number; horse_type: string;
+        rarity: string; condition: string; fatigue: string; dna_hash: string;
+        gifted_at: string | null; ability_json: Record<string, number>; dna_modifier: string;
+        tonight_training: string | null; effective_race_date: string; listing: string | null;
+      }>(
         `with eff as (
            select case when exists (select 1 from batch_runs where batch_date = $2 and status = 'COMPLETED')
                        then ($2::date + 1) else $2::date end as race_date
@@ -176,21 +246,40 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
          select h.id, h.name, h.status::text as status, h.current_day, h.horse_type::text as horse_type,
                 h.rarity::text as rarity, h.condition::text as condition, h.fatigue::text as fatigue,
                 h.dna_hash, h.gifted_at::text as gifted_at,
-                exists(
-                  select 1 from training_sessions t
+                h.ability_json, h.dna_modifier::text as dna_modifier,
+                (select t.training_type::text from training_sessions t
                   where t.horse_id = h.id and t.effective_race_date = (select race_date from eff)
-                ) as trained_for_next_race,
+                  limit 1) as tonight_training,
+                (select race_date from eff)::text as effective_race_date,
                 (select l.source::text from market_listings l
                  where l.horse_id = h.id and l.status = 'LISTED' limit 1) as listing
          from horses h where h.owner_user_id = $1 order by h.created_at desc limit 500`,
         [ctx.userId, today],
       );
       // 隠し演出ルック(EASTER_EGG_PLAN.md)— 真偽フラグ/色種別のみ付与。条件は秘匿。
-      const looks = await computeHiddenLooks(ctx.client, rows.rows.map((r) => r.id as string), ctx.userId);
+      const looks = await computeHiddenLooks(ctx.client, rows.rows.map((r) => r.id), ctx.userId);
+      // 総合値V0+今夜の安全圏(FUN_V2_PLAN.md §3 A1)。分布はプロセス内キャッシュ。
+      const effDate = rows.rows[0]?.effective_race_date ?? today;
+      const hasActive = rows.rows.some((r) => r.status === 'ACTIVE');
+      const dist = hasActive ? await tonightDistribution(ctx.client, effDate) : [];
       const horses = rows.rows.map((r) => {
-        const l = looks.get(r.id as string);
+        const l = looks.get(r.id);
+        const { ability_json, dna_modifier, tonight_training, effective_race_date, ...rest } = r;
+        void ability_json;
+        void dna_modifier;
+        void effective_race_date;
+        const isActive = r.status === 'ACTIVE';
+        const totalValue = isActive ? totalValueV0(totalValueInputFromRow(r)) : null;
+        // 手動出品中は今夜走らない=順位なし(総合値のみ)
+        const runs = isActive && r.listing !== 'MANUAL';
+        const rank = runs && totalValue !== null ? 1 + dist.filter((v) => v > totalValue).length : null;
         return {
-          ...r,
+          ...rest,
+          trained_for_next_race: tonight_training !== null,
+          total_value: totalValue,
+          tonight_rank: rank,
+          tonight_entrants: runs ? dist.length : null,
+          tonight_band: rank !== null ? tonightBand(rank, dist.length) : null,
           night_variant: l?.nightVariant ?? false,
           golden_star: l?.goldenStar ?? false,
           golden_aura: l?.goldenAura ?? false,
@@ -226,14 +315,31 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
                 mint_seed_hash, horse_generation_version, gifted_at::text as gifted_at,
                 (select l.source::text from market_listings l
                  where l.horse_id = horses.id and l.status = 'LISTED' limit 1) as listing,
-                exists(
-                  select 1 from training_sessions t
+                (select t.training_type::text from training_sessions t
                   where t.horse_id = horses.id and t.effective_race_date = (select race_date from eff)
-                ) as trained_for_next_race
+                  limit 1) as tonight_training,
+                (select race_date from eff)::text as effective_race_date
          from horses where id = $1 and owner_user_id = $2`,
         [ctx.params.id, ctx.userId, today],
       );
       if (!rows.rows[0]) throw new ApiError('NOT_FOUND', 'Horse not found');
+      // 総合値V0+今夜の安全圏(FUN_V2_PLAN.md §3 A1)
+      const hRow = rows.rows[0] as (typeof rows.rows)[0] & {
+        ability_json: Record<string, number>;
+        horse_type: string; rarity: string; dna_modifier: string;
+        condition: string; fatigue: string; tonight_training: string | null;
+        effective_race_date: string; status: string; listing: string | null;
+      };
+      const isActiveHorse = hRow.status === 'ACTIVE';
+      const totalValue = isActiveHorse ? totalValueV0(totalValueInputFromRow(hRow)) : null;
+      const runsTonight = isActiveHorse && hRow.listing !== 'MANUAL';
+      let tonightRank: number | null = null;
+      let tonightEntrants: number | null = null;
+      if (runsTonight && totalValue !== null) {
+        const dist = await tonightDistribution(ctx.client, hRow.effective_race_date);
+        tonightRank = 1 + dist.filter((v) => v > totalValue).length;
+        tonightEntrants = dist.length;
+      }
       // 隠し演出ルック(EASTER_EGG_PLAN.md)— 詳細ページ用の真偽フラグ。
       const looks = await computeHiddenLooks(ctx.client, [ctx.params.id!], ctx.userId);
       const lk = looks.get(ctx.params.id!);
@@ -249,8 +355,15 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
          order by br.batch_date asc`,
         [ctx.params.id],
       );
+      const { tonight_training: tt, effective_race_date: efd, ...detailRest } = hRow;
+      void efd;
       return {
-        ...rows.rows[0],
+        ...detailRest,
+        trained_for_next_race: tt !== null,
+        total_value: totalValue,
+        tonight_rank: tonightRank,
+        tonight_entrants: tonightEntrants,
+        tonight_band: tonightRank !== null && tonightEntrants !== null ? tonightBand(tonightRank, tonightEntrants) : null,
         night_variant: lk?.nightVariant ?? false,
         golden_star: lk?.goldenStar ?? false,
         golden_aura: lk?.goldenAura ?? false,

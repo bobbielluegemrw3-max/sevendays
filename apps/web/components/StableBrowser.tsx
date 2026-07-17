@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AppSelect } from '@/components/AppSelect';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
-import { pct, horseValue, rarClass } from '@/components/stable-shared';
+import { horseValue } from '@/components/stable-shared';
 import type { StableHorse } from '@/components/StableView';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
@@ -21,6 +21,30 @@ import s from '../app/stable.module.css';
 
 const RANK: Record<string, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
 type T = AppDict['stable'];
+
+/* 総合値チップ+安全圏(FUN_V2_PLAN.md §3 A1)。band色はCSS側で管理。 */
+function bandCls(band: string | null | undefined): string {
+  return band === 'SAFE' ? s.bandSafe! : band === 'RISK' ? s.bandRisk! : s.bandMid!;
+}
+function bandLabel(band: string | null | undefined, t: T): string {
+  return band === 'SAFE' ? t.band_safe : band === 'RISK' ? t.band_risk : t.band_mid;
+}
+function TvChip({ h, t, extraCls = '' }: { h: StableHorse; t: T; extraCls?: string }) {
+  if (h.total_value === null || h.total_value === undefined) return null;
+  return (
+    <span className={`${s.tvChip} ${bandCls(h.tonight_band)} ${extraCls}`}>
+      {t.tv_chip} <b>{h.total_value}</b>
+    </span>
+  );
+}
+function RankLine({ h, t }: { h: StableHorse; t: T }) {
+  if (!h.tonight_rank || !h.tonight_entrants) return null;
+  return (
+    <div className={`${s.rankLine} ${bandCls(h.tonight_band)}`}>
+      {fill(t.rank_tpl, { r: h.tonight_rank, n: h.tonight_entrants })} · {bandLabel(h.tonight_band, t)}
+    </div>
+  );
+}
 const PAGE_SIZES = [24, 48, 96, 99999];
 
 /* ---- 隠し演出の原色オーバーレイ色(全身を1色に染める) ---------------------- */
@@ -66,29 +90,25 @@ function DayRail({ day }: { day: number }) {
 
 function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
   const untrained = !h.trained_for_next_race;
-  const rar = rarClass(h.rarity);
   const trainCls = untrained ? s.trainNo : s.trainYes;
   const trainText = untrained ? t.badge_untrained : t.badge_trained;
   return (
     <Link href={`/horses/${h.id}`} className={`${s.hcard} ${untrained ? s.untrained : ''}`}>
       <div className={s.hart}>
         <StableArt horse={h} t={t} />
-        <span className={`${s.rar} ${rar} ${s.artBadge} ${s.artRarity}`}>{h.rarity}</span>
+        <TvChip h={h} t={t} extraCls={`${s.artBadge} ${s.artRarity}`} />
         <span className={`${s.trainBadge} ${trainCls} ${s.artBadge} ${s.artTrain}`}>{trainText}</span>
       </div>
       <div className={s.hbody}>
         <div className={s.hrow1}>
           <span className={s.hname}>{h.name}</span>
-          <span className={`${s.rar} ${rar} ${s.inlineRarity}`}>{h.rarity}</span>
+          <TvChip h={h} t={t} extraCls={s.inlineRarity!} />
           {/* Decision 087監査: スマート出品中は走るが今夜売れる可能性がある — 事実を小さく明示 */}
           {h.listing === 'SMART' ? <span className={s.smartTag}>{t.smart_tag}</span> : null}
           <span className={s.htype}>{h.horse_type}</span>
         </div>
         <DayRail day={h.current_day} />
-        <div className={s.hmeters}>
-          <span className={s.hmeter}><span className="k">COND</span><span className={s.track}><span className={s.fillCyan} style={{ width: `${pct(h.condition)}%` }} /></span></span>
-          <span className={s.hmeter}><span className="k">FTG</span><span className={s.track}><span className={s.fillMag} style={{ width: `${pct(h.fatigue)}%` }} /></span></span>
-        </div>
+        <RankLine h={h} t={t} />
         <div className={s.hfoot}>
           <span className={s.hvalue}>{t.value_now} <b>{horseValue(h.current_day)}</b> USDT</span>
           <span className={`${s.hcta} ${untrained ? s.hctaTrain : s.hctaDetail}`}>{untrained ? t.cta_train : t.cta_detail}</span>
@@ -104,18 +124,17 @@ function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
  * 今夜は出走しない事実を明示し、無駄になる調教CTAは出さない。管理は/marketへ。
  */
 export function ListedCard({ h, t }: { h: StableHorse; t: T }) {
-  const rar = rarClass(h.rarity);
   return (
     <Link href="/market" className={`${s.hcard} ${s.listedCard}`}>
       <div className={s.hart}>
         <StableArt horse={h} t={t} />
-        <span className={`${s.rar} ${rar} ${s.artBadge} ${s.artRarity}`}>{h.rarity}</span>
+        <TvChip h={h} t={t} extraCls={`${s.artBadge} ${s.artRarity}`} />
         <span className={`${s.listedBadge} ${s.artBadge} ${s.artTrain}`}>{t.badge_listed}</span>
       </div>
       <div className={s.hbody}>
         <div className={s.hrow1}>
           <span className={s.hname}>{h.name}</span>
-          <span className={`${s.rar} ${rar} ${s.inlineRarity}`}>{h.rarity}</span>
+          <TvChip h={h} t={t} extraCls={s.inlineRarity!} />
           <span className={s.htype}>{h.horse_type}</span>
         </div>
         <div className={s.listedNote}>{t.listed_card_note}</div>
@@ -181,9 +200,9 @@ function PastCard({ h, t }: { h: StableHorse; t: T }) {
 
 /* ---- ソート比較 ----------------------------------------------------------- */
 const ACTIVE_SORTS: Record<string, (a: StableHorse, b: StableHorse) => number> = {
-  value_desc: (a, b) => b.current_day - a.current_day || RANK[b.rarity]! - RANK[a.rarity]!,
-  value_asc:  (a, b) => a.current_day - b.current_day || RANK[a.rarity]! - RANK[b.rarity]!,
-  rarity:     (a, b) => RANK[b.rarity]! - RANK[a.rarity]! || b.current_day - a.current_day,
+  value_desc: (a, b) => b.current_day - a.current_day || (b.total_value ?? 0) - (a.total_value ?? 0),
+  value_asc:  (a, b) => a.current_day - b.current_day || (a.total_value ?? 0) - (b.total_value ?? 0),
+  total:      (a, b) => (b.total_value ?? 0) - (a.total_value ?? 0) || b.current_day - a.current_day,
   cond:       (a, b) => Number(b.condition) - Number(a.condition),
   untrained:  (a, b) => Number(a.trained_for_next_race) - Number(b.trained_for_next_race) || b.current_day - a.current_day,
   name:       (a, b) => a.name.localeCompare(b.name),
@@ -198,7 +217,6 @@ const PAST_SORTS: Record<string, (a: StableHorse, b: StableHorse) => number> = {
 export function StableBrowser({ kind, horses, t }: { kind: 'active' | 'past'; horses: StableHorse[]; t: T }) {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState(kind === 'active' ? 'value_desc' : 'rarity');
-  const [rar, setRar] = useState('ALL');            // active: レアリティ / past: 状態
   const [untrainedOnly, setUntrainedOnly] = useState(false);
   const [pageSize, setPageSize] = useState(24);
   const [page, setPage] = useState(0);
@@ -207,18 +225,13 @@ export function StableBrowser({ kind, horses, t }: { kind: 'active' | 'past'; ho
     const needle = q.trim().toLowerCase();
     let arr = horses.filter((h) => {
       if (needle && !h.name.toLowerCase().includes(needle)) return false;
-      if (kind === 'active') {
-        if (rar !== 'ALL' && h.rarity !== rar) return false;
-        if (untrainedOnly && h.trained_for_next_race) return false;
-      } else {
-        if (rar !== 'ALL' && h.status !== rar) return false;
-      }
+      if (kind === 'active' && untrainedOnly && h.trained_for_next_race) return false;
       return true;
     });
     const cmp = (kind === 'active' ? ACTIVE_SORTS : PAST_SORTS)[sort];
     if (cmp) arr = arr.slice().sort(cmp);
     return arr;
-  }, [horses, q, sort, rar, untrainedOnly, kind]);
+  }, [horses, q, sort, untrainedOnly, kind]);
 
   const total = horses.length;
   const shown = filtered.length;
@@ -247,8 +260,7 @@ export function StableBrowser({ kind, horses, t }: { kind: 'active' | 'past'; ho
           options={kind === 'active' ? [
             { value: 'value_desc', label: t.sort_value_desc },
             { value: 'value_asc', label: t.sort_value_asc },
-            { value: 'rarity', label: t.sort_rarity },
-            { value: 'cond', label: t.sort_cond },
+            { value: 'total', label: t.sort_total },
             { value: 'untrained', label: t.sort_untrained },
             { value: 'name', label: t.sort_name },
           ] : [
@@ -256,22 +268,6 @@ export function StableBrowser({ kind, horses, t }: { kind: 'active' | 'past'; ho
             { value: 'name', label: t.sort_name },
           ]}
         />
-        {kind === 'active' ? (
-          <AppSelect
-            className={s.select}
-            value={rar}
-            onChange={(v) => { setRar(v); reset(); }}
-            ariaLabel={t.filter_aria}
-            options={[
-              { value: 'ALL', label: t.filter_all },
-              { value: 'LEGENDARY', label: 'LEGENDARY' },
-              { value: 'EPIC', label: 'EPIC' },
-              { value: 'RARE', label: 'RARE' },
-              { value: 'UNCOMMON', label: 'UNCOMMON' },
-              { value: 'COMMON', label: 'COMMON' },
-            ]}
-          />
-        ) : null}
         {kind === 'active' ? (
           <button
             type="button"

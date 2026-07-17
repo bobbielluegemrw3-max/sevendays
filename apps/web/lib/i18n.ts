@@ -566,6 +566,8 @@ export interface AppDict {
     bulk_done_tpl: string; bulk_none: string;
     type_speed: string; type_power: string; type_recovery: string;
     badges_title: string;
+    tv_chip: string; band_safe: string; band_mid: string; band_risk: string;
+    rank_tpl: string; rank_note: string; sort_total: string;
     legend_title: string; legend_note: string; legend_chip_tpl: string;
   };
   /** /horses/[id](馬詳細)+ 調教フォーム + ページャ + ブースト + 転送。 */
@@ -1153,6 +1155,8 @@ const ja: AppDict = {
     bulk_fail: '一括調教に失敗しました', bulk_done_tpl: '{n}頭を調教しました({parts})。', bulk_none: '調教できる馬はいませんでした。',
     type_speed: 'スピード', type_power: 'パワー', type_recovery: '回復',
     badges_title: '獲得した称号',
+    tv_chip: '総合値', band_safe: '安全圏', band_mid: '中位', band_risk: '危険圏',
+    rank_tpl: '今夜 {r}位 / {n}頭', rank_note: '順位は目安 — 当日の運と条件で変動します', sort_total: '総合値が高い順',
     legend_title: 'レアリティ', legend_note: '加点は毎晩のレーススコアに常時反映(公開ルール)',
     legend_chip_tpl: '{pct} · スコア+{n}',
   },
@@ -1773,6 +1777,8 @@ const en: AppDict = {
     bulk_fail: 'Bulk training failed', bulk_done_tpl: 'Trained {n} horses ({parts}).', bulk_none: 'No horses could be trained.',
     type_speed: 'Speed', type_power: 'Power', type_recovery: 'Recovery',
     badges_title: 'Titles earned',
+    tv_chip: 'TOTAL', band_safe: 'Safe zone', band_mid: 'Mid', band_risk: 'Danger zone',
+    rank_tpl: 'Tonight {r} / {n}', rank_note: 'Rank is a guide — luck and conditions vary on the night', sort_total: 'Highest total',
     legend_title: 'Rarity', legend_note: 'Bonuses apply to every night’s race score (public rule)',
     legend_chip_tpl: '{pct} · score +{n}',
   },
@@ -2393,6 +2399,8 @@ const zh: AppDict = {
     bulk_fail: '批量训练失败', bulk_done_tpl: '已训练{n}匹({parts})。', bulk_none: '没有可训练的赛马。',
     type_speed: '速度', type_power: '力量', type_recovery: '恢复',
     badges_title: '获得的称号',
+    tv_chip: '综合值', band_safe: '安全圈', band_mid: '中位', band_risk: '危险圈',
+    rank_tpl: '今晚 {r}位 / {n}匹', rank_note: '排名仅供参考 — 当晚的运气与条件会变动', sort_total: '综合值从高到低',
     legend_title: '稀有度', legend_note: '加分每晚都计入比赛得分(公开规则)',
     legend_chip_tpl: '{pct} · 得分+{n}',
   },
@@ -3013,6 +3021,8 @@ const ko: AppDict = {
     bulk_fail: '일괄 조교에 실패했습니다', bulk_done_tpl: '{n}마리를 조교했습니다({parts}).', bulk_none: '조교할 수 있는 말이 없습니다.',
     type_speed: '스피드', type_power: '파워', type_recovery: '회복',
     badges_title: '획득한 칭호',
+    tv_chip: '종합치', band_safe: '안전권', band_mid: '중위', band_risk: '위험권',
+    rank_tpl: '오늘 밤 {r}위 / {n}마리', rank_note: '순위는 참고용 — 당일 운과 조건에 따라 변동합니다', sort_total: '종합치 높은 순',
     legend_title: '레어리티', legend_note: '가산점은 매일 밤 레이스 점수에 상시 반영(공개 규칙)',
     legend_chip_tpl: '{pct} · 점수+{n}',
   },
@@ -3633,6 +3643,8 @@ const ms: AppDict = {
     bulk_fail: 'Latihan pukal gagal', bulk_done_tpl: '{n} kuda dilatih ({parts}).', bulk_none: 'Tiada kuda boleh dilatih.',
     type_speed: 'Kelajuan', type_power: 'Kuasa', type_recovery: 'Pemulihan',
     badges_title: 'Gelaran diperoleh',
+    tv_chip: 'NILAI', band_safe: 'Zon selamat', band_mid: 'Pertengahan', band_risk: 'Zon bahaya',
+    rank_tpl: 'Malam ini {r} / {n}', rank_note: 'Kedudukan hanyalah panduan — tuah dan keadaan malam berbeza', sort_total: 'Nilai tertinggi',
     legend_title: 'Kejarangan', legend_note: 'Bonus sentiasa dikira dalam skor perlumbaan setiap malam (peraturan umum)',
     legend_chip_tpl: '{pct} · skor +{n}',
   },

@@ -49,6 +49,27 @@ const HORSES: StableHorse[] = [
   H('f005', 'Aurora Crown', 'RARE', 'SPRINTER', 7, 0, 0, false, 'MEMORIALIZED'),
 ];
 
+/* FUN改修A1: 総合値+安全圏の見た目確認用のフィクスチャ値(実計算ではない・devのみ)。 */
+const RARN: Record<string, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
+for (const h of HORSES) {
+  if (h.status !== 'ACTIVE') continue;
+  h.total_value = Math.max(5, Math.min(97, Math.round(
+    35 + Number(h.condition) * 0.5 - Number(h.fatigue) * 0.25 + (RARN[h.rarity] ?? 0) * 6 + (h.trained_for_next_race ? 4 : 0),
+  )));
+}
+{
+  const runners = HORSES.filter((h) => h.status === 'ACTIVE' && h.listing !== 'MANUAL')
+    .sort((a, b) => (b.total_value ?? 0) - (a.total_value ?? 0));
+  runners.forEach((h, i) => {
+    const rank = i + 1;
+    h.tonight_rank = rank;
+    h.tonight_entrants = runners.length;
+    h.tonight_band = rank <= Math.ceil(runners.length * 0.4)
+      ? 'SAFE'
+      : rank > runners.length - Math.ceil(runners.length * 0.25) ? 'RISK' : 'MID';
+  });
+}
+
 export default async function StablePreview() {
   await requireDevPreviewAccess();
   return (

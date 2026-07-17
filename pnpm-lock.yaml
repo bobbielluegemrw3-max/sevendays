@@ -108,6 +108,9 @@ importers:
       '@sevendays/ledger':
         specifier: workspace:*
         version: link:../ledger
+      '@sevendays/race-engine':
+        specifier: workspace:*
+        version: link:../race-engine
       '@sevendays/settlement-engine':
         specifier: workspace:*
         version: link:../settlement-engine
@@ -124,9 +127,6 @@ importers:
       '@sevendays/database':
         specifier: workspace:*
         version: link:../database
-      '@sevendays/race-engine':
-        specifier: workspace:*
-        version: link:../race-engine
       '@types/web-push':
         specifier: ^3.6.4
         version: 3.6.4

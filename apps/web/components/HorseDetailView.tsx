@@ -6,7 +6,6 @@ import { HorsePager, type PagerNav } from '@/components/HorsePager';
 import { TrainingForm } from '@/components/TrainingForm';
 import { ItemBoostPanel } from '@/components/ItemBoostPanel';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
-import { RarityLegend } from '@/components/RarityLegend';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { APP_COPY, type Lang } from '@/lib/i18n';
 import { fill, type AppDict } from '@/lib/i18n-shared';
@@ -47,6 +46,11 @@ export interface HorseDetail {
   horse_type: string; rarity: string; dna_hash: string; dna_modifier: string;
   ability_json: Record<string, number>;
   condition: string; fatigue: string;
+  /** 総合値V0(0-100)。ACTIVE以外は null(FUN_V2_PLAN.md §3 A1)。 */
+  total_value?: number | null;
+  tonight_rank?: number | null;
+  tonight_entrants?: number | null;
+  tonight_band?: 'SAFE' | 'MID' | 'RISK' | null;
   mint_seed_hash: string; horse_generation_version: string;
   /** 譲渡された馬(Decision 094)— 手動出品不可の恒久マーク。 */
   gifted_at?: string | null;
@@ -66,8 +70,12 @@ export interface HorseDetail {
   history: HorseRaceResult[];
 }
 
-const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
 type TH = AppDict['horse'];
+
+/* 総合値バッジ/安全圏の色(FUN_V2_PLAN.md §3 A1)。 */
+function bandClsDetail(band: string | null | undefined): string {
+  return band === 'SAFE' ? s.bandSafe! : band === 'RISK' ? s.bandRisk! : s.bandMid!;
+}
 type TC = AppDict['conds'];
 
 /** テンプレの {v} の前後で分割して値だけ太字にする(語順の言語差を吸収)。 */
@@ -112,9 +120,6 @@ function score2(raw: string): string {
 }
 function horseValue(currentDay: number): string {
   return PRICE_TABLE_V1[Math.max(0, Math.min(6, currentDay))] ?? PRICE_TABLE_V1[0]!;
-}
-function rarClass(rarity: string): string {
-  return s[`rar${RARITIES.includes(rarity) ? rarity : 'COMMON'}`]!;
 }
 function short(hash: string, head = 6, tail = 4): string {
   if (!hash || hash.length <= head + tail + 1) return hash;
@@ -319,7 +324,11 @@ export function HorseDetailView({
         <div className={s.mastL}>
           <div className={s.titleRow}>
             <span className={s.title}>{horse.name}</span>
-            <span className={`${s.badge} ${rarClass(horse.rarity)}`}>{horse.rarity}</span>
+            {horse.total_value !== null && horse.total_value !== undefined ? (
+              <span className={`${s.badge} ${s.tvBadge} ${bandClsDetail(horse.tonight_band)}`}>
+                {ts.tv_chip} <b>{horse.total_value}</b>
+              </span>
+            ) : null}
             <span className={`${s.badge} ${s.typeBadge}`}>{horse.horse_type}</span>
             <span className={`${s.badge} ${badge.cls}`}>{badge.label}</span>
             {horse.listing === 'SMART' ? <span className={`${s.badge} ${s.stSmart}`}>{t.st_smart}</span> : null}
@@ -357,7 +366,7 @@ export function HorseDetailView({
               <div className={s.artCap}>
                 <div>
                   <div className={s.artCapK}>{horse.name.toUpperCase()}</div>
-                  <div className={s.artCapSub}>{horse.horse_type} · {horse.rarity}</div>
+                  <div className={s.artCapSub}>{horse.horse_type}</div>
                 </div>
                 <div className={s.dayBig}>
                   <div className="l">DAY</div>
@@ -369,6 +378,13 @@ export function HorseDetailView({
             </div>
             <div className={s.heroFoot}>
               <DayRail horse={horse} mode={mode} />
+              {horse.tonight_rank && horse.tonight_entrants ? (
+                <div className={`${s.rankLine} ${bandClsDetail(horse.tonight_band)}`}>
+                  {fill(ts.rank_tpl, { r: horse.tonight_rank, n: horse.tonight_entrants })} ·{' '}
+                  {horse.tonight_band === 'SAFE' ? ts.band_safe : horse.tonight_band === 'RISK' ? ts.band_risk : ts.band_mid}
+                  <span className={s.rankNote}> — {ts.rank_note}</span>
+                </div>
+              ) : null}
               <div className={s.dayNote}>{dayNote(horse, mode, t)}</div>
             </div>
           </div>
@@ -460,7 +476,6 @@ export function HorseDetailView({
               </div>
             ))}
           </div>
-          <div className={s.legendWrap}><RarityLegend t={ts} /></div>
         </div>
 
         {history.length > 0 ? (

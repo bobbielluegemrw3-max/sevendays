@@ -184,10 +184,10 @@
 
 - [x] 5項目の認識合わせ(FUN_REVISION §7〜§10)
 - [x] 本設計・計画書の起票
-- [ ] git tag `pre-fun-overhaul` + push
-- [ ] A1: totalValueV0 関数+テスト(エンジン実スコアと突合)
-- [ ] A1: GET /horses 等に total_value / tonight_rank_band(1往復規律)
-- [ ] A1: 厩舎/詳細/棚のUI置き換え+5言語辞書
+- [x] git tag `pre-fun-overhaul` + push(2026-07-17)
+- [x] A1: totalValueV0 関数+テスト(エンジン実スコアと突合 — race-engine/total-value.ts・45件PASS)
+- [x] A1: GET /horses・/horses/:id に total_value/tonight_rank/tonight_band(分布はプロセス内60秒キャッシュ)
+- [x] A1: 厩舎カード+馬詳細のUI置き換え+5言語辞書(視覚QA済み)。**棚(/market)への総合値表示は未** — A2後に
 - [ ] A2: training upsert化(やり直し)+未回収表示+確定演出+チケット表示+帰属表示
 - [ ] A層 実機確認(オーナー)→ 本番
 - [ ] B: 弁護士質問文の起草→承認→送付
