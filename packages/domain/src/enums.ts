@@ -99,6 +99,7 @@ export const ACCOUNT_TYPES = [
   'PLATFORM_DEPOSIT_CLEARING',
   'PLATFORM_WITHDRAWAL_CLEARING',
   'PLATFORM_ITEM_CLEARING',
+  'PLATFORM_MARKETING_BUDGET',
 ] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 

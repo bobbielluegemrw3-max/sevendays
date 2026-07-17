@@ -138,11 +138,15 @@ describe('migrations and seed data', () => {
     expect(Number(r.rows[0]!.count)).toBeGreaterThanOrEqual(35);
   });
 
-  it('seeds 9 platform ledger accounts (incl. ITEM_CLEARING, Decision 078)', async () => {
+  it('seeds 10 platform ledger accounts (incl. ITEM_CLEARING D078, MARKETING_BUDGET FUN-B)', async () => {
     const r = await db.query<{ count: string }>(
       `select count(*)::text as count from ledger_accounts where owner_type = 'PLATFORM'`,
     );
-    expect(r.rows[0]!.count).toBe('9');
+    expect(r.rows[0]!.count).toBe('10');
+    const mkt = await db.query(
+      `select 1 from ledger_accounts where owner_type = 'PLATFORM' and account_type = 'PLATFORM_MARKETING_BUDGET'`,
+    );
+    expect(mkt.rows).toHaveLength(1);
   });
 
   it('marketplace starts OPEN', async () => {

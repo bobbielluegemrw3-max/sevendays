@@ -842,6 +842,92 @@ describe('training (Decision 066)', () => {
   });
 });
 
+describe('marketing budget account (FUN overhaul B-layer)', () => {
+  function asAdmin(userId: string, roles: string[]): AuthContext {
+    return { kind: 'admin', userId, roles };
+  }
+  async function newAdmin(role: 'FINANCE_ADMIN' | 'SUPER_ADMIN'): Promise<string> {
+    const id = await newUser();
+    await client.query(`insert into admin_role_grants (user_id, role) values ($1, $2)`, [id, role]);
+    return id;
+  }
+
+  it('funds instantly under the limit, dual-approves above it, and stays balanced', async () => {
+    const superAdmin = await newAdmin('SUPER_ADMIN');
+    const financeAdmin = await newAdmin('FINANCE_ADMIN');
+
+    // 原資: 運営準備金に足しておく(帳簿バランスのため入金クリアリングから)
+    const reserve = await client.query<{ id: string }>(
+      `select id from ledger_accounts where owner_type = 'PLATFORM' and account_type = 'PLATFORM_OPERATING_RESERVE'`,
+    );
+    const clearing = await client.query<{ id: string }>(
+      `select id from ledger_accounts where owner_type = 'PLATFORM' and account_type = 'PLATFORM_DEPOSIT_CLEARING'`,
+    );
+    await postTransaction(client, {
+      type: 'ADMIN_ADJUSTMENT',
+      idempotencyKey: `mkt-test-seed:${randomUUID()}`,
+      referenceType: 'test',
+      referenceId: randomUUID(),
+      entries: [
+        { accountId: clearing.rows[0]!.id, direction: 'DEBIT', amount: Money.of(5000) },
+        { accountId: reserve.rows[0]!.id, direction: 'CREDIT', amount: Money.of(5000) },
+      ],
+    });
+
+    // 差分アサーション用に開始残高を捕捉(他テストが準備金を動かすため絶対値は使わない)
+    const before = await call('GET', '/api/v1/admin/marketing/overview', asAdmin(superAdmin, ['SUPER_ADMIN']));
+    const before0 = before.body as { marketing_budget: string; operating_reserve: string };
+    const budget0 = Number(before0.marketing_budget);
+    const reserve0 = Number(before0.operating_reserve);
+
+    // 小口(≤1000)は1名で即時
+    const instant = await call('POST', '/api/v1/admin/marketing/transfer', asAdmin(superAdmin, ['SUPER_ADMIN']), {
+      body: { direction: 'FUND', amount: 600, reason: 'launch jackpot seed' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(instant.status).toBe(200);
+    expect((instant.body as { status: string; instant?: boolean }).instant).toBe(true);
+
+    // 大口(>1000)はPENDING→本人は承認不可→別の管理者が承認
+    const big = await call('POST', '/api/v1/admin/marketing/transfer', asAdmin(superAdmin, ['SUPER_ADMIN']), {
+      body: { direction: 'FUND', amount: 2500, reason: 'august campaign' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(big.status).toBe(200);
+    const bigId = (big.body as { id: string; status: string }).id;
+    expect((big.body as { status: string }).status).toBe('PENDING');
+
+    const selfApprove = await call(
+      'POST', `/api/v1/admin/marketing/transfers/${bigId}/approve`,
+      asAdmin(superAdmin, ['SUPER_ADMIN']),
+    );
+    expect(selfApprove.status).toBe(403);
+
+    const approve = await call(
+      'POST', `/api/v1/admin/marketing/transfers/${bigId}/approve`,
+      asAdmin(financeAdmin, ['FINANCE_ADMIN']),
+    );
+    expect(approve.status).toBe(200);
+
+    // overview: 広告費口座残高 = 600 + 2500・運営準備金は同額減
+    const overview = await call('GET', '/api/v1/admin/marketing/overview', asAdmin(financeAdmin, ['FINANCE_ADMIN']));
+    expect(overview.status).toBe(200);
+    const ov = overview.body as { marketing_budget: string; operating_reserve: string; transfers: { status: string }[] };
+    expect(Number(ov.marketing_budget) - budget0).toBeCloseTo(3100, 6);
+    expect(Number(ov.operating_reserve) - reserve0).toBeCloseTo(-3100, 6); // 捕捉はシード後 → 純減のみ
+    expect(ov.transfers.every((t) => t.status === 'APPROVED')).toBe(true);
+
+    // RETURN(戻し)も即時経路で動く
+    const back = await call('POST', '/api/v1/admin/marketing/transfer', asAdmin(financeAdmin, ['FINANCE_ADMIN']), {
+      body: { direction: 'RETURN', amount: 100, reason: 'correction' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(back.status).toBe(200);
+    const after = await call('GET', '/api/v1/admin/marketing/overview', asAdmin(financeAdmin, ['FINANCE_ADMIN']));
+    expect(Number((after.body as { marketing_budget: string }).marketing_budget) - budget0).toBeCloseTo(3000, 6);
+  });
+});
+
 describe('admin recovery surface (Decision 067)', () => {
   function asAdmin(userId: string, roles: string[]): AuthContext {
     return { kind: 'admin', userId, roles };

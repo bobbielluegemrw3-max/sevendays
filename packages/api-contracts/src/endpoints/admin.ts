@@ -761,6 +761,143 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
     },
   });
 
+  // ---- 運営広告費口座(FUN改修 B層・FUN_V2_PLAN §4 / FUN_REVISION §9.3) ----
+  // 「吐き出し」の器: レースの数学は曲げず、賞金イベントの原資をここから足す。
+  // 帳簿上の移動のみ(現物ウォレットは1つ)。承認は fund-grant と同じ閾値思想
+  // (Decision 089: ≤1,000は1名即時・超は二重承認)。ユーザーには残高を見せない。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/admin/marketing/overview',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const balances = await ctx.client.query<{ account_type: string; balance: string }>(
+        `select a.account_type::text as account_type, coalesce(b.balance, 0)::text as balance
+         from ledger_accounts a
+         left join ledger_account_balances b on b.account_id = a.id
+         where a.owner_type = 'PLATFORM'
+           and a.account_type in ('PLATFORM_OPERATING_RESERVE', 'PLATFORM_MARKETING_BUDGET')`,
+      );
+      const byType = new Map(balances.rows.map((r) => [r.account_type, r.balance]));
+      const transfers = await ctx.client.query(
+        `select t.id, t.direction, t.amount::text as amount, t.reason, t.status,
+                t.created_at::text as created_at, t.approved_at::text as approved_at,
+                ru.email as requested_by_email, t.requested_by
+         from marketing_budget_transfers t
+         join users ru on ru.id = t.requested_by
+         order by (t.status = 'PENDING') desc, t.created_at desc
+         limit 50`,
+      );
+      return {
+        operating_reserve: byType.get('PLATFORM_OPERATING_RESERVE') ?? '0',
+        marketing_budget: byType.get('PLATFORM_MARKETING_BUDGET') ?? '0',
+        single_approval_limit: SINGLE_APPROVAL_ADJUSTMENT_LIMIT_USDT,
+        transfers: transfers.rows,
+      };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/marketing/transfer',
+    auth: 'admin',
+    idempotencyKeyRequired: true,
+    input: z.object({
+      direction: z.enum(['FUND', 'RETURN']),
+      amount: z.number().positive().max(1000000),
+      reason: z.string().min(1).max(500),
+    }),
+    handler: async (ctx, input) => {
+      requireAdminRole(ctx);
+      const row = await ctx.client.query<{ id: string }>(
+        `insert into marketing_budget_transfers (direction, amount, reason, requested_by, idempotency_key)
+         values ($1, $2, $3, $4, $5)
+         on conflict (idempotency_key) do update set idempotency_key = excluded.idempotency_key
+         returning id`,
+        [input.direction, input.amount, input.reason, ctx.userId, ctx.idempotencyKey],
+      );
+      const transferId = row.rows[0]!.id;
+
+      if (input.amount <= SINGLE_APPROVAL_ADJUSTMENT_LIMIT_USDT) {
+        const reserve = await getPlatformAccountId(ctx.client, 'PLATFORM_OPERATING_RESERVE');
+        const budget = await getPlatformAccountId(ctx.client, 'PLATFORM_MARKETING_BUDGET');
+        const amount = Money.of(input.amount);
+        const [from, to] = input.direction === 'FUND' ? [reserve, budget] : [budget, reserve];
+        const posted = await postSingleApproverAdjustment(ctx.client, {
+          type: 'ADMIN_ADJUSTMENT',
+          idempotencyKey: `marketing-transfer:${transferId}`,
+          referenceType: 'marketing_budget_transfer',
+          referenceId: transferId,
+          reason: input.reason,
+          approvedBy: ctx.userId,
+          entries: [
+            { accountId: from, direction: 'DEBIT', amount },
+            { accountId: to, direction: 'CREDIT', amount },
+          ],
+        });
+        await ctx.client.query(
+          `update marketing_budget_transfers
+           set status = 'APPROVED', approved_by = $2, approved_at = now(), ledger_transaction_id = $3
+           where id = $1`,
+          [transferId, ctx.userId, posted.transactionId],
+        );
+        await audit(ctx, 'ADMIN_MARKETING_TRANSFER_INSTANT', 'marketing_budget_transfer', transferId);
+        return { id: transferId, status: 'APPROVED', instant: true };
+      }
+
+      await audit(ctx, 'ADMIN_MARKETING_TRANSFER_REQUESTED', 'marketing_budget_transfer', transferId);
+      return { id: transferId, status: 'PENDING' };
+    },
+  });
+
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/admin/marketing/transfers/:id/approve',
+    auth: 'admin',
+    handler: async (ctx) => {
+      requireAdminRole(ctx);
+      const q = await ctx.client.query<{
+        id: string; direction: string; amount: string; reason: string;
+        requested_by: string; status: string;
+      }>(
+        `select id, direction, amount::text as amount, reason, requested_by, status
+         from marketing_budget_transfers where id = $1`,
+        [ctx.params.id],
+      );
+      const t = q.rows[0];
+      if (!t) throw new ApiError('NOT_FOUND', 'Transfer not found');
+      if (t.status !== 'PENDING') throw new ApiError('TRANSFER_NOT_PENDING', `Transfer is ${t.status}`);
+      if (t.requested_by === ctx.userId) {
+        throw new ApiError('FORBIDDEN', 'Dual approval requires a different admin');
+      }
+      const reserve = await getPlatformAccountId(ctx.client, 'PLATFORM_OPERATING_RESERVE');
+      const budget = await getPlatformAccountId(ctx.client, 'PLATFORM_MARKETING_BUDGET');
+      const amount = Money.of(t.amount);
+      const [from, to] = t.direction === 'FUND' ? [reserve, budget] : [budget, reserve];
+      const posted = await postAdminAdjustment(ctx.client, {
+        type: 'ADMIN_ADJUSTMENT',
+        idempotencyKey: `marketing-transfer:${t.id}`,
+        referenceType: 'marketing_budget_transfer',
+        referenceId: t.id,
+        reason: t.reason,
+        approvedBy1: t.requested_by,
+        approvedBy2: ctx.userId,
+        entries: [
+          { accountId: from, direction: 'DEBIT', amount },
+          { accountId: to, direction: 'CREDIT', amount },
+        ],
+      });
+      await ctx.client.query(
+        `update marketing_budget_transfers
+         set status = 'APPROVED', approved_by = $2, approved_at = now(), ledger_transaction_id = $3
+         where id = $1`,
+        [t.id, ctx.userId, posted.transactionId],
+      );
+      await audit(ctx, 'ADMIN_MARKETING_TRANSFER_APPROVED', 'marketing_budget_transfer', t.id);
+      return { id: t.id, status: 'APPROVED' };
+    },
+  });
+
   registry.register({
     method: 'GET',
     path: '/api/v1/admin/fund-grants',

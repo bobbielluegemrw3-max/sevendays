@@ -242,3 +242,10 @@
 .wrap :global(button.secondary:hover){ background:rgba(255,255,255,0.08); transform:none; }
 .wrap :global(span.error){ color:var(--c-bad); font-size:12px; }
 .wrap :global(span.muted){ color:var(--c-ink-3); font-size:12px; }
+
+/* 広告費タブ(FUN改修 B層)の移動フォーム */
+.panelBox { border: 1px solid var(--c-line); border-radius: 12px; background: var(--c-surface); padding: 14px 16px; }
+.formRow { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.formField { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--c-mut); min-width: 160px; }
+.formField > span { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; }
+.formFieldWide { flex: 1; min-width: 240px; }

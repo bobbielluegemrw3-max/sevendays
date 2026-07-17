@@ -22,6 +22,7 @@ const GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
     label: '資金',
     links: [
       { href: '/admin/economy', label: '経済' },
+      { href: '/admin/marketing', label: '広告費' },
       { href: '/admin/withdrawals', label: '出金レビュー' },
       { href: '/admin/recovery', label: 'リカバリ' },
     ],
