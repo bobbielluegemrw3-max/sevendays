@@ -4,18 +4,27 @@ import {
   ABILITY_WEIGHTS_V1,
   ITEM_POLICY_VERSION_V2,
   deriveNightForecastV1,
+  isRaceEngineV2,
   type AbilityName,
   type HorseType,
   type Rarity,
+  type Surface,
+  type TrackCondition,
+  type TrainingMenuV2,
   type TrainingType,
+  type Weather,
 } from '@sevendays/domain';
 import {
+  applyDecayV2,
+  applyTotalValueGainV2,
   computeDailyState,
   deriveSurface,
   deriveTrackCondition,
   deriveWeather,
   resolveItemEffect,
   round2,
+  trackModifier,
+  weatherModifier,
 } from '@sevendays/race-engine';
 
 function clampStat(x: number): number {
@@ -64,13 +73,12 @@ interface HorseRow {
   fatigue: string;
 }
 
-export async function createParticipantSnapshots(
+/** ADR-012: 条件シード(night_forecasts)があればそこから、無ければレースシード由来で
+ *  条件を導出し、レース行へ凍結する(V1/V2共通 — 予報との70%結合のため同一シードが必須)。 */
+async function deriveAndFreezeConditions(
   client: SqlClient,
   input: CreateSnapshotsInput,
-): Promise<number> {
-  // ADR-012: 前夜にコミット済みの条件シード(night_forecasts)があれば、そこから
-  // 実際の条件を導出する(予報との70%結合のため同一シードが必須)。行が無い日
-  // (初日・移行期)は従来どおりレースシード由来 — 後方互換のフォールバック。
+): Promise<{ weather: Weather; track: TrackCondition; surface: Surface }> {
   const fc = await client.query<{ seed: string }>(
     `select seed from night_forecasts where forecast_date = $1::date`,
     [input.batchDate],
@@ -82,14 +90,24 @@ export async function createParticipantSnapshots(
         track: deriveTrackCondition(input.raceSeed, input.raceEngineVersion),
         surface: deriveSurface(input.raceSeed, input.raceEngineVersion),
       };
-  const weather = derived.weather;
-  const track = derived.track;
-  const surface = derived.surface;
-  const conditions = { weather, track, surface } as const;
   await client.query(
     `update races set weather = $2, track_condition = $3, surface = $4 where id = $1`,
-    [input.raceId, weather, track, surface],
+    [input.raceId, derived.weather, derived.track, derived.surface],
   );
+  return derived;
+}
+
+export async function createParticipantSnapshots(
+  client: SqlClient,
+  input: CreateSnapshotsInput,
+): Promise<number> {
+  const conditions = await deriveAndFreezeConditions(client, input);
+  // V2(Decision 101/104): 保存済みバージョンで分岐 — 過去レースのリプレイは
+  // 常に当時の経路を通る(リプレイ互換は憲法)。
+  if (isRaceEngineV2(input.raceEngineVersion)) {
+    return createParticipantSnapshotsV2(client, input, conditions);
+  }
+  const { weather, track, surface } = conditions;
 
   // Market Lock (Decision 076): a manually listed horse does not race —
   // excluded from the snapshot, so current_day and value stay frozen while
@@ -270,6 +288,180 @@ export async function createParticipantSnapshots(
           await client.query(
             `update item_usages set status = 'SNAPSHOTTED', race_id = $2 where id = $1`,
             [usageRow.id, input.raceId],
+          );
+        }
+      }
+      await client.query('commit');
+    } catch (error) {
+      await client.query('rollback').catch(() => undefined);
+      throw error;
+    }
+  }
+
+  await client.query(
+    `update races set participant_count = (
+       select count(*) from race_participant_snapshots where race_id = $1
+     ) where id = $1`,
+    [input.raceId],
+  );
+  return created;
+}
+
+interface HorseRowV2 {
+  id: string;
+  owner_user_id: string;
+  current_day: number;
+  horse_type: HorseType;
+  rarity: Rarity;
+  dna_hash: string;
+  total_value: string | null;
+}
+
+interface TrainingRowV2 {
+  id: string;
+  menus_v2: TrainingMenuV2[] | null;
+  per_menu_v2: unknown;
+  synergy_v2: string | null;
+  delta_v2: string | null;
+  rests_decay_v2: boolean | null;
+}
+
+/**
+ * V2 snapshot (Decision 101/104): the training roll already RESOLVED at
+ * confirm time and lives on the training_sessions row — this step only reads
+ * it, advances the Total Value recurrence (softcap-gain then decay, REST
+ * negates the decay tick — same order as the design sim), and freezes:
+ *   - total_value                (the value that races tonight)
+ *   - condition_prep_modifier    (type aptitude for revealed weather+track,
+ *                                 +-4 vessel; race items join in a later phase)
+ *   - training_snapshot_json     (the V2 roll, for attribution display/replay)
+ * No condition/fatigue advance, no rarity/buff/item modifiers — the V2 score
+ * is total_value + prep + luck, nothing else (Decision 101).
+ */
+async function createParticipantSnapshotsV2(
+  client: SqlClient,
+  input: CreateSnapshotsInput,
+  conditions: { weather: Weather; track: TrackCondition; surface: Surface },
+): Promise<number> {
+  const { weather, track } = conditions;
+
+  // Market Lock (Decision 076) unchanged: manually listed horses do not race.
+  const horses = await client.query<HorseRowV2>(
+    `select h.id, h.owner_user_id, h.current_day, h.horse_type::text as horse_type,
+            h.rarity::text as rarity, h.dna_hash, h.total_value::text as total_value
+     from horses h
+     where h.status = 'ACTIVE'
+       and not exists (
+         select 1 from market_listings ml
+         where ml.horse_id = h.id and ml.status = 'LISTED' and ml.source = 'MANUAL'
+       )
+     order by h.id`,
+  );
+
+  let created = 0;
+  for (const horse of horses.rows) {
+    if (horse.total_value === null) {
+      // A V2 race requires every horse to be minted with a Total Value —
+      // a NULL here means corrupted season state, never a legal input.
+      throw new Error(`V2_TOTAL_VALUE_MISSING: horse ${horse.id} has no total_value`);
+    }
+
+    const training = await client.query<TrainingRowV2>(
+      `select id, menus_v2, per_menu_v2, synergy_v2::text as synergy_v2,
+              delta_v2::text as delta_v2, rests_decay_v2
+       from training_sessions
+       where horse_id = $1 and effective_race_date = $2 and snapshot_included_at is null`,
+      [horse.id, input.batchDate],
+    );
+    const trainingRow = training.rows[0] ?? null;
+    // A V1-shaped row (no menus) in a V2 race has no Total Value effect but is
+    // still frozen below — it must not leak into a later race date.
+    const v2Roll = trainingRow !== null && trainingRow.menus_v2 !== null ? trainingRow : null;
+    const delta = v2Roll ? Number(v2Roll.delta_v2) : null;
+    const restsDecay = v2Roll ? v2Roll.rests_decay_v2 === true : false;
+
+    const before = Number(horse.total_value);
+    const afterGain = delta === null ? before : applyTotalValueGainV2(before, delta);
+    const totalValue = applyDecayV2(afterGain, restsDecay);
+
+    const prep = round2(
+      weatherModifier(weather, horse.horse_type) + trackModifier(track, horse.horse_type),
+    );
+
+    const trainingSnapshot = v2Roll
+      ? {
+          menus: v2Roll.menus_v2,
+          per_menu: v2Roll.per_menu_v2,
+          synergy: Number(v2Roll.synergy_v2),
+          delta: Number(v2Roll.delta_v2),
+          rests_decay: v2Roll.rests_decay_v2 === true,
+        }
+      : null;
+
+    const snapshotHash = sha256Parts(
+      input.raceId,
+      horse.id,
+      horse.owner_user_id,
+      String(horse.current_day),
+      horse.horse_type,
+      horse.dna_hash,
+      String(totalValue),
+      String(prep),
+      JSON.stringify(trainingSnapshot),
+      weather,
+      track,
+      input.raceEngineVersion,
+    );
+
+    // Per-horse atomicity (same as V1): snapshot insert, Total Value advance
+    // and training freeze commit together or not at all.
+    await client.query('begin');
+    try {
+      const inserted = await client.query<{ id: string }>(
+        `insert into race_participant_snapshots (
+           race_id, horse_id, owner_user_id, current_day, horse_type, rarity, dna_hash,
+           ability_snapshot_json, training_snapshot_json,
+           total_value, condition_prep_modifier,
+           weather, track_condition, race_engine_version, liquidity_policy_version,
+           price_table_version, race_seed_hash, snapshot_hash
+         )
+         select $1, $2, $3, $4, $5::horse_type, $6::rarity, $7, '{}'::jsonb, $8,
+                $9, $10, $11::weather, $12::track_condition, $13, $14, $15,
+                (select commit_hash from randomness_commits rc
+                   join races r on r.seed_commit_id = rc.id where r.id = $1),
+                $16
+         on conflict (race_id, horse_id) do nothing
+         returning id`,
+        [
+          input.raceId,
+          horse.id,
+          horse.owner_user_id,
+          horse.current_day,
+          horse.horse_type,
+          horse.rarity,
+          horse.dna_hash,
+          trainingSnapshot ? JSON.stringify(trainingSnapshot) : null,
+          totalValue,
+          prep,
+          weather,
+          track,
+          input.raceEngineVersion,
+          input.liquidityPolicyVersion,
+          input.priceTableVersion,
+          snapshotHash,
+        ],
+      );
+
+      if (inserted.rows.length > 0) {
+        created += 1;
+        await client.query(`update horses set total_value = $2 where id = $1`, [
+          horse.id,
+          totalValue,
+        ]);
+        if (trainingRow) {
+          await client.query(
+            `update training_sessions set snapshot_included_at = now() where id = $1`,
+            [trainingRow.id],
           );
         }
       }

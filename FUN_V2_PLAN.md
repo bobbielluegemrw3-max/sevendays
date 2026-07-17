@@ -283,8 +283,19 @@
   `race-engine/src/v2/`(mintTotalValueV2・hiddenPreferencesV2(70/30法則を統計テストで検証)・
   resolveTrainingRollV2(上振れ/下振れ/シナジー)・applyTotalValueGainV2(ソフトキャップ)・
   applyDecayV2・computeScoreV2(総合値+備え±4+運±3・LUCK拡大))— 全55テストPASS
-- [ ] V2実装-1b: settlement-engine結線(スナップショットV2・horses.total_value列・
-  race_engine_version 'race_v2.0'・マイグレーション)
+- [x] V2実装-1b: **settlement-engine結線**(2026-07-17): migration `20260717030000_v2_engine.sql`
+  (本番適用済み・全て追加のみ) = `horses.total_value` /
+  training_sessions V2列(menus_v2・per_menu_v2・synergy_v2・delta_v2・rests_decay_v2+
+  不変ガード拡張・V1/V2排他check)/ スナップショットV2列(total_value・condition_prep_modifier=
+  入力凍結、luck_modifier=スコア列。ガードにitem_snapshot_json凍結も追補)/
+  **`race_engine_v2.0` は非アクティブ登録**(本番バッチはv1.1をロックし続ける —
+  有効化はテストネットリセット時に `activatePolicy` で別途)。
+  結線は `createParticipantSnapshots`/`runRaceScores`/`verifyReplayInputs` の内部バージョン分岐
+  (production.ts無変更=V1リプレイは常に当時の経路)。漸化=ロールdeltaをソフトキャップ加算→
+  減衰2.0(RESTで無効)— シムと同順。備え±4=WEATHER_MODIFIER_V1+TRACK_MODIFIER_V1の合成
+  (各±2・発明なし)。調教ロールは確定時解決済みの前提でスナップショットは読むだけ。
+  PGliteテスト4件(漸化/ソフトキャップ跨ぎ/REST/冪等/LUCK運レンジ/リプレイ検証/不変ガード/
+  非アクティブ登録)全PASS
 - [ ] V2実装-2: バッチ2回制(102・(batch_date,slot)キー・買戻しバックストップ)
 - [ ] V2実装-3: プール購入(103) → -4: 新調教UI(104) → -5: ジャックポット(106仮値) →
   -6: 新アイテムカタログ起草(104-5) → -7: 表示のLV置換 → テストネット試運転開始

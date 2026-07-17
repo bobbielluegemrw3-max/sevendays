@@ -1,14 +1,15 @@
 import type { SqlClient } from '@sevendays/shared';
-import type {
-  AbilityName,
-  BuffRarity,
-  HorseType,
-  Rarity,
-  TrackCondition,
-  TrainingType,
-  Weather,
+import {
+  isRaceEngineV2,
+  type AbilityName,
+  type BuffRarity,
+  type HorseType,
+  type Rarity,
+  type TrackCondition,
+  type TrainingType,
+  type Weather,
 } from '@sevendays/domain';
-import { computeScore, type ScoreInput } from '@sevendays/race-engine';
+import { computeScore, computeScoreV2, type ScoreInput } from '@sevendays/race-engine';
 
 /**
  * Batch Step 8 — Run Race Engine: compute every participant's score from
@@ -44,6 +45,11 @@ export interface RunScoresInput {
 }
 
 export async function runRaceScores(client: SqlClient, input: RunScoresInput): Promise<number> {
+  // V2(Decision 101): score = total_value + condition_prep + luck。保存済み
+  // バージョンで分岐 — 過去レースのリプレイは常に当時の経路(憲法)。
+  if (isRaceEngineV2(input.raceEngineVersion)) {
+    return runRaceScoresV2(client, input);
+  }
   const snapshots = await client.query<SnapshotRow>(
     `select s.id, s.horse_id, s.horse_type::text as horse_type, s.rarity::text as rarity,
             s.ability_snapshot_json, s.training_snapshot_json, s.revenge_buff_snapshot_json,
@@ -101,6 +107,49 @@ export async function runRaceScores(client: SqlClient, input: RunScoresInput): P
         s.itemModifier,
         s.finalScore,
       ],
+    );
+    scored += 1;
+  }
+  return scored;
+}
+
+interface SnapshotRowV2 {
+  id: string;
+  horse_id: string;
+  horse_type: HorseType;
+  total_value: string;
+  condition_prep_modifier: string;
+  training_snapshot_json: unknown;
+}
+
+/** V2: 凍結済みの total_value と備え補正から computeScoreV2 で採点し、
+ *  luck_modifier + final_score のみを一度だけ書く(スナップショット凍結則)。 */
+async function runRaceScoresV2(client: SqlClient, input: RunScoresInput): Promise<number> {
+  const snapshots = await client.query<SnapshotRowV2>(
+    `select s.id, s.horse_id, s.horse_type::text as horse_type,
+            s.total_value::text as total_value,
+            s.condition_prep_modifier::text as condition_prep_modifier,
+            s.training_snapshot_json
+     from race_participant_snapshots s
+     where s.race_id = $1 and s.final_score is null
+     order by s.horse_id`,
+    [input.raceId],
+  );
+
+  let scored = 0;
+  for (const row of snapshots.rows) {
+    const s = computeScoreV2({
+      horseUuid: row.horse_id,
+      horseType: row.horse_type,
+      totalValue: Number(row.total_value),
+      conditionPrepModifier: Number(row.condition_prep_modifier),
+      trained: row.training_snapshot_json !== null,
+      raceSeed: input.raceSeed,
+      raceEngineVersion: input.raceEngineVersion,
+    });
+    await client.query(
+      `update race_participant_snapshots set luck_modifier = $2, final_score = $3 where id = $1`,
+      [row.id, s.luckModifier, s.finalScore],
     );
     scored += 1;
   }

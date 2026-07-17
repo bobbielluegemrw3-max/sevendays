@@ -1,6 +1,6 @@
 import { newUuid, generateSecureSeedHex, sha256Hex, Money } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import { deriveNightForecastV1, type EconomyStatus } from '@sevendays/domain';
+import { deriveNightForecastV1, isRaceEngineV2, type EconomyStatus } from '@sevendays/domain';
 import {
   computeEconomyMetrics,
   currentEconomyStatus,
@@ -15,6 +15,7 @@ import {
 } from '@sevendays/economy-engine';
 import {
   computeScore,
+  computeScoreV2,
   deriveTrackCondition,
   deriveWeather,
   rankParticipants,
@@ -541,6 +542,12 @@ export async function verifyReplayInputs(
     throw new Error(`RACE_SEED_VERIFICATION_FAILED: SHA-256(seed) != commit (race ${raceId})`);
   }
 
+  // V2(Decision 101): 凍結済み入力から computeScoreV2 で再計算する専用経路。
+  // 保存済みバージョンで分岐 — 過去レースのリプレイは常に当時の経路(憲法)。
+  if (isRaceEngineV2(raceEngineVersion)) {
+    return verifyReplayInputsV2(client, raceId, raceEngineVersion, seed);
+  }
+
   const snapshots = await client.query<{
     horse_id: string;
     horse_type: ScoreInput['horseType'];
@@ -617,6 +624,86 @@ export async function verifyReplayInputs(
   }
 
   // ranking sanity: recomputed order must be internally consistent
+  rankParticipants(
+    snapshots.rows.map((s) => ({ horseUuid: s.horse_id, finalScore: Number(s.final_score) })),
+    seed,
+    raceEngineVersion,
+  );
+}
+
+/** Step 10 (V2): environment + score replay from the frozen V2 inputs. */
+async function verifyReplayInputsV2(
+  client: SqlClient,
+  raceId: string,
+  raceEngineVersion: string,
+  seed: string,
+): Promise<void> {
+  const snapshots = await client.query<{
+    horse_id: string;
+    horse_type: ScoreInput['horseType'];
+    total_value: string | null;
+    condition_prep_modifier: string | null;
+    training_snapshot_json: unknown;
+    weather: ScoreInput['weather'];
+    track_condition: ScoreInput['track'];
+    final_score: string | null;
+  }>(
+    `select s.horse_id, s.horse_type::text as horse_type,
+            s.total_value::text as total_value,
+            s.condition_prep_modifier::text as condition_prep_modifier,
+            s.training_snapshot_json,
+            s.weather::text as weather, s.track_condition::text as track_condition,
+            s.final_score::text as final_score
+     from race_participant_snapshots s
+     where s.race_id = $1 order by s.horse_id`,
+    [raceId],
+  );
+
+  // ADR-012: 条件シード(night_forecasts)がある夜は、環境の再導出もそのシードから。
+  const fc = await client.query<{ seed: string }>(
+    `select nf.seed from night_forecasts nf
+     join batch_runs b on b.batch_date = nf.forecast_date
+     join races r on r.batch_run_id = b.id
+     where r.id = $1`,
+    [raceId],
+  );
+  const expectedEnv = fc.rows[0]
+    ? deriveNightForecastV1(fc.rows[0].seed).actual
+    : {
+        weather: deriveWeather(seed, raceEngineVersion),
+        track: deriveTrackCondition(seed, raceEngineVersion),
+      };
+
+  for (const snap of snapshots.rows) {
+    if (snap.weather !== expectedEnv.weather || snap.track_condition !== expectedEnv.track) {
+      throw new Error(
+        `RACE_SNAPSHOT_VERIFICATION_FAILED: environment mismatch (race ${raceId}, horse ${snap.horse_id})`,
+      );
+    }
+    if (snap.final_score === null) {
+      throw new Error(`RACE_SNAPSHOT_VERIFICATION_FAILED: unscored snapshot (horse ${snap.horse_id})`);
+    }
+    if (snap.total_value === null || snap.condition_prep_modifier === null) {
+      throw new Error(
+        `RACE_SNAPSHOT_VERIFICATION_FAILED: v2 inputs missing (horse ${snap.horse_id})`,
+      );
+    }
+    const recomputed = computeScoreV2({
+      horseUuid: snap.horse_id,
+      horseType: snap.horse_type,
+      totalValue: Number(snap.total_value),
+      conditionPrepModifier: Number(snap.condition_prep_modifier),
+      trained: snap.training_snapshot_json !== null,
+      raceSeed: seed,
+      raceEngineVersion,
+    });
+    if (!Money.of(String(recomputed.finalScore)).eq(snap.final_score)) {
+      throw new Error(
+        `RACE_SNAPSHOT_VERIFICATION_FAILED: score replay mismatch (horse ${snap.horse_id}: stored ${snap.final_score}, replayed ${recomputed.finalScore})`,
+      );
+    }
+  }
+
   rankParticipants(
     snapshots.rows.map((s) => ({ horseUuid: s.horse_id, finalScore: Number(s.final_score) })),
     seed,

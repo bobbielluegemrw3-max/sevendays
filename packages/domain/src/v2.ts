@@ -12,6 +12,14 @@ import type { HorseType } from './enums.js';
  * 表示・エンジン・シミュレーションはこの単一の定数を参照する(嘘の数字を見せない原則)。
  */
 
+/** レースエンジンV2のバージョン文字列(race_engine_versionsに登録・リセット時に有効化)。 */
+export const RACE_ENGINE_V2_VERSION = 'race_engine_v2.0';
+
+/** 保存済みバージョン文字列でV1/V2経路を分岐する(リプレイはこの判定に従う)。 */
+export function isRaceEngineV2(version: string): boolean {
+  return version.startsWith('race_engine_v2');
+}
+
 export const TOTAL_VALUE_V2 = {
   /** 新規発行馬の総合値(一様分布)。90台は生まれでは出ない — 育成でのみ到達。 */
   mintMin: 40,
