@@ -17,16 +17,19 @@ export function TotalAssetsCard({
   available,
   locked,
   stableValue,
+  uncollected = 0,
   t,
 }: {
   available: string;
   locked: string;
   stableValue: number;
+  /** 未回収(利確待ち)の上昇分 — 調教確定までは総資産に合流させない(A2・表示の儀式)。 */
+  uncollected?: number;
   t: AppDict['dash'];
 }) {
   const bal = Number(available);
   const lock = Number(locked);
-  const total = bal + stableValue + lock;
+  const total = bal + stableValue + lock - uncollected;
   return (
     <div className={s.card}>
       <div className={s.head}>
@@ -37,7 +40,7 @@ export function TotalAssetsCard({
           <span className={s.totalV}>{money(total)}</span>
           <span className={s.totalU}>USDT</span>
         </div>
-        <div className={s.eq} role="math" aria-label={`${t.total_bal} ${money(bal)} + ${t.total_stable} ${money(stableValue)} + ${t.total_locked} ${money(lock)} = ${money(total)}`}>
+        <div className={s.eq} role="math" aria-label={`${t.total_bal} ${money(bal)} + ${t.total_stable} ${money(stableValue)} + ${t.total_locked} ${money(lock)}${uncollected > 0 ? ` - ${t.total_uncollected_k} ${money(uncollected)}` : ''} = ${money(total)}`}>
           <span className={s.part}>
             <span className={s.partK}>{t.total_bal}</span>
             <span className={s.partV}>{money(bal)}</span>
@@ -52,12 +55,26 @@ export function TotalAssetsCard({
             <span className={s.partK}>{t.total_locked}</span>
             <span className={`${s.partV} ${s.partLocked}`}>{money(lock)}</span>
           </span>
+          {uncollected > 0 ? (
+            <>
+              <span className={s.op}>−</span>
+              <span className={s.part}>
+                <span className={s.partK}>{t.total_uncollected_k}</span>
+                <span className={`${s.partV} ${s.partUncollected}`}>{money(uncollected)}</span>
+              </span>
+            </>
+          ) : null}
           <span className={`${s.op} ${s.opEq}`}>=</span>
           <span className={`${s.part} ${s.partEq}`}>
             <span className={s.partK}>TOTAL</span>
             <span className={`${s.partV} ${s.partTotal}`}>{money(total)}</span>
           </span>
         </div>
+        {uncollected > 0 ? (
+          <div className={s.uncollectedLine}>
+            {(t.total_uncollected_tpl ?? '未回収 +{v}').replace('{v}', money(uncollected))}
+          </div>
+        ) : null}
       </div>
       <div className={s.note}>{t.total_note}</div>
     </div>

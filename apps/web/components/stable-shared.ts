@@ -23,3 +23,19 @@ export function horseValue(currentDay: number): string {
 export function rarClass(rarity: string): string {
   return s[`rar${RARITIES.includes(rarity) ? rarity : 'COMMON'}`]!;
 }
+
+/** 未回収(利確)の上昇分(FUN_V2_PLAN §3 A2)。
+ *  昨夜生存でLVが上がったのに今夜の調教が未確定の馬 = 「まだ刈り取っていない」。
+ *  手動出品中は今夜走らない(調教も不可)ため対象外。経済の実体は不変 — 表示の儀式。 */
+export function uncollectedGain(h: {
+  status: string;
+  current_day: number;
+  trained_for_next_race: boolean;
+  listing?: string | null;
+}): number {
+  if (h.status !== 'ACTIVE' || h.trained_for_next_race || h.current_day < 1) return 0;
+  if (h.listing === 'MANUAL') return 0;
+  const now = Number(horseValue(h.current_day));
+  const prev = Number(horseValue(h.current_day - 1));
+  return Math.max(0, now - prev);
+}

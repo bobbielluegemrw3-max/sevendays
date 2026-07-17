@@ -23,13 +23,15 @@ function money(v: string): string {
 }
 
 export function WalletView({
-  wallet, deposit, history, stableValue, assetsCopy,
+  wallet, deposit, history, stableValue, uncollected = 0, assetsCopy,
 }: {
   wallet: Wallet;
   deposit: DepositInfo | null;
   history: HistoryEntry[];
   /** 現役馬の評価額合計(公開価格テーブル基準)。総資産カード用。 */
   stableValue: number;
+  /** 未回収(利確待ち)の上昇分 — A2(FUN_V2_PLAN §3)。 */
+  uncollected?: number;
   /** 総資産カードの文言(dashセクション共用)。 */
   assetsCopy: AppDict['dash'];
 }) {
@@ -44,6 +46,7 @@ export function WalletView({
         available={wallet.available}
         locked={wallet.locked}
         stableValue={stableValue}
+        uncollected={uncollected}
         t={assetsCopy}
       />
 

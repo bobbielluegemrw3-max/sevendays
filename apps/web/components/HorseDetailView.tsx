@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import type { JSX } from 'react';
-import { PRICE_TABLE_V1 } from '@sevendays/domain';
+import { PRICE_TABLE_V1, trainingModifierV1, type HorseType as DomainHorseType, type TrainingType as DomainTrainingType } from '@sevendays/domain';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { HorsePager, type PagerNav } from '@/components/HorsePager';
 import { TrainingForm } from '@/components/TrainingForm';
 import { ItemBoostPanel } from '@/components/ItemBoostPanel';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
+import { uncollectedGain } from '@/components/stable-shared';
 import { APP_COPY, type Lang } from '@/lib/i18n';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
@@ -39,6 +40,9 @@ export interface HorseRaceResult {
   batch_date: string; final_rank: number; final_score: string; is_burned: boolean;
   participant_count: number;
   weather: string | null; track_condition: string | null; surface: string | null;
+  /** その夜の調教(スナップショット由来・帰属表示用 — A2)。 */
+  training_type?: string | null;
+  snapshot_horse_type?: string | null;
 }
 
 export interface HorseDetail {
@@ -58,6 +62,8 @@ export interface HorseDetail {
   listing: string | null;
   /** 次のレース向けの調教済みか(2026-07-14: 調教フォームの完了表示用)。 */
   trained_for_next_race?: boolean;
+  /** 確定済みの調教タイプ(A2: やり直しUIの初期値)。 */
+  tonight_training?: string | null;
   /** 隠し演出(EASTER_EGG_PLAN.md)。 */
   night_variant?: boolean;
   golden_star?: boolean;
@@ -314,6 +320,13 @@ export function HorseDetailView({
   const abilities = Object.entries(horse.ability_json ?? {});
   const history = horse.history ?? [];
   const isActive = mode === 'ACTIVE';
+  // 未回収(利確待ち)の上昇分 — A2の収穫の儀式(FUN_V2_PLAN §3)
+  const uncollected = uncollectedGain({
+    status: horse.status,
+    current_day: horse.current_day,
+    trained_for_next_race: horse.trained_for_next_race === true,
+    listing: horse.listing,
+  });
 
   return (
     <div className={s.wrap}>
@@ -333,6 +346,9 @@ export function HorseDetailView({
             <span className={`${s.badge} ${badge.cls}`}>{badge.label}</span>
             {horse.listing === 'SMART' ? <span className={`${s.badge} ${s.stSmart}`}>{t.st_smart}</span> : null}
             {horse.gifted_at ? <span className={`${s.badge} ${s.stGifted}`}>{t.st_gifted}</span> : null}
+            {uncollected > 0 ? (
+              <span className={`${s.badge} ${s.uncollectedBadge}`}>{fill(ts.uncollected_tpl, { v: uncollected.toFixed(2) })}</span>
+            ) : null}
           </div>
         </div>
         <div className={s.mastR}>
@@ -404,6 +420,8 @@ export function HorseDetailView({
                   horseType={horse.horse_type}
                   fatigue={Number(horse.fatigue)}
                   trained={horse.trained_for_next_race === true}
+                  currentTraining={horse.tonight_training ?? null}
+                  uncollected={uncollected}
                   t={t}
                 />
                 <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} t={t} />
@@ -491,6 +509,16 @@ export function HorseDetailView({
                     <small>{fill(t.heads_tpl, { n: r.participant_count.toLocaleString('en-US') })}</small>
                   </span>
                   <span className={s.histScore}>SCORE {score2(r.final_score)}</span>
+                  {r.training_type ? (
+                    <span className={s.histTrain}>
+                      {fill(t.attr_tpl, {
+                        n: trainingModifierV1(
+                          (r.snapshot_horse_type ?? horse.horse_type) as DomainHorseType,
+                          r.training_type as DomainTrainingType,
+                        ),
+                      })}
+                    </span>
+                  ) : null}
                   <span className={s.histCond}>{conditionsText(r, tc)}</span>
                   <span className={s.histRes}>
                     {r.is_burned ? <span className={s.burnTag}>BURN</span> : <span className={s.survTag}>{t.surv_tag}</span>}

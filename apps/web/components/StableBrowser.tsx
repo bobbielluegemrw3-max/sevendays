@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AppSelect } from '@/components/AppSelect';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
-import { horseValue } from '@/components/stable-shared';
+import { horseValue, uncollectedGain } from '@/components/stable-shared';
 import type { StableHorse } from '@/components/StableView';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
@@ -109,6 +109,9 @@ function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
         </div>
         <DayRail day={h.current_day} />
         <RankLine h={h} t={t} />
+        {uncollectedGain(h) > 0 ? (
+          <div className={s.harvestTag}>{fill(t.uncollected_tpl, { v: uncollectedGain(h).toFixed(2) })}</div>
+        ) : null}
         <div className={s.hfoot}>
           <span className={s.hvalue}>{t.value_now} <b>{horseValue(h.current_day)}</b> USDT</span>
           <span className={`${s.hcta} ${untrained ? s.hctaTrain : s.hctaDetail}`}>{untrained ? t.cta_train : t.cta_detail}</span>

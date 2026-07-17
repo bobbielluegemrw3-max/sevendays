@@ -61,13 +61,19 @@ export function TrainingForm({
   fatigue,
   t,
   trained = false,
+  currentTraining = null,
+  uncollected = 0,
 }: {
   horseId: string;
   horseType: string;
   fatigue: number;
   t: AppDict['horse'];
-  /** 次のレース向けの調教が済んでいる(2026-07-14: 完了表示でボタンを閉じる)。 */
+  /** 次のレース向けの調教が済んでいる(済みでも「変更する」でやり直し可 — A2)。 */
   trained?: boolean;
+  /** 確定済みの調教タイプ(やり直しUIの初期値)。 */
+  currentTraining?: string | null;
+  /** 未回収(利確待ち)の上昇分$ — 初回確定の演出に使う。 */
+  uncollected?: number;
 }) {
   const typeLabel: Record<TrainingType, string> = {
     SPEED_TRAINING: t.tt_speed,
@@ -77,17 +83,27 @@ export function TrainingForm({
   const router = useRouter();
   const type = horseType as HorseType;
   const recommended = recommendedTrainingV1(type, fatigue);
-  const [trainingType, setTrainingType] = useState<TrainingType>(recommended);
+  const [trainingType, setTrainingType] = useState<TrainingType>(
+    (currentTraining as TrainingType | null) ?? recommended,
+  );
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [harvest, setHarvest] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // A2: 確定済みでも20:00スナップショット前ならやり直せる(チケット・回収は初回のみ)
+  const [editing, setEditing] = useState(false);
+  const confirmed = trained && !editing;
 
-  // 調教済み(1日1回)は選択カードを畳んで完了表示だけにする。
-  if (trained) {
+  if (confirmed) {
     return (
       <div className={s.tStack}>
+        {harvest ? <p className={`ok ${s.harvestMsg}`}>{harvest}</p> : null}
+        {message ? <p className="ok">{message}</p> : null}
         <button type="button" disabled>
           {t.train_done}
+        </button>
+        <button type="button" className={s.redoBtn} onClick={() => setEditing(true)}>
+          {t.redo_btn}
         </button>
       </div>
     );
@@ -97,18 +113,29 @@ export function TrainingForm({
     setBusy(true);
     setError(null);
     setMessage(null);
-    const result = await apiFetch<{ effective_race_date: string }>(
-      `/api/v1/horses/${horseId}/training`,
-      { method: 'POST', body: { training_type: trainingType } },
-    );
+    setHarvest(null);
+    const result = await apiFetch<{
+      effective_race_date: string;
+      first_confirm: boolean;
+      training_tickets: number;
+    }>(`/api/v1/horses/${horseId}/training`, { method: 'POST', body: { training_type: trainingType } });
     setBusy(false);
     if (result.status !== 200) {
       setError(errorMessage(result.body) ?? t.train_fail);
       return;
     }
-    setMessage(
-      fill(t.train_applied_tpl, { date: (result.body as { effective_race_date: string }).effective_race_date }),
-    );
+    const body = result.body as { effective_race_date: string; first_confirm: boolean; training_tickets: number };
+    if (body.first_confirm) {
+      // 初回確定 = 利確+チケット(A2の収穫の瞬間)
+      const parts: string[] = [];
+      if (uncollected > 0) parts.push(fill(t.harvest_done_tpl, { v: uncollected.toFixed(2) }));
+      parts.push(fill(t.ticket_nth_tpl, { n: body.training_tickets }));
+      setHarvest(parts.join(' '));
+      setMessage(fill(t.train_applied_tpl, { date: body.effective_race_date }));
+    } else {
+      setMessage(t.redo_saved);
+    }
+    setEditing(false);
     router.refresh();
   }
 
@@ -150,6 +177,7 @@ export function TrainingForm({
         <div className={s.tLuckNote}>{t.luck_note}</div>
       ) : null}
       {error ? <p className="error">{error}</p> : null}
+      {harvest ? <p className={`ok ${s.harvestMsg}`}>{harvest}</p> : null}
       {message ? <p className="ok">{message}</p> : null}
       <button type="button" disabled={busy} onClick={() => void submit()}>
         {busy ? t.train_busy : t.train_submit}

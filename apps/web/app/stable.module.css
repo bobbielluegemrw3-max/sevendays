@@ -381,3 +381,12 @@
 .bandMid { color: #aab4c8; border-color: rgba(170, 180, 200, 0.4); }
 .bandRisk { color: #ff5c8a; border-color: rgba(255, 92, 138, 0.55); }
 .rankLine { font-family: var(--font-mono); font-size: 9.5px; margin-top: 7px; letter-spacing: 0.04em; }
+
+/* 未回収(利確待ち)タグ — A2の収穫の儀式(FUN_V2_PLAN §3) */
+.harvestTag {
+  display: inline-flex; align-self: flex-start; margin-top: 6px;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.05em;
+  color: var(--gold-bright); border: 1px solid rgba(201, 168, 106, 0.5);
+  background: rgba(201, 168, 106, 0.1); border-radius: 999px; padding: 2px 8px;
+  animation: sdd-pulse 2.2s infinite;
+}

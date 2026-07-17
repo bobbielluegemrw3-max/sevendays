@@ -7,6 +7,7 @@ import { PromoRedeemForm } from '@/components/PromoRedeemForm';
 import { TradeAutoTile, TradeModeModal, type TradeSettings } from '@/components/TradeAutoControls';
 import { TotalAssetsCard } from '@/components/TotalAssetsCard';
 import { deriveNftLook } from '@/lib/nft-visual';
+import { uncollectedGain } from '@/components/stable-shared';
 import { APP_COPY, type Lang, type AppDict } from '@/lib/i18n';
 import { formatMonthDay } from '@/lib/i18n-shared';
 import s from '../app/dashboard.module.css';
@@ -35,6 +36,7 @@ export interface DashHorse {
   id: string; name: string; status: string; current_day: number;
   horse_type: string; rarity: string; condition: string; fatigue: string;
   dna_hash: string; trained_for_next_race: boolean;
+  listing?: string | null;
 }
 export interface DashWallet { available: string; locked: string }
 export interface DashBuff { buff_rarity: string; buff_bonus_score: string; status: string }
@@ -207,7 +209,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
       <section className={s.assets}>
         {wallet ? (
           <div className={s.totalRow}>
-            <TotalAssetsCard available={wallet.available} locked={wallet.locked} stableValue={stableValue} t={t} />
+            <TotalAssetsCard available={wallet.available} locked={wallet.locked} stableValue={stableValue} uncollected={horses.reduce((sum, h) => sum + uncollectedGain(h), 0)} t={t} />
           </div>
         ) : null}
         <Link href="/wallet" className={`${s.kpi} ${s.kpiBal}`}>

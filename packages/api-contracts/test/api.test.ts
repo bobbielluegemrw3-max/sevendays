@@ -738,12 +738,29 @@ describe('training (Decision 066)', () => {
     expect(count.status).toBe(200);
     expect((count.body as { unread: number }).unread).toBe(0);
 
-    // Second training for the same effective race date is rejected.
-    const duplicate = await call('POST', `/api/v1/horses/${horseId}/training`, asUser(owner), {
+    // FUN改修A2(FUN_V2_PLAN §3): 同じ効力日の再調教は「やり直し」= typeを更新。
+    // チケット(=行)は増えない・first_confirm=false・通知は初回のみ。
+    const redo = await call('POST', `/api/v1/horses/${horseId}/training`, asUser(owner), {
       body: { training_type: 'POWER_TRAINING' },
     });
-    expect(duplicate.status).toBe(409);
-    expect((duplicate.body as { error: { code: string } }).error.code).toBe('TRAINING_ALREADY_EXISTS');
+    expect(redo.status).toBe(200);
+    const redoBody = redo.body as { training_type: string; first_confirm: boolean; training_tickets: number };
+    expect(redoBody.training_type).toBe('POWER_TRAINING');
+    expect(redoBody.first_confirm).toBe(false);
+    expect(redoBody.training_tickets).toBe(1); // 行は1つのまま(初回確定のみカウント)
+    const redoRow = await client.query<{ training_type: string; n: string }>(
+      `select training_type::text as training_type,
+              (select count(*) from training_sessions where horse_id = $1) as n
+       from training_sessions where horse_id = $1`,
+      [horseId],
+    );
+    expect(redoRow.rows[0]!.training_type).toBe('POWER_TRAINING');
+    expect(Number(redoRow.rows[0]!.n)).toBe(1);
+    // 通知は増えていない(dedupeKeyが同一+初回のみ発火)
+    const afterRedo = await call('GET', '/api/v1/notifications', asUser(owner));
+    const trainNotifs = (afterRedo.body as { notifications: { notification_type: string }[] }).notifications
+      .filter((n) => n.notification_type === 'TRAINING_COMPLETED');
+    expect(trainNotifs.length).toBe(1);
 
     // Non-ACTIVE horses never race again — training is refused.
     const burnedHorse = await newHorseFor(owner);

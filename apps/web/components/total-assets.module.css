@@ -73,3 +73,11 @@
   /* 等式の「= TOTAL」は大きな合計と重複するためモバイルでは畳む */
   .opEq, .partEq { display: none; }
 }
+
+/* 未回収(利確待ち)行 — A2(FUN_V2_PLAN §3)。調教確定までは総資産に合流しない演出 */
+.uncollectedLine {
+  margin-top: 8px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em;
+  color: var(--gold-bright); animation: taPulse 2.2s infinite;
+}
+@keyframes taPulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+.partUncollected { color: var(--gold-bright); }

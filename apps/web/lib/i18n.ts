@@ -70,6 +70,7 @@ export interface AppDict {
     stable_val_s_tpl: string; // 「USDT · {n}頭の現在価値」
     // 総資産カード(2026-07-16: 残高+評価額+ロック=総資産。/dashboardと/wallet共用)
     total_k: string;
+    total_uncollected_tpl: string; total_uncollected_k: string;
     total_bal: string;
     total_stable: string;
     total_locked: string;
@@ -568,6 +569,7 @@ export interface AppDict {
     badges_title: string;
     tv_chip: string; band_safe: string; band_mid: string; band_risk: string;
     rank_tpl: string; rank_note: string; sort_total: string;
+    uncollected_tpl: string;
     legend_title: string; legend_note: string; legend_chip_tpl: string;
   };
   /** /horses/[id](馬詳細)+ 調教フォーム + ページャ + ブースト + 転送。 */
@@ -601,6 +603,7 @@ export interface AppDict {
     reason_endurance_tpl: string; reason_balanced_tpl: string; reason_luck_tpl: string;
     luck_note: string;
     train_done: string; train_fail: string; train_applied_tpl: string; train_submit: string; train_busy: string;
+    harvest_done_tpl: string; ticket_nth_tpl: string; redo_btn: string; redo_saved: string; attr_tpl: string;
     grp_racing: string; grp_listed: string; grp_champion: string; grp_burned: string; grp_other: string;
     pgr_prev_tpl: string; pgr_next_tpl: string; pgr_jump: string; pgr_rest_tpl: string; pgr_all_done: string;
     mark_flame: string; mark_milestone: string;
@@ -621,6 +624,7 @@ const ja: AppDict = {
   dash: {
     result_label: '昨夜の結果',
     result_label_tpl: '{date}の結果',
+    total_uncollected_tpl: '未回収 +{v} — 調教で回収', total_uncollected_k: '未回収',
     result_detail: 'レース詳細 →',
     res_survived: '生存',
     res_burned: 'Burn(消滅)',
@@ -1157,6 +1161,7 @@ const ja: AppDict = {
     badges_title: '獲得した称号',
     tv_chip: '総合値', band_safe: '安全圏', band_mid: '中位', band_risk: '危険圏',
     rank_tpl: '今夜 {r}位 / {n}頭', rank_note: '順位は目安 — 当日の運と条件で変動します', sort_total: '総合値が高い順',
+    uncollected_tpl: '未回収 +{v}$',
     legend_title: 'レアリティ', legend_note: '加点は毎晩のレーススコアに常時反映(公開ルール)',
     legend_chip_tpl: '{pct} · スコア+{n}',
   },
@@ -1213,6 +1218,9 @@ const ja: AppDict = {
     reason_luck_tpl: '回復調教は加点が最大(+{n})のうえ、調子を上げて疲労も溜めません',
     luck_note: 'LUCKタイプはどの調教でも、今夜の運の振れ幅が上向きになります(−2〜+4)。',
     train_done: '✓ 調教完了 — 次のレースに適用されます', train_fail: 'トレーニングの登録に失敗しました',
+    harvest_done_tpl: '+{v}$ を回収しました!', ticket_nth_tpl: '調教チケット {n}枚目を獲得',
+    redo_btn: '調教を変更する →', redo_saved: '調教を変更しました(チケット・回収は初回のみ)。',
+    attr_tpl: '調教+{n}',
     train_applied_tpl: '{date} のレースに適用されます。',
     train_submit: 'この調教にする(今夜20:00まで・1日1回)', train_busy: '調教中…',
     grp_racing: '出走中', grp_listed: '出品中', grp_champion: 'チャンピオン', grp_burned: '消滅', grp_other: '厩舎',
@@ -1243,6 +1251,7 @@ const en: AppDict = {
   dash: {
     result_label: 'Last night’s result',
     result_label_tpl: 'Results — {date}',
+    total_uncollected_tpl: 'Unclaimed +{v} — claim by training', total_uncollected_k: 'Unclaimed',
     result_detail: 'Race details →',
     res_survived: 'Survived',
     res_burned: 'Burned',
@@ -1779,6 +1788,7 @@ const en: AppDict = {
     badges_title: 'Titles earned',
     tv_chip: 'TOTAL', band_safe: 'Safe zone', band_mid: 'Mid', band_risk: 'Danger zone',
     rank_tpl: 'Tonight {r} / {n}', rank_note: 'Rank is a guide — luck and conditions vary on the night', sort_total: 'Highest total',
+    uncollected_tpl: 'Unclaimed +{v}$',
     legend_title: 'Rarity', legend_note: 'Bonuses apply to every night’s race score (public rule)',
     legend_chip_tpl: '{pct} · score +{n}',
   },
@@ -1835,6 +1845,9 @@ const en: AppDict = {
     reason_luck_tpl: 'Recovery training gives the biggest bonus (+{n}), raises condition, and adds no fatigue',
     luck_note: 'LUCK-type horses get an upward luck range tonight (−2 to +4) with any training.',
     train_done: '✓ Trained — applies to the next race', train_fail: 'Failed to register training',
+    harvest_done_tpl: 'Claimed +{v}$!', ticket_nth_tpl: 'Training ticket #{n} earned',
+    redo_btn: 'Change training →', redo_saved: 'Training changed (ticket and claim are first-time only).',
+    attr_tpl: 'Training +{n}',
     train_applied_tpl: 'Applies to the race on {date}.',
     train_submit: 'Use this training (by 20:00 tonight · once a day)', train_busy: 'Training…',
     grp_racing: 'Racing', grp_listed: 'Listed', grp_champion: 'Champions', grp_burned: 'Burned', grp_other: 'Stable',
@@ -1865,6 +1878,7 @@ const zh: AppDict = {
   dash: {
     result_label: '昨晚的结果',
     result_label_tpl: '{date}的结果',
+    total_uncollected_tpl: '未领取 +{v} — 通过训练领取', total_uncollected_k: '未领取',
     result_detail: '比赛详情 →',
     res_survived: '存活',
     res_burned: 'Burn(消灭)',
@@ -2401,6 +2415,7 @@ const zh: AppDict = {
     badges_title: '获得的称号',
     tv_chip: '综合值', band_safe: '安全圈', band_mid: '中位', band_risk: '危险圈',
     rank_tpl: '今晚 {r}位 / {n}匹', rank_note: '排名仅供参考 — 当晚的运气与条件会变动', sort_total: '综合值从高到低',
+    uncollected_tpl: '未领取 +{v}$',
     legend_title: '稀有度', legend_note: '加分每晚都计入比赛得分(公开规则)',
     legend_chip_tpl: '{pct} · 得分+{n}',
   },
@@ -2457,6 +2472,9 @@ const zh: AppDict = {
     reason_luck_tpl: '恢复训练加成最大(+{n}),还能提升状态且不积累疲劳',
     luck_note: 'LUCK型无论选择哪种训练,今晚运气的波动都会偏向上行(−2〜+4)。',
     train_done: '✓ 训练完成 — 将应用于下一场比赛', train_fail: '训练登记失败',
+    harvest_done_tpl: '已领取 +{v}$!', ticket_nth_tpl: '获得第{n}张训练券',
+    redo_btn: '更改训练 →', redo_saved: '训练已更改(训练券与领取仅限首次)。',
+    attr_tpl: '训练+{n}',
     train_applied_tpl: '将应用于 {date} 的比赛。',
     train_submit: '选择此训练(今晚20:00前 · 每日1次)', train_busy: '训练中…',
     grp_racing: '出赛中', grp_listed: '出售中', grp_champion: '冠军', grp_burned: '消失', grp_other: '马厩',
@@ -2487,6 +2505,7 @@ const ko: AppDict = {
   dash: {
     result_label: '어젯밤 결과',
     result_label_tpl: '{date} 결과',
+    total_uncollected_tpl: '미회수 +{v} — 조교로 회수', total_uncollected_k: '미회수',
     result_detail: '레이스 상세 →',
     res_survived: '생존',
     res_burned: 'Burn(소멸)',
@@ -3023,6 +3042,7 @@ const ko: AppDict = {
     badges_title: '획득한 칭호',
     tv_chip: '종합치', band_safe: '안전권', band_mid: '중위', band_risk: '위험권',
     rank_tpl: '오늘 밤 {r}위 / {n}마리', rank_note: '순위는 참고용 — 당일 운과 조건에 따라 변동합니다', sort_total: '종합치 높은 순',
+    uncollected_tpl: '미회수 +{v}$',
     legend_title: '레어리티', legend_note: '가산점은 매일 밤 레이스 점수에 상시 반영(공개 규칙)',
     legend_chip_tpl: '{pct} · 점수+{n}',
   },
@@ -3079,6 +3099,9 @@ const ko: AppDict = {
     reason_luck_tpl: '회복 조교는 가산이 최대(+{n})인 데다 컨디션을 올리고 피로도 쌓이지 않습니다',
     luck_note: 'LUCK 타입은 어떤 조교든 오늘 밤 운의 변동 폭이 위쪽으로 향합니다(−2〜+4).',
     train_done: '✓ 조교 완료 — 다음 레이스에 적용됩니다', train_fail: '조교 등록에 실패했습니다',
+    harvest_done_tpl: '+{v}$ 회수 완료!', ticket_nth_tpl: '조교 티켓 {n}장째 획득',
+    redo_btn: '조교 변경하기 →', redo_saved: '조교를 변경했습니다(티켓·회수는 최초 1회만).',
+    attr_tpl: '조교+{n}',
     train_applied_tpl: '{date} 레이스에 적용됩니다.',
     train_submit: '이 조교로 하기(오늘 밤 20:00까지 · 1일 1회)', train_busy: '조교 중…',
     grp_racing: '출주 중', grp_listed: '판매 중', grp_champion: '챔피언', grp_burned: '소멸', grp_other: '마구간',
@@ -3109,6 +3132,7 @@ const ms: AppDict = {
   dash: {
     result_label: 'Keputusan malam tadi',
     result_label_tpl: 'Keputusan {date}',
+    total_uncollected_tpl: 'Belum dituntut +{v} — tuntut melalui latihan', total_uncollected_k: 'Blm dituntut',
     result_detail: 'Butiran perlumbaan →',
     res_survived: 'Terselamat',
     res_burned: 'Burn (musnah)',
@@ -3645,6 +3669,7 @@ const ms: AppDict = {
     badges_title: 'Gelaran diperoleh',
     tv_chip: 'NILAI', band_safe: 'Zon selamat', band_mid: 'Pertengahan', band_risk: 'Zon bahaya',
     rank_tpl: 'Malam ini {r} / {n}', rank_note: 'Kedudukan hanyalah panduan — tuah dan keadaan malam berbeza', sort_total: 'Nilai tertinggi',
+    uncollected_tpl: 'Belum dituntut +{v}$',
     legend_title: 'Kejarangan', legend_note: 'Bonus sentiasa dikira dalam skor perlumbaan setiap malam (peraturan umum)',
     legend_chip_tpl: '{pct} · skor +{n}',
   },
@@ -3701,6 +3726,9 @@ const ms: AppDict = {
     reason_luck_tpl: 'Latihan pemulihan memberi bonus terbesar (+{n}), menaikkan keadaan dan tidak menambah keletihan',
     luck_note: 'Kuda jenis LUCK mendapat julat tuah menaik malam ini (−2 hingga +4) dengan apa jua latihan.',
     train_done: '✓ Terlatih — digunakan pada perlumbaan seterusnya', train_fail: 'Gagal mendaftarkan latihan',
+    harvest_done_tpl: '+{v}$ dituntut!', ticket_nth_tpl: 'Tiket latihan ke-{n} diperoleh',
+    redo_btn: 'Tukar latihan →', redo_saved: 'Latihan ditukar (tiket dan tuntutan kali pertama sahaja).',
+    attr_tpl: 'Latihan +{n}',
     train_applied_tpl: 'Digunakan pada perlumbaan {date}.',
     train_submit: 'Guna latihan ini (sebelum 20:00 malam ini · sekali sehari)', train_busy: 'Melatih…',
     grp_racing: 'Berlumba', grp_listed: 'Disenarai', grp_champion: 'Juara', grp_burned: 'Terbakar', grp_other: 'Kandang',

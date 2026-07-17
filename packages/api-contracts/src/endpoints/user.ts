@@ -100,7 +100,9 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     handler: async (ctx) => {
       const r = await ctx.client.query<{ id: string; email: string; status: string; created_at: string }>(
         `select id, email, status::text as status, created_at::text as created_at,
-                stable_name from users where id = $1`,
+                stable_name,
+                (select count(*)::int from training_sessions t where t.user_id = users.id) as training_tickets
+           from users where id = $1`,
         [ctx.userId],
       );
       if (!r.rows[0]) throw new ApiError('NOT_FOUND', 'User not found');
@@ -347,10 +349,13 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         `select br.batch_date::text as batch_date, rr.final_rank, rr.final_score::text as final_score,
                 rr.is_burned, r.participant_count,
                 r.weather::text as weather, r.track_condition::text as track_condition,
-                r.surface::text as surface
+                r.surface::text as surface,
+                s.training_snapshot_json->>'training_type' as training_type,
+                s.horse_type::text as snapshot_horse_type
          from race_results rr
          join races r on r.id = rr.race_id
          join batch_runs br on br.id = r.batch_run_id
+         left join race_participant_snapshots s on s.race_id = rr.race_id and s.horse_id = rr.horse_id
          where rr.horse_id = $1
          order by br.batch_date asc`,
         [ctx.params.id],
@@ -360,6 +365,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       return {
         ...detailRest,
         trained_for_next_race: tt !== null,
+        /** 今夜向けに確定済みの調教タイプ(やり直しUIの初期値・A2)。 */
+        tonight_training: tt,
         total_value: totalValue,
         tonight_rank: tonightRank,
         tonight_entrants: tonightEntrants,
@@ -654,38 +661,61 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         throw new ApiError('RACE_SNAPSHOT_ALREADY_CREATED', 'The race snapshot is already frozen');
       }
 
-      // Training row + notification are one atomic unit — a crash can never
-      // record the training while dropping its notification (or vice versa).
+      // FUN改修A2(FUN_V2_PLAN §3): スナップショット確定前なら何度でもやり直し可。
+      // スキーマの憲法は training_type の UPDATE を禁じ、未スナップショット行の
+      // DELETE を明示的に許している(guard_training_delete)— やり直しは
+      // 「削除して入れ直す」が正規の道。チケット(=初回確定)と通知は初回のみ。
+      const existing = await ctx.client.query<{ id: string; snapshot_included_at: string | null }>(
+        `select id, snapshot_included_at from training_sessions
+          where horse_id = $1 and effective_race_date = $2`,
+        [ctx.params.id, effectiveRaceDate],
+      );
+      if (existing.rows[0]?.snapshot_included_at) {
+        throw new ApiError('RACE_SNAPSHOT_ALREADY_CREATED', 'The race snapshot is already frozen');
+      }
+      const firstConfirm = !existing.rows[0];
       try {
         await ctx.client.query('begin');
+        if (existing.rows[0]) {
+          await ctx.client.query(`delete from training_sessions where id = $1`, [existing.rows[0].id]);
+        }
         await ctx.client.query(
           `insert into training_sessions (horse_id, user_id, training_type, training_date, effective_race_date)
            values ($1, $2, $3::training_type, $4, $5)`,
           [ctx.params.id, ctx.userId, input.training_type, today, effectiveRaceDate],
         );
-        const rendered = renderNotification('TRAINING_COMPLETED', {
-          horse_name: horse.rows[0].name,
-          training_type: input.training_type,
-        });
-        await insertNotification(ctx.client, {
-          userId: ctx.userId,
-          type: 'TRAINING_COMPLETED',
-          dedupeKey: `notif:TRAINING_COMPLETED:${ctx.params.id}:${effectiveRaceDate}`,
-          payload: { ...rendered, horse_id: ctx.params.id, training_type: input.training_type },
-        });
+        if (firstConfirm) {
+          const rendered = renderNotification('TRAINING_COMPLETED', {
+            horse_name: horse.rows[0].name,
+            training_type: input.training_type,
+          });
+          await insertNotification(ctx.client, {
+            userId: ctx.userId,
+            type: 'TRAINING_COMPLETED',
+            dedupeKey: `notif:TRAINING_COMPLETED:${ctx.params.id}:${effectiveRaceDate}`,
+            payload: { ...rendered, horse_id: ctx.params.id, training_type: input.training_type },
+          });
+        }
         await ctx.client.query('commit');
       } catch (error) {
         await ctx.client.query('rollback').catch(() => undefined);
-        if (/uq_training_horse_race_date|duplicate key/i.test((error as Error).message)) {
-          throw new ApiError('TRAINING_ALREADY_EXISTS', 'This horse already trained for that race');
+        // 同時やり直しの衝突・凍結競合は409で返す(500にしない)
+        if (/uq_training_horse_race_date|duplicate key|TRAINING_FROZEN/i.test((error as Error).message)) {
+          throw new ApiError('TRAINING_CONFLICT', 'Training changed concurrently — try again');
         }
         throw error;
       }
+      const tickets = await ctx.client.query<{ n: number }>(
+        `select count(*)::int as n from training_sessions where user_id = $1`,
+        [ctx.userId],
+      );
 
       return {
         horse_id: ctx.params.id,
         training_type: input.training_type,
         effective_race_date: effectiveRaceDate,
+        first_confirm: firstConfirm,
+        training_tickets: tickets.rows[0]?.n ?? 0,
       };
     },
   });
