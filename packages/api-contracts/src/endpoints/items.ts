@@ -4,12 +4,17 @@ import { Money, addDays, batchDateFor, insertNotification } from '@sevendays/sha
 import {
   AFFINITY_JA,
   ITEM_BY_KEY_V2,
+  ITEM_BY_KEY_V3,
   ITEM_CATALOG_V2,
+  ITEM_CATALOG_V3,
   SURFACE_JA,
   TRACK_JA,
   WEATHER_JA,
+  isRaceEngineV2,
   raceNightNameV2,
   renderNotification,
+  type RaceEffectV3,
+  type TrainingEffectV3,
 } from '@sevendays/domain';
 import { getBalance, ensureUserAccounts, itemPurchase } from '@sevendays/ledger';
 import { getMarketplaceState } from '@sevendays/settlement-engine';
@@ -26,6 +31,33 @@ import type { ApiRegistry, HandlerContext } from '../router.js';
  */
 
 const GIFTS_PER_DAY_LIMIT = 20;
+
+/** カタログV2(Decision 109)へのゲート: アクティブエンジンがv2か(調教APIと同じ判定)。 */
+async function isEngineV2Active(ctx: HandlerContext): Promise<boolean> {
+  const active = await ctx.client.query<{ version: string }>(
+    `select version from race_engine_versions
+     where activated_at is not null and deactivated_at is null`,
+  );
+  return active.rows.length === 1 && isRaceEngineV2(active.rows[0]!.version);
+}
+
+/** V2の対象サイクル = 朝→夜→翌朝の順で未COMPLETEDの最初(調教-4aと同じ規則)。 */
+async function targetCycleV2(ctx: HandlerContext): Promise<{ date: string; slot: 'MORNING' | 'NIGHT' }> {
+  const today = batchDateFor(new Date());
+  const candidates: { date: string; slot: 'MORNING' | 'NIGHT' }[] = [
+    { date: today, slot: 'MORNING' },
+    { date: today, slot: 'NIGHT' },
+    { date: addDays(today, 1), slot: 'MORNING' },
+  ];
+  for (const c of candidates) {
+    const done = await ctx.client.query(
+      `select 1 from batch_runs where batch_date = $1 and slot = $2::race_slot and status = 'COMPLETED'`,
+      [c.date, c.slot],
+    );
+    if (!done.rows[0]) return c;
+  }
+  return candidates[candidates.length - 1]!;
+}
 
 /** Same next-race boundary as training (Decision 066). */
 async function effectiveRaceDateFor(ctx: HandlerContext): Promise<string> {
@@ -46,8 +78,10 @@ async function catalogRow(ctx: HandlerContext, itemKey: string) {
     active: boolean;
     usable_day_min: number | null;
     usable_day_max: number | null;
+    item_class: 'V1' | 'TRAINING' | 'RACE';
   }>(
-    `select key, price::text as price, sellable, giftable, active, usable_day_min, usable_day_max
+    `select key, price::text as price, sellable, giftable, active, usable_day_min, usable_day_max,
+            item_class
      from item_catalog where key = $1`,
     [itemKey],
   );
@@ -67,7 +101,26 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
         `select key, active from item_catalog`,
       );
       const activeByKey = new Map(active.rows.map((r) => [r.key, r.active]));
+      // カタログV2(Decision 109): V2シーズンは2分類の新カタログだけを見せる
+      if (await isEngineV2Active(ctx)) {
+        return {
+          engine_v2: true,
+          items: ITEM_CATALOG_V3.filter((i) => activeByKey.get(i.key) === true).map((i) => ({
+            key: i.key,
+            name_ja: i.nameJa,
+            name_en: i.nameEn,
+            band: i.band,
+            item_class: i.itemClass,
+            price: i.price,
+            sellable: i.sellable,
+            giftable: i.giftable,
+            effect: i.effect,
+            description_ja: i.descriptionJa,
+          })),
+        };
+      }
       return {
+        engine_v2: false,
         items: ITEM_CATALOG_V2.filter((i) => activeByKey.get(i.key) !== false).map((i) => ({
           key: i.key,
           name_ja: i.nameJa,
@@ -105,7 +158,8 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
         effective_race_date: string;
       }>(
         `select u.id as usage_id, u.horse_id, h.name as horse_name, u.item_key,
-                u.effective_race_date::text as effective_race_date
+                u.effective_race_date::text as effective_race_date,
+                u.slot::text as slot, u.usage_kind
          from item_usages u join horses h on h.id = u.horse_id
          where u.user_id = $1 and u.status = 'PENDING'
          order by u.created_at desc`,
@@ -126,6 +180,11 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
     handler: async (ctx, input) => {
       const item = await catalogRow(ctx, input.item_key);
       if (!item.sellable) throw new ApiError('ITEM_NOT_SELLABLE', 'This item cannot be purchased');
+      // シーズンとカタログの整合(Decision 109): V2=新カタログのみ/V1=旧カタログのみ
+      const v2Season = await isEngineV2Active(ctx);
+      if (v2Season === (item.item_class === 'V1')) {
+        throw new ApiError('ITEM_NOT_FOUND', 'This item is not available this season');
+      }
       const quantity = input.quantity ?? 1;
       const total = Money.of(item.price).mulFloor(String(quantity));
       const accounts = await ensureUserAccounts(ctx.client, ctx.userId);
@@ -169,7 +228,12 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
     method: 'POST',
     path: '/api/v1/horses/:id/item',
     auth: 'user',
-    input: z.object({ item_key: z.string() }),
+    input: z.object({
+      item_key: z.string(),
+      // DUAL_PREP(完全装備/野営一式)の備え先グループ
+      weather_group: z.enum(['RAIN_GROUP', 'SUN_GROUP']).optional(),
+      track_group: z.enum(['MUD_GROUP', 'FIRM_GROUP']).optional(),
+    }),
     handler: async (ctx, input) => {
       const item = await catalogRow(ctx, input.item_key);
       const horse = await ctx.client.query<{
@@ -208,6 +272,91 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
           `This item is usable on Day${item.usable_day_min}〜${item.usable_day_max} only`,
         );
       }
+
+      // ---- カタログV2(Decision 109) ------------------------------------
+      const v2Season = await isEngineV2Active(ctx);
+      if (v2Season === (item.item_class === 'V1')) {
+        throw new ApiError('ITEM_NOT_FOUND', 'This item is not available this season');
+      }
+      if (v2Season) {
+        const def = ITEM_BY_KEY_V3.get(input.item_key);
+        if (!def) throw new ApiError('ITEM_NOT_FOUND', 'Unknown item');
+        // TRAINING系のうち即時適用(星霜の砂)だけがこのAPIを使う。ロール系は調教確定で添付。
+        if (def.itemClass === 'TRAINING') {
+          const effect = def.effect as TrainingEffectV3;
+          if (effect.kind !== 'DECAY_SHIELD') {
+            throw new ApiError(
+              'ITEM_TRAINING_ATTACH_ONLY',
+              'Attach this item on a training confirm instead',
+            );
+          }
+          await ctx.client.query('begin');
+          try {
+            const unit = await ctx.client.query<{ id: string }>(
+              `select id from user_items
+               where user_id = $1 and item_key = $2 and status = 'AVAILABLE'
+               order by acquired_at asc, id asc limit 1 for update`,
+              [ctx.userId, input.item_key],
+            );
+            if (!unit.rows[0]) throw new ApiError('ITEM_NOT_OWNED', 'You do not own this item');
+            await ctx.client.query(`update user_items set status = 'CONSUMED' where id = $1`, [unit.rows[0].id]);
+            await ctx.client.query(
+              `update horses set decay_shield_v2 = decay_shield_v2 + $2 where id = $1`,
+              [ctx.params.id, effect.races],
+            );
+            await ctx.client.query('commit');
+          } catch (error) {
+            await ctx.client.query('rollback').catch(() => undefined);
+            throw error;
+          }
+          return { horse_id: ctx.params.id, item_key: input.item_key, decay_shield_added: effect.races };
+        }
+
+        // RACE系: 次サイクルへの備え。DUAL_PREPは備え先グループの指定が必須。
+        const effect = def.effect as RaceEffectV3;
+        let params: { weatherGroup: string; trackGroup: string } | null = null;
+        if (effect.kind === 'DUAL_PREP') {
+          if (!input.weather_group || !input.track_group) {
+            throw new ApiError('ITEM_PARAMS_REQUIRED', 'Choose a weather group and a track group');
+          }
+          params = { weatherGroup: input.weather_group, trackGroup: input.track_group };
+        }
+        const target = await targetCycleV2(ctx);
+        await ctx.client.query('begin');
+        try {
+          const unit = await ctx.client.query<{ id: string; unit_price: string }>(
+            `select id, unit_price::text as unit_price from user_items
+             where user_id = $1 and item_key = $2 and status = 'AVAILABLE'
+             order by acquired_at asc, id asc limit 1 for update`,
+            [ctx.userId, input.item_key],
+          );
+          if (!unit.rows[0]) throw new ApiError('ITEM_NOT_OWNED', 'You do not own this item');
+          await ctx.client.query(
+            `insert into item_usages
+               (user_item_id, horse_id, user_id, item_key, unit_price,
+                effective_race_date, slot, usage_kind, params_json)
+             values ($1, $2, $3, $4, $5, $6, $7::race_slot, 'RACE', $8)`,
+            [unit.rows[0].id, ctx.params.id, ctx.userId, input.item_key, unit.rows[0].unit_price,
+             target.date, target.slot, params ? JSON.stringify(params) : null],
+          );
+          await ctx.client.query(`update user_items set status = 'APPLIED' where id = $1`, [unit.rows[0].id]);
+          await ctx.client.query('commit');
+        } catch (error) {
+          await ctx.client.query('rollback').catch(() => undefined);
+          if (/uq_item_usage_horse_race/i.test((error as Error).message)) {
+            throw new ApiError('ITEM_ALREADY_APPLIED', 'This horse already has a race item for that cycle');
+          }
+          throw error;
+        }
+        return {
+          horse_id: ctx.params.id,
+          item_key: input.item_key,
+          effective_race_date: target.date,
+          slot: target.slot,
+          params,
+        };
+      }
+
       const effectiveRaceDate = await effectiveRaceDateFor(ctx);
 
       await ctx.client.query('begin');
@@ -249,10 +398,19 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
       if ((await getMarketplaceState(ctx.client)) !== 'OPEN') {
         throw new ApiError('MARKETPLACE_LOCKED', 'Item intake is closed during Daily Settlement');
       }
+      // V2 (Decision 109): RACE系だけ取消可(凍結前)。TRAINING系は確定即最終(107)。
+      const v2Season = await isEngineV2Active(ctx);
       const effectiveRaceDate = await effectiveRaceDateFor(ctx);
       await ctx.client.query('begin');
       try {
-        const usage = await ctx.client.query<{ id: string; user_item_id: string }>(
+        const usage = v2Season
+          ? await ctx.client.query<{ id: string; user_item_id: string }>(
+              `update item_usages set status = 'CANCELLED'
+               where horse_id = $1 and user_id = $2 and status = 'PENDING' and usage_kind = 'RACE'
+               returning id, user_item_id`,
+              [ctx.params.id, ctx.userId],
+            )
+          : await ctx.client.query<{ id: string; user_item_id: string }>(
           `update item_usages set status = 'CANCELLED'
            where horse_id = $1 and user_id = $2 and effective_race_date = $3 and status = 'PENDING'
            returning id, user_item_id`,
@@ -457,7 +615,10 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
         }
         const rendered = renderNotification('ITEM_GIFT_RECEIVED', {
           sender: maskedSender,
-          item_name: ITEM_BY_KEY_V2.get(input.item_key)?.nameJa ?? input.item_key,
+          item_name:
+            ITEM_BY_KEY_V2.get(input.item_key)?.nameJa ??
+            ITEM_BY_KEY_V3.get(input.item_key)?.nameJa ??
+            input.item_key,
         });
         await insertNotification(ctx.client, {
           userId: recipientId,

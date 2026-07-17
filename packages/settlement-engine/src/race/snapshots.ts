@@ -3,10 +3,13 @@ import type { SqlClient } from '@sevendays/shared';
 import {
   ABILITY_WEIGHTS_V1,
   ITEM_POLICY_VERSION_V2,
+  ITEM_POLICY_VERSION_V3,
+  applyRacePrepItemV3,
   deriveNightForecastV1,
   isRaceEngineV2,
   type AbilityName,
   type HorseType,
+  type RacePrepParamsV3,
   type RaceSlotV2,
   type Rarity,
   type Surface,
@@ -318,6 +321,7 @@ interface HorseRowV2 {
   rarity: Rarity;
   dna_hash: string;
   total_value: string | null;
+  decay_shield_v2: number;
 }
 
 interface TrainingRowV2 {
@@ -327,6 +331,16 @@ interface TrainingRowV2 {
   synergy_v2: string | null;
   delta_v2: string | null;
   rests_decay_v2: boolean | null;
+  item_key_v3: string | null;
+  item_bonus_v3: string | null;
+}
+
+interface ItemUsageRowV3 {
+  id: string;
+  item_key: string;
+  unit_price: string;
+  usage_kind: 'RACE' | 'TRAINING';
+  params_json: RacePrepParamsV3 | null;
 }
 
 /**
@@ -351,7 +365,8 @@ async function createParticipantSnapshotsV2(
   // Market Lock (Decision 076) unchanged: manually listed horses do not race.
   const horses = await client.query<HorseRowV2>(
     `select h.id, h.owner_user_id, h.current_day, h.horse_type::text as horse_type,
-            h.rarity::text as rarity, h.dna_hash, h.total_value::text as total_value
+            h.rarity::text as rarity, h.dna_hash, h.total_value::text as total_value,
+            h.decay_shield_v2
      from horses h
      where h.status = 'ACTIVE'
        and not exists (
@@ -371,7 +386,8 @@ async function createParticipantSnapshotsV2(
 
     const training = await client.query<TrainingRowV2>(
       `select id, menus_v2, per_menu_v2, synergy_v2::text as synergy_v2,
-              delta_v2::text as delta_v2, rests_decay_v2
+              delta_v2::text as delta_v2, rests_decay_v2, item_key_v3,
+              item_bonus_v3::text as item_bonus_v3
        from training_sessions
        where horse_id = $1 and effective_race_date = $2 and slot = $3::race_slot
          and snapshot_included_at is null`,
@@ -381,16 +397,46 @@ async function createParticipantSnapshotsV2(
     // A V1-shaped row (no menus) in a V2 race has no Total Value effect but is
     // still frozen below — it must not leak into a later race date.
     const v2Roll = trainingRow !== null && trainingRow.menus_v2 !== null ? trainingRow : null;
-    const delta = v2Roll ? Number(v2Roll.delta_v2) : null;
     const restsDecay = v2Roll ? v2Roll.rests_decay_v2 === true : false;
+
+    // V3 items (Decision 109): at most one usage per class for this cycle.
+    // The TRAINING bonus already rolled at confirm (it rides the training
+    // row); the RACE prep applies the override law against today's actual
+    // conditions. Both usages freeze into this snapshot.
+    const usages = await client.query<ItemUsageRowV3>(
+      `select id, item_key, unit_price::text as unit_price, usage_kind, params_json
+       from item_usages
+       where horse_id = $1 and effective_race_date = $2 and slot = $3::race_slot
+         and status = 'PENDING'`,
+      [horse.id, input.batchDate, input.slot ?? 'NIGHT'],
+    );
+    const raceUsage = usages.rows.find((u) => u.usage_kind === 'RACE') ?? null;
+    const trainingUsage = usages.rows.find((u) => u.usage_kind === 'TRAINING') ?? null;
+
+    const itemBonus = v2Roll?.item_key_v3 ? Number(v2Roll.item_bonus_v3) : 0;
+    const delta = v2Roll ? round2(Number(v2Roll.delta_v2) + itemBonus) : null;
+
+    // Decay shield (aeon_sand): negates the decay tick when REST does not
+    // already cover it; consumed one race at a time.
+    const shieldUsed = !restsDecay && horse.decay_shield_v2 > 0;
 
     const before = Number(horse.total_value);
     const afterGain = delta === null ? before : applyTotalValueGainV2(before, delta);
-    const totalValue = applyDecayV2(afterGain, restsDecay);
+    const totalValue = applyDecayV2(afterGain, restsDecay || shieldUsed);
 
-    const prep = round2(
-      weatherModifier(weather, horse.horse_type) + trackModifier(track, horse.horse_type),
-    );
+    const naturalWeatherMod = weatherModifier(weather, horse.horse_type);
+    const naturalTrackMod = trackModifier(track, horse.horse_type);
+    const prepMods = raceUsage
+      ? applyRacePrepItemV3({
+          itemKey: raceUsage.item_key,
+          params: raceUsage.params_json,
+          naturalWeatherMod,
+          naturalTrackMod,
+          actualWeather: weather,
+          actualTrack: track,
+        })
+      : { weatherMod: naturalWeatherMod, trackMod: naturalTrackMod, weatherHit: null, trackHit: null };
+    const prep = round2(prepMods.weatherMod + prepMods.trackMod);
 
     const trainingSnapshot = v2Roll
       ? {
@@ -402,6 +448,33 @@ async function createParticipantSnapshotsV2(
         }
       : null;
 
+    // Frozen item record (replay recomputes the prep from exactly this).
+    const itemSnapshot =
+      raceUsage || trainingUsage || shieldUsed
+        ? {
+            item_policy_version: ITEM_POLICY_VERSION_V3,
+            race_item: raceUsage
+              ? {
+                  item_key: raceUsage.item_key,
+                  params: raceUsage.params_json,
+                  weather_mod: prepMods.weatherMod,
+                  track_mod: prepMods.trackMod,
+                  weather_hit: prepMods.weatherHit,
+                  track_hit: prepMods.trackHit,
+                  unit_price: raceUsage.unit_price,
+                }
+              : null,
+            training_item: v2Roll?.item_key_v3
+              ? {
+                  item_key: v2Roll.item_key_v3,
+                  bonus: itemBonus,
+                  unit_price: trainingUsage?.unit_price ?? '0',
+                }
+              : null,
+            decay_shield_used: shieldUsed,
+          }
+        : null;
+
     const snapshotHash = sha256Parts(
       input.raceId,
       horse.id,
@@ -412,6 +485,7 @@ async function createParticipantSnapshotsV2(
       String(totalValue),
       String(prep),
       JSON.stringify(trainingSnapshot),
+      JSON.stringify(itemSnapshot),
       weather,
       track,
       input.raceEngineVersion,
@@ -424,16 +498,16 @@ async function createParticipantSnapshotsV2(
       const inserted = await client.query<{ id: string }>(
         `insert into race_participant_snapshots (
            race_id, horse_id, owner_user_id, current_day, horse_type, rarity, dna_hash,
-           ability_snapshot_json, training_snapshot_json,
+           ability_snapshot_json, training_snapshot_json, item_snapshot_json,
            total_value, condition_prep_modifier,
            weather, track_condition, race_engine_version, liquidity_policy_version,
            price_table_version, race_seed_hash, snapshot_hash
          )
-         select $1, $2, $3, $4, $5::horse_type, $6::rarity, $7, '{}'::jsonb, $8,
-                $9, $10, $11::weather, $12::track_condition, $13, $14, $15,
+         select $1, $2, $3, $4, $5::horse_type, $6::rarity, $7, '{}'::jsonb, $8, $9,
+                $10, $11, $12::weather, $13::track_condition, $14, $15, $16,
                 (select commit_hash from randomness_commits rc
                    join races r on r.seed_commit_id = rc.id where r.id = $1),
-                $16
+                $17
          on conflict (race_id, horse_id) do nothing
          returning id`,
         [
@@ -445,6 +519,7 @@ async function createParticipantSnapshotsV2(
           horse.rarity,
           horse.dna_hash,
           trainingSnapshot ? JSON.stringify(trainingSnapshot) : null,
+          itemSnapshot ? JSON.stringify(itemSnapshot) : null,
           totalValue,
           prep,
           weather,
@@ -462,11 +537,29 @@ async function createParticipantSnapshotsV2(
           horse.id,
           totalValue,
         ]);
+        if (shieldUsed) {
+          await client.query(
+            `update horses set decay_shield_v2 = decay_shield_v2 - 1
+             where id = $1 and decay_shield_v2 > 0`,
+            [horse.id],
+          );
+        }
         if (trainingRow) {
           await client.query(
             `update training_sessions set snapshot_included_at = now() where id = $1`,
             [trainingRow.id],
           );
+        }
+        // Snapshot inclusion commits both item usages to exactly this race
+        // (same rule as V1 — Step 16 settles them by the burn outcome).
+        for (const usage of [raceUsage, trainingUsage]) {
+          if (usage) {
+            await client.query(
+              `update item_usages set status = 'SNAPSHOTTED', race_id = $2
+               where id = $1 and status = 'PENDING'`,
+              [usage.id, input.raceId],
+            );
+          }
         }
       }
       await client.query('commit');

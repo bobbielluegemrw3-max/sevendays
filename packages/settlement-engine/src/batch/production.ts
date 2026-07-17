@@ -1,6 +1,12 @@
 import { newUuid, generateSecureSeedHex, sha256Hex, Money } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import { deriveNightForecastV1, isRaceEngineV2, type EconomyStatus } from '@sevendays/domain';
+import {
+  applyRacePrepItemV3,
+  deriveNightForecastV1,
+  isRaceEngineV2,
+  type EconomyStatus,
+  type RacePrepParamsV3,
+} from '@sevendays/domain';
 import {
   computeEconomyMetrics,
   currentEconomyStatus,
@@ -19,7 +25,10 @@ import {
   deriveTrackCondition,
   deriveWeather,
   rankParticipants,
+  round2,
+  trackModifier,
   verifyRaceSeed,
+  weatherModifier,
   type ScoreInput,
 } from '@sevendays/race-engine';
 import { createParticipantSnapshots } from '../race/snapshots.js';
@@ -687,6 +696,9 @@ async function verifyReplayInputsV2(
     total_value: string | null;
     condition_prep_modifier: string | null;
     training_snapshot_json: unknown;
+    item_snapshot_json: {
+      race_item: { item_key: string; params: RacePrepParamsV3 | null } | null;
+    } | null;
     weather: ScoreInput['weather'];
     track_condition: ScoreInput['track'];
     final_score: string | null;
@@ -694,7 +706,7 @@ async function verifyReplayInputsV2(
     `select s.horse_id, s.horse_type::text as horse_type,
             s.total_value::text as total_value,
             s.condition_prep_modifier::text as condition_prep_modifier,
-            s.training_snapshot_json,
+            s.training_snapshot_json, s.item_snapshot_json,
             s.weather::text as weather, s.track_condition::text as track_condition,
             s.final_score::text as final_score
      from race_participant_snapshots s
@@ -729,6 +741,28 @@ async function verifyReplayInputsV2(
     if (snap.total_value === null || snap.condition_prep_modifier === null) {
       throw new Error(
         `RACE_SNAPSHOT_VERIFICATION_FAILED: v2 inputs missing (horse ${snap.horse_id})`,
+      );
+    }
+    // 備え±4は公開適性表+凍結済みRACEアイテム(置換法則)から誰でも再計算できる。
+    // アイテムを使った夜だけ検証が落ちないよう、凍結入力から同じ関数で再構築する
+    // (v1.1のfirm_platesインシデントの教訓をV2でも構造化)。
+    const naturalW = weatherModifier(snap.weather, snap.horse_type);
+    const naturalT = trackModifier(snap.track_condition, snap.horse_type);
+    const raceItem = snap.item_snapshot_json?.race_item ?? null;
+    const prepMods = raceItem
+      ? applyRacePrepItemV3({
+          itemKey: raceItem.item_key,
+          params: raceItem.params,
+          naturalWeatherMod: naturalW,
+          naturalTrackMod: naturalT,
+          actualWeather: snap.weather,
+          actualTrack: snap.track_condition,
+        })
+      : { weatherMod: naturalW, trackMod: naturalT };
+    const expectedPrep = round2(prepMods.weatherMod + prepMods.trackMod);
+    if (!Money.of(String(expectedPrep)).eq(snap.condition_prep_modifier)) {
+      throw new Error(
+        `RACE_SNAPSHOT_VERIFICATION_FAILED: condition prep replay mismatch (horse ${snap.horse_id}: stored ${snap.condition_prep_modifier}, replayed ${expectedPrep})`,
       );
     }
     const recomputed = computeScoreV2({

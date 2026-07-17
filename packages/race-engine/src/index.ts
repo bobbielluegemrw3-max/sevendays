@@ -12,3 +12,4 @@ export * from './item.js';
 export * from './total-value.js';
 export * from './v2/total-value.js';
 export * from './v2/score.js';
+export * from './v2/items.js';

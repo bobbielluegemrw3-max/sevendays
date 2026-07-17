@@ -2,8 +2,11 @@ import { Money, insertNotification, sha256Parts } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
 import {
   BURN_DROP_KEYS_V2,
+  BURN_DROP_KEYS_V3,
   BURN_TARGET_RATE_V1,
   ITEM_BY_KEY_V2,
+  ITEM_BY_KEY_V3,
+  isRaceEngineV2,
   renderNotification,
   type EconomyStatus,
 } from '@sevendays/domain';
@@ -135,46 +138,52 @@ export async function finalizeAndBurn(
     );
 
     // Revenge Buff: one active buff per user — refresh, never duplicate.
-    const roll = rollBuffRarity({
-      raceSeed: input.raceSeed,
-      horseUuid: horseId,
-      ownerUserIdAtSnapshot: ownerId,
-      burnEventId,
-      buffPolicyVersion: input.buffPolicyVersion,
-    });
-    // One live buff per user across ACTIVE and APPLIED (refresh, never duplicate).
-    const existing = await client.query<{ id: string }>(
-      `select id from revenge_buffs where user_id = $1 and status in ('ACTIVE', 'APPLIED')`,
-      [ownerId],
-    );
-    if (existing.rows.length > 0) {
-      await client.query(
-        `update revenge_buffs
-         set buff_rarity = $2::buff_rarity, buff_bonus_score = $3,
-             buff_policy_version = $4, deterministic_buff_roll = $5, refreshed_at = now()
-         where id = $1`,
-        [existing.rows[0]!.id, roll.rarity, roll.bonusScore, input.buffPolicyVersion, roll.rollHash],
+    // V2 (Decision 109): revenge buffs are retired — the V2 score formula has
+    // no buff term; the memorial slot is the burn drop below.
+    if (!isRaceEngineV2(input.raceEngineVersion)) {
+      const roll = rollBuffRarity({
+        raceSeed: input.raceSeed,
+        horseUuid: horseId,
+        ownerUserIdAtSnapshot: ownerId,
+        burnEventId,
+        buffPolicyVersion: input.buffPolicyVersion,
+      });
+      // One live buff per user across ACTIVE and APPLIED (refresh, never duplicate).
+      const existing = await client.query<{ id: string }>(
+        `select id from revenge_buffs where user_id = $1 and status in ('ACTIVE', 'APPLIED')`,
+        [ownerId],
       );
-      buffsRefreshed += 1;
-    } else {
-      await client.query(
-        `insert into revenge_buffs (user_id, buff_rarity, buff_bonus_score, buff_policy_version, deterministic_buff_roll)
-         values ($1, $2::buff_rarity, $3, $4, $5)`,
-        [ownerId, roll.rarity, roll.bonusScore, input.buffPolicyVersion, roll.rollHash],
-      );
-      buffsGenerated += 1;
+      if (existing.rows.length > 0) {
+        await client.query(
+          `update revenge_buffs
+           set buff_rarity = $2::buff_rarity, buff_bonus_score = $3,
+               buff_policy_version = $4, deterministic_buff_roll = $5, refreshed_at = now()
+           where id = $1`,
+          [existing.rows[0]!.id, roll.rarity, roll.bonusScore, input.buffPolicyVersion, roll.rollHash],
+        );
+        buffsRefreshed += 1;
+      } else {
+        await client.query(
+          `insert into revenge_buffs (user_id, buff_rarity, buff_bonus_score, buff_policy_version, deterministic_buff_roll)
+           values ($1, $2::buff_rarity, $3, $4, $5)`,
+          [ownerId, roll.rarity, roll.bonusScore, input.buffPolicyVersion, roll.rollHash],
+        );
+        buffsGenerated += 1;
+      }
     }
   }
 
-  // Burn drops (Decision 078): alongside the Revenge Buff, every burn grants
-  // one of the five non-sellable items — seed-deterministic pick, idempotent
-  // via the unique source_burn_event_id.
+  // Burn drops (Decision 078): every burn grants one of the five non-sellable
+  // items — seed-deterministic pick, idempotent via the unique
+  // source_burn_event_id. V2 (Decision 109) draws from the V3 memorial set.
+  const dropKeys = isRaceEngineV2(input.raceEngineVersion) ? BURN_DROP_KEYS_V3 : BURN_DROP_KEYS_V2;
+  const dropNameByKey = isRaceEngineV2(input.raceEngineVersion) ? ITEM_BY_KEY_V3 : ITEM_BY_KEY_V2;
   let itemDrops = 0;
   for (const horseId of burnTargets) {
     const ownerId = ownerByHorse.get(horseId)!;
     const burnEventId = uuidFromParts(input.raceId, horseId, 'burn_event');
     const u = unitFromParts(input.raceSeed, burnEventId, 'item_drop', input.raceEngineVersion);
-    const dropKey = BURN_DROP_KEYS_V2[Math.min(BURN_DROP_KEYS_V2.length - 1, Math.floor(u * BURN_DROP_KEYS_V2.length))]!;
+    const dropKey = dropKeys[Math.min(dropKeys.length - 1, Math.floor(u * dropKeys.length))]!;
     const dropped = await client.query<{ id: string }>(
       `insert into user_items (user_id, item_key, unit_price, source, source_burn_event_id)
        values ($1, $2, 0, 'BURN_DROP', $3)
@@ -185,7 +194,7 @@ export async function finalizeAndBurn(
     if (dropped.rows.length > 0) {
       itemDrops += 1;
       const rendered = renderNotification('ITEM_DROPPED', {
-        item_name: ITEM_BY_KEY_V2.get(dropKey)?.nameJa ?? dropKey,
+        item_name: dropNameByKey.get(dropKey)?.nameJa ?? dropKey,
       });
       await insertNotification(client, {
         userId: ownerId,
@@ -260,13 +269,16 @@ export async function finalizeAndBurn(
       dedupeKey: `notif:HORSE_BURNED:${input.raceId}:${horseId}`,
       payload: { ...burned, horse_id: horseId },
     });
-    const buff = renderNotification('REVENGE_BUFF_GENERATED');
-    await insertNotification(client, {
-      userId: ownerId,
-      type: 'REVENGE_BUFF_GENERATED',
-      dedupeKey: `notif:REVENGE_BUFF_GENERATED:${uuidFromParts(input.raceId, horseId, 'burn_event')}`,
-      payload: { ...buff },
-    });
+    // V2 (Decision 109): no revenge buffs — the drop notification above covers the memorial.
+    if (!isRaceEngineV2(input.raceEngineVersion)) {
+      const buff = renderNotification('REVENGE_BUFF_GENERATED');
+      await insertNotification(client, {
+        userId: ownerId,
+        type: 'REVENGE_BUFF_GENERATED',
+        dedupeKey: `notif:REVENGE_BUFF_GENERATED:${uuidFromParts(input.raceId, horseId, 'burn_event')}`,
+        payload: { ...buff },
+      });
+    }
   }
 
   await client.query(

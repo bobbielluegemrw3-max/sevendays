@@ -25,9 +25,12 @@ import { verifyWalletLink } from '@sevendays/blockchain';
 import { evaluateHiddenBadges } from '../hidden/achievements.js';
 import { computeHiddenLooks } from '../hidden/looks.js';
 import {
+  hiddenPreferencesV2,
+  resolveTrainingItemV3,
   resolveTrainingRollV2,
   tonightBand,
   totalValueV0,
+  trainingItemEligibilityV3,
   type TotalValueInputV0,
 } from '@sevendays/race-engine';
 import type { HorseType, Rarity, TrainingType } from '@sevendays/domain';
@@ -664,6 +667,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     input: z.object({
       training_type: z.string().optional(),
       menus: z.array(z.string()).min(1).max(TRAINING_COMBO_SIZE_V2).optional(),
+      // カタログV2(Decision 109): TRAINING系アイテムを確定と同時に1個添付
+      item_key: z.string().optional(),
     }),
     handler: async (ctx, input) => {
       if (input.menus === undefined) {
@@ -683,9 +688,10 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         status: string;
         horse_type: HorseType;
         dna_hash: string;
+        current_day: number;
       }>(
         `select owner_user_id, name, status::text as status,
-                horse_type::text as horse_type, dna_hash
+                horse_type::text as horse_type, dna_hash, current_day
          from horses where id = $1`,
         [ctx.params.id],
       );
@@ -775,20 +781,75 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         }
 
         // 確定の瞬間にロール(決定論シード: 馬×サイクル。リトライは同一結果)
+        const rollSeed = `${ctx.params.id}:${target.date}:${target.slot}`;
         const roll = resolveTrainingRollV2({
           dnaHash: horse.rows[0].dna_hash,
           horseType: horse.rows[0].horse_type,
           menus,
-          rollSeed: `${ctx.params.id}:${target.date}:${target.slot}`,
+          rollSeed,
         });
+
+        // TRAINING系アイテムの添付(Decision 109)。確定と同時にロールし、
+        // アイテムも即最終(107)— 使用行は取消不可のkind=TRAININGで刻む。
+        let itemBonus: number | null = null;
+        let itemUnitId: string | null = null;
+        if (input.item_key !== undefined) {
+          const cat = await ctx.client.query<{ item_class: string; active: boolean }>(
+            `select item_class, active from item_catalog where key = $1`,
+            [input.item_key],
+          );
+          if (!cat.rows[0] || !cat.rows[0].active || cat.rows[0].item_class !== 'TRAINING') {
+            throw new ApiError('ITEM_NOT_FOUND', 'Unknown or non-training item');
+          }
+          const prefs = hiddenPreferencesV2(horse.rows[0].dna_hash, horse.rows[0].horse_type);
+          const eligibility = trainingItemEligibilityV3(input.item_key, {
+            menus,
+            favoriteMenu: prefs.favorite,
+            lv: horse.rows[0].current_day,
+          });
+          if (!eligibility.ok) {
+            throw new ApiError('ITEM_NOT_ELIGIBLE', eligibility.reason ?? 'Item does not fit this confirm');
+          }
+        }
 
         try {
           await ctx.client.query('begin');
+          if (input.item_key !== undefined) {
+            const unit = await ctx.client.query<{ id: string }>(
+              `select id from user_items
+               where user_id = $1 and item_key = $2 and status = 'AVAILABLE'
+               order by acquired_at asc, id asc limit 1 for update`,
+              [ctx.userId, input.item_key],
+            );
+            if (!unit.rows[0]) throw new ApiError('ITEM_NOT_OWNED', 'You do not own this item');
+            itemUnitId = unit.rows[0].id;
+            const prefs = hiddenPreferencesV2(horse.rows[0].dna_hash, horse.rows[0].horse_type);
+            itemBonus = resolveTrainingItemV3(input.item_key, rollSeed, {
+              menus,
+              favoriteMenu: prefs.favorite,
+              lv: horse.rows[0].current_day,
+              roll: { delta: roll.delta, synergy: roll.synergy },
+            }).itemBonus;
+            const unitPrice = await ctx.client.query<{ unit_price: string }>(
+              `select unit_price::text as unit_price from user_items where id = $1`,
+              [itemUnitId],
+            );
+            await ctx.client.query(
+              `insert into item_usages
+                 (user_item_id, horse_id, user_id, item_key, unit_price,
+                  effective_race_date, slot, usage_kind)
+               values ($1, $2, $3, $4, $5, $6, $7::race_slot, 'TRAINING')`,
+              [itemUnitId, ctx.params.id, ctx.userId, input.item_key,
+               unitPrice.rows[0]!.unit_price, target.date, target.slot],
+            );
+            await ctx.client.query(`update user_items set status = 'APPLIED' where id = $1`, [itemUnitId]);
+          }
           await ctx.client.query(
             `insert into training_sessions
                (horse_id, user_id, training_date, effective_race_date, slot,
-                menus_v2, per_menu_v2, synergy_v2, delta_v2, rests_decay_v2)
-             values ($1, $2, $3, $4, $5::race_slot, $6, $7, $8, $9, $10)`,
+                menus_v2, per_menu_v2, synergy_v2, delta_v2, rests_decay_v2,
+                item_key_v3, item_bonus_v3, item_user_item_id)
+             values ($1, $2, $3, $4, $5::race_slot, $6, $7, $8, $9, $10, $11, $12, $13)`,
             [
               ctx.params.id,
               ctx.userId,
@@ -800,6 +861,9 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
               roll.synergy,
               roll.delta,
               roll.restsDecay,
+              input.item_key ?? null,
+              itemBonus,
+              itemUnitId,
             ],
           );
           const rendered = renderNotification('TRAINING_COMPLETED', {
@@ -838,6 +902,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
           effective_race_date: target.date,
           slot: target.slot,
           first_confirm: true,
+          item_key: input.item_key ?? null,
+          item_bonus: itemBonus,
           training_tickets: ticketsV2.rows[0]?.n ?? 0,
         };
       }
