@@ -615,6 +615,14 @@ export interface AppDict {
     gift_toggle: string; gift_head_tpl: string; gift_w1: string; gift_w2: string; gift_w3: string;
     gift_email_ph: string; gift_confirm_tpl: string; gift_cancel: string; gift_submit: string; gift_busy: string;
     gift_fail: string; gift_done_tpl: string;
+    // V2調教(Decision 104/107): メニュー選択・確定時ロール・確定即最終
+    tv2_pick_hint: string; tv2_range_k: string; tv2_x2: string;
+    tv2_menu_hill: string; tv2_menu_pool: string; tv2_menu_spar: string;
+    tv2_menu_gate: string; tv2_menu_wood: string; tv2_menu_rest: string;
+    tv2_rest_note: string;
+    tv2_confirm_title: string; tv2_confirm_warn: string; tv2_confirm_go: string; tv2_back: string;
+    tv2_result_title: string; tv2_synergy_k: string; tv2_delta_tpl: string; tv2_rest_done: string;
+    tv2_done_note: string; tv2_slot_morning: string; tv2_slot_night: string; tv2_target_tpl: string;
   };
 }
 
@@ -1242,6 +1250,16 @@ const ja: AppDict = {
     gift_email_ph: '相手のメールアドレス', gift_confirm_tpl: '上記を理解し、{name} を贈ります(取消不可)',
     gift_cancel: 'やめる', gift_submit: 'この馬を贈る', gift_busy: '転送中…', gift_fail: '転送に失敗しました。',
     gift_done_tpl: '{name} を {to} さんへ贈りました。今夜から相手の厩舎で出走します。',
+    tv2_pick_hint: 'メニューを2つまで選ぶ(同じメニュー×2も可)', tv2_range_k: '公開レンジ', tv2_x2: '×2',
+    tv2_menu_hill: '坂路', tv2_menu_pool: 'プール', tv2_menu_spar: '併せ馬',
+    tv2_menu_gate: 'ゲート練習', tv2_menu_wood: 'ウッドチップ', tv2_menu_rest: '休養',
+    tv2_rest_note: '今回の減衰(−2.0)を無効化・好みの影響なし',
+    tv2_confirm_title: 'この内容で確定しますか?', tv2_confirm_warn: '結果は確定の瞬間に決まります。やり直しはできません。',
+    tv2_confirm_go: '確定する(最終)', tv2_back: '選び直す',
+    tv2_result_title: '調教結果', tv2_synergy_k: 'シナジー', tv2_delta_tpl: '総合値 {n}',
+    tv2_rest_done: '休養 — 今回の減衰を無効化',
+    tv2_done_note: 'このレースの調教は確定済みです(結果は確定の瞬間に決まりました)',
+    tv2_slot_morning: '朝レース', tv2_slot_night: '夜レース', tv2_target_tpl: '対象: {date} の{slot}',
   },
 };
 
@@ -1869,6 +1887,16 @@ const en: AppDict = {
     gift_email_ph: 'Recipient’s email address', gift_confirm_tpl: 'I understand the above and gift {name} (irreversible)',
     gift_cancel: 'Cancel', gift_submit: 'Gift this horse', gift_busy: 'Transferring…', gift_fail: 'Transfer failed.',
     gift_done_tpl: 'Gifted {name} to {to}. It races from their stable starting tonight.',
+    tv2_pick_hint: 'Pick up to 2 menus (the same menu twice is fine)', tv2_range_k: 'Public range', tv2_x2: '×2',
+    tv2_menu_hill: 'Hill gallop', tv2_menu_pool: 'Pool', tv2_menu_spar: 'Sparring',
+    tv2_menu_gate: 'Gate practice', tv2_menu_wood: 'Wood chips', tv2_menu_rest: 'Rest',
+    tv2_rest_note: 'Negates this cycle\'s decay (−2.0); preferences don\'t apply',
+    tv2_confirm_title: 'Confirm this training?', tv2_confirm_warn: 'The result is rolled the moment you confirm. There is no redo.',
+    tv2_confirm_go: 'Confirm (final)', tv2_back: 'Choose again',
+    tv2_result_title: 'Training result', tv2_synergy_k: 'Synergy', tv2_delta_tpl: 'Total Value {n}',
+    tv2_rest_done: 'Rest — this cycle\'s decay is negated',
+    tv2_done_note: 'Training for this race is confirmed (the roll was decided at confirm).',
+    tv2_slot_morning: 'morning race', tv2_slot_night: 'night race', tv2_target_tpl: 'Target: the {slot} of {date}',
   },
 };
 
@@ -2496,6 +2524,16 @@ const zh: AppDict = {
     gift_email_ph: '对方的邮箱地址', gift_confirm_tpl: '我已理解上述内容,并赠出 {name}(不可撤销)',
     gift_cancel: '取消', gift_submit: '赠出这匹马', gift_busy: '转让中…', gift_fail: '转让失败。',
     gift_done_tpl: '已将 {name} 赠给 {to}。今晚起将在对方的马厩出赛。',
+    tv2_pick_hint: '最多选择2个菜单(同一菜单×2也可以)', tv2_range_k: '公开范围', tv2_x2: '×2',
+    tv2_menu_hill: '坡路', tv2_menu_pool: '游泳池', tv2_menu_spar: '对抗训练',
+    tv2_menu_gate: '闸门练习', tv2_menu_wood: '木屑跑道', tv2_menu_rest: '休养',
+    tv2_rest_note: '免除本次衰减(−2.0)・不受偏好影响',
+    tv2_confirm_title: '确定这个训练内容吗?', tv2_confirm_warn: '结果在确定的瞬间决定。无法重来。',
+    tv2_confirm_go: '确定(最终)', tv2_back: '重新选择',
+    tv2_result_title: '训练结果', tv2_synergy_k: '协同加成', tv2_delta_tpl: '综合值 {n}',
+    tv2_rest_done: '休养 — 已免除本次衰减',
+    tv2_done_note: '本场比赛的训练已确定(结果在确定瞬间已决定)。',
+    tv2_slot_morning: '早场比赛', tv2_slot_night: '晚场比赛', tv2_target_tpl: '目标: {date} 的{slot}',
   },
 };
 
@@ -3123,6 +3161,16 @@ const ko: AppDict = {
     gift_email_ph: '상대의 이메일 주소', gift_confirm_tpl: '위 내용을 이해했으며 {name}을(를) 선물합니다(취소 불가)',
     gift_cancel: '그만두기', gift_submit: '이 말을 선물하기', gift_busy: '양도 중…', gift_fail: '양도에 실패했습니다.',
     gift_done_tpl: '{name}을(를) {to}님께 선물했습니다. 오늘 밤부터 상대의 마구간에서 출주합니다.',
+    tv2_pick_hint: '메뉴를 2개까지 선택(같은 메뉴 ×2도 가능)', tv2_range_k: '공개 범위', tv2_x2: '×2',
+    tv2_menu_hill: '언덕 조교', tv2_menu_pool: '수영장', tv2_menu_spar: '대항 조교',
+    tv2_menu_gate: '게이트 연습', tv2_menu_wood: '우드칩', tv2_menu_rest: '휴양',
+    tv2_rest_note: '이번 감쇠(−2.0)를 무효화・취향의 영향 없음',
+    tv2_confirm_title: '이 내용으로 확정하시겠습니까?', tv2_confirm_warn: '결과는 확정하는 순간에 결정됩니다. 다시 할 수 없습니다.',
+    tv2_confirm_go: '확정(최종)', tv2_back: '다시 선택',
+    tv2_result_title: '조교 결과', tv2_synergy_k: '시너지', tv2_delta_tpl: '종합값 {n}',
+    tv2_rest_done: '휴양 — 이번 감쇠를 무효화',
+    tv2_done_note: '이 레이스의 조교는 확정되었습니다(결과는 확정 순간에 결정되었습니다).',
+    tv2_slot_morning: '아침 레이스', tv2_slot_night: '밤 레이스', tv2_target_tpl: '대상: {date}의 {slot}',
   },
 };
 
@@ -3750,6 +3798,16 @@ const ms: AppDict = {
     gift_email_ph: 'Alamat e-mel penerima', gift_confirm_tpl: 'Saya faham perkara di atas dan menghadiahkan {name} (tidak boleh dibatalkan)',
     gift_cancel: 'Batal', gift_submit: 'Hadiahkan kuda ini', gift_busy: 'Memindahkan…', gift_fail: 'Pemindahan gagal.',
     gift_done_tpl: '{name} dihadiahkan kepada {to}. Ia berlumba dari kandang mereka mulai malam ini.',
+    tv2_pick_hint: 'Pilih hingga 2 menu (menu sama ×2 pun boleh)', tv2_range_k: 'Julat umum', tv2_x2: '×2',
+    tv2_menu_hill: 'Larian bukit', tv2_menu_pool: 'Kolam', tv2_menu_spar: 'Latihan lawan',
+    tv2_menu_gate: 'Latihan pintu', tv2_menu_wood: 'Cip kayu', tv2_menu_rest: 'Rehat',
+    tv2_rest_note: 'Membatalkan susut nilai kali ini (−2.0); kegemaran tidak terpakai',
+    tv2_confirm_title: 'Sahkan latihan ini?', tv2_confirm_warn: 'Keputusan ditentukan sebaik anda sahkan. Tiada ulangan.',
+    tv2_confirm_go: 'Sahkan (muktamad)', tv2_back: 'Pilih semula',
+    tv2_result_title: 'Keputusan latihan', tv2_synergy_k: 'Sinergi', tv2_delta_tpl: 'Nilai Keseluruhan {n}',
+    tv2_rest_done: 'Rehat — susut nilai kali ini dibatalkan',
+    tv2_done_note: 'Latihan untuk perlumbaan ini telah disahkan (keputusan ditentukan ketika pengesahan).',
+    tv2_slot_morning: 'perlumbaan pagi', tv2_slot_night: 'perlumbaan malam', tv2_target_tpl: 'Sasaran: {slot} pada {date}',
   },
 };
 

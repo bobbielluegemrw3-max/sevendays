@@ -368,3 +368,42 @@
   font-family: var(--font-mono); font-size: 0.62rem; color: var(--cyan);
   border: 1px solid rgba(0, 234, 255, 0.35); border-radius: 999px; padding: 1px 7px; white-space: nowrap;
 }
+
+/* ---- V2調教フォーム(Decision 104/107)— TrainingFormV2 ---- */
+.tv2Hint { font-family: var(--font-jp); font-size: 0.72rem; color: var(--muted); }
+.tv2Grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+@media (max-width: 560px) { .tv2Grid { grid-template-columns: repeat(2, 1fr); } }
+.tv2Chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.tv2Chip {
+  font-family: var(--font-mono); font-size: 0.68rem; color: var(--cyan); cursor: pointer;
+  border: 1px solid rgba(0, 234, 255, 0.35); border-radius: 999px; padding: 2px 9px;
+  background: rgba(0, 234, 255, 0.06);
+}
+.tv2Chip:hover { border-color: var(--cyan); }
+.tv2Confirm, .tv2Result {
+  display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid var(--border-strong); border-radius: 12px; padding: 12px;
+  background: rgba(10, 8, 22, 0.6);
+}
+.tv2ConfirmHead, .tv2ResultHead {
+  font-family: var(--font-display); font-weight: 700; font-size: 12px; letter-spacing: 0.04em; color: var(--text);
+}
+.tv2Warn {
+  font-family: var(--font-jp); font-size: 0.74rem; color: var(--magenta-soft);
+  border: 1px dashed rgba(255, 45, 196, 0.4); border-radius: 9px; padding: 7px 10px;
+  background: rgba(255, 45, 196, 0.05);
+}
+.tv2ConfirmRow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tv2Rolls { display: flex; gap: 6px; flex-wrap: wrap; }
+.tv2Roll {
+  font-family: var(--font-mono); font-size: 0.68rem; color: var(--text);
+  border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px;
+  background: rgba(10, 8, 22, 0.5);
+}
+.tv2Delta { font-family: var(--font-display); font-weight: 800; font-size: 20px; }
+.tv2Pos { color: var(--cyan); }
+.tv2Neg { color: var(--magenta-soft); }
+.tv2RestDone { font-family: var(--font-jp); font-size: 0.72rem; color: var(--muted); }
+.tv2Target { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); }
+.tv2DoneNote { font-family: var(--font-jp); font-size: 0.7rem; color: var(--muted); }
+.tv2Cap { font-family: var(--font-mono); font-size: 0.62rem; color: var(--muted); letter-spacing: 0.05em; }

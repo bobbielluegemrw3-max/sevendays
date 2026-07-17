@@ -4,6 +4,7 @@ import { PRICE_TABLE_V1, trainingModifierV1, type HorseType as DomainHorseType, 
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { HorsePager, type PagerNav } from '@/components/HorsePager';
 import { TrainingForm } from '@/components/TrainingForm';
+import { TrainingFormV2, type TrainingV2Confirmed } from '@/components/TrainingFormV2';
 import { ItemBoostPanel } from '@/components/ItemBoostPanel';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
@@ -64,6 +65,10 @@ export interface HorseDetail {
   trained_for_next_race?: boolean;
   /** 確定済みの調教タイプ(A2: やり直しUIの初期値)。 */
   tonight_training?: string | null;
+  /** V2エンジンがアクティブ(Decision 101)— 調教UIをメニュー方式へ切替。 */
+  engine_v2?: boolean;
+  /** 次サイクルの確定済みV2ロール(Decision 107: 変更不可の完了表示)。 */
+  training_v2?: TrainingV2Confirmed | null;
   /** 隠し演出(EASTER_EGG_PLAN.md)。 */
   night_variant?: boolean;
   golden_star?: boolean;
@@ -415,15 +420,23 @@ export function HorseDetailView({
               </div>
               <div className={s.trainDesc}>{t.train_desc}</div>
               <div className={s.trainForm}>
-                <TrainingForm
-                  horseId={horse.id}
-                  horseType={horse.horse_type}
-                  fatigue={Number(horse.fatigue)}
-                  trained={horse.trained_for_next_race === true}
-                  currentTraining={horse.tonight_training ?? null}
-                  uncollected={uncollected}
-                  t={t}
-                />
+                {horse.engine_v2 ? (
+                  <TrainingFormV2
+                    horseId={horse.id}
+                    confirmed={horse.training_v2 ?? null}
+                    t={t}
+                  />
+                ) : (
+                  <TrainingForm
+                    horseId={horse.id}
+                    horseType={horse.horse_type}
+                    fatigue={Number(horse.fatigue)}
+                    trained={horse.trained_for_next_race === true}
+                    currentTraining={horse.tonight_training ?? null}
+                    uncollected={uncollected}
+                    t={t}
+                  />
+                )}
                 <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} t={t} />
               </div>
               <div className={s.trainNote}>{t.train_note}</div>

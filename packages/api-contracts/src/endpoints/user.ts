@@ -366,10 +366,58 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
          order by br.batch_date asc`,
         [ctx.params.id],
       );
+      // V2(Decision 104/107): V2エンジンがアクティブなら、次サイクル(朝→夜→翌朝)の
+      // 確定済みロールを返す — 詳細ページがメニューUI/確定済み表示へ切り替えるため。
+      let engineV2 = false;
+      let trainingV2: {
+        menus: string[]; delta: number; synergy: number; rests_decay: boolean; slot: string;
+      } | null = null;
+      {
+        const active = await ctx.client.query<{ version: string }>(
+          `select version from race_engine_versions
+           where activated_at is not null and deactivated_at is null`,
+        );
+        engineV2 = active.rows.length === 1 && isRaceEngineV2(active.rows[0]!.version);
+        if (engineV2 && isActiveHorse) {
+          const cycles: { date: string; slot: 'MORNING' | 'NIGHT' }[] = [
+            { date: today, slot: 'MORNING' },
+            { date: today, slot: 'NIGHT' },
+            { date: addDays(today, 1), slot: 'MORNING' },
+          ];
+          let cycle = cycles[cycles.length - 1]!;
+          for (const c of cycles) {
+            const done = await ctx.client.query(
+              `select 1 from batch_runs where batch_date = $1 and slot = $2::race_slot and status = 'COMPLETED'`,
+              [c.date, c.slot],
+            );
+            if (!done.rows[0]) { cycle = c; break; }
+          }
+          const v2row = await ctx.client.query<{
+            menus_v2: string[]; delta_v2: string; synergy_v2: string; rests_decay_v2: boolean;
+          }>(
+            `select menus_v2, delta_v2::text as delta_v2, synergy_v2::text as synergy_v2, rests_decay_v2
+             from training_sessions
+             where horse_id = $1 and effective_race_date = $2 and slot = $3::race_slot
+               and menus_v2 is not null`,
+            [ctx.params.id, cycle.date, cycle.slot],
+          );
+          if (v2row.rows[0]) {
+            trainingV2 = {
+              menus: v2row.rows[0].menus_v2,
+              delta: Number(v2row.rows[0].delta_v2),
+              synergy: Number(v2row.rows[0].synergy_v2),
+              rests_decay: v2row.rows[0].rests_decay_v2,
+              slot: cycle.slot,
+            };
+          }
+        }
+      }
       const { tonight_training: tt, effective_race_date: efd, ...detailRest } = hRow;
       void efd;
       return {
         ...detailRest,
+        engine_v2: engineV2,
+        training_v2: trainingV2,
         trained_for_next_race: tt !== null,
         /** 今夜向けに確定済みの調教タイプ(やり直しUIの初期値・A2)。 */
         tonight_training: tt,

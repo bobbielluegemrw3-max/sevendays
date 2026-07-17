@@ -332,7 +332,14 @@
   確定の瞬間に resolveTrainingRollV2(決定論シード=馬×サイクル・リトライ同一結果)・
   結果(perMenu/synergy/delta/restsDecay)を即返却・再確定は TRAINING_ALREADY_EXISTS。
   スナップショットのV2調教読みもslot対応。train-allのconflict targetを新ユニークに追従。
-  PGliteテスト5件PASS。**残(-4b)**: 調教UI(メニュー選択・公開レンジ表示・ロール演出・5言語)
+  PGliteテスト5件PASS。
+- [x] V2実装-4b: **新調教UI**(2026-07-18): `TrainingFormV2`(6メニュー×公開レンジ=
+  TRAINING_MENUS_V2実定数のみ・2つまで選択/同一×2可・RESTは減衰無効表示・
+  確定は2段階で最終確認に**「やり直しはできません」警告(107)**・確定後はメニュー別ロール+
+  シナジー+合計を表示し変更不可)。GET /horses/:id に engine_v2/training_v2(次サイクルの
+  確定済みロール)を追加し、HorseDetailView がV2アクティブ時に自動で切替。
+  5言語キー(tv2_* 21キー×ja/en/zh/ko/ms)。/dev/pages-preview にQAフィクスチャ3種
+  (選択中/確定済み/REST)— devサーバーで描画確認済み。ソフトキャップ/減衰の実定数も脚注表示
 - [ ] V2実装-5: ジャックポット(106仮値) →
   -6: 新アイテムカタログ起草(104-5) → -7: 表示のLV置換 → テストネット試運転開始
 - [ ] テストネット試運転 → メインネットリセット → ローンチ

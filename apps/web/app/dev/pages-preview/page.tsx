@@ -88,6 +88,28 @@ const HORSE_BURNED: HorseDetail = {
   ],
 };
 
+// V2調教UI(Decision 104/107)のQA用: 選択中 / 確定済み(REST含む)
+const HORSE_V2: HorseDetail = {
+  ...HORSE,
+  id: 'b8c1d4e7', name: 'Menu Pioneer', horse_type: 'SPRINTER',
+  current_day: 2, listing: null,
+  dna_hash: '0xb8c1' + 'd4e7'.repeat(15),
+  engine_v2: true, training_v2: null,
+  history: HORSE.history.slice(0, 2),
+};
+const HORSE_V2_DONE: HorseDetail = {
+  ...HORSE_V2,
+  id: 'c9d2e5f8', name: 'Roll Sealed', horse_type: 'ENDURANCE',
+  dna_hash: '0xc9d2' + 'e5f8'.repeat(15),
+  training_v2: { menus: ['HILL', 'SPAR'], delta: 7.4, synergy: 1.8, rests_decay: false, slot: 'NIGHT' },
+};
+const HORSE_V2_REST: HorseDetail = {
+  ...HORSE_V2,
+  id: 'd0e3f6a9', name: 'Quiet Keeper', horse_type: 'BALANCED',
+  dna_hash: '0xd0e3' + 'f6a9'.repeat(15),
+  training_v2: { menus: ['REST'], delta: 0, synergy: 0, rests_decay: true, slot: 'MORNING' },
+};
+
 // 未出走(戦績なし・Day0)の空状態QA用
 const HORSE_ROOKIE: HorseDetail = {
   ...HORSE,
@@ -135,6 +157,15 @@ export default async function PagesPreview() {
 
       {sect('/horses/[id] 馬詳細(新馬 Day0 — 未出走・戦績なし)')}
       <HorseDetailView horse={HORSE_ROOKIE} />
+
+      {sect('/horses/[id] V2調教 — メニュー選択(Decision 104/107)')}
+      <HorseDetailView horse={HORSE_V2} />
+
+      {sect('/horses/[id] V2調教 — 確定済み(ロール表示・変更不可)')}
+      <HorseDetailView horse={HORSE_V2_DONE} />
+
+      {sect('/horses/[id] V2調教 — REST確定(減衰無効)')}
+      <HorseDetailView horse={HORSE_V2_REST} />
 
       {sect('/races 一覧')}
       <RacesView
