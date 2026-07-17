@@ -6,6 +6,7 @@ import { HorsePager, type PagerNav } from '@/components/HorsePager';
 import { TrainingForm } from '@/components/TrainingForm';
 import { TrainingFormV2, type TrainingV2Confirmed } from '@/components/TrainingFormV2';
 import { ItemBoostPanel } from '@/components/ItemBoostPanel';
+import { ItemPrepPanelV3 } from '@/components/ItemPrepPanelV3';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { uncollectedGain } from '@/components/stable-shared';
@@ -424,6 +425,7 @@ export function HorseDetailView({
                   <TrainingFormV2
                     horseId={horse.id}
                     confirmed={horse.training_v2 ?? null}
+                    lv={horse.current_day}
                     t={t}
                   />
                 ) : (
@@ -437,7 +439,11 @@ export function HorseDetailView({
                     t={t}
                   />
                 )}
-                <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} t={t} />
+                {horse.engine_v2 ? (
+                  <ItemPrepPanelV3 horseId={horse.id} t={t} />
+                ) : (
+                  <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} t={t} />
+                )}
               </div>
               <div className={s.trainNote}>{t.train_note}</div>
               {/* 馬の転送(Decision 094): ACTIVEかつ出品中でない馬のみ */}

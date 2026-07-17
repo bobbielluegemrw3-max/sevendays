@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   TOTAL_VALUE_V2,
@@ -9,6 +9,8 @@ import {
   type TrainingMenuV2,
 } from '@sevendays/domain';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { AppSelect } from '@/components/AppSelect';
+import { effectSummaryJa, type CatalogItem, type InventoryData } from '@/lib/items';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
 
@@ -37,6 +39,8 @@ interface RollResult {
   effective_race_date: string;
   slot: string;
   training_tickets: number;
+  item_key?: string | null;
+  item_bonus?: number | null;
 }
 
 function menuLabel(menu: TrainingMenuV2, t: AppDict['horse']): string {
@@ -62,11 +66,16 @@ export function TrainingFormV2({
   horseId,
   t,
   confirmed = null,
+  lv = 0,
+  preview = false,
 }: {
   horseId: string;
   t: AppDict['horse'];
   /** このサイクルの確定済みロール(あれば変更不可の完了表示)。 */
   confirmed?: TrainingV2Confirmed | null;
+  /** 馬のLV(current_day)— アイテムのLV制限判定に使用。 */
+  lv?: number;
+  preview?: boolean;
 }) {
   const router = useRouter();
   const [menus, setMenus] = useState<TrainingMenuV2[]>([]);
@@ -74,6 +83,49 @@ export function TrainingFormV2({
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<RollResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // カタログV2(Decision 109): TRAINING系アイテムを確定と同時に1個添付できる
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [inventory, setInventory] = useState<InventoryData | null>(null);
+  const [itemKey, setItemKey] = useState('');
+
+  useEffect(() => {
+    if (preview || confirmed) return;
+    void (async () => {
+      const [cat, inv] = await Promise.all([
+        apiFetch<{ engine_v2?: boolean; items: CatalogItem[] }>('/api/v1/items/catalog'),
+        apiFetch<InventoryData>('/api/v1/items/inventory'),
+      ]);
+      if (cat.status === 200 && (cat.body as { engine_v2?: boolean }).engine_v2) {
+        setCatalog((cat.body as { items: CatalogItem[] }).items);
+      }
+      if (inv.status === 200) setInventory(inv.body as InventoryData);
+    })();
+  }, [preview, confirmed]);
+
+  const ownedByKey = useMemo(
+    () => new Map((inventory?.available ?? []).map((e) => [e.item_key, e.n])),
+    [inventory],
+  );
+  // 添付できる = TRAINING系(即時適用を除く)で、選択中メニュー・LVの条件を満たすもの
+  const attachable = useMemo(
+    () =>
+      catalog.filter((c) => {
+        if (c.item_class !== 'TRAINING' || !c.effect || c.effect.kind === 'DECAY_SHIELD') return false;
+        if (!c.sellable && (ownedByKey.get(c.key) ?? 0) === 0) return false;
+        if (c.effect.kind === 'BONUS') {
+          if (c.effect.requiresMenu && !menus.includes(c.effect.requiresMenu as TrainingMenuV2)) return false;
+          if (c.effect.lvMin !== undefined && lv < c.effect.lvMin) return false;
+          if (c.effect.lvMax !== undefined && lv > c.effect.lvMax) return false;
+        }
+        return true;
+      }),
+    [catalog, ownedByKey, menus, lv],
+  );
+  // メニュー変更で条件を外れたら選択を自動解除
+  useEffect(() => {
+    if (itemKey && !attachable.some((c) => c.key === itemKey)) setItemKey('');
+  }, [attachable, itemKey]);
+  const attachedItem = itemKey ? catalog.find((c) => c.key === itemKey) : undefined;
 
   // 確定済み(props経由 or この場でロール済み)= 変更不可の結果表示(Decision 107)
   const done: TrainingV2Confirmed | null = result
@@ -96,6 +148,13 @@ export function TrainingFormV2({
                   {t.tv2_synergy_k} <b className={s.tv2Pos}>{fmtSigned(result.synergy)}</b>
                 </span>
               ) : null}
+              {result.item_key && result.item_bonus != null ? (
+                <span className={s.tv2Roll}>
+                  <img src={`/items/${result.item_key}.webp`} alt="" width={16} height={16} style={{ verticalAlign: '-3px', borderRadius: 3 }} />
+                  {' '}
+                  <b className={s.tv2Pos}>{fmtSigned(result.item_bonus)}</b>
+                </span>
+              ) : null}
             </div>
           ) : (
             <div className={s.tv2Rolls}>
@@ -104,8 +163,8 @@ export function TrainingFormV2({
               ))}
             </div>
           )}
-          <div className={`${s.tv2Delta} ${done.delta < 0 ? s.tv2Neg : s.tv2Pos}`}>
-            {fill(t.tv2_delta_tpl, { n: fmtSigned(done.delta) })}
+          <div className={`${s.tv2Delta} ${done.delta + (result?.item_bonus ?? 0) < 0 ? s.tv2Neg : s.tv2Pos}`}>
+            {fill(t.tv2_delta_tpl, { n: fmtSigned(done.delta + (result?.item_bonus ?? 0)) })}
           </div>
           {done.rests_decay ? <div className={s.tv2RestDone}>{t.tv2_rest_done}</div> : null}
           {result ? (
@@ -123,9 +182,21 @@ export function TrainingFormV2({
   async function submit() {
     setBusy(true);
     setError(null);
+    // 未所持のアイテムは Buy & Attach(購入→確定と同時に添付)
+    if (itemKey && (ownedByKey.get(itemKey) ?? 0) === 0) {
+      const buy = await apiFetch('/api/v1/items/purchase', {
+        method: 'POST',
+        body: { item_key: itemKey, quantity: 1 },
+      });
+      if (buy.status !== 200) {
+        setBusy(false);
+        setError(errorMessage(buy.body) ?? t.train_fail);
+        return;
+      }
+    }
     const res = await apiFetch<RollResult>(`/api/v1/horses/${horseId}/training`, {
       method: 'POST',
-      body: { menus },
+      body: itemKey ? { menus, item_key: itemKey } : { menus },
     });
     setBusy(false);
     setConfirming(false);
@@ -150,6 +221,13 @@ export function TrainingFormV2({
             {menus.map((m, i) => (
               <span key={`${m}-${i}`} className={s.tv2Roll}>{menuLabel(m, t)}</span>
             ))}
+            {attachedItem ? (
+              <span className={s.tv2Roll}>
+                <img src={`/items/${attachedItem.key}.webp`} alt="" width={16} height={16} style={{ verticalAlign: '-3px', borderRadius: 3 }} />
+                {' '}{attachedItem.name_ja}
+                {(ownedByKey.get(attachedItem.key) ?? 0) === 0 ? ` (${attachedItem.price} USDT)` : ''}
+              </span>
+            ) : null}
           </div>
           <div className={s.tv2Warn}>{t.tv2_confirm_warn}</div>
           {error ? <p className="error">{error}</p> : null}
@@ -213,6 +291,30 @@ export function TrainingFormV2({
               {menuLabel(m, t)} ✕
             </button>
           ))}
+        </div>
+      ) : null}
+      {attachable.length > 0 && menus.length > 0 ? (
+        <div className={s.tv2Chips} style={{ alignItems: 'center', gap: '0.45rem' }}>
+          <AppSelect
+            value={itemKey}
+            onChange={setItemKey}
+            ariaLabel="調教アイテムを添付"
+            options={[
+              { value: '', label: 'アイテムなし(任意)' },
+              ...attachable.map((c) => {
+                const owned = ownedByKey.get(c.key) ?? 0;
+                return {
+                  value: c.key,
+                  label: `${c.name_ja} ${owned > 0 ? `(所持${owned})` : `(${c.price} USDT)`}`,
+                };
+              }),
+            ]}
+          />
+          {attachedItem?.effect ? (
+            <span style={{ color: 'var(--faint)', fontSize: '0.72rem' }}>
+              {effectSummaryJa(attachedItem.effect)}
+            </span>
+          ) : null}
         </div>
       ) : null}
       {error ? <p className="error">{error}</p> : null}

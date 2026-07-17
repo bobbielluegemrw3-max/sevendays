@@ -373,6 +373,24 @@
   **→ オーナー承認(2026-07-18)= Decision 109 起票済み**(ドラフトどおり: Revenge Buff廃止・
   アイテム天候廃止・非売は譲渡不可・コース軸温存・上限=クラスごと1個)。
   アート発注書 `ITEM_ART_PROMPT_V2.md` 起草済み(Manus・35点・オーナーが発注)。
-  **実装(IT2-1〜5)は解禁 — レンジ最終値はRTPシム突合(IT2-4)で確定**
+  **→ 実装完了(2026-07-18・IT2-1〜5)**: コード上の版数は **item_policy_v3.0 / `_V3`**
+  (既存`_V2`=Decision 082版と区別)。**キー衝突5点をリネーム**(royal_feast→royal_banquet /
+  veteran_blanket→elder_blanket / memorial_wreath→farewell_wreath / legacy_mane→testament_mane /
+  stardust_sand→aeon_sand — 旧カタログのDB主キーと衝突するため)。
+  domain: `items-v3.ts`(カタログ35+±4器の置換法則純関数・スイング包絡テスト済み=IT2-4)/
+  race-engine: `v2/items.ts`(確定時アイテムロール・適格性ゲート)/
+  migration `20260718020000_v3_item_catalog.sql`(本番適用済み): item_class列・**V3の35行は
+  active=false でシード(現行ショップに出ない)**・item_usages(slot/usage_kind/params_json+
+  ユニーク再キー)・training_sessionsのアイテム添付列(107ガード凍結)・horses.decay_shield_v2 /
+  エンジン: V2スナップショットが備え置換+調教ボーナス+シールドを凍結・リプレイは凍結入力から
+  備えを再計算・**V2のBurnドロップ=V3セット・Revenge Buff生成はV2で停止(109)**・Step16精算は
+  078レールに同乗 / API: シーズンゲート(V2=新カタログのみ)・調教確定への添付(即最終・
+  取消不可)・RACE適用/取消(DUALはグループ選択)・星霜の砂の即時適用 / UI: TrainingFormV2に
+  添付セレクタ(Buy&Attach)・ItemPrepPanelV3(備えパネル・外れの下振れを正直表示)・
+  ショップのV2分岐(2分類チップ+効果文)。**アート35点納品済み・512px WebP組込済み**
+  (原本マスター=`seven_days_derby_items_v2_35.zip` 未コミット・消さないこと。納品は
+  発注書v1のキーだったため5点は取込時にリネーム)。新テスト+27件・全ゲートgreen。
+  **リセット時追加**: `update item_catalog set active = (item_class <> 'V1')` を§7チェックリストへ。
+  V2アイテムUIの実機視覚QAはテストネット試運転で(-7のプレビュー整備と合流)
 - [ ] V2実装-7: 表示のLV置換+レース単位化 → テストネット試運転開始(-6の実装はオーナー承認後)
 - [ ] テストネット試運転 → メインネットリセット → ローンチ

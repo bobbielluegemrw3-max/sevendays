@@ -60,7 +60,7 @@ across the whole set — they must read as one family.
 | protein_mash | プロテインマッシュ | a chrome feed pail of rich steaming mash with a power-grain sheen |
 | farrier_kit | 装蹄キット | an open farrier's toolkit — hammer, rasp and a fresh horseshoe on a dark leather roll |
 | spar_guard | 併せ馬の防具 | a padded sparring headguard and chest protector set for a horse, sturdy straps |
-| veteran_blanket | 古馬の毛布 | a dignified quilted horse blanket with worn gold trim and service medals |
+| elder_blanket | 古馬の毛布 | a dignified quilted horse blanket with worn gold trim and service medals |
 | storm_armor | 嵐の完全装具 | full storm barding armour with cloud-dark plates and tiny lightning glints |
 | solar_silks | 快晴の勝負服 | radiant racing silks shimmering with a sunburst pattern |
 | mud_plates | 重馬場プレート | heavy-duty dark racing plates for deep going, mud-shedding grooves |
@@ -72,7 +72,7 @@ across the whole set — they must read as one family.
 
 | key | 名前 | 被写体プロンプト |
 |---|---|---|
-| royal_feast | ロイヤルフィースト | a golden trough overflowing with luminous royal feed, crown emblem |
+| royal_banquet | ロイヤルフィースト | a golden trough overflowing with luminous royal feed, crown emblem |
 | masters_eye | 名伯楽の眼 | a wise brass monocle on a fine chain, engraved eye emblem, calm knowing glow |
 | awakening_elixir | 覚醒のエリキシル | a tall ornate elixir bottle with swirling radiant liquid, energy wisps escaping the cork |
 | synergy_incense | 好物の香 | an ornate incense burner with two intertwining smoke ribbons forming a knot of light |
@@ -83,10 +83,10 @@ across the whole set — they must read as one family.
 | key | 名前 | 被写体プロンプト |
 |---|---|---|
 | keepsake_shoe | 形見の蹄鉄 | a cherished old horseshoe on a velvet cushion, soft ember glow, one small candle beside |
-| memorial_wreath | 追悼の花冠 | a memorial flower wreath of dark roses and ember petals, quiet dignity |
-| legacy_mane | 遺志のたてがみ | a lock of flowing silver horse mane tied with a red ribbon, faintly luminous |
+| farewell_wreath | 追悼の花冠 | a memorial flower wreath of dark roses and ember petals, quiet dignity |
+| testament_mane | 遺志のたてがみ | a lock of flowing silver horse mane tied with a red ribbon, faintly luminous |
 | roar_soul | 咆哮の魂 | a spectral flame shaped like a rearing horse spirit, contained in a dark orb |
-| stardust_sand | 星霜の砂 | an hourglass pouring glittering stardust sand, embers drifting around it |
+| aeon_sand | 星霜の砂 | an hourglass pouring glittering stardust sand, embers drifting around it |
 
 ## 納品仕様
 

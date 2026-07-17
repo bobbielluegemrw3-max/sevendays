@@ -62,8 +62,8 @@ export function ItemBoostPanel({
       catalog.filter(
         (c) =>
           (c.sellable || (ownedByKey.get(c.key) ?? 0) > 0) &&
-          (c.usable_day_min === null || currentDay >= c.usable_day_min) &&
-          (c.usable_day_max === null || currentDay <= c.usable_day_max),
+          (c.usable_day_min == null || currentDay >= c.usable_day_min) &&
+          (c.usable_day_max == null || currentDay <= c.usable_day_max),
       ),
     [catalog, ownedByKey, currentDay],
   );

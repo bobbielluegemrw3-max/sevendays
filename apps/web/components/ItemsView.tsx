@@ -7,7 +7,9 @@ import { AppSelect } from '@/components/AppSelect';
 import {
   BAND_LABEL,
   BAND_ORDER,
+  ITEM_CLASS_LABEL,
   TXN_META,
+  effectSummaryJa,
   type CatalogItem,
   type DailyConditions,
   type InventoryData,
@@ -71,12 +73,21 @@ export function ItemsView({
   const byKey = useMemo(() => new Map(catalog.map((c) => [c.key, c])), [catalog]);
   const giftable = inventory.available.filter((e) => byKey.get(e.item_key)?.giftable !== false);
 
-  const BAND_RANGE: Record<string, string> = {
-    BASIC: '1〜2 USDT',
-    STANDARD: '3〜4 USDT',
-    PREMIUM: '5〜7 USDT',
-    BURN_DROP: 'Burn時にのみ授与',
-  };
+  // カタログV2(Decision 109)は item_class を持つ — 帯の価格レンジも新カタログ準拠
+  const isV3 = catalog.some((c) => c.item_class !== undefined);
+  const BAND_RANGE: Record<string, string> = isV3
+    ? {
+        BASIC: '2〜3 USDT',
+        STANDARD: '4〜5 USDT',
+        PREMIUM: '6〜10 USDT',
+        BURN_DROP: 'Burn時にのみ授与',
+      }
+    : {
+        BASIC: '1〜2 USDT',
+        STANDARD: '3〜4 USDT',
+        PREMIUM: '5〜7 USDT',
+        BURN_DROP: 'Burn時にのみ授与',
+      };
 
   const visibleBands = band === 'ALL' ? BAND_ORDER : [band];
 
@@ -439,16 +450,21 @@ export function ItemsView({
                           {item.affinity && item.affinity !== 'ALL' && (
                             <span className={s.affinityChip}>{item.affinity_ja}</span>
                           )}
+                          {item.item_class && (
+                            <span className={s.affinityChip}>{ITEM_CLASS_LABEL[item.item_class]}</span>
+                          )}
                           <div className={s.cardNameEn}>{item.name_en}</div>
                         </div>
                         {item.sellable ? (
                           <div className={s.cardPrice}>{item.price}<span className="unit">USDT</span></div>
                         ) : null}
                       </div>
-                      <div className={s.cardDesc}>{item.description_ja}</div>
+                      <div className={s.cardDesc}>
+                        {item.effect ? effectSummaryJa(item.effect) : item.description_ja}
+                      </div>
                       <div className={s.cardMeta}>
                         {owned > 0 ? <span className={s.ownTag}>所持 {owned}</span> : null}
-                        {item.usable_day_min !== null ? (
+                        {item.usable_day_min != null ? (
                           <span className={s.dayTag}>Day{item.usable_day_min}〜{item.usable_day_max}限定</span>
                         ) : null}
                         {!item.sellable ? <span className={s.dropTag}>Burn時にのみ授与</span> : null}
