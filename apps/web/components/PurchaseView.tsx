@@ -14,6 +14,10 @@ import s from '../app/purchase.module.css';
 export interface Session {
   id: string; status: string; locked_amount: string;
   assigned_price: string | null; refund_amount: string | null; created_at: string;
+  /** V2(Decision 103): 'SINGLE' | 'POOL'。旧レスポンス互換のためoptional。 */
+  session_mode?: string;
+  /** このセッションで入手した頭数(プールは複数)。 */
+  horse_count?: number;
 }
 
 function money(v: string | null): string {
@@ -34,13 +38,20 @@ function sessionMeta(status: string): { cls: string; label: string; pending: boo
 }
 /** 予約1件で「実際に何が起きたか」の1文。 */
 function sessionStory(ss: Session): string {
+  const isPool = ss.session_mode === 'POOL';
   switch (ss.status) {
     case 'PENDING_ASSIGNMENT':
-      return `最大 ${money(ss.locked_amount)} USDT をロック中。今夜20:00のマッチングで馬が割り当てられます(20:00前ならキャンセルで全額返金)。`;
+      return isPool
+        ? `予算 ${money(ss.locked_amount)} USDT をロック中。次のレースで出品馬→新規発行の順に予算いっぱい割り当てられます(締切前なら金額変更・キャンセル可)。`
+        : `最大 ${money(ss.locked_amount)} USDT をロック中。今夜20:00のマッチングで馬が割り当てられます(20:00前ならキャンセルで全額返金)。`;
     case 'ASSIGNED':
     case 'COMPLETED': {
       const paid = money(ss.assigned_price);
       const refund = Number(ss.refund_amount) > 0 ? `、差額 ${money(ss.refund_amount)} USDT を返金` : '';
+      if (isPool) {
+        const n = ss.horse_count ?? 0;
+        return `YOUR NEW STABLE — ${money(ss.locked_amount)} USDT が ${n} 頭になりました(${paid} USDT 使用${refund})。`;
+      }
       return `${paid} USDT の馬を入手しました${refund}。`;
     }
     case 'REFUNDED':

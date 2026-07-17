@@ -319,8 +319,14 @@
   **ミント馬は総合値40〜75をミントシードから決定論導出して常に保持**(V2結線・commit-reveal検証可能)。
   API: POST /api/v1/purchase に `amount`(V2エンジンアクティブ時のみ受付=POOL_NOT_AVAILABLEガード)。
   PGliteテスト4件PASS(作成/編集/キャンセル・500予算割当・スキップ規則・冪等・reconcile)。
-  **残(-3b)**: 購入ページUI(パッケージバッジ・自由入力)・auto_reserve のプール型再定義・
-  「YOUR NEW STABLE」個人結果ショー・market post-batch のレース単位スイープ
+  **残(-3b後述以外)**: auto_reserve のプール型再定義・market post-batch のレース単位スイープ
+- [x] V2実装-3b: **プール購入UI**(2026-07-18): `PoolReservePanel`(パッケージバッジ200〜10000+
+  自由入力・下限102=最安1頭・残高超は入金導線・確認ダイアログ・生きているプールがあれば
+  **金額変更モード**(差額のみ動く説明つき))。/market はGET /purchaseの `engine_v2` で
+  自動切替(V1のReservePanelは不変)。GET /purchase に session_mode/horse_count を追加し、
+  予約一覧の物語文をプール対応(「YOUR NEW STABLE — 1000 USDTが8頭になりました」)。
+  /dev/pages-preview にフィクスチャ3種 — devサーバーで描画確認済み(ゾンビdevサーバーは
+  taskkillで退治=プーラー枠)。**ショー内のYOUR NEW STABLE演出は-7(表示フェーズ)で**
 - [x] V2実装-4a: **新調教API**(2026-07-17/18): **Decision 107 起票(オーナー決定)= V2ロール調教は
   確定即最終・やり直し不可**(再ロール/組合せ試し替えの搾取を封じ、シムの1レース1ロール前提を守る。
   V1のロール無しやり直しは不変・リセットで退役)。

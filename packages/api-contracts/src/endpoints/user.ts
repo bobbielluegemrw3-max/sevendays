@@ -1071,12 +1071,21 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     handler: async (ctx) => {
       const rows = await ctx.client.query(
         `select id, status::text as status, locked_amount::text as locked_amount,
+                session_mode::text as session_mode,
                 assigned_price::text as assigned_price, refund_amount::text as refund_amount,
-                created_at::text as created_at
+                created_at::text as created_at,
+                (select count(*)::int from ownership_assignments oa
+                 where oa.purchase_session_id = purchase_sessions.id) as horse_count
          from purchase_sessions where user_id = $1 order by created_at desc limit 20`,
         [ctx.userId],
       );
-      return { sessions: rows.rows };
+      // V2(Decision 103): プール購入UIへの切替フラグ(アクティブエンジンで判定)
+      const active = await ctx.client.query<{ version: string }>(
+        `select version from race_engine_versions
+         where activated_at is not null and deactivated_at is null`,
+      );
+      const engineV2 = active.rows.length === 1 && isRaceEngineV2(active.rows[0]!.version);
+      return { sessions: rows.rows, engine_v2: engineV2 };
     },
   });
 

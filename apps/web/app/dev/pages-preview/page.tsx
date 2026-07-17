@@ -6,6 +6,7 @@ import { RaceDetailView } from '@/components/RaceDetailView';
 import { WalletView } from '@/components/WalletView';
 import { PurchaseView } from '@/components/PurchaseView';
 import { NotificationsView } from '@/components/NotificationsView';
+import { PoolReservePanel } from '@/components/PoolReservePanel';
 import { BuybacksView } from '@/components/BuybacksView';
 import { BuybackDetailView } from '@/components/BuybackDetailView';
 import { AccountView } from '@/components/AccountView';
@@ -211,6 +212,21 @@ export default async function PagesPreview() {
           { id: 'as-1', horse_id: 'a1f4b2e7', assigned_price: '110.00', status: 'COMPLETED', was_day0_mint: false, created_at: iso(1500) },
           { id: 'as-2', horse_id: 'b2e7c3d9', assigned_price: '100.00', status: 'COMPLETED', was_day0_mint: true, created_at: iso(2900) },
         ]}
+      />
+
+      {sect('プール購入パネル(Decision 103・V2)— 新規予約')}
+      <PoolReservePanel available="1523.40" pool={null} preview />
+
+      {sect('プール購入パネル — 金額変更モード(生きているプールあり)')}
+      <PoolReservePanel available="523.40" pool={{ id: 'p-1', locked_amount: '1000.00000000' }} preview />
+
+      {sect('購入予約一覧 — プールの物語(割当待ち / YOUR NEW STABLE)')}
+      <PurchaseView
+        sessions={[
+          { id: 'p-1', status: 'PENDING_ASSIGNMENT', locked_amount: '1000.00000000', assigned_price: null, refund_amount: null, created_at: iso(30), session_mode: 'POOL' },
+          { id: 'p-2', status: 'ASSIGNED', locked_amount: '1000.00000000', assigned_price: '989.16000000', refund_amount: '10.84000000', created_at: iso(1600), session_mode: 'POOL', horse_count: 8 },
+        ]}
+        assignments={[]}
       />
 
       {sect('/notifications 通知')}

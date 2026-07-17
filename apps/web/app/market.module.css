@@ -183,3 +183,29 @@
   background: rgba(0, 234, 255, 0.06); border-radius: 999px; padding: 2px 8px;
 }
 .shelfTv b { font-family: var(--font-display); font-size: 12.5px; font-weight: 800; }
+
+/* ---- プール購入パネル(Decision 103・V2)— PoolReservePanel ---- */
+.poolBox {
+  display: flex; flex-direction: column; gap: 10px;
+  border: 1px solid var(--border-strong); border-radius: 14px; padding: 14px;
+  background: rgba(10, 8, 22, 0.6);
+}
+.poolHead { font-family: var(--font-display); font-weight: 800; font-size: 13px; letter-spacing: 0.04em; color: var(--text); }
+.poolNote { font-family: var(--font-jp); font-size: 0.74rem; color: var(--muted); margin: 0; }
+.poolRow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.poolBadges { display: flex; gap: 7px; flex-wrap: wrap; }
+.poolBadge {
+  font-family: var(--font-display); font-weight: 700; font-size: 12px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 999px; padding: 5px 13px;
+  background: rgba(10, 8, 22, 0.5); color: var(--text); transition: border-color 0.15s ease;
+}
+.poolBadge:hover:not(:disabled) { border-color: var(--border-strong); }
+.poolBadge:disabled { opacity: 0.35; cursor: default; }
+.poolBadgeOn { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(0, 234, 255, 0.25); background: rgba(0, 234, 255, 0.06); }
+.poolInput {
+  flex: 1; min-width: 160px;
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px;
+  background: rgba(10, 8, 22, 0.5);
+}
+.poolInput:focus { outline: none; border-color: var(--cyan); }

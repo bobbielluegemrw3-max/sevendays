@@ -2,6 +2,7 @@ import { serverApi, serverApiOrLogin } from '@/lib/server-api';
 import { MarketPlaceView, type ListableHorse, type MarketPlaceData } from '@/components/MarketPlaceView';
 import { PurchaseView, type Session } from '@/components/PurchaseView';
 import { ReservePanel } from '@/components/ReservePanel';
+import { PoolReservePanel } from '@/components/PoolReservePanel';
 import { TradeAutoTile, TradeModeModal, type TradeSettings } from '@/components/TradeAutoControls';
 import type { Assignment } from '@/components/AssignmentList';
 import { APP_COPY } from '@/lib/i18n';
@@ -18,12 +19,16 @@ export default async function MarketPage() {
   const [place, horses, sessions, assignments, wallet, trade] = await Promise.all([
     serverApiOrLogin<MarketPlaceData>('/api/v1/market/place'),
     serverApiOrLogin<{ horses: ListableHorse[] }>('/api/v1/horses'),
-    serverApiOrLogin<{ sessions: Session[] }>('/api/v1/purchase'),
+    serverApiOrLogin<{ sessions: Session[]; engine_v2?: boolean }>('/api/v1/purchase'),
     serverApi<{ assignments: Assignment[] }>('/api/v1/assignments'),
     serverApiOrLogin<{ available: string; locked: string }>('/api/v1/wallet'),
     serverApi<TradeSettings>('/api/v1/trade-settings'),
   ]);
   const pendingCount = sessions.sessions.filter((s) => s.status === 'PENDING_ASSIGNMENT').length;
+  // V2(Decision 103): プール購入UI。生きているプール(PENDING×POOL)は金額変更モード
+  const engineV2 = sessions.engine_v2 === true;
+  const livePool =
+    sessions.sessions.find((s) => s.status === 'PENDING_ASSIGNMENT' && s.session_mode === 'POOL') ?? null;
   const tradeSettings = trade.status === 200 ? trade.body : null;
   const tradeCopy = APP_COPY[await getLang()].trade;
   return (
@@ -32,7 +37,14 @@ export default async function MarketPage() {
       myHorses={horses.horses}
       reserveSlot={
         <>
-          <ReservePanel available={wallet.available} pendingCount={pendingCount} />
+          {engineV2 ? (
+            <PoolReservePanel
+              available={wallet.available}
+              pool={livePool ? { id: livePool.id, locked_amount: livePool.locked_amount } : null}
+            />
+          ) : (
+            <ReservePanel available={wallet.available} pendingCount={pendingCount} />
+          )}
           {/* AUTOトグルはダッシュボードとここの2箇所(Decision 086) */}
           {tradeSettings ? <TradeAutoTile settings={tradeSettings} t={tradeCopy} /> : null}
           <PurchaseView
