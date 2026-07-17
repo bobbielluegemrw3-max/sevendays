@@ -81,6 +81,9 @@ export const API_ERROR_STATUS: Record<string, number> = {
   MARKET_DAY_RANGE: 400,
   // 売買自動化設定 (Decision 086)
   TRADE_SETTINGS_INVALID: 400,
+  // プール購入 (Decision 103・V2)
+  POOL_BUDGET_INVALID: 400,
+  POOL_NOT_AVAILABLE: 409,
   // 出品中(Market Lock)の馬は今夜走らない — 調教/アイテムの無駄遣い防止 (087監査)
   HORSE_MARKET_LOCKED: 409,
 };

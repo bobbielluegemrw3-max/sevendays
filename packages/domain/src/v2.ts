@@ -91,6 +91,10 @@ export function raceSlotStartUtcV2(mytDate: string, slot: RaceSlotV2): Date {
   return new Date(`${mytDate}T${hour}:00:00.000Z`);
 }
 
+/** プール購入(Decision 103): パッケージバッジ。自由入力も可・下限は最安の馬1頭(102)。 */
+export const POOL_PACKAGES_V2 = ['200', '500', '1000', '2000', '5000', '10000'] as const;
+export const POOL_PURCHASE_MIN_USDT = '102';
+
 /** ジャックポット(Decision 106・テストネット仮値。本番値は公開判断時にオーナー決定)。 */
 export const JACKPOT_DEFAULTS_V2 = {
   prizeUsdt: '100.00',

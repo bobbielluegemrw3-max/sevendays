@@ -309,6 +309,18 @@
   `/internal/batch/start` に slot 入力(省略=NIGHT)。PGliteテスト6件PASS。
   **残(後続フェーズへ)**: my-results/透明性台帳/ショー/status APIのレース単位表示(-7)・
   朝レースのプッシュ通知文言・market post-batchのレース単位スイープ(-3のプール購入改修と同時)
-- [ ] V2実装-3: プール購入(103) → -4: 新調教UI(104) → -5: ジャックポット(106仮値) →
+- [x] V2実装-3a: **プール購入エンジンコア**(2026-07-17): migration `20260717050000_v2_pool_purchase.sql`
+  (本番適用済み) = `purchase_session_mode`(SINGLE|POOL・既定SINGLE=V1不変)/ プール予算≥102 check /
+  1ユーザー1ライブプール(部分ユニーク)/ ownership_assignments は (session, horse) ユニークへ。
+  結線: `createOrUpdatePoolSession`(全額ロック・再呼び出し=金額変更で差額ロック/解放・
+  キャンセルは既存経路)/ executeAssignment のプール分岐 — P2P出品を抽選順の先頭から予算内で取得・
+  **買えない出品は次の買い手へスキップ**(出品はチャンスを失わない)・残予算をミント(102)充填・
+  余り(<102)自動返金・全て冪等(精算キーは session×horse)。SINGLE経路はキー含め完全温存。
+  **ミント馬は総合値40〜75をミントシードから決定論導出して常に保持**(V2結線・commit-reveal検証可能)。
+  API: POST /api/v1/purchase に `amount`(V2エンジンアクティブ時のみ受付=POOL_NOT_AVAILABLEガード)。
+  PGliteテスト4件PASS(作成/編集/キャンセル・500予算割当・スキップ規則・冪等・reconcile)。
+  **残(-3b)**: 購入ページUI(パッケージバッジ・自由入力)・auto_reserve のプール型再定義・
+  「YOUR NEW STABLE」個人結果ショー・market post-batch のレース単位スイープ
+- [ ] V2実装-4: 新調教UI(104) → -5: ジャックポット(106仮値) →
   -6: 新アイテムカタログ起草(104-5) → -7: 表示のLV置換 → テストネット試運転開始
 - [ ] テストネット試運転 → メインネットリセット → ローンチ

@@ -6,12 +6,14 @@ import {
   TRAINING_TYPES,
   PURCHASE_MAX_PER_REQUEST,
   PURCHASE_LOCK_AMOUNT,
+  isRaceEngineV2,
   recommendedTrainingV1,
   renderNotification,
 } from '@sevendays/domain';
 import { ensureUserAccounts, withdrawalFundLock } from '@sevendays/ledger';
 import {
   cancelPurchaseSession,
+  createOrUpdatePoolSession,
   createPurchaseSession,
   getMarketplaceState,
   verifyReplayInputs,
@@ -888,8 +890,36 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       // Decision 096: 同時予約の上限は実質撤廃。1リクエストの作成数だけ
       // PURCHASE_MAX_PER_REQUEST(直列作成の実行時間ガード)で区切る。
       count: z.number().int().min(1).max(PURCHASE_MAX_PER_REQUEST).optional(),
+      // Decision 103(V2): 予算プール「◯◯$厩舎」。amount指定=プール予約。
+      // 生きているプールがあれば金額変更(差額ロック/解放)。countとは排他。
+      amount: z
+        .string()
+        .regex(/^\d{1,7}(\.\d{1,2})?$/, 'amount must be a positive USDT value')
+        .optional(),
     }),
     handler: async (ctx, input) => {
+      if (input.amount !== undefined) {
+        // プール購入はV2エンジン(テストネットリセット後)でのみ受け付ける
+        const active = await ctx.client.query<{ version: string }>(
+          `select version from race_engine_versions
+           where activated_at is not null and deactivated_at is null`,
+        );
+        if (active.rows.length !== 1 || !isRaceEngineV2(active.rows[0]!.version)) {
+          throw new ApiError('POOL_NOT_AVAILABLE', 'Pool purchase opens with the V2 season');
+        }
+        const pool = await createOrUpdatePoolSession(ctx.client, {
+          userId: ctx.userId,
+          amount: input.amount,
+          idempotencyKey: ctx.idempotencyKey!,
+        });
+        return {
+          purchase_session_id: pool.sessionId,
+          already_exists: pool.alreadyExists,
+          session_ids: [pool.sessionId],
+          locked_amount: pool.lockedAmount,
+          mode: 'POOL',
+        };
+      }
       const count = input.count ?? 1;
       const key = ctx.idempotencyKey!;
       const sessions: { id: string; alreadyExists: boolean }[] = [];

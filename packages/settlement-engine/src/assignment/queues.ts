@@ -32,6 +32,8 @@ export interface QueuedBuyer {
   sessionId: string;
   userId: string;
   lockedAmount: string;
+  /** Decision 103: POOL sessions receive multiple horses up to their budget. */
+  sessionMode: 'SINGLE' | 'POOL';
   tiebreak: number;
 }
 
@@ -89,8 +91,9 @@ export async function buildBuyerQueue(
     id: string;
     user_id: string;
     locked_amount: string;
+    session_mode: 'SINGLE' | 'POOL';
   }>(
-    `select id, user_id, locked_amount::text as locked_amount
+    `select id, user_id, locked_amount::text as locked_amount, session_mode::text as session_mode
      from purchase_sessions
      where batch_run_id = $1 and status = 'PENDING_ASSIGNMENT'`,
     [batchRunId],
@@ -99,6 +102,7 @@ export async function buildBuyerQueue(
     sessionId: s.id,
     userId: s.user_id,
     lockedAmount: s.locked_amount,
+    sessionMode: s.session_mode,
     tiebreak: purchaseTiebreakScore(batchRunId, s.id, assignmentAlgorithmVersion),
   }));
   // 予約時刻(createdAtMs)は並びに使わない — シード由来の決定論スコアのみで抽選。

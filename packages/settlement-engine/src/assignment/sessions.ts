@@ -1,6 +1,10 @@
 import { Money } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import { MAX_CONCURRENT_PURCHASE_SESSIONS, PURCHASE_LOCK_AMOUNT } from '@sevendays/domain';
+import {
+  MAX_CONCURRENT_PURCHASE_SESSIONS,
+  POOL_PURCHASE_MIN_USDT,
+  PURCHASE_LOCK_AMOUNT,
+} from '@sevendays/domain';
 import { LedgerError, postTransaction, purchaseRefund, ensureUserAccounts } from '@sevendays/ledger';
 import { getMarketplaceState } from '../batch/marketplace.js';
 
@@ -16,7 +20,8 @@ export type AssignmentErrorCode =
   | 'MARKETPLACE_LOCKED'
   | 'PURCHASE_SESSION_LIMIT'
   | 'PURCHASE_NOT_CANCELLABLE'
-  | 'PURCHASE_NOT_FOUND';
+  | 'PURCHASE_NOT_FOUND'
+  | 'POOL_BUDGET_INVALID';
 
 export class AssignmentError extends Error {
   constructor(
@@ -113,6 +118,153 @@ export async function createPurchaseSession(
         [input.idempotencyKey],
       );
       if (winner.rows[0]) return { sessionId: winner.rows[0].id, alreadyExists: true };
+    }
+    throw error;
+  }
+}
+
+export interface PoolSessionResult {
+  sessionId: string;
+  /** true when this request replayed or edited an existing live pool. */
+  alreadyExists: boolean;
+  lockedAmount: string;
+}
+
+/**
+ * Pool purchase (Decision 103): reserve an AMOUNT — the whole budget locks
+ * and the next race turns it into horses (P2P first, then mints; remainder
+ * under 102 auto-returns). One live pool per user; calling again while a
+ * live pool exists EDITS its amount (lock/unlock the difference), which is
+ * the "editable until cutoff" rule. No concurrent-session cap — the cap and
+ * the per-horse 177.16 lock are retired for pools.
+ */
+export async function createOrUpdatePoolSession(
+  client: SqlClient,
+  input: { userId: string; amount: string; idempotencyKey: string },
+): Promise<PoolSessionResult> {
+  const amount = Money.of(input.amount);
+  if (amount.lt(POOL_PURCHASE_MIN_USDT)) {
+    throw new AssignmentError(
+      'POOL_BUDGET_INVALID',
+      `Pool budget must be at least ${POOL_PURCHASE_MIN_USDT} USDT (one cheapest horse)`,
+    );
+  }
+
+  // Idempotent replay: the same request key returns the original outcome.
+  const replay = await client.query<{ id: string; locked_amount: string }>(
+    `select id, locked_amount::text as locked_amount from purchase_sessions where idempotency_key = $1`,
+    [input.idempotencyKey],
+  );
+  if (replay.rows[0]) {
+    return {
+      sessionId: replay.rows[0].id,
+      alreadyExists: true,
+      lockedAmount: replay.rows[0].locked_amount,
+    };
+  }
+
+  const accounts = await ensureUserAccounts(client, input.userId);
+  await client.query('begin');
+  try {
+    await client.query(`select pg_advisory_xact_lock(hashtext('user_sessions:' || $1))`, [
+      input.userId,
+    ]);
+    if ((await getMarketplaceState(client)) !== 'OPEN') {
+      throw new AssignmentError('MARKETPLACE_LOCKED', 'Marketplace is not OPEN');
+    }
+
+    const live = await client.query<{ id: string; locked_amount: string }>(
+      `select id, locked_amount::text as locked_amount from purchase_sessions
+       where user_id = $1 and status = 'PENDING_ASSIGNMENT' and session_mode = 'POOL'
+         and batch_run_id is null`,
+      [input.userId],
+    );
+
+    if (live.rows[0]) {
+      // Edit the single live pool: lock or release exactly the difference.
+      const sessionId = live.rows[0].id;
+      const current = Money.of(live.rows[0].locked_amount);
+      if (!amount.eq(current)) {
+        if (amount.gt(current)) {
+          await postTransaction(
+            client,
+            {
+              type: 'PURCHASE_FUND_LOCK',
+              idempotencyKey: `pslock:${input.idempotencyKey}`,
+              referenceType: 'purchase_session',
+              referenceId: sessionId,
+              entries: [
+                { accountId: accounts.available, direction: 'DEBIT', amount: amount.sub(current) },
+                { accountId: accounts.locked, direction: 'CREDIT', amount: amount.sub(current) },
+              ],
+            },
+            { manageTransaction: false },
+          );
+        } else {
+          await postTransaction(
+            client,
+            {
+              type: 'PURCHASE_REFUND',
+              idempotencyKey: `psunlock:${input.idempotencyKey}`,
+              referenceType: 'purchase_session',
+              referenceId: sessionId,
+              entries: [
+                { accountId: accounts.locked, direction: 'DEBIT', amount: current.sub(amount) },
+                { accountId: accounts.available, direction: 'CREDIT', amount: current.sub(amount) },
+              ],
+            },
+            { manageTransaction: false },
+          );
+        }
+        await client.query(`update purchase_sessions set locked_amount = $2 where id = $1`, [
+          sessionId,
+          amount.toFixed8(),
+        ]);
+      }
+      await client.query('commit');
+      return { sessionId, alreadyExists: true, lockedAmount: amount.toFixed8() };
+    }
+
+    const session = await client.query<{ id: string }>(
+      `insert into purchase_sessions (user_id, locked_amount, funds_locked, idempotency_key, session_mode)
+       values ($1, $2, true, $3, 'POOL') returning id`,
+      [input.userId, amount.toFixed8(), input.idempotencyKey],
+    );
+    const sessionId = session.rows[0]!.id;
+    await postTransaction(
+      client,
+      {
+        type: 'PURCHASE_FUND_LOCK',
+        idempotencyKey: `pslock:${input.idempotencyKey}`,
+        referenceType: 'purchase_session',
+        referenceId: sessionId,
+        entries: [
+          { accountId: accounts.available, direction: 'DEBIT', amount },
+          { accountId: accounts.locked, direction: 'CREDIT', amount },
+        ],
+      },
+      { manageTransaction: false },
+    );
+    await client.query('commit');
+    return { sessionId, alreadyExists: false, lockedAmount: amount.toFixed8() };
+  } catch (error) {
+    await client.query('rollback').catch(() => undefined);
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('NEGATIVE_BALANCE_FORBIDDEN')) {
+      throw new LedgerError('INSUFFICIENT_BALANCE', `Insufficient balance to lock ${amount.toFixed8()} USDT`);
+    }
+    if (message.includes('duplicate key') && message.includes('idempotency')) {
+      const winner = await client.query<{ id: string; locked_amount: string }>(
+        `select id, locked_amount::text as locked_amount from purchase_sessions where idempotency_key = $1`,
+        [input.idempotencyKey],
+      );
+      if (winner.rows[0]) {
+        return {
+          sessionId: winner.rows[0].id,
+          alreadyExists: true,
+          lockedAmount: winner.rows[0].locked_amount,
+        };
+      }
     }
     throw error;
   }
