@@ -510,7 +510,7 @@ export interface AppDict {
     // ④ レース
     race_p1: string;
     tl1_t: string; tl1_v: string; tl2_t: string; tl2_v: string; tl3_t: string; tl3_v: string; tl4_t: string; tl4_v: string;
-    race_p2: string; race_p3: string; race_p4: string; race_tip: string;
+    race_p2: string; race_p3: string; race_p4: string; race_honest: string; race_tip: string;
     // ⑤ チャンピオン
     champ_p1: string; ladder_survive: string; ladder_day7_v: string; champ_p2: string; champ_tip: string;
     // ⑥ TEAM
@@ -1094,6 +1094,7 @@ const ja: AppDict = {
     race_p2: '**レースは誰にも操作できません。**結果は事前にコミット(封印)された乱数シードから決定論的に計算され、レース後にシードが公開されます。誰でも結果を再計算して検証できる「コミット・リビール方式」です。運営もあなたも、結果を変えることはできません。',
     race_p3: '**毎晩、成績下位の馬はBURN(消滅)します。**何頭が走り、何頭が生き残り、何頭がBURNされたかの全記録は**「台帳」ページ**で毎日公開しており、CSVでダウンロードして誰でも検証・集計できます。',
     race_p4: 'レース演出の最後には**「明日の予報」**(天候・馬場・コース)が発表されます。予報は事前にコミットされたシードから機械的に生成される**的中率約70%の参考情報**で、結果を保証するものではありません。予報に合わせてアイテムを備えるかはあなた次第です。',
+    race_honest: '**このゲームは「上手い人が勝つ」ゲームです。** 調教の読み・予報への備え・アイテムの使いどころで結果は大きく変わり、研究しているプレイヤーほど有利になります(初心者が不利になる場面もあります)。「安全圏」などのバッジは実データに基づく目安であり、結果を保証するものではありません。',
     race_tip: 'RACEページの「Daily Derby」で、毎晩のレースをライブ風の演出で観戦できます。自分の馬の走りには専用のハイライトが入ります。',
     champ_p1: '7晩のレースをすべて生き延びた馬は**チャンピオン**です。**200 USDTのチャンピオン報酬**(翌日から7回に分けて自動支払い)と、殿堂入りの**記念NFT**(Polygon / ERC-721)を獲得します。',
     ladder_survive: '生存', ladder_day7_v: '200 USDT + 記念NFT',
@@ -1731,6 +1732,7 @@ const en: AppDict = {
     race_p2: '**No one can rig the race.** The result is computed deterministically from a random seed committed (sealed) in advance, and the seed is revealed after the race. Anyone can re-compute and verify it — this is the “commit–reveal” method. Neither the operator nor you can change a result.',
     race_p3: '**Each night, the lowest-placed horses are BURNed (destroyed).** The full record of how many ran, survived, and were BURNed is published daily on the **“Ledger” page**, downloadable as CSV so anyone can verify and tally it.',
     race_p4: 'At the end of the race presentation, a **“tomorrow’s forecast”** (weather, track, surface) is announced. The forecast is generated mechanically from a pre-committed seed — a **~70%-accurate hint**, not a guarantee of the result. Whether you stock items to match it is up to you.',
+    race_honest: '**This is a game where skill wins.** Reading trainings, preparing for the forecast and timing your items changes outcomes significantly — players who study the game hold a real edge (newcomers can be at a disadvantage). Badges like the “safe zone” are data-based guides, never guarantees.',
     race_tip: 'On the RACE page’s “Daily Derby,” you can watch each night’s race in a live-style presentation, with a dedicated highlight for your own horse’s run.',
     champ_p1: 'A horse that survives all seven nights is a **Champion**. It earns a **200 USDT Champion Reward** (paid automatically in 7 installments from the next day) and a hall-of-fame **Memorial NFT** (Polygon / ERC-721).',
     ladder_survive: 'Survived', ladder_day7_v: '200 USDT + Memorial NFT',
@@ -2368,6 +2370,7 @@ const zh: AppDict = {
     race_p2: '**比赛无人能操纵。**结果由事先承诺(封印)的随机种子决定论地计算，赛后公开种子。任何人都能重新计算并验证 — 这就是「承诺-揭示」方式。运营和你都无法更改结果。',
     race_p3: '**每晚，成绩垫底的马会被 BURN(消灭)。**多少匹出赛、多少存活、多少被 BURN 的全记录，每天公开在**「账本」页面**，可下载 CSV 供任何人验证与统计。',
     race_p4: '比赛演出的最后会公布**「明日预报」**(天气・赛道・场地)。预报由事先承诺的种子机械生成，是**约70%命中率的参考信息**，不保证结果。是否按预报备好道具由你决定。',
+    race_honest: '**这是一款「高手获胜」的游戏。** 训练判断、对预报的准备、道具的使用时机都会显著改变结果——研究越深的玩家优势越大(新手可能处于劣势)。「安全区」等徽章是基于真实数据的参考，并非结果保证。',
     race_tip: '在 RACE 页面的「Daily Derby」，可以以直播风格的演出观看每晚的比赛，你自己马匹的奔跑会有专属高光。',
     champ_p1: '熬过全部七晚比赛的马就是**冠军**。可获得**200 USDT 冠军奖励**(从次日起分7次自动支付)与入殿堂的**纪念NFT**(Polygon / ERC-721)。',
     ladder_survive: '存活', ladder_day7_v: '200 USDT + 纪念NFT',
@@ -3005,6 +3008,7 @@ const ko: AppDict = {
     race_p2: '**레이스는 누구도 조작할 수 없습니다.** 결과는 사전에 커밋(봉인)된 난수 시드로부터 결정론적으로 계산되고, 레이스 후 시드가 공개됩니다. 누구나 결과를 다시 계산해 검증할 수 있는 「커밋-리빌 방식」입니다. 운영도 당신도 결과를 바꿀 수 없습니다.',
     race_p3: '**매일 밤 성적 하위권 말은 BURN(소멸)됩니다.** 몇 마리가 달리고, 몇 마리가 살아남고, 몇 마리가 BURN됐는지의 전 기록은 **「원장」 페이지**에 매일 공개되며, CSV로 내려받아 누구나 검증・집계할 수 있습니다.',
     race_p4: '레이스 연출의 마지막에 **「내일의 예보」**(날씨・주로・코스)가 발표됩니다. 예보는 사전에 커밋된 시드로부터 기계적으로 생성되는 **적중률 약 70%의 참고 정보**로, 결과를 보장하지 않습니다. 예보에 맞춰 아이템을 준비할지는 당신에게 달려 있습니다.',
+    race_honest: '**이 게임은 「잘하는 사람이 이기는」 게임입니다.** 조교 판단, 예보 대비, 아이템 사용 타이밍에 따라 결과가 크게 달라지며, 연구하는 플레이어일수록 유리합니다(초보자가 불리해질 수 있습니다). 「안전권」 등의 배지는 실데이터 기반의 참고 정보이며 결과를 보장하지 않습니다.',
     race_tip: 'RACE 페이지의 「Daily Derby」에서 매일 밤 레이스를 라이브 풍 연출로 관전할 수 있습니다. 자신의 말의 질주에는 전용 하이라이트가 들어갑니다.',
     champ_p1: '7일 밤의 레이스를 모두 살아남은 말은 **챔피언**입니다. **200 USDT 챔피언 보상**(다음 날부터 7회로 나눠 자동 지급)과 전당 입성의 **기념 NFT**(Polygon / ERC-721)를 획득합니다.',
     ladder_survive: '생존', ladder_day7_v: '200 USDT + 기념 NFT',
@@ -3642,6 +3646,7 @@ const ms: AppDict = {
     race_p2: '**Tiada sesiapa boleh menipu perlumbaan.** Keputusan dikira secara berketentuan daripada benih rawak yang dikomit (dimeterai) lebih awal, dan benih didedahkan selepas perlumbaan. Sesiapa boleh mengira semula dan mengesahkannya — inilah kaedah “commit–reveal”. Pengendali mahupun anda tidak boleh mengubah keputusan.',
     race_p3: '**Setiap malam, kuda berkedudukan terendah di-BURN (dimusnahkan).** Rekod penuh berapa yang berlari, terselamat dan di-BURN diterbitkan setiap hari pada **halaman “Lejar”**, boleh dimuat turun sebagai CSV supaya sesiapa boleh mengesahkan dan mengiranya.',
     race_p4: 'Pada penghujung persembahan perlumbaan, satu **“ramalan esok”** (cuaca, trek, padang) diumumkan. Ramalan dijana secara mekanikal daripada benih yang dikomit awal — satu **petunjuk berketepatan ~70%**, bukan jaminan keputusan. Sama ada anda menyimpan item untuk memadankannya terpulang kepada anda.',
+    race_honest: '**Ini permainan di mana kemahiran menang.** Pembacaan latihan, persediaan untuk ramalan dan masa penggunaan item mengubah keputusan dengan ketara — pemain yang mengkaji permainan mempunyai kelebihan sebenar (pemain baru mungkin kurang beruntung). Lencana seperti “zon selamat” ialah panduan berasaskan data sebenar, bukan jaminan keputusan.',
     race_tip: 'Di “Daily Derby” pada halaman RACE, anda boleh menonton perlumbaan setiap malam dalam persembahan gaya langsung, dengan sorotan khas untuk larian kuda anda sendiri.',
     champ_p1: 'Kuda yang terselamat kesemua tujuh malam ialah **Juara**. Ia memperoleh **Champion Reward 200 USDT** (dibayar automatik dalam 7 ansuran mulai keesokan hari) dan **NFT peringatan** dewan kemasyhuran (Polygon / ERC-721).',
     ladder_survive: 'Terselamat', ladder_day7_v: '200 USDT + NFT peringatan',

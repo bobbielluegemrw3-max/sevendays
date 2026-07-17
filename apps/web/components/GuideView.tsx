@@ -168,6 +168,8 @@ export function GuideView({ lang = 'ja' }: { lang?: Lang }) {
         <p className={s.p}>{rich(t.race_p2)}</p>
         <p className={s.p}>{rich(t.race_p3)}</p>
         <p className={s.p}>{rich(t.race_p4)}</p>
+        {/* Decision 101-6(R1): 「上手い人が勝つゲーム」の正直明記 — 隠さない */}
+        <p className={s.p}>{rich(t.race_honest)}</p>
         <Tip>{rich(t.race_tip)}</Tip>
       </section>
 
