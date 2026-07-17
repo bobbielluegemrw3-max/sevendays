@@ -569,7 +569,7 @@ export interface AppDict {
     badges_title: string;
     tv_chip: string; band_safe: string; band_mid: string; band_risk: string;
     rank_tpl: string; rank_note: string; sort_total: string;
-    uncollected_tpl: string;
+    uncollected_tpl: string; tickets_k: string; bulk_harvest_tpl: string;
     legend_title: string; legend_note: string; legend_chip_tpl: string;
   };
   /** /horses/[id](馬詳細)+ 調教フォーム + ページャ + ブースト + 転送。 */
@@ -1161,7 +1161,7 @@ const ja: AppDict = {
     badges_title: '獲得した称号',
     tv_chip: '総合値', band_safe: '安全圏', band_mid: '中位', band_risk: '危険圏',
     rank_tpl: '今夜 {r}位 / {n}頭', rank_note: '順位は目安 — 当日の運と条件で変動します', sort_total: '総合値が高い順',
-    uncollected_tpl: '未回収 +{v}$',
+    uncollected_tpl: '未回収 +{v}$', tickets_k: '調教チケット', bulk_harvest_tpl: '+{v}$ をまとめて回収!',
     legend_title: 'レアリティ', legend_note: '加点は毎晩のレーススコアに常時反映(公開ルール)',
     legend_chip_tpl: '{pct} · スコア+{n}',
   },
@@ -1788,7 +1788,7 @@ const en: AppDict = {
     badges_title: 'Titles earned',
     tv_chip: 'TOTAL', band_safe: 'Safe zone', band_mid: 'Mid', band_risk: 'Danger zone',
     rank_tpl: 'Tonight {r} / {n}', rank_note: 'Rank is a guide — luck and conditions vary on the night', sort_total: 'Highest total',
-    uncollected_tpl: 'Unclaimed +{v}$',
+    uncollected_tpl: 'Unclaimed +{v}$', tickets_k: 'Training tickets', bulk_harvest_tpl: 'Claimed +{v}$ in one go!',
     legend_title: 'Rarity', legend_note: 'Bonuses apply to every night’s race score (public rule)',
     legend_chip_tpl: '{pct} · score +{n}',
   },
@@ -2415,7 +2415,7 @@ const zh: AppDict = {
     badges_title: '获得的称号',
     tv_chip: '综合值', band_safe: '安全圈', band_mid: '中位', band_risk: '危险圈',
     rank_tpl: '今晚 {r}位 / {n}匹', rank_note: '排名仅供参考 — 当晚的运气与条件会变动', sort_total: '综合值从高到低',
-    uncollected_tpl: '未领取 +{v}$',
+    uncollected_tpl: '未领取 +{v}$', tickets_k: '训练券', bulk_harvest_tpl: '一次性领取 +{v}$!',
     legend_title: '稀有度', legend_note: '加分每晚都计入比赛得分(公开规则)',
     legend_chip_tpl: '{pct} · 得分+{n}',
   },
@@ -3042,7 +3042,7 @@ const ko: AppDict = {
     badges_title: '획득한 칭호',
     tv_chip: '종합치', band_safe: '안전권', band_mid: '중위', band_risk: '위험권',
     rank_tpl: '오늘 밤 {r}위 / {n}마리', rank_note: '순위는 참고용 — 당일 운과 조건에 따라 변동합니다', sort_total: '종합치 높은 순',
-    uncollected_tpl: '미회수 +{v}$',
+    uncollected_tpl: '미회수 +{v}$', tickets_k: '조교 티켓', bulk_harvest_tpl: '+{v}$ 한 번에 회수!',
     legend_title: '레어리티', legend_note: '가산점은 매일 밤 레이스 점수에 상시 반영(공개 규칙)',
     legend_chip_tpl: '{pct} · 점수+{n}',
   },
@@ -3669,7 +3669,7 @@ const ms: AppDict = {
     badges_title: 'Gelaran diperoleh',
     tv_chip: 'NILAI', band_safe: 'Zon selamat', band_mid: 'Pertengahan', band_risk: 'Zon bahaya',
     rank_tpl: 'Malam ini {r} / {n}', rank_note: 'Kedudukan hanyalah panduan — tuah dan keadaan malam berbeza', sort_total: 'Nilai tertinggi',
-    uncollected_tpl: 'Belum dituntut +{v}$',
+    uncollected_tpl: 'Belum dituntut +{v}$', tickets_k: 'Tiket latihan', bulk_harvest_tpl: '+{v}$ dituntut sekali gus!',
     legend_title: 'Kejarangan', legend_note: 'Bonus sentiasa dikira dalam skor perlumbaan setiap malam (peraturan umum)',
     legend_chip_tpl: '{pct} · skor +{n}',
   },

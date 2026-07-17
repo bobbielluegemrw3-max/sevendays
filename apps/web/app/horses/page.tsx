@@ -10,7 +10,7 @@ export default async function StablePage() {
   // 隠し実績バッジ(EASTER_EGG_PLAN.md)— 取得失敗しても厩舎は表示する。
   const [{ horses }, me, sessionsRes, badgesRes, lang] = await Promise.all([
     serverApiOrLogin<{ horses: StableHorse[] }>('/api/v1/horses'),
-    serverApi<{ stable_name?: string | null }>('/api/v1/me'),
+    serverApi<{ stable_name?: string | null; training_tickets?: number }>('/api/v1/me'),
     serverApi<{ sessions: Session[] }>('/api/v1/purchase'),
     serverApi<{ badges: HiddenBadge[] }>('/api/v1/hidden-badges'),
     getLang(),
@@ -26,6 +26,7 @@ export default async function StablePage() {
         horses,
         pendingCount,
         stableName: me.status === 200 ? me.body.stable_name ?? null : null,
+        trainingTickets: me.status === 200 ? me.body.training_tickets ?? 0 : 0,
         hiddenBadges: badgesRes.status === 200 ? badgesRes.body.badges : [],
       }}
     />

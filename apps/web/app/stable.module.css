@@ -390,3 +390,7 @@
   background: rgba(201, 168, 106, 0.1); border-radius: 999px; padding: 2px 8px;
   animation: sdd-pulse 2.2s infinite;
 }
+
+/* 調教チケットのスタットタイル(A2) */
+.statTickets { border: 1px solid rgba(255, 45, 196, 0.3); background: linear-gradient(180deg, rgba(255, 45, 196, 0.09), rgba(255, 45, 196, 0.015)); }
+.statTickets :global(.k) { color: var(--magenta-soft); } .statTickets :global(.v) { color: #ff9ade; }

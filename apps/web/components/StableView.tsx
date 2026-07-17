@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { PURCHASE_LOCK_AMOUNT } from '@sevendays/domain';
-import { money, horseValue } from '@/components/stable-shared';
+import { money, horseValue, uncollectedGain } from '@/components/stable-shared';
 import { BulkTrainButton } from '@/components/BulkTrainButton';
 import { ChampionCard, ListedCard, StableBrowser } from '@/components/StableBrowser';
 import { HiddenBadges, type HiddenBadge } from '@/components/HiddenBadges';
@@ -46,6 +46,8 @@ export interface StableHorse {
 export interface StableData {
   /** 厩舎名(Decision 097)。未設定はマイ厩舎。 */
   stableName?: string | null;
+  /** 調教チケット累計(/me由来・A2)。 */
+  trainingTickets?: number;
   horses: StableHorse[];   // 全所有馬(現役 + 過去)
   pendingCount: number;    // 割当待ちの購入予約数
   /** 獲得済みの隠し称号(EASTER_EGG_PLAN.md)。0件なら非表示。 */
@@ -63,6 +65,7 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
   const champions = horses.filter((h) => h.status === 'DAY7_CLEARED' || h.status === 'MEMORIALIZED');
   const burned = horses.filter((h) => h.status === 'BURNED');
   const stableValue = active.reduce((sum, h) => sum + Number(horseValue(h.current_day)), 0);
+  const uncollectedTotal = racing.reduce((sum, h) => sum + uncollectedGain(h), 0);
   // 頭数サマリー(チャンピオン0頭のときは省略 — 従来と同じ)
   const subParts = [
     fill(t.sub_active_tpl, { n: active.length }),
@@ -89,6 +92,12 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
             <div className="k">{t.stat_value_k}</div>
             <div className="v">{money(stableValue)}<small>USDT</small></div>
           </div>
+          {(data.trainingTickets ?? 0) > 0 ? (
+            <div className={`${s.stat} ${s.statTickets}`}>
+              <div className="k">{t.tickets_k}</div>
+              <div className="v">{data.trainingTickets}</div>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -118,7 +127,7 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
         </div>
         {racing.length > 0 ? (
           <>
-            <BulkTrainButton untrainedCount={racing.filter((h) => !h.trained_for_next_race).length} t={t} />
+            <BulkTrainButton untrainedCount={racing.filter((h) => !h.trained_for_next_race).length} uncollectedTotal={uncollectedTotal} t={t} />
             <StableBrowser kind="active" horses={racing} t={t} />
           </>
         ) : (

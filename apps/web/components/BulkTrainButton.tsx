@@ -15,10 +15,13 @@ import s from '../app/stable.module.css';
 export function BulkTrainButton({
   untrainedCount,
   t,
+  uncollectedTotal = 0,
   preview = false,
 }: {
   untrainedCount: number;
   t: AppDict['stable'];
+  /** 未調教勢の未回収合計$(全頭成功時のみ祝いに使う — 部分成功で嘘をつかない)。 */
+  uncollectedTotal?: number;
   preview?: boolean;
 }) {
   const typeLabel: Record<string, string> = {
@@ -55,7 +58,11 @@ export function BulkTrainButton({
     const parts = Object.entries(body.by_type)
       .map(([k, n]) => `${typeLabel[k] ?? k}${n}`)
       .join('・');
-    setMessage(body.trained > 0 ? fill(t.bulk_done_tpl, { n: body.trained, parts }) : t.bulk_none);
+    const harvest =
+      body.trained === untrainedCount && uncollectedTotal > 0
+        ? ` ${fill(t.bulk_harvest_tpl, { v: uncollectedTotal.toFixed(2) })}`
+        : '';
+    setMessage(body.trained > 0 ? fill(t.bulk_done_tpl, { n: body.trained, parts }) + harvest : t.bulk_none);
     router.refresh();
   }
 

@@ -29,8 +29,10 @@ export interface ShelfItem {
   listed_at: string;
   name: string;
   dna_hash: string;
-  /** レアリティ(新規): COMMON/UNCOMMON/RARE/EPIC/LEGENDARY。 */
+  /** レアリティ(V2で廃止予定・表示は総合値へ移行済み)。 */
   rarity: string;
+  /** 総合値V0(FUN改修A1 — 「同じ価格で中身が違う」宝探し)。 */
+  total_value?: number | null;
 }
 export interface MatchRow {
   horse_name: string;
@@ -206,7 +208,13 @@ export function MarketPlaceView({
                 {myIds.has(item.horse_id) && <span className={s.mineTag}>MINE</span>}
                 <NftHorseArt look={deriveNftLook(item.dna_hash, item.name)} className={s.shelfArt} />
                 <div className={s.shelfName}>{item.name}</div>
-                <div className={s.shelfRar}><span className={`${s.rar} ${s[`rar${rarClass(item.rarity)}`]}`}>{item.rarity}</span></div>
+                <div className={s.shelfRar}>
+                  {item.total_value !== null && item.total_value !== undefined ? (
+                    <span className={s.shelfTv}>総合値 <b>{item.total_value}</b></span>
+                  ) : (
+                    <span className={`${s.rar} ${s[`rar${rarClass(item.rarity)}`]}`}>{item.rarity}</span>
+                  )}
+                </div>
                 <div className={s.shelfMeta}>DAY {item.current_day}</div>
                 <div className={s.shelfPrice}>{fmt(item.price)} USDT</div>
               </div>

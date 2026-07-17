@@ -3,6 +3,8 @@ import { batchDateFor } from '@sevendays/shared';
 import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { getMarketplaceState, manualMarketTiebreakScore } from '@sevendays/settlement-engine';
 import { ApiError } from '../errors.js';
+import { totalValueV0 } from '@sevendays/race-engine';
+import type { HorseType, Rarity, TrainingType } from '@sevendays/domain';
 import type { ApiRegistry } from '../router.js';
 
 /**
@@ -156,16 +158,44 @@ export function registerMarketEndpoints(registry: ApiRegistry): void {
     auth: 'user',
     handler: async (ctx) => {
       // The shelf, in tonight's matching order (Decision 012: oldest first).
-      const shelf = await ctx.client.query(
-        `select l.id as listing_id, l.horse_id, l.listing_price::text as price,
+      // FUN改修A1: 総合値V0の材料(能力・調子・疲労・調教)を同じ1クエリで取得し、
+      // 棚に「同じ価格でも中身が違う」宝探し(FUN_REVISION §8.1)を作る。
+      const today = batchDateFor(new Date());
+      const shelf = await ctx.client.query<{
+        listing_id: string; horse_id: string; price: string; current_day: number;
+        listed_at: string; name: string; dna_hash: string; horse_type: string; rarity: string;
+        ability_json: Record<string, number>; dna_modifier: string;
+        condition: string; fatigue: string; tonight_training: string | null;
+      }>(
+        `with eff as (
+           select case when exists (select 1 from batch_runs where batch_date = $1 and status = 'COMPLETED')
+                       then ($1::date + 1) else $1::date end as race_date
+         )
+         select l.id as listing_id, l.horse_id, l.listing_price::text as price,
                 l.current_day, l.listed_at::text as listed_at,
-                h.name, h.dna_hash, h.horse_type::text as horse_type, h.rarity::text as rarity
+                h.name, h.dna_hash, h.horse_type::text as horse_type, h.rarity::text as rarity,
+                h.ability_json, h.dna_modifier::text as dna_modifier,
+                h.condition::text as condition, h.fatigue::text as fatigue,
+                (select t.training_type::text from training_sessions t
+                  where t.horse_id = h.id and t.effective_race_date = (select race_date from eff)
+                  limit 1) as tonight_training
          from market_listings l
          join horses h on h.id = l.horse_id
          where l.status = 'LISTED' and h.status = 'ACTIVE' and l.current_day between 1 and 6
          order by l.listed_at asc, l.current_day desc, l.horse_id asc
          limit 200`,
+        [today],
       );
+      const shelfTotal = (r: (typeof shelf.rows)[0]): number =>
+        totalValueV0({
+          abilityJson: r.ability_json,
+          horseType: r.horse_type as HorseType,
+          rarity: r.rarity as Rarity,
+          dnaModifier: Number(r.dna_modifier),
+          condition: Number(r.condition),
+          fatigue: Number(r.fatigue),
+          training: (r.tonight_training as TrainingType | null) ?? null,
+        });
       const demand = await ctx.client.query<{ n: number }>(
         `select count(*)::int as n from purchase_sessions where status = 'PENDING_ASSIGNMENT'`,
       );
@@ -203,7 +233,11 @@ export function registerMarketEndpoints(registry: ApiRegistry): void {
         [ctx.userId],
       );
       return {
-        shelf: shelf.rows,
+        shelf: shelf.rows.map((r) => {
+          const { ability_json, dna_modifier, condition, fatigue, tonight_training, ...rest } = r;
+          void ability_json; void dna_modifier; void condition; void fatigue; void tonight_training;
+          return { ...rest, total_value: shelfTotal(r) };
+        }),
         pending_buy_count: demand.rows[0]!.n,
         recent_matches: recent.rows.map((r) => ({
           horse_name: r.horse_name,
