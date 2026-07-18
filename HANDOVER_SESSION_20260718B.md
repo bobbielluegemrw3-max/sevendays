@@ -5,7 +5,9 @@
 > **Decision Logは109まで起票済み・次は110。**
 > 本セッションのコミット(すべてpush済み・マイグレーション2本は本番適用済み):
 > `692fccc`(-5 JP)→ `1a82ca5`(-6 カタログ起草)→ `38c43b3`(35点拡張)→ `101686a`(Decision 109+アート発注書)→
-> `8b1f2db`(-6 エンジン+API)→ `b48a4b4`(-6 UI+アート組込)→ `c0e0644`(-7a)→ `4dcebd7`(-7d)
+> `8b1f2db`(-6 エンジン+API)→ `b48a4b4`(-6 UI+アート組込)→ `c0e0644`(-7a)→ `4dcebd7`(-7d)→
+> `a55ad94`(Decision 110 自動プール)→ `82a2d1f`(-7b LV置換=辞書Proxy)→ `f612b7b`(-7c サーバー側)
+> ※マイグレーションは計3本(JP/アイテムV3/auto_pool)すべて本番適用済み
 
 ## 0. 現在地
 
@@ -24,27 +26,25 @@
   `update item_catalog set active = (item_class <> 'V1')`**(§7チェックリスト追加)。
   アート35点納品済み→512px WebP組込済み(原本=`seven_days_derby_items_v2_35.zip` 未コミット・消さない。
   納品は発注書v1キーのため5点は取込時リネーム)
-- **-7a レース単位化: 完了** / **-7d 正直明記: 完了**(詳細=FUN_V2_PLAN §9)
-- **残り: -7b(DAY→LV置換)と -7c(ショー新幕)→ テストネット試運転**
+- **-7a レース単位化 / -7b DAY→LV置換 / -7c サーバー側 / -7d 正直明記: すべて完了**(詳細=FUN_V2_PLAN §9)
+- **Decision 110: auto_reserve=金額指定自動プール — 完了**
+- **残り: -7c UI(ショーの新幕)のみ → テストネット試運転**
 
-## 1. 次セッションの作業(-7b/-7c)
+## 1. 次セッションの作業(残り = -7c UI のみ)
 
-### -7b DAY→LV全面置換
-- **LV = current_day(0〜6)表示・LV7走破=チャンピオン**(価格表LV0..6読み替え。
-  カタログV3のLV制限もcurrent_day基準で実装済み=この定義が既成事実)
-- 規模: i18n約69行(5言語)+15コンポーネント約40箇所。engine_v2フラグは厩舎(stable-shared)/
-  馬詳細/棚(/market)に配線済み — 他ページはページ側でエンジン判定の配線が要る
-- 注意: 通知テンプレート「Day {current_day}」・ショーログ「DAY7 — CLEARED」・LedgerViewの
-  slot表示(APIは-7aでslot返却済み)も対象
-
-### -7c ショー新幕+朝プッシュ
-- YOUR NEW STABLE幕(プール購入披露 — PurchaseViewの物語文は-3bで実装済み・ショー内演出が未)
-- ジャックポット幕(日曜夜のみ・当選者マスク表示。データ源=jackpot_draws/jackpot_winners。
-  ユーザー向け取得APIは未実装 — status API拡張が自然)
-- 朝レースのプッシュ文言/キー: `/internal/batch/start` は slot=NIGHT のみフォールバック送信中
-  (`race-start:{date}`)。朝用キーは `race-start:{date}:MORNING` 等の別キー設計で二重送信を防ぐ
-- ✎ ショーのタイムライン(`apps/web/lib/daily-derby.ts`)は決定論生成 — 新幕はフィクスチャ+
-  /dev/derby-preview で視覚QA(CDPエミュレーション)
+### -7c UI: ショーのタイムライン新幕(最後の1ピース)
+- **データはAPIに揃っている**(`f612b7b`): derby statusの `jackpot`
+  ({status, prize_amount, total_tickets, winners:[{name(マスク済), amount}]} —
+  このバッチで解決した抽選のみ非null)と `my_events.pool`
+  ({amount, horses, spent} — このレースで精算された自分のプール)
+- 実装: `apps/web/lib/daily-derby.ts`(決定論タイムライン)に
+  ①YOUR NEW STABLE幕(pool非null時 — 「{amount} USDTが{horses}頭になりました」・
+  -3b PurchaseViewの物語文と同じ言い回し)②ジャックポット幕(jackpot非null時・
+  ショー最終幕=明日の予報の後・当選者マスク名と賞金)を追加
+- 視覚QA: フィクスチャ追加+ `/dev/derby-preview`(`?t=秒&paused=1`)で確認・
+  モバイルはCDPエミュレーション必須(ヘッドレスは500px下限クランプ)
+- ついで: LedgerView に -7a で追加済みの `slot` 列の表示ラベル(朝/夜)
+- 完了後 → **テストネット試運転**(§2チェックリスト)
 
 ### ~~未解決のオーナー論点~~ → Decision 110 解決済み(同日追記)
 - **auto_reserve = 金額指定の自動プール**(オーナー決定 2026-07-18)。実装済み:
@@ -58,6 +58,17 @@
 1. `update item_catalog set active = (item_class <> 'V1')` — 旧35種を棚から下げ、V3の35点を解禁
 2. system_settings `jackpot` の enabled を広告費口座残高と整合させてからtrueに(§7-5と同項)
 3. CSナレッジの「V2シーズン(現行未適用)」注記を削除(適用済みになるため)
+
+## 2.5 -7bの機構メモ(重要)
+
+- DAY→LV置換は **APP_COPY辞書Proxy** 方式: root layoutが毎リクエスト
+  `isEngineV2Active()`(`apps/web/lib/engine-server.ts`・60秒キャッシュ)を
+  `setLvDisplayMode` にセット → `APP_COPY[lang]` の参照が透過的にLV変換辞書へ。
+  **参照側は全ページ無改修**。変換は `toLvText`(i18n-shared・数字/プレースホルダが
+  続くDay/DAYトークンのみ・`play_tpl` は除外リスト)。保存済み通知payloadは
+  NotificationsList の `lvMode` prop で表示時変換
+- Landing/ガイドの散文(「毎晩20:00」等のV1説明)は単語置換では嘘になるため対象外 —
+  **ローンチ準備のコンテンツ改修**で書き直す(リセット後のタスク)
 
 ## 3. ハマりどころ(このセッションの新規)
 
