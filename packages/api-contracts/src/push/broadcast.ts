@@ -19,21 +19,33 @@ export interface BroadcastResult {
   failed: number;
 }
 
-export function raceStartMessage(): PushMessage {
+// V2実装-7c(Decision 102): 朝レースは専用文面。省略時はNIGHT(V1互換)。
+export function raceStartMessage(slot: 'MORNING' | 'NIGHT' = 'NIGHT'): PushMessage {
   return {
     title: 'SEVEN DAYS DERBY',
-    body: '本日のダービーが発走しました。今夜の結果と「明日の予報」はショーの中で。',
+    body:
+      slot === 'MORNING'
+        ? '朝のダービーが発走しました。結果と「次の予報」はショーの中で。'
+        : '本日のダービーが発走しました。今夜の結果と「明日の予報」はショーの中で。',
     url: '/races',
   };
 }
 
 /** 発走5分前リマインド — どのタイムゾーンでも「受信=あと5分」になる時刻非依存の文面。 */
-export function raceReminderMessage(): PushMessage {
+export function raceReminderMessage(slot: 'MORNING' | 'NIGHT' = 'NIGHT'): PushMessage {
   return {
     title: 'SEVEN DAYS DERBY',
-    body: 'まもなく発走 — あと5分で本日のダービーが始まります。今夜の結果と「明日の予報」はショーの中で。',
+    body:
+      slot === 'MORNING'
+        ? 'まもなく発走 — あと5分で朝のダービーが始まります。'
+        : 'まもなく発走 — あと5分で本日のダービーが始まります。今夜の結果と「明日の予報」はショーの中で。',
     url: '/races',
   };
+}
+
+/** ブロードキャストキー: NIGHTは従来キーのまま(互換)・MORNINGはスロット修飾。 */
+export function broadcastKeyFor(base: string, date: string, slot: 'MORNING' | 'NIGHT'): string {
+  return slot === 'NIGHT' ? `${base}:${date}` : `${base}:${date}:${slot}`;
 }
 
 /** 指定キーのブロードキャストが既に送られたか(バッチ側のフォールバック判定用)。 */

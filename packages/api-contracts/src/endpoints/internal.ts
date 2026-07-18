@@ -14,7 +14,7 @@ import { batchDateFor } from '@sevendays/shared';
 import { ApiError } from '../errors.js';
 import type { ApiRegistry } from '../router.js';
 import { buildWebPushTransport } from '../push/webpush.js';
-import { hasBroadcast, raceReminderMessage, raceStartMessage, sendNightlyBroadcast } from '../push/broadcast.js';
+import { hasBroadcast, raceReminderMessage, raceStartMessage, sendNightlyBroadcast, broadcastKeyFor } from '../push/broadcast.js';
 import { runMarketPostBatch } from '../market/post-batch.js';
 
 /**
@@ -48,18 +48,17 @@ export function registerInternalEndpoints(registry: ApiRegistry): void {
     handler: async (ctx, input) => {
       const batchDate = input.batch_date ?? batchDateFor(new Date());
       // 「レース開始」プッシュ(Decision 084)— 主経路は5分前リマインド
-      // (/internal/push/race-reminder)。ここはワーカーが窓を逃した夜のフォールバック。
-      // broadcast_keyで冪等(再実行でも1晩1回)、VAPID未設定ではスキップ、
-      // いかなる失敗もバッチを止めない。
-      // 朝レース(V2)のプッシュ文言・キー設計は表示フェーズで行う — ここでは
-      // 夜レースのみ既存のフォールバックを維持(キーが夜前提のため)。
-      const transport = (input.slot ?? 'NIGHT') === 'NIGHT' ? buildWebPushTransport() : null;
+      // (/internal/push/race-reminder)。ここはワーカーが窓を逃したサイクルの
+      // フォールバック。broadcast_keyで冪等(NIGHTは従来キー・MORNINGはスロット
+      // 修飾キー=V2実装-7c)、VAPID未設定ではスキップ、失敗はバッチを止めない。
+      const slot = input.slot ?? 'NIGHT';
+      const transport = buildWebPushTransport();
       if (transport) {
         try {
-          if (!(await hasBroadcast(ctx.client, `race-soon:${batchDate}`))) {
+          if (!(await hasBroadcast(ctx.client, broadcastKeyFor('race-soon', batchDate, slot)))) {
             await sendNightlyBroadcast(ctx.client, {
-              broadcastKey: `race-start:${batchDate}`,
-              message: raceStartMessage(),
+              broadcastKey: broadcastKeyFor('race-start', batchDate, slot),
+              message: raceStartMessage(slot),
               transport,
             });
           }
@@ -85,11 +84,12 @@ export function registerInternalEndpoints(registry: ApiRegistry): void {
     input: schedulableDateInput,
     handler: async (ctx, input) => {
       const batchDate = input.batch_date ?? batchDateFor(new Date());
+      const slot = input.slot ?? 'NIGHT';
       const transport = buildWebPushTransport();
       if (!transport) return { skipped: true, reason: 'VAPID not configured' };
       return sendNightlyBroadcast(ctx.client, {
-        broadcastKey: `race-soon:${batchDate}`,
-        message: raceReminderMessage(),
+        broadcastKey: broadcastKeyFor('race-soon', batchDate, slot),
+        message: raceReminderMessage(slot),
         transport,
       });
     },

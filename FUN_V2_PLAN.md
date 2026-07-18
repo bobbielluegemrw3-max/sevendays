@@ -409,9 +409,15 @@
   derby tickerのDAY7→LV.7。エンジン状態はグローバルなのでリクエスト横断フラグで安全。
   Landing/ガイドの散文(毎晩20:00等のV1説明)は**ローンチ準備のコンテンツ改修で書き直し**
   (単語置換では嘘になるため対象外 — リセットチェックリスト参照)。
-  **残り: -7c ショー新幕**
-  (YOUR NEW STABLE幕・ジャックポット幕(当選者マスク)・朝レースのプッシュ文言/キー
-  (`/internal/batch/start`は夜のみフォールバック中)・LedgerView等のslot表示)。
+  **-7c サーバー側=完了(2026-07-18)**: 朝レースのプッシュ実装(専用文面・
+  キーはNIGHT従来/MORNINGスロット修飾 `race-soon:{date}:MORNING` 等・workerは
+  サイクルごとの5分前窓・batch/startフォールバックも両slot対応)。
+  ショー用データAPI: derby statusに `jackpot`(このバッチで解決した抽選 —
+  当選者マスク・R3規則)と `my_events.pool`(このレースで精算された自分のプール:
+  amount/horses/spent = YOUR NEW STABLE幕の素材)を追加。
+  **残り: -7c UI = ショーのタイムライン新幕**(daily-derby.tsに
+  YOUR NEW STABLE幕とジャックポット幕を追加・フィクスチャ+/dev/derby-previewで
+  視覚QA(CDPエミュレーション)・LedgerView等のslot表示ラベル)。
   **auto_reserve=金額指定の自動プールに再定義(Decision 110・2026-07-18 オーナー決定・実装済み)**:
   `user_trade_settings.auto_pool_amount`(下限102)— V2のスイープで「生きているプールが
   無ければ min(設定額, 残高) のプールを自動作成」(手動プールは上書きしない・102未満はスキップ・

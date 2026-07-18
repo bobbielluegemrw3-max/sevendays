@@ -162,14 +162,21 @@ async function tick(): Promise<void> {
       const nextBatch = batchStartUtc(today).getTime() <= Date.now() ? 'due/ran today' : batchStartUtc(today).toISOString();
       console.log(`[heartbeat] alive; chain=${chainEnabled ? 'on' : 'off'}; daily batch (${today}): ${nextBatch}`);
     }
-    // 発走5分前プッシュ(Decision 084): 19:55-20:00 MYT の窓で毎分試行。
-    // ブロードキャストの一意クレーム(race-soon:{date})が冪等性を担保するので
-    // 多重試行しても1晩1回しか送られない。窓を丸ごと逃した夜は
+    // 発走5分前プッシュ(Decision 084/-7c): 各サイクルの発走5分前の窓で毎分試行。
+    // ブロードキャストの一意クレーム(race-soon:{date}[:MORNING])が冪等性を担保する
+    // ので多重試行しても1サイクル1回しか送られない。窓を丸ごと逃したサイクルは
     // /internal/batch/start 側のフォールバック(race-start)が拾う。
     const todayForPush = batchDateFor(new Date());
-    const raceStartMs = batchStartUtc(todayForPush).getTime();
-    if (Date.now() >= raceStartMs - 5 * 60_000 && Date.now() < raceStartMs && every('race-reminder', 60_000)) {
-      await dispatchInternal('/internal/push/race-reminder', { batch_date: todayForPush });
+    const pushSlots: Array<'MORNING' | 'NIGHT'> = (await isV2EngineActive()) ? ['MORNING', 'NIGHT'] : ['NIGHT'];
+    for (const slot of pushSlots) {
+      const raceStartMs = raceSlotStartUtcV2(todayForPush, slot).getTime();
+      if (
+        Date.now() >= raceStartMs - 5 * 60_000 &&
+        Date.now() < raceStartMs &&
+        every(`race-reminder:${slot}`, 60_000)
+      ) {
+        await dispatchInternal('/internal/push/race-reminder', { batch_date: todayForPush, slot });
+      }
     }
 
     // Settlement batches: NIGHT due at 20:00 MYT (Decision 047); MORNING

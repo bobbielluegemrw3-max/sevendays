@@ -258,6 +258,46 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
     const tonightForecast = forecastOf(currentCycle);
     const tomorrowForecast = forecastOf(nextCycle);
 
+    // V2実装-7c(Decision 106/108): このバッチで解決したジャックポットがあれば
+    // ショー最終幕用に公開(当選者はマスク表示 — R3の表示規則)。
+    let jackpot: Record<string, unknown> | null = null;
+    if (v2 && batchRow) {
+      const jp = await client.query<{
+        status: string;
+        prize_amount: string | null;
+        total_tickets: number | null;
+        email: string | null;
+        stable_name: string | null;
+        amount: string | null;
+      }>(
+        `select d.status, d.prize_amount::text as prize_amount, d.total_tickets,
+                u.email, u.stable_name, w.amount::text as amount
+         from jackpot_draws d
+         left join jackpot_winners w on w.draw_id = d.id
+         left join users u on u.id = w.user_id
+         where d.resolved_batch_run_id = $1
+         order by w.ticket_index`,
+        [batchRow.id],
+      );
+      if (jp.rows[0]) {
+        const maskName = (email: string | null, stable: string | null): string =>
+          stable ??
+          (!email
+            ? '—'
+            : email.endsWith('@user.sevendays')
+              ? 'ウォレットユーザー'
+              : `${email.slice(0, 2)}***`);
+        jackpot = {
+          status: jp.rows[0].status,
+          prize_amount: jp.rows[0].prize_amount,
+          total_tickets: jp.rows[0].total_tickets,
+          winners: jp.rows
+            .filter((r) => r.email !== null || r.stable_name !== null)
+            .map((r) => ({ name: maskName(r.email, r.stable_name), amount: r.amount })),
+        };
+      }
+    }
+
     // 次のレースの「全体の出走枠」(Decision 093候補・少頭数有利の可視化):
     // ACTIVE馬 − 手動出品中(Market Lockは欠場)。今夜の購入予約で生まれる馬は
     // 明晩からの出走なので、この数は日中に増えない(減るのは手動出品のみ)。
@@ -295,6 +335,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       ticker,
       tonight_forecast: tonightForecast,
       tomorrow_forecast: tomorrowForecast,
+      jackpot,
     };
   }
 
@@ -437,7 +478,23 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
                 : `${email.slice(0, 2)}***`;
           const cp = (r: { cp_email: string | null; cp_stable: string | null }) =>
             r.cp_stable ?? mask(r.cp_email);
+          // V2実装-7c: YOUR NEW STABLE幕 — このレースで精算された自分のプール
+          const poolQ = sharedV2
+            ? await ctx.client.query<{ amount: string; horses: number; spent: string }>(
+                `select ps.locked_amount::text as amount, count(a.id)::int as horses,
+                        coalesce(sum(a.assigned_price), 0)::text as spent
+                 from purchase_sessions ps
+                 join ownership_assignments a on a.purchase_session_id = ps.id
+                 join batch_runs b on b.id = a.batch_run_id
+                 where ps.user_id = $1 and ps.session_mode = 'POOL'
+                   and a.status = 'SETTLED'
+                   and b.batch_date = $2 and b.slot = $3::race_slot
+                 group by ps.id, ps.locked_amount`,
+                [ctx.userId, today, sharedSlot],
+              )
+            : null;
           myEvents = {
+            pool: poolQ?.rows[0] ?? null,
             burned: ev.rows
               .filter((r) => r.kind === 'BURN')
               .map((r) => ({
