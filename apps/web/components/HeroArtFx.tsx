@@ -133,8 +133,23 @@ export function HeroArtFx({ horseId, children }: { horseId: string; children: Re
       {t && !rest ? <span className={s.fxLines} aria-hidden="true" /> : null}
       {t ? (
         <span className={s.fxDust} aria-hidden="true">
-          <i /><i /><i />
+          <i /><i /><i /><i /><i /><i />
         </span>
+      ) : null}
+
+      {/* アート連動レイヤ(正典 04_馬の反応アニメ): クローム掃引+回路サージ+たてがみ飛散 */}
+      {t && up ? (
+        <>
+          <span className={s.fxSweep} aria-hidden="true" />
+          <span className={s.fxCircuit} aria-hidden="true" />
+          <span className={s.fxMane} aria-hidden="true">
+            <i /><i /><i /><i /><i /><i />
+          </span>
+        </>
+      ) : null}
+      {/* 眼フレア: 上振れ/昇格/保険/アイテム使用の一閃 */}
+      {(t && (up || insurance)) || fx?.kind === 'item' ? (
+        <span className={s.fxEye} aria-hidden="true" />
       ) : null}
       {rest ? (
         <span className={s.fxSteam} aria-hidden="true">
