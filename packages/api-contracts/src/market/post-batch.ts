@@ -162,9 +162,11 @@ export async function runMarketPostBatch(
   let autoReserveSessions = 0;
   for (const user of optedIn.rows) {
     try {
-      // Decision 110: V2で金額が設定されていれば「自動プール」。
-      // 未設定ユーザーは従来のSINGLE予約のまま(経路温存・継続性)。
-      if (v2 && user.auto_pool_amount !== null) {
+      // Decision 110(2026-07-18改・オーナー指示): V2の自動予約は常に「金額指定の
+      // 自動プール」。金額未設定の旧ユーザーはV1設定を予算に読み替える
+      // (上限N頭 → 102×N、MAX(null) → 残高全額)。V1のSINGLE予約(177.16×N)は
+      // V2シーズンでは一切作らない。
+      if (v2) {
         const livePool = await client.query(
           `select 1 from purchase_sessions
            where user_id = $1 and session_mode = 'POOL' and status = 'PENDING_ASSIGNMENT'`,
@@ -173,9 +175,13 @@ export async function runMarketPostBatch(
         if (livePool.rows[0]) continue; // 手動プールを上書きしない
         const accounts = await ensureUserAccounts(client, user.user_id);
         const available = Money.of(await getBalance(client, accounts.available));
-        const target = available.lt(Money.of(user.auto_pool_amount))
-          ? Math.floor(Number(available.toFixed8()))
-          : Number(user.auto_pool_amount);
+        const cap =
+          user.auto_pool_amount !== null
+            ? Number(user.auto_pool_amount)
+            : user.auto_reserve_max !== null
+              ? user.auto_reserve_max * 102
+              : Number.POSITIVE_INFINITY;
+        const target = Math.min(Math.floor(Number(available.toFixed8())), Math.floor(cap));
         if (target < 102) continue; // 最安1頭に届かない残高では張らない
         const pool = await createOrUpdatePoolSession(client, {
           userId: user.user_id,

@@ -10,7 +10,7 @@ import { runMarketPostBatch } from '../src/market/post-batch.js';
 /**
  * Decision 110: V2の自動プール予約(金額指定)。
  * 残高が設定額に満たなければ残高まで切り下げ・102未満はスキップ・
- * 手動プールは上書きしない・金額未設定はSINGLE予約のまま(経路温存)。
+ * 手動プールは上書きしない・金額未設定はV1設定(上限N頭)を102×Nの予算に読み替え。
  */
 
 let client: SqlClient;
@@ -53,9 +53,9 @@ async function poolOf(userId: string) {
 }
 
 describe('V2 auto pool sweep (Decision 110)', () => {
-  it('arms a pool of min(setting, balance), idempotently; unset users keep legacy singles', async () => {
+  it('arms a pool of min(setting, balance), idempotently; unset users convert V1 cap to budget', async () => {
     const pooled = await newUser('300', 500); // 残高300 < 設定500 → 300で張る
-    const legacy = await newUser('400', null); // 未設定 → SINGLE予約のまま
+    const legacy = await newUser('400', null); // 金額未設定 → V1上限1頭を102×1の予算に読み替え
     const broke = await newUser('50', 500); // 102未満 → スキップ
 
     const first = await runMarketPostBatch(client, today, 'MORNING', true);
@@ -71,13 +71,16 @@ describe('V2 auto pool sweep (Decision 110)', () => {
     );
     expect(notif.rows[0]!.n).toBe(1);
 
-    // 未設定ユーザーはSINGLE(177.16ロック)の従来経路
+    // 金額未設定ユーザー: V1のSINGLEは作られず、102×N(N=auto_reserve_max=1)のプール
     const singles = await client.query<{ n: number }>(
       `select count(*)::int as n from purchase_sessions
        where user_id = $1 and session_mode = 'SINGLE' and status = 'PENDING_ASSIGNMENT'`,
       [legacy],
     );
-    expect(singles.rows[0]!.n).toBe(1);
+    expect(singles.rows[0]!.n).toBe(0);
+    const legacyPools = await poolOf(legacy);
+    expect(legacyPools).toHaveLength(1);
+    expect(Number(legacyPools[0]!.locked_amount)).toBe(102);
 
     // 102未満はプールを張らない
     expect(await poolOf(broke)).toHaveLength(0);
