@@ -66,7 +66,7 @@ function totalValueInputFromRow(r: {
       r.tonight_training === 'SPEED_TRAINING' ||
       r.tonight_training === 'POWER_TRAINING' ||
       r.tonight_training === 'RECOVERY_TRAINING'
-        ? (r.tonight_training as TrainingType)
+        ? r.tonight_training
         : null,
   };
 }
