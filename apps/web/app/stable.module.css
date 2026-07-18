@@ -38,6 +38,14 @@
   .headStats { flex: none; }
   .stat { flex: none; }
 }
+/* モバイル(2026-07-19 オーナー指摘: 評価額のUSDTが隣のボックスへはみ出す) —
+   3ボックス時代の22px数字は390px幅で溢れる。縮小+折返し許可で絶対にはみ出させない */
+@media (max-width: 899px) {
+  .headStats { flex-wrap: wrap; }
+  .stat { padding: 10px 12px; overflow: hidden; }
+  .stat :global(.v) { font-size: 17px; white-space: nowrap; }
+  .stat :global(.v) small { font-size: 9.5px; margin-left: 2px; }
+}
 
 /* ---- 出品中/チャンピオンセクション(Decision 087監査) ------------------------ */
 .secLabelListed { color: var(--warn); }

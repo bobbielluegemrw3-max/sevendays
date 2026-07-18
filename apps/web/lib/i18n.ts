@@ -614,7 +614,7 @@ export interface AppDict {
     boost_title: string; boost_paid: string; boost_desc: string;
     boost_pending: string; boost_pending_race_tpl: string; boost_cancel: string;
     boost_canceled: string; boost_cancel_fail: string;
-    boost_pick: string; boost_pick_aria: string; boost_owned_tpl: string; boost_price_tpl: string;
+    boost_pick: string; boost_pick_aria: string; boost_hint_empty: string; boost_owned_tpl: string; boost_price_tpl: string;
     boost_use: string; boost_buy_use: string; boost_buy_fail: string; boost_apply_fail: string; boost_applied_tpl: string;
     gift_toggle: string; gift_head_tpl: string; gift_w1: string; gift_w2: string; gift_w3: string;
     gift_email_ph: string; gift_confirm_tpl: string; gift_cancel: string; gift_submit: string; gift_busy: string;
@@ -1249,6 +1249,7 @@ const ja: AppDict = {
     boost_pending: '適用予定', boost_pending_race_tpl: '{date} のレース', boost_cancel: '取り消す',
     boost_canceled: 'アイテムを在庫に戻しました。', boost_cancel_fail: '取り消しに失敗しました',
     boost_pick: 'アイテムを選ぶ…', boost_pick_aria: 'ブーストアイテムを選ぶ',
+    boost_hint_empty: 'アイテムを選ぶと、効果の説明がここに表示されます。',
     boost_owned_tpl: '(所持 {n})', boost_price_tpl: '({p} USDT)',
     boost_use: '使う', boost_buy_use: '買って使う', boost_buy_fail: '購入に失敗しました',
     boost_apply_fail: 'アイテムの適用に失敗しました', boost_applied_tpl: '{date} のレースに適用されます。',
@@ -1891,6 +1892,7 @@ const en: AppDict = {
     boost_pending: 'Scheduled', boost_pending_race_tpl: 'race on {date}', boost_cancel: 'Cancel',
     boost_canceled: 'Item returned to your inventory.', boost_cancel_fail: 'Failed to cancel',
     boost_pick: 'Choose an item…', boost_pick_aria: 'Choose a boost item',
+    boost_hint_empty: 'Pick an item and its effect will be described here.',
     boost_owned_tpl: '(owned {n})', boost_price_tpl: '({p} USDT)',
     boost_use: 'Use', boost_buy_use: 'Buy & use', boost_buy_fail: 'Purchase failed',
     boost_apply_fail: 'Failed to apply the item', boost_applied_tpl: 'Applies to the race on {date}.',
@@ -2533,6 +2535,7 @@ const zh: AppDict = {
     boost_pending: '预定使用', boost_pending_race_tpl: '{date} 的比赛', boost_cancel: '取消',
     boost_canceled: '道具已退回库存。', boost_cancel_fail: '取消失败',
     boost_pick: '选择道具…', boost_pick_aria: '选择强化道具',
+    boost_hint_empty: '选择道具后，效果说明会显示在这里。',
     boost_owned_tpl: '(持有 {n})', boost_price_tpl: '({p} USDT)',
     boost_use: '使用', boost_buy_use: '购买并使用', boost_buy_fail: '购买失败',
     boost_apply_fail: '道具应用失败', boost_applied_tpl: '将应用于 {date} 的比赛。',
@@ -3175,6 +3178,7 @@ const ko: AppDict = {
     boost_pending: '적용 예정', boost_pending_race_tpl: '{date} 레이스', boost_cancel: '취소하기',
     boost_canceled: '아이템을 재고로 되돌렸습니다.', boost_cancel_fail: '취소에 실패했습니다',
     boost_pick: '아이템 선택…', boost_pick_aria: '부스트 아이템 선택',
+    boost_hint_empty: '아이템을 선택하면 효과 설명이 여기에 표시됩니다.',
     boost_owned_tpl: '(보유 {n})', boost_price_tpl: '({p} USDT)',
     boost_use: '사용', boost_buy_use: '구매 후 사용', boost_buy_fail: '구매에 실패했습니다',
     boost_apply_fail: '아이템 적용에 실패했습니다', boost_applied_tpl: '{date} 레이스에 적용됩니다.',
@@ -3817,6 +3821,7 @@ const ms: AppDict = {
     boost_pending: 'Dijadualkan', boost_pending_race_tpl: 'perlumbaan {date}', boost_cancel: 'Batal',
     boost_canceled: 'Item dikembalikan ke inventori anda.', boost_cancel_fail: 'Gagal membatalkan',
     boost_pick: 'Pilih item…', boost_pick_aria: 'Pilih item rangsangan',
+    boost_hint_empty: 'Pilih item dan kesannya akan diterangkan di sini.',
     boost_owned_tpl: '(dimiliki {n})', boost_price_tpl: '({p} USDT)',
     boost_use: 'Guna', boost_buy_use: 'Beli & guna', boost_buy_fail: 'Belian gagal',
     boost_apply_fail: 'Gagal menggunakan item', boost_applied_tpl: 'Digunakan pada perlumbaan {date}.',

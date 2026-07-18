@@ -112,7 +112,8 @@
 }
 .heroBurned .heroCanvas { filter: grayscale(1) brightness(0.6); opacity: 0.55; }
 .scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 8, 19, 0) 46%, rgba(10, 8, 19, 0.92) 96%); pointer-events: none; }
-.artCap { position: absolute; left: 16px; right: 16px; bottom: 13px; display: flex; justify-content: space-between; align-items: flex-end; }
+.artCap { position: absolute; left: 16px; right: 16px; bottom: 13px; display: flex; justify-content: space-between; align-items: flex-end;
+  flex-wrap: wrap; row-gap: 4px; text-shadow: 0 2px 10px rgba(5, 4, 9, 0.85); }
 .artCapK { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); letter-spacing: 0.08em; }
 .artCapSub { font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--text); letter-spacing: 0.02em; }
 /* 総合値ヒーロー表示(2026-07-18): アートキャプション右側は TOTAL + DAY/LV の2ブロック。
@@ -122,15 +123,23 @@
 .tvBig :global(.l) { font-family: var(--font-display); font-size: 8.5px; color: var(--faint); letter-spacing: 0.14em; }
 .tvBig :global(.v) { font-family: var(--font-display); font-weight: 900; font-size: 38px; line-height: 1; }
 @media (max-width: 480px) {
-  .capBlocks { gap: 11px; }
-  .tvBig :global(.v) { font-size: 30px; }
-  .dayBig :global(.v) { font-size: 21px; }
+  .artCap { left: 12px; right: 12px; bottom: 10px; }
+  .artCapSub { font-size: 13px; }
+  .capBlocks { gap: 8px; }
+  .tvBig :global(.l) { font-size: 7.5px; }
+  .tvBig :global(.v) { font-size: 25px; }
+  .dayBig :global(.l) { font-size: 7.5px; }
+  .dayBig :global(.v) { font-size: 18px; }
+  .dayBig :global(.v) small { font-size: 10px; }
 }
 .dayBig { text-align: right; }
 .dayBig :global(.l) { font-family: var(--font-display); font-size: 8.5px; color: var(--faint); letter-spacing: 0.14em; }
 .dayBig :global(.v) { font-family: var(--font-display); font-weight: 800; font-size: 26px; color: var(--cyan); line-height: 1; }
 .dayBig :global(.v) small { font-size: 13px; color: var(--faint); }
-.heroFoot { padding: 13px 16px 15px; }
+/* 高さを馬ごとに揺らさない(2026-07-19: 矢印で馬を切り替えるたび順位行/注記の
+   行数差でカード高が変わり不安定だった) — 2行分を常に確保 */
+.heroFoot { padding: 13px 16px 15px; min-height: 88px; box-sizing: border-box; }
+@media (max-width: 480px) { .heroFoot { min-height: 102px; } }
 .dayNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 9px; line-height: 1.55; }
 
 /* 7日レール */

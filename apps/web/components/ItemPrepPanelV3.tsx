@@ -236,10 +236,18 @@ export function ItemPrepPanelV3({
         </>
       )}
 
-      {selectedItem && !pendingHere ? (
-        <div className={s.boostHint} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-          <img className={s.thumb} src={`/items/${selectedItem.key}.webp`} alt="" width={42} height={42} />
-          <span>{selectedItem.effect ? effectSummaryJa(selectedItem.effect) : selectedItem.description_ja}</span>
+      {!pendingHere ? (
+        /* 常時マウント+最低高さ(2026-07-19): 選択のたびに枠の高さが跳ねて
+           ページ全体がガタつく不安定さの解消。未選択時は案内文を表示 */
+        <div className={s.boostHint} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minHeight: 50 }}>
+          {selectedItem ? (
+            <>
+              <img className={s.thumb} src={`/items/${selectedItem.key}.webp`} alt="" width={42} height={42} />
+              <span>{selectedItem.effect ? effectSummaryJa(selectedItem.effect) : selectedItem.description_ja}</span>
+            </>
+          ) : (
+            <span style={{ opacity: 0.55 }}>{t.boost_hint_empty}</span>
+          )}
         </div>
       ) : null}
 
