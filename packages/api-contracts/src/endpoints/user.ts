@@ -1356,9 +1356,9 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     handler: async (ctx) => {
       const rows = await ctx.client.query(
         `select r.id, r.status::text as status, r.participant_count,
-                b.batch_date::text as batch_date, r.race_engine_version
+                b.batch_date::text as batch_date, b.slot::text as slot, r.race_engine_version
          from races r join batch_runs b on b.id = r.batch_run_id
-         order by b.batch_date desc limit 30`,
+         order by b.batch_date desc, r.created_at desc limit 30`,
       );
       return { races: rows.rows };
     },
@@ -1371,7 +1371,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     handler: async (ctx) => {
       const rows = await ctx.client.query(
         `select r.id, r.status::text as status, r.participant_count, r.race_engine_version,
-                b.batch_date::text as batch_date,
+                b.batch_date::text as batch_date, b.slot::text as slot,
                 rc.commit_hash as seed_hash, rc.reveal_seed as revealed_seed
          from races r
          join batch_runs b on b.id = r.batch_run_id

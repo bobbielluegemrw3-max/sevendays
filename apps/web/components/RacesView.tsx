@@ -11,7 +11,7 @@ import s from '../app/races.module.css';
 
 export interface Race {
   id: string; status: string; participant_count: number | null;
-  batch_date: string; race_engine_version: string;
+  batch_date: string; slot?: string | null; race_engine_version: string;
 }
 
 function fmtDate(iso: string): { md: string; year: string } {
@@ -35,7 +35,7 @@ export function RacesView({ races }: { races: Race[] }) {
           <div className={s.raceMd}>台帳</div>
           <div className={s.raceYear}>LEDGER</div>
         </div>
-        <div className={s.raceParts}>毎晩の全記録(生存・BURN・売買)を公開 · CSVダウンロード可</div>
+        <div className={s.raceParts}>毎レースの全記録(生存・BURN・売買)を公開 · CSVダウンロード可</div>
         <span className={s.raceGo}>開く →</span>
       </Link>
 
@@ -49,7 +49,7 @@ export function RacesView({ races }: { races: Race[] }) {
               return (
                 <Link key={r.id} href={`/races/${r.id}`} className={s.raceRow}>
                   <div className={s.raceDate}>
-                    <div className={s.raceMd}>{d.md}</div>
+                    <div className={s.raceMd}>{d.md}{r.slot === 'MORNING' ? ' 8:00' : r.slot === 'NIGHT' ? ' 20:00' : ''}</div>
                     <div className={s.raceYear}>{d.year}</div>
                   </div>
                   <span className={`${s.badge} ${s.stCompleted}`}>FINALIZED · 確定</span>

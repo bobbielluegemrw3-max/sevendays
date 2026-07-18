@@ -44,7 +44,7 @@ export interface DashHorse {
 }
 export interface DashWallet { available: string; locked: string }
 export interface DashBuff { buff_rarity: string; buff_bonus_score: string; status: string }
-export interface DashRace { id: string; status: string; participant_count: number | null; batch_date: string }
+export interface DashRace { id: string; status: string; participant_count: number | null; batch_date: string; slot?: string | null }
 export interface DashResult { horse_id: string; final_score: string; final_rank: number; is_burned: boolean; horse: DashHorse }
 export interface DashBuyback { id: string; status: string; payments_paid: number | string }
 export interface DashNotification { id: string; notification_type: string; payload_json: { title?: string; body?: string } | null; read_at: string | null; created_at: string }
@@ -135,7 +135,11 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
       <section className={s.result}>
         <div className={s.tileHead}>
           <span className={s.tileLabel}>
-            {lastRace ? fill(t.result_label_tpl, { date: formatMonthDay(lang, lastRace.batch_date) }) : t.result_label}
+            {lastRace
+              ? fill(t.result_label_tpl, {
+                  date: `${formatMonthDay(lang, lastRace.batch_date)}${lastRace.slot === 'MORNING' ? ' 8:00' : lastRace.slot === 'NIGHT' ? ' 20:00' : ''}`,
+                })
+              : t.result_label}
           </span>
           {lastRace ? <Link href={`/races/${lastRace.id}`} className={s.tileLink}>{t.result_detail}</Link> : null}
         </div>
@@ -174,7 +178,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
       <section className={s.count}>
         <div className={s.tileHead}>
           <span className={s.tileLabel}>{t.tonight_label}</span>
-          <span className={s.live}><span className={s.dot}>●</span> LIVE 20:00 MYT</span>
+          <span className={s.live}><span className={s.dot}>●</span> LIVE 8:00 / 20:00 MYT</span>
         </div>
         <Countdown className={s.timer} />
         <div className={s.countMeta}>
