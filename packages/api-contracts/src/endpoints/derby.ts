@@ -217,7 +217,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         order by at desc limit 14`,
         [raceRow.id, today],
       );
-      ticker = tick.rows.map((r) => r.line);
+      // V2実装-7b: DAY表記はLVへ(Decision 102)
+      ticker = tick.rows.map((r) => (v2 ? r.line.replace('DAY7', 'LV.7') : r.line));
     }
 
     // ADR-012の予報を1クエリで2つ拾う:

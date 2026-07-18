@@ -1,5 +1,6 @@
 'use client';
 
+import { toLvText } from '@/lib/i18n-shared';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/client-api';
@@ -57,14 +58,14 @@ function meta(type: string): TypeMeta {
 function labelOf(type: string, t: AppDict['notif']): string {
   return t.types[type] ?? t.type_default;
 }
-function titleOf(n: Notification, t: AppDict['notif']): string {
+function titleOf(n: Notification, t: AppDict['notif'], lvMode = false): string {
   const title = n.payload_json?.['title'];
-  if (typeof title === 'string' && title) return title;
+  if (typeof title === 'string' && title) return lvMode ? toLvText(title) : title;
   return labelOf(n.notification_type, t);
 }
-function bodyOf(n: Notification): string | null {
+function bodyOf(n: Notification, lvMode = false): string | null {
   const b = n.payload_json?.['body'];
-  return typeof b === 'string' && b ? b : null;
+  return typeof b === 'string' && b ? (lvMode ? toLvText(b) : b) : null;
 }
 /** 通知 → 関連ページ(「読む」から「次の行動」へ)。 */
 function hrefOf(n: Notification): string {
@@ -106,7 +107,7 @@ function timeAgo(value: string, t: AppDict['notif']): string {
 const dateOf = (iso: string): string => localDate(iso); // 現地日でグルーピング(2026-07-14)
 const dateLabel = (d: string): string => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 
-export function NotificationsList({ notifications, preview = false, t }: { notifications: Notification[]; preview?: boolean; t: AppDict['notif'] }) {
+export function NotificationsList({ notifications, preview = false, t , lvMode = false}: { notifications: Notification[]; preview?: boolean; t: AppDict['notif'] ; lvMode?: boolean}) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState<'ALL' | Cat>('ALL');
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -129,7 +130,7 @@ export function NotificationsList({ notifications, preview = false, t }: { notif
       const m = meta(n.notification_type);
       if (cat !== 'ALL' && m.cat !== cat) return false;
       if (unreadOnly && n.read_at != null) return false;
-      if (needle && !`${titleOf(n, t)} ${labelOf(n.notification_type, t)}`.toLowerCase().includes(needle)) return false;
+      if (needle && !`${titleOf(n, t, lvMode)} ${labelOf(n.notification_type, t)}`.toLowerCase().includes(needle)) return false;
       return true;
     });
   }, [notifications, q, cat, unreadOnly, t]);
@@ -206,7 +207,7 @@ export function NotificationsList({ notifications, preview = false, t }: { notif
           {slice.map((n, i) => {
             const m = meta(n.notification_type);
             const unread = n.read_at == null && !n.is_broadcast;
-            const body = bodyOf(n);
+            const body = bodyOf(n, lvMode);
             const d = dateOf(n.created_at);
             const prev = i > 0 ? dateOf(slice[i - 1]!.created_at) : null;
             return (
@@ -223,7 +224,7 @@ export function NotificationsList({ notifications, preview = false, t }: { notif
                       <span className={`${s.typeBadge} ${s[m.cls]!}`}>{labelOf(n.notification_type, t)}</span>
                       {unread ? <span className={s.dot} /> : null}
                     </div>
-                    <div className={`${s.title} ${unread ? s.titleUnread : ''}`}>{titleOf(n, t)}</div>
+                    <div className={`${s.title} ${unread ? s.titleUnread : ''}`}>{titleOf(n, t, lvMode)}</div>
                     {body ? <div className={s.sub}>{body}</div> : null}
                   </div>
                   <span className={s.rowRight}>

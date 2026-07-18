@@ -6,7 +6,8 @@ import { getAccessToken, serverApi } from '@/lib/server-api';
 import { withSqlClient } from '@/lib/db';
 import { getMaintenanceState } from '@/lib/maintenance';
 import { getLang } from '@/lib/i18n-server';
-import { type Lang } from '@/lib/i18n';
+import { setLvDisplayMode, type Lang } from '@/lib/i18n';
+import { isEngineV2Active } from '@/lib/engine-server';
 import { TopNav } from '@/components/TopNav';
 import { Splash } from '@/components/Splash';
 import { MaintenanceScreen } from '@/components/MaintenanceScreen';
@@ -52,6 +53,8 @@ async function TopNavLoader({ lang }: { lang: Lang }) {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const authed = (await getAccessToken()) !== null;
   const lang = await getLang();
+  // V2実装-7b(Decision 102): V2シーズンはDAY表記をLV表記へ(辞書Proxyが一括切替)
+  setLvDisplayMode(await isEngineV2Active());
 
   // メンテナンスモード(Decision 098): ONの間、管理者以外は全ページを
   // メンテナンス画面に差し替える(APIはブリッジ側で503遮断済み)。

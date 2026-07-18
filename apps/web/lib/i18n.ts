@@ -1,3 +1,4 @@
+import { toLvText } from '@/lib/i18n-shared';
 import { LANDING_LANGS, LANG_LABEL, isLang, type Lang } from '@/lib/landing-i18n';
 
 /* ============================================================================
@@ -3828,4 +3829,54 @@ const ms: AppDict = {
   },
 };
 
-export const APP_COPY: Record<Lang, AppDict> = { ja, en, zh, ko, ms };
+const APP_COPY_BASE: Record<Lang, AppDict> = { ja, en, zh, ko, ms };
+
+/* ============================================================================
+ * V2実装-7b(Decision 102): DAY→LV表示置換。
+ * エンジン状態は全ユーザー共通のグローバル(切替はテストネットリセットの
+ * activatePolicy一点)なので、リクエスト横断のモジュールフラグで安全。
+ * root layout が毎リクエスト isEngineV2Active() の結果をセットし、
+ * APP_COPY[lang] の参照が透過的にLV変換済み辞書へ切り替わる —
+ * 参照側(全ページ・全サーバーコンポーネント)は無改修。
+ * ========================================================================== */
+
+// プレイ日数など「馬のDayではない」キーは変換しない
+const LV_SKIP_KEYS = new Set(['play_tpl']);
+
+function lvizeDeep<T>(value: T): T {
+  if (typeof value === 'string') return toLvText(value) as unknown as T;
+  if (Array.isArray(value)) return value.map((v) => lvizeDeep(v) as unknown) as unknown as T;
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = LV_SKIP_KEYS.has(k) ? v : lvizeDeep(v);
+    }
+    return out as unknown as T;
+  }
+  return value;
+}
+
+const APP_COPY_LV_CACHE = new Map<Lang, AppDict>();
+function lvCopyOf(lang: Lang): AppDict {
+  const cached = APP_COPY_LV_CACHE.get(lang);
+  if (cached) return cached;
+  const built = lvizeDeep(APP_COPY_BASE[lang]);
+  APP_COPY_LV_CACHE.set(lang, built);
+  return built;
+}
+
+let lvDisplayMode = false;
+/** root layout 専用: アクティブエンジンがv2ならLV表記に切り替える。 */
+export function setLvDisplayMode(on: boolean): void {
+  lvDisplayMode = on;
+}
+export function isLvDisplayMode(): boolean {
+  return lvDisplayMode;
+}
+
+export const APP_COPY: Record<Lang, AppDict> = new Proxy(APP_COPY_BASE, {
+  get(target, prop: string) {
+    if (lvDisplayMode && prop in target) return lvCopyOf(prop as Lang);
+    return target[prop as Lang];
+  },
+});

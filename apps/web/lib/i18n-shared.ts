@@ -32,3 +32,14 @@ export function formatMonthDay(lang: string, isoDate: string): string {
     default: return `${m}月${d}日`; // ja / zh
   }
 }
+
+
+/**
+ * V2実装-7b(Decision 102): DAY表記→LV表記の表示置換。
+ * 「Day 7」「DAY0」「Day {d}」等の馬の日数トークンだけを LV.〜 に変える
+ * (数字かプレースホルダが続く場合のみ — "Daily" や "Day of play" は不変)。
+ * クライアント・サーバー両用の純関数。
+ */
+export function toLvText(s: string): string {
+  return s.replace(/\b[Dd][Aa][Yy]\.? ?(?=\{|\d)/g, 'LV.');
+}
