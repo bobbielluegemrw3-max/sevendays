@@ -415,13 +415,23 @@
   ショー用データAPI: derby statusに `jackpot`(このバッチで解決した抽選 —
   当選者マスク・R3規則)と `my_events.pool`(このレースで精算された自分のプール:
   amount/horses/spent = YOUR NEW STABLE幕の素材)を追加。
-  **残り: -7c UI = ショーのタイムライン新幕**(daily-derby.tsに
-  YOUR NEW STABLE幕とジャックポット幕を追加・フィクスチャ+/dev/derby-previewで
-  視覚QA(CDPエミュレーション)・LedgerView等のslot表示ラベル)。
+  **-7c UI=完了(2026-07-18)**: ショー最終幕に **YOUR NEW STABLE幕**(my_events.pool
+  非null時・YOUR RESULTS冒頭・「{amount} USDTが{horses}頭になりました+余り自動返金」)と
+  **WEEKLY JACKPOT幕**(jackpot.status='PAID'の週のみ・明日の予報の後=真の最終幕・
+  当選者マスク名+賞金+「commit-revealで検証可能」の正直注記。中止/不成立週は幕ごと非表示=108)。
+  既存のTomorrowForecastと同じ意匠ブロック(fcWrap系)を再利用。DerbyLiveがstatusの
+  jackpot/poolを結線・フィクスチャ追加(/dev/derby-preview 既定でJP幕表示・?jp=0で消す)。
+  LedgerViewは同日2レースを夜優先で日別集約(サイクル別台帳UIは試運転フィードバックで)。
+  ビルドチャンクへの文字列組込+devサーバーSSRスモーク確認済み — **実機の通し視覚QAは
+  テストネット試運転の初週で**(実データのショーで確認するのが最短)。
   **auto_reserve=金額指定の自動プールに再定義(Decision 110・2026-07-18 オーナー決定・実装済み)**:
   `user_trade_settings.auto_pool_amount`(下限102)— V2のスイープで「生きているプールが
   無ければ min(設定額, 残高) のプールを自動作成」(手動プールは上書きしない・102未満はスキップ・
   未設定ユーザーは従来SINGLE予約のまま=経路温存)。AUTO_POOL_RESERVED通知+メール。
   /market のAUTOタイルはV2で金額セレクタに切替(5言語)。migration 20260718030000 本番適用済み
-- [ ] -7c 完了 → テストネット試運転開始(+ローンチ前にLanding/ガイドのV2コンテンツ改修)
+- [x] **V2実装 全フェーズ完了(2026-07-18)** — -1a〜-7 まですべて実装済み・全ゲートgreen
+- [ ] **テストネット試運転開始**(§7チェックリスト+HANDOVER_SESSION_20260718B §2:
+  リセット→total_value付与→activatePolicy→アイテムカタログ切替→JP有効化(残高整合後)→
+  CS注記削除。デプロイ禁止帯再開)→ 試運転の視覚QA(ショー新幕含む)
+- [ ] ローンチ前: Landing/ガイドのV2コンテンツ改修(散文の書き直し)→ メインネットリセット=ローンチ
 - [ ] テストネット試運転 → メインネットリセット → ローンチ

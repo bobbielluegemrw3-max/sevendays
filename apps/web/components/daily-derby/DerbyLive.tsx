@@ -8,6 +8,7 @@ import {
   SHOW_TOTAL,
   conditionsView,
   type DerbyCounts,
+  type DerbyJackpotView,
   type DerbyNightResults,
 } from '@/lib/daily-derby';
 import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
@@ -39,6 +40,8 @@ interface DerbyStatus {
   tonight_forecast?: { weather: string; track: string; surface: string } | null;
   tomorrow_forecast?: { weather: string; track: string; surface: string } | null;
   tonight_field?: { entrants: number; burn_slots_min: number; burn_slots_max: number } | null;
+  /** V2実装-7c: このバッチで解決したジャックポット(当選者マスク済)。 */
+  jackpot?: DerbyJackpotView | null;
 }
 
 /* ---- 見逃しリプレイ(オーナー要望 2026-07-16) ------------------------------
@@ -243,6 +246,7 @@ export function DerbyLive() {
       tomorrowForecast={
         status.tomorrow_forecast ? conditionsView({ ...status.tomorrow_forecast, night_name: null }) : null
       }
+      jackpot={status.jackpot ?? null}
     />
   );
 

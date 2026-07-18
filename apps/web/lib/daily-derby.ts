@@ -334,6 +334,23 @@ export interface DerbyNightResults {
   survived: { name: string; dna_hash: string; from_day: number; to_day: number; day7: boolean }[];
   sold: { name: string; dna_hash: string; price: string; day: number | null; counterpart: string }[];
   bought: { name: string; dna_hash: string; price: string; day: number | null; is_mint: boolean; counterpart: string | null }[];
+  /** V2実装-7c: このレースで精算された自分のプール(YOUR NEW STABLE幕)。 */
+  pool?: PoolActView | null;
+}
+
+/** V2(Decision 103): プール購入の披露幕データ(derby status my_events.pool)。 */
+export interface PoolActView {
+  amount: string;
+  horses: number;
+  spent: string;
+}
+
+/** V2(Decision 106/108): ジャックポット幕データ(derby status jackpot)。 */
+export interface DerbyJackpotView {
+  status: string;
+  prize_amount: string | null;
+  total_tickets: number | null;
+  winners: { name: string; amount: string | null }[];
 }
 
 /* ---- フィクスチャ(プレビュー/モック結線用。実結線時にAPI値へ差替) ------- */
@@ -450,6 +467,7 @@ const dna = (seed: string): string => `0x${seed.repeat(32).slice(0, 64)}`;
 export function fixtureNightResults(): DerbyNightResults {
   const [burnH, svH, day7H, matchH] = fixtureMyHorses();
   return {
+    pool: { amount: '1000.00000000', horses: 8, spent: '923.80000000' },
     burned: [
       { name: burnH!.name, dna_hash: burnH!.dnaHash!, day: burnH!.currentDay!, used_item_key: 'rain_hood', drop_item_key: 'spirit_roar' },
     ],
@@ -463,5 +481,16 @@ export function fixtureNightResults(): DerbyNightResults {
     bought: [
       { name: 'Golden Storm', dna_hash: dna('4c'), price: '100.00', day: 0, is_mint: true, counterpart: null },
     ],
+  };
+}
+
+
+/** ジャックポット幕のフィクスチャ(/dev/derby-preview)。 */
+export function fixtureJackpot(): DerbyJackpotView {
+  return {
+    status: 'PAID',
+    prize_amount: '100.00000000',
+    total_tickets: 342,
+    winners: [{ name: 'ta***', amount: '100.00000000' }],
   };
 }

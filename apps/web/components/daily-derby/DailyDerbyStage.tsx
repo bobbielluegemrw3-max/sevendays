@@ -18,7 +18,9 @@ import {
   matchingCount,
   turnLabel,
   type DerbyCounts,
+  type DerbyJackpotView,
   type DerbyNightResults,
+  type PoolActView,
   type LogTone,
   type ShowStep,
 } from '@/lib/daily-derby';
@@ -67,6 +69,8 @@ export interface DailyDerbyStageProps {
   tonightField?: { entrants: number; burnSlotsMin: number; burnSlotsMax: number } | null;
   /** 明日の予報(ADR-012)。ショー最終幕(YOUR RESULTSの後)で発表する。 */
   tomorrowForecast?: DerbyConditionsView | null;
+  /** V2実装-7c: このバッチで解決したジャックポット(日曜夜のみ非null・当選者マスク済)。 */
+  jackpot?: DerbyJackpotView | null;
   /** 見逃しリプレイ再生中(2026-07-16): REPLAYバー表示+タイトルのLIVEバッジをREPLAYに。 */
   replay?: boolean;
   /** リプレイの「スキップして結果へ」ボタン(replay時のみ使用)。 */
@@ -128,6 +132,7 @@ export function DailyDerbyStage({
   tonightForecast = null,
   tonightField = null,
   tomorrowForecast = null,
+  jackpot = null,
   replay = false,
   onReplaySkip,
   debugVerdict,
@@ -542,7 +547,13 @@ export function DailyDerbyStage({
             replay={replay}
           />
         ) : (
-          <PersonalOrDone night={nightResults} forecast={tomorrowForecast} field={tonightField} />
+          <PersonalOrDone
+            night={nightResults}
+            pool={myEvents?.pool ?? nightResults?.pool ?? null}
+            jackpot={jackpot}
+            forecast={tomorrowForecast}
+            field={tonightField}
+          />
         )}
       </div>
 
@@ -1206,12 +1217,70 @@ function TomorrowForecast({
   );
 }
 
+/* V2実装-7c(Decision 103): YOUR NEW STABLE幕 — プール購入の披露。
+   -3b PurchaseView の物語文と同じ言い回しで、頭数の内訳はすぐ下の結果一覧が担う。 */
+const fmtUsdt = (v: string | null): string => (v === null ? '—' : String(Number(v)));
+
+function PoolStableAct({ pool }: { pool: PoolActView }) {
+  if (pool.horses <= 0) return null;
+  return (
+    <div className={s.fcWrap}>
+      <div className={s.fcK}>— YOUR NEW STABLE —</div>
+      <div className={s.fcRow}>
+        <b>{fmtUsdt(pool.amount)} USDT</b>
+        <span className={s.condK}>が</span>
+        <b>{pool.horses}頭</b>
+        <span className={s.condK}>になりました</span>
+      </div>
+      <div className={s.fcNote}>
+        使用 {fmtUsdt(pool.spent)} USDT — 余りは自動返金済み。新しい仲間は下の結果一覧に登場します。
+      </div>
+    </div>
+  );
+}
+
+/* V2実装-7c(Decision 106/108): 週次ジャックポット幕(ショーの本当の最終幕)。
+   支払い済み(PAID)の週だけ表示 — 中止/不成立の週は幕ごと出さない(108)。 */
+function JackpotAct({ jackpot }: { jackpot: DerbyJackpotView }) {
+  if (jackpot.status !== 'PAID' || jackpot.winners.length === 0) return null;
+  return (
+    <div className={s.fcWrap}>
+      <div className={s.fcK}>— WEEKLY JACKPOT —</div>
+      <div className={s.fcRow}>
+        <span className={s.condK}>賞金</span>
+        <b style={{ color: 'var(--gold-bright, #f2e4bf)' }}>{fmtUsdt(jackpot.prize_amount)} USDT</b>
+        <span className={s.condK}>/ 応募</span>
+        <b>{jackpot.total_tickets ?? 0}口</b>
+      </div>
+      {jackpot.winners.map((w, i) => (
+        <div key={i} className={s.fcRow}>
+          <span className={s.condK}>当選</span>
+          <b>{w.name}</b>
+          {w.amount ? (
+            <>
+              <span className={s.condK}>—</span>
+              <b>{fmtUsdt(w.amount)} USDT</b>
+            </>
+          ) : null}
+        </div>
+      ))}
+      <div className={s.fcNote}>
+        抽選券=今週の調教確定数。抽選はレースと同じcommit-revealで検証できます。来週も毎レースの調教が応募になります。
+      </div>
+    </div>
+  );
+}
+
 function PersonalOrDone({
   night,
+  pool,
+  jackpot,
   forecast,
   field,
 }: {
   night: DerbyNightResults | null;
+  pool: PoolActView | null;
+  jackpot: DerbyJackpotView | null;
   forecast: DerbyConditionsView | null;
   field: { entrants: number; burnSlotsMin: number; burnSlotsMax: number } | null;
 }) {
@@ -1223,9 +1292,11 @@ function PersonalOrDone({
           <div className={s.nightSumK}>YOUR RESULTS — 本日のあなたの全結果</div>
           <div className={s.liveRule} />
         </div>
+        {pool && <PoolStableAct pool={pool} />}
         <NightResultsList results={night} />
         <div className={s.nightSumNote}>この結果はレースページの「あなたのレース記録」でいつでも見返せます。</div>
         {forecast && <TomorrowForecast forecast={forecast} field={field} />}
+        {jackpot && <JackpotAct jackpot={jackpot} />}
       </div>
     );
   }
@@ -1236,7 +1307,9 @@ function PersonalOrDone({
         <div className={s.doneText}>TODAY RACE END</div>
         <div className={s.liveRule} />
       </div>
+      {pool && <PoolStableAct pool={pool} />}
       {forecast && <TomorrowForecast forecast={forecast} field={field} />}
+      {jackpot && <JackpotAct jackpot={jackpot} />}
     </div>
   );
 }

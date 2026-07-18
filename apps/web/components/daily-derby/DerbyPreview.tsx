@@ -8,6 +8,7 @@ import {
   SHOW_TOTAL,
   fixtureConditions,
   fixtureForecast,
+  fixtureJackpot,
   fixtureMyHorses,
   fixtureNightResults,
 } from '@/lib/daily-derby';
@@ -47,6 +48,8 @@ export function DerbyPreview() {
   const [failed, setFailed] = useState(false);
   const [quiet, setQuiet] = useState(false);
   const [replaySim, setReplaySim] = useState(false);
+  // V2実装-7c: ?jp=0 でジャックポット幕を消せる(既定は表示 — 視覚QA用)
+  const [jackpotSim, setJackpotSim] = useState(true);
   const [tonightVariant, setTonightVariant] = useState<0 | 1 | 2>(1);
   const [myHorsesOverride, setMyHorsesOverride] = useState<ReturnType<typeof fixtureMyHorses> | null>(null);
   const [debugVerdict, setDebugVerdict] = useState<
@@ -67,6 +70,7 @@ export function DerbyPreview() {
     if (q.get('failed') === '1') setFailed(true);
     if (q.get('quiet') === '1') setQuiet(true);
     if (q.get('replay') === '1') setReplaySim(true);
+    if (q.get('jp') === '0') setJackpotSim(false);
     const tn = q.get('tonight');
     if (tn === '0' || tn === '1' || tn === '2') setTonightVariant(Number(tn) as 0 | 1 | 2);
     // 視覚QA: ?herd=100 で大量所有(100頭等)の見え方を確認
@@ -242,6 +246,7 @@ export function DerbyPreview() {
         conditions={fixtureConditions(new Date().toISOString().slice(0, 10))}
         tomorrowForecast={fixtureForecast(new Date().toISOString().slice(0, 10))}
         tonightField={{ entrants: 14, burnSlotsMin: 1, burnSlotsMax: 1 }}
+        jackpot={jackpotSim ? fixtureJackpot() : null}
       />
 
       <p className="faint" style={{ fontSize: '0.78rem', marginTop: '0.8rem' }}>

@@ -95,7 +95,13 @@ export function LedgerView({ t }: { t: AppDict['ledger'] }) {
   }, [selected]);
 
   const months = useMemo(() => [...new Set((days ?? []).map((d) => d.date.slice(0, 7)))].sort(), [days]);
-  const monthDays = useMemo(() => new Map((days ?? []).map((d) => [d.date, d])), [days]);
+  // V2(-7a)は同日2レース: 日別ビューは夜レース優先で1行に集約(API順=date desc, slot desc
+  // → NIGHTが先)。サイクル別の台帳UIは試運転のフィードバックで拡張する。
+  const monthDays = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof days>[number]>();
+    for (const d of days ?? []) if (!map.has(d.date)) map.set(d.date, d);
+    return map;
+  }, [days]);
 
   const downloadMonthly = useCallback(() => {
     if (!days || !viewMonth) return;
