@@ -1,21 +1,24 @@
 /**
- * Race timing (Decision 047): the daily race settles at 20:00 MYT (UTC+8) =
- * 12:00 UTC. Training for the day closes at Marketplace Lock, which the
- * batch performs at settlement; we show a slightly earlier UX cutoff.
+ * Race timing (Decision 047 → V2): races settle at 8:00 MYT (= 00:00 UTC) and
+ * 20:00 MYT (= 12:00 UTC), twice a day. Training closes at Marketplace Lock,
+ * which the batch performs at settlement; we show a slightly earlier UX cutoff.
  */
 
-const RACE_HOUR_UTC = 12; // 20:00 MYT
-export const TRAINING_CUTOFF_LABEL = '20:00 MYT';
+const RACE_HOURS_UTC = [0, 12]; // 8:00 MYT / 20:00 MYT
+export const TRAINING_CUTOFF_LABEL = '8:00 / 20:00 MYT';
 
-/** The next 20:00 MYT instant strictly in the future (or now). */
+/** The next race instant (8:00 or 20:00 MYT) strictly in the future (or now). */
 export function nextRaceInstant(now: Date = new Date()): Date {
-  const candidate = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), RACE_HOUR_UTC, 0, 0, 0),
-  );
-  if (candidate.getTime() <= now.getTime()) {
-    candidate.setUTCDate(candidate.getUTCDate() + 1);
+  for (const dayOffset of [0, 1]) {
+    for (const hour of RACE_HOURS_UTC) {
+      const candidate = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + dayOffset, hour, 0, 0, 0),
+      );
+      if (candidate.getTime() > now.getTime()) return candidate;
+    }
   }
-  return candidate;
+  /* unreachable: tomorrow's 12:00 UTC is always in the future */
+  return new Date(now.getTime());
 }
 
 export function msUntilNextRace(now: Date = new Date()): number {

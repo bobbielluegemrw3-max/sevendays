@@ -123,10 +123,10 @@ export function Landing({
             <div className={s.hstats}>
               <div>
                 <div className={`${s.n} ${s.go}`}>200 USDT</div>
-                <div className={s.k}>DAY7 CHAMPION</div>
+                <div className={s.k}>LV.7 CHAMPION</div>
               </div>
               <div>
-                <div className={`${s.n} ${s.cy}`}>7 DAYS</div>
+                <div className={`${s.n} ${s.cy}`}>7 RACES</div>
                 <div className={s.k}>TO GLORY</div>
               </div>
               <div>
@@ -184,7 +184,7 @@ export function Landing({
           <div className={s.cdSide}>
             {/* countdown */}
             <div className={s.cdCard}>
-              <div className={s.l}>{'// NEXT POST 20:00 MYT'}</div>
+              <div className={s.l}>{'// NEXT POST 8:00 & 20:00 MYT'}</div>
               <Countdown className={s.cd} />
               <div className={s.s}>
                 <LocalPostTime lang={lang} />
@@ -356,7 +356,7 @@ export function Landing({
         <div className={s.secHead}>
           <span className={`${s.kick} ${s.cy}`}>
             <span className={s.kdot} style={{ background: '#00eaff' }} />
-            THE DAILY DERBY — 20:00 MYT
+            THE DAILY DERBY — 8:00 & 20:00 MYT
           </span>
           <h2 className={s.h2} style={{ marginTop: 14 }}>
             {t.s4_h2}
@@ -448,7 +448,7 @@ export function Landing({
               </div>
             </LandingReveal>
             <div className={s.nextRaceCard}>
-              <div className={s.l}>{'// NEXT POST 20:00 MYT'}</div>
+              <div className={s.l}>{'// NEXT POST 8:00 & 20:00 MYT'}</div>
               <Countdown className={s.nrCd} />
               <div className={s.nrNote}>{t.next_race_note}</div>
             </div>
@@ -478,22 +478,22 @@ export function Landing({
             <div className={s.priceLadder}>
               <div className={s.pStep}>
                 <div className={s.pv}>100</div>
-                <div className={s.pd}>DAY0</div>
+                <div className={s.pd}>LV.0</div>
               </div>
               <span className={s.pArrow}>▲</span>
               <div className={`${s.pStep} ${s.up}`}>
                 <div className={s.pv}>110</div>
-                <div className={s.pd}>DAY1</div>
+                <div className={s.pd}>LV.1</div>
               </div>
               <span className={s.pArrow}>▲</span>
               <div className={`${s.pStep} ${s.up}`}>
                 <div className={s.pv}>121</div>
-                <div className={s.pd}>DAY2</div>
+                <div className={s.pd}>LV.2</div>
               </div>
               <span className={s.pArrow}>▲</span>
               <div className={`${s.pStep} ${s.up}`}>
                 <div className={s.pv}>…</div>
-                <div className={s.pd}>DAY3+</div>
+                <div className={s.pd}>LV.3+</div>
               </div>
             </div>
             <p className={s.p} style={{ margin: '16px 0 0', fontSize: 12.5, color: '#8f8ac2' }}>
@@ -508,7 +508,7 @@ export function Landing({
         <div className={s.secHead}>
           <span className={`${s.kick} ${s.gd}`}>
             <span className={s.kdot} style={{ background: '#c9a86a' }} />
-            DAY7 — CHAMPION
+            LV.7 — CHAMPION
           </span>
           <h2 className={s.h2} style={{ marginTop: 14 }}>
             {t.s6_h2}
@@ -735,7 +735,7 @@ export function Landing({
           <div className={s.finalLeft}>
             <div className={s.finalKick}>
               <span className={s.dot} />
-              JOIN TONIGHT&apos;S RACE
+              JOIN THE NEXT RACE
             </div>
             <h2>
               {t.s10_h2a}
