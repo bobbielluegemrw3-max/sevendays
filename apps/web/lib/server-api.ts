@@ -28,16 +28,38 @@ export const getAccessToken = cache(async (): Promise<string | null> => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) return null;
-  const supabase = createServerClient(url, anonKey, {
-    cookies: {
-      getAll: () => cookieStore.getAll(),
-      setAll: () => {
-        /* read-only in RSC; the browser client owns the session cookies */
+  try {
+    const supabase = createServerClient(url, anonKey, {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: () => {
+          /* read-only in RSC; the browser client owns the session cookies */
+        },
       },
-    },
-  });
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? null;
+    });
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  } catch (e) {
+    // 2026-07-19 実障害(digest 3579376556): 実ブラウザのセッションCookieでのみ
+    // ここが throw し、全ページがServer Componentsエラーで死んでいた疑い。
+    // 絶対にレンダーを殺さない — 未ログイン扱いに落とし、原因はログと
+    // system_settings('debug:auth_error') に残して遠隔診断できるようにする。
+    const msg = e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e);
+    console.error('[server-api] getSession failed:', msg);
+    try {
+      await withSqlClient((client) =>
+        client.query(
+          `insert into system_settings (key, value, updated_at)
+           values ('debug:auth_error', $1::jsonb, now())
+           on conflict (key) do update set value = $1::jsonb, updated_at = now()`,
+          [JSON.stringify({ at: new Date().toISOString(), error: msg.slice(0, 4000) })],
+        ),
+      );
+    } catch {
+      /* 診断書き込みの失敗はレンダーに影響させない */
+    }
+    return null;
+  }
 });
 
 const getAuthContext = cache(async (): Promise<AuthContext> => {
