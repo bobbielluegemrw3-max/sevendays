@@ -46,9 +46,11 @@
 - ✎ ショーのタイムライン(`apps/web/lib/daily-derby.ts`)は決定論生成 — 新幕はフィクスチャ+
   /dev/derby-preview で視覚QA(CDPエミュレーション)
 
-### 未解決のオーナー論点(Decision 110候補)
-- **auto_reserve のプール型再定義**(Decision 103のTBD)。現状はV2でもSINGLE予約(177.16ロック)として
-  機能する(経路温存)ため、試運転はこのままで開始可能
+### ~~未解決のオーナー論点~~ → Decision 110 解決済み(同日追記)
+- **auto_reserve = 金額指定の自動プール**(オーナー決定 2026-07-18)。実装済み:
+  `auto_pool_amount`列(migration 20260718030000 本番適用済み)・スイープのプール分岐
+  (手動プール不可侵・残高切り下げ・102未満スキップ・未設定=SINGLE温存)・
+  AUTO_POOL_RESERVED通知・/marketのAUTOタイル金額セレクタ(5言語)・PGliteテスト2件
 
 ## 2. テストネットリセット時のチェックリスト(このセッションの追加分)
 
@@ -72,7 +74,7 @@
 
 ## 4. オーナー待ち・不変の注意(変更なし+追加)
 
-- オーナー待ち: ①A層実機確認 ②弁護士回答(=JP本番公開の解禁のみ) ③auto_reserveプール型(110候補)
+- オーナー待ち: ①A層実機確認 ②弁護士回答(=JP本番公開の解禁のみ)
 - 未コミットのオーナー保留物: `LEGAL_REVIEW_MEMO.md`修正・`EASTER_EGG_PLAN.md`・
   `operator-rtp-sim.mjs`・`法務.txt`・portrait3枚・**`seven_days_derby_items_v2_35.zip`(アート原本)**
 - リバート基点: `pre-fun-overhaul`。V2アイテムUIの実機視覚QAはテストネット試運転で

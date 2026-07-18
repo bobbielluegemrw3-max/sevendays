@@ -21,10 +21,17 @@ export interface TradeSettings {
   auto_list: boolean;
   auto_reserve: boolean;
   auto_reserve_max: number | null; // null = MAX(残高と枠の許す限り)
+  /** Decision 110: V2の自動プール金額(USDT)。null = 旧方式(1頭ずつ)。 */
+  auto_pool_amount?: number | null;
 }
 
 async function save(
-  next: { auto_list: boolean; auto_reserve?: boolean; auto_reserve_max?: number | null },
+  next: {
+    auto_list: boolean;
+    auto_reserve?: boolean;
+    auto_reserve_max?: number | null;
+    auto_pool_amount?: number | null;
+  },
   saveErr: string,
 ): Promise<string | null> {
   const result = await apiFetch('/api/v1/trade-settings', { method: 'POST', body: next });
@@ -119,7 +126,7 @@ function Toggle({ on, disabled, onClick }: { on: boolean; disabled?: boolean; on
   );
 }
 
-export function TradeAutoTile({ settings, preview = false, t }: { settings: TradeSettings; preview?: boolean; t: AppDict['trade'] }) {
+export function TradeAutoTile({ settings, preview = false, engineV2 = false, t }: { settings: TradeSettings; preview?: boolean; engineV2?: boolean; t: AppDict['trade'] }) {
   const router = useRouter();
   const [local, setLocal] = useState(settings);
   const [busy, setBusy] = useState(false);
@@ -136,6 +143,7 @@ export function TradeAutoTile({ settings, preview = false, t }: { settings: Trad
       auto_list: next.auto_list,
       auto_reserve: next.auto_reserve,
       auto_reserve_max: next.auto_reserve_max,
+      auto_pool_amount: next.auto_pool_amount ?? null,
     }, t.save_err);
     setBusy(false);
     if (err) {
@@ -182,7 +190,30 @@ export function TradeAutoTile({ settings, preview = false, t }: { settings: Trad
         <span className={s.autoDesc}>
           {local.auto_list ? t.reserve_on_desc : t.reserve_off_desc}
         </span>
-        {local.auto_list && local.auto_reserve ? (
+        {local.auto_list && local.auto_reserve && engineV2 ? (
+          /* Decision 110: V2は金額指定の自動プール(未設定=旧方式の1頭ずつ) */
+          <label className={s.autoMax}>
+            {t.pool_label}
+            <AppSelect
+              className={s.autoMaxSelect}
+              value={local.auto_pool_amount == null ? 'SINGLE' : String(local.auto_pool_amount)}
+              onChange={(v) =>
+                void apply({
+                  ...local,
+                  auto_pool_amount: v === 'SINGLE' ? null : Number(v),
+                })
+              }
+              ariaLabel={t.pool_label}
+              options={[
+                { value: 'SINGLE', label: t.pool_single },
+                ...['200', '500', '1000', '2000', '5000', '10000'].map((n) => ({
+                  value: n,
+                  label: `${n} USDT`,
+                })),
+              ]}
+            />
+          </label>
+        ) : local.auto_list && local.auto_reserve ? (
           <label className={s.autoMax}>
             {t.max_label}
             <AppSelect

@@ -1000,15 +1000,16 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         auto_list: boolean;
         auto_reserve: boolean;
         auto_reserve_max: number | null;
+        auto_pool_amount: string | null;
       }>(
-        `select auto_list, auto_reserve, auto_reserve_max
+        `select auto_list, auto_reserve, auto_reserve_max, auto_pool_amount::text as auto_pool_amount
          from user_trade_settings where user_id = $1`,
         [ctx.userId],
       );
       const row = r.rows[0];
       if (!row) {
         // 未選択: 初回モーダルの表示条件。デフォルトは何も自動化しない
-        return { chosen: false, auto_list: false, auto_reserve: false, auto_reserve_max: 1 };
+        return { chosen: false, auto_list: false, auto_reserve: false, auto_reserve_max: 1, auto_pool_amount: null };
       }
       return { chosen: true, ...row };
     },
@@ -1023,10 +1024,13 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       auto_reserve: z.boolean().optional(),
       /** 1晩の自動予約上限。null = MAX(残高と枠の許す限り)。 */
       auto_reserve_max: z.number().int().min(1).max(10).nullable().optional(),
+      /** Decision 110: V2の自動プール金額(USDT・下限102)。null = 未設定(SINGLE予約のまま)。 */
+      auto_pool_amount: z.number().int().min(102).max(100000).nullable().optional(),
     }),
     handler: async (ctx, input) => {
       const autoReserve = input.auto_reserve ?? false;
       const autoReserveMax = input.auto_reserve_max === undefined ? 1 : input.auto_reserve_max;
+      const autoPoolAmount = input.auto_pool_amount === undefined ? null : input.auto_pool_amount;
       if (autoReserve && !input.auto_list) {
         throw new ApiError(
           'TRADE_SETTINGS_INVALID',
@@ -1034,14 +1038,15 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         );
       }
       await ctx.client.query(
-        `insert into user_trade_settings (user_id, auto_list, auto_reserve, auto_reserve_max)
-         values ($1, $2, $3, $4)
+        `insert into user_trade_settings (user_id, auto_list, auto_reserve, auto_reserve_max, auto_pool_amount)
+         values ($1, $2, $3, $4, $5)
          on conflict (user_id) do update
            set auto_list = excluded.auto_list,
                auto_reserve = excluded.auto_reserve,
                auto_reserve_max = excluded.auto_reserve_max,
+               auto_pool_amount = excluded.auto_pool_amount,
                updated_at = now()`,
-        [ctx.userId, input.auto_list, autoReserve, autoReserveMax],
+        [ctx.userId, input.auto_list, autoReserve, autoReserveMax, autoPoolAmount],
       );
       // Smartをやめた場合、既存のSmart出品は翌バッチで取り下げ(今夜売れたら売却優先 —
       // 手動出品の取り下げと同じ約束事)
@@ -1057,6 +1062,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         auto_list: input.auto_list,
         auto_reserve: autoReserve,
         auto_reserve_max: autoReserveMax,
+        auto_pool_amount: autoPoolAmount,
       };
     },
   });

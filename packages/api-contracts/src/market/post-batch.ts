@@ -6,7 +6,7 @@ import {
   PURCHASE_LOCK_AMOUNT,
   renderNotification,
 } from '@sevendays/domain';
-import { createPurchaseSession } from '@sevendays/settlement-engine';
+import { createOrUpdatePoolSession, createPurchaseSession } from '@sevendays/settlement-engine';
 import { ensureUserAccounts, getBalance } from '@sevendays/ledger';
 import { sendCsEmail } from '../cs/mail.js';
 
@@ -119,9 +119,10 @@ export async function runMarketPostBatch(
   const optedIn = await client.query<{
     user_id: string;
     auto_reserve_max: number | null;
+    auto_pool_amount: string | null;
     email: string;
   }>(
-    `select uts.user_id, uts.auto_reserve_max, u.email
+    `select uts.user_id, uts.auto_reserve_max, uts.auto_pool_amount::text as auto_pool_amount, u.email
      from user_trade_settings uts
      join users u on u.id = uts.user_id
      where uts.auto_reserve = true
@@ -131,6 +132,56 @@ export async function runMarketPostBatch(
   let autoReserveSessions = 0;
   for (const user of optedIn.rows) {
     try {
+      // Decision 110: V2で金額が設定されていれば「自動プール」。
+      // 未設定ユーザーは従来のSINGLE予約のまま(経路温存・継続性)。
+      if (v2 && user.auto_pool_amount !== null) {
+        const livePool = await client.query(
+          `select 1 from purchase_sessions
+           where user_id = $1 and session_mode = 'POOL' and status = 'PENDING_ASSIGNMENT'`,
+          [user.user_id],
+        );
+        if (livePool.rows[0]) continue; // 手動プールを上書きしない
+        const accounts = await ensureUserAccounts(client, user.user_id);
+        const available = Money.of(await getBalance(client, accounts.available));
+        const target = available.lt(Money.of(user.auto_pool_amount))
+          ? Math.floor(Number(available.toFixed8()))
+          : Number(user.auto_pool_amount);
+        if (target < 102) continue; // 最安1頭に届かない残高では張らない
+        const pool = await createOrUpdatePoolSession(client, {
+          userId: user.user_id,
+          amount: String(target),
+          idempotencyKey: `autopool:${batchDate}${keySuffix}:${user.user_id}`,
+        });
+        if (pool.alreadyExists) continue; // 再実行(冪等)
+        autoReserveUsers += 1;
+        autoReserveSessions += 1;
+        const rendered = renderNotification('AUTO_POOL_RESERVED', { total: String(target) });
+        await insertNotification(client, {
+          userId: user.user_id,
+          type: 'AUTO_POOL_RESERVED',
+          dedupeKey: `notif:AUTO_POOL_RESERVED:${batchDate}${keySuffix}:${user.user_id}`,
+          payload: { ...rendered, total: String(target) },
+        });
+        if (isRealEmail(user.email) && (await claimMail(client, `autopool-mail:${batchDate}${keySuffix}:${user.user_id}`))) {
+          await sendCsEmail({
+            toEmail: user.email,
+            subject: `自動プール予約を作成しました(${target} USDT)— ${nextRaceLabel}に処理されます`,
+            body: [
+              'オーナー様',
+              '',
+              `設定にもとづき、プール予約を自動で作成しました(${batchDate} のレース後)。`,
+              `・予約額: ${target} USDT`,
+              `・${nextRaceLabel}の一斉マッチングで予算いっぱい割り当てられます(余りは自動返金)`,
+              '・精算前であればマーケットページから金額変更・キャンセル(全額返金)できます',
+              '',
+              '自動プール予約はマーケットページのAUTO設定からいつでもOFFにできます。',
+              '',
+              'Seven Days Derby',
+            ].join('\n'),
+          }).catch(() => undefined);
+        }
+        continue;
+      }
       const pending = await client.query<{ count: string }>(
         `select count(*)::text as count from purchase_sessions
          where user_id = $1 and status = 'PENDING_ASSIGNMENT'`,

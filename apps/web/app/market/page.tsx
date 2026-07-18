@@ -46,7 +46,7 @@ export default async function MarketPage() {
             <ReservePanel available={wallet.available} pendingCount={pendingCount} />
           )}
           {/* AUTOトグルはダッシュボードとここの2箇所(Decision 086) */}
-          {tradeSettings ? <TradeAutoTile settings={tradeSettings} t={tradeCopy} /> : null}
+          {tradeSettings ? <TradeAutoTile settings={tradeSettings} engineV2={engineV2} t={tradeCopy} /> : null}
           <PurchaseView
             sessions={sessions.sessions}
             assignments={assignments.status === 200 ? assignments.body.assignments : []}

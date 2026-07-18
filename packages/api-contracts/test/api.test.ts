@@ -253,7 +253,13 @@ describe('user flow through the API', () => {
     });
     expect(saved.status).toBe(200);
     const after = await call('GET', '/api/v1/trade-settings', asUser(user));
-    expect(after.body).toEqual({ chosen: true, auto_list: true, auto_reserve: true, auto_reserve_max: null });
+    expect(after.body).toEqual({
+      chosen: true,
+      auto_list: true,
+      auto_reserve: true,
+      auto_reserve_max: null,
+      auto_pool_amount: null,
+    });
 
     // Smartをやめると既存SMART出品が翌バッチ取り下げにフラグされる
     const horse = await client.query<{ id: string }>(

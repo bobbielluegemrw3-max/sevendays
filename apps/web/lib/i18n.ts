@@ -135,6 +135,8 @@ export interface AppDict {
     reserve_off_desc: string;
     max_label: string;
     max_unit: string; // オプション「{n} 頭」の単位(先頭スペース込み)
+    pool_label: string; // Decision 110: V2の自動プール金額
+    pool_single: string; // 未設定(=旧方式の1頭ずつ)の選択肢
   };
   /** アプリ化&通知導線(PwaSetupTile)。 */
   pwa: {
@@ -718,6 +720,8 @@ const ja: AppDict = {
     reserve_off_desc: 'スマート出品ONで使えます',
     max_label: '上限',
     max_unit: ' 頭',
+    pool_label: '自動プール金額',
+    pool_single: '1頭ずつ(旧方式)',
   },
   pwa: {
     label: 'APP & 通知',
@@ -1356,6 +1360,8 @@ const en: AppDict = {
     reserve_off_desc: 'Available with Smart listing ON',
     max_label: 'Limit',
     max_unit: ' horses',
+    pool_label: 'Auto pool amount',
+    pool_single: 'One at a time (legacy)',
   },
   pwa: {
     label: 'APP & Notifications',
@@ -1994,6 +2000,8 @@ const zh: AppDict = {
     reserve_off_desc: '开启智能出品后可用',
     max_label: '上限',
     max_unit: ' 匹',
+    pool_label: '自动池金额',
+    pool_single: '每次1匹(旧方式)',
   },
   pwa: {
     label: 'APP 与通知',
@@ -2632,6 +2640,8 @@ const ko: AppDict = {
     reserve_off_desc: '스마트 출품 ON에서 사용 가능',
     max_label: '상한',
     max_unit: ' 마리',
+    pool_label: '자동 풀 금액',
+    pool_single: '1마리씩(구방식)',
   },
   pwa: {
     label: 'APP & 알림',
@@ -3270,6 +3280,8 @@ const ms: AppDict = {
     reserve_off_desc: 'Tersedia apabila Penyenaraian pintar ON',
     max_label: 'Had',
     max_unit: ' ekor',
+    pool_label: 'Jumlah kolam auto',
+    pool_single: 'Seekor demi seekor (lama)',
   },
   pwa: {
     label: 'APP & Notifikasi',

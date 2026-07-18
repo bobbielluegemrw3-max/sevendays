@@ -34,6 +34,8 @@ export const NOTIFICATION_TYPES_V1 = [
   'HORSE_GIFT_RECEIVED',
   // Decision 106/108: 週次ジャックポット当選(当選者本人への個別通知)
   'JACKPOT_WON',
+  // Decision 110: V2の金額指定・自動プール予約
+  'AUTO_POOL_RESERVED',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES_V1)[number];
@@ -131,6 +133,10 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   JACKPOT_WON: {
     title: 'ジャックポット当選!',
     body: '今週のジャックポットに当選しました。賞金 {amount} USDT がウォレットに支払われました。',
+  },
+  AUTO_POOL_RESERVED: {
+    title: '自動プール予約を作成しました。',
+    body: '{total} USDT のプール予約。次のレースで予算いっぱい割り当てられます(余りは自動返金)。精算前ならマーケットページから変更・キャンセルできます。',
   },
 };
 

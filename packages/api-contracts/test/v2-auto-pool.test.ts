@@ -1,0 +1,111 @@
+import { beforeAll, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { createTestDb } from '@sevendays/database';
+import { Money, batchDateFor } from '@sevendays/shared';
+import type { SqlClient } from '@sevendays/shared';
+import { activatePolicy } from '@sevendays/economy-engine';
+import { depositConfirmation } from '@sevendays/ledger';
+import { runMarketPostBatch } from '../src/market/post-batch.js';
+
+/**
+ * Decision 110: V2の自動プール予約(金額指定)。
+ * 残高が設定額に満たなければ残高まで切り下げ・102未満はスキップ・
+ * 手動プールは上書きしない・金額未設定はSINGLE予約のまま(経路温存)。
+ */
+
+let client: SqlClient;
+const today = batchDateFor(new Date());
+
+beforeAll(async () => {
+  client = await createTestDb();
+  await activatePolicy(client, 'race_engine_versions', 'race_engine_v2.0');
+  await client.query(
+    `insert into batch_runs (batch_date, slot, batch_algorithm_version, status)
+     values ($1, 'MORNING', 'batch_v1.0', 'COMPLETED')`,
+    [today],
+  );
+});
+
+async function newUser(balance: string, autoPoolAmount: number | null): Promise<string> {
+  const r = await client.query<{ id: string }>(
+    `insert into users (email) values ($1) returning id`,
+    [`${randomUUID()}@user.sevendays`],
+  );
+  const id = r.rows[0]!.id;
+  if (Number(balance) > 0) {
+    await depositConfirmation(client, { userId: id, amount: Money.of(balance), idempotencyKey: randomUUID() });
+  }
+  await client.query(
+    `insert into user_trade_settings (user_id, auto_list, auto_reserve, auto_reserve_max, auto_pool_amount)
+     values ($1, true, true, 1, $2)`,
+    [id, autoPoolAmount],
+  );
+  return id;
+}
+
+async function poolOf(userId: string) {
+  const r = await client.query<{ id: string; locked_amount: string; status: string }>(
+    `select id, locked_amount::text as locked_amount, status::text as status
+     from purchase_sessions where user_id = $1 and session_mode = 'POOL'`,
+    [userId],
+  );
+  return r.rows;
+}
+
+describe('V2 auto pool sweep (Decision 110)', () => {
+  it('arms a pool of min(setting, balance), idempotently; unset users keep legacy singles', async () => {
+    const pooled = await newUser('300', 500); // 残高300 < 設定500 → 300で張る
+    const legacy = await newUser('400', null); // 未設定 → SINGLE予約のまま
+    const broke = await newUser('50', 500); // 102未満 → スキップ
+
+    const first = await runMarketPostBatch(client, today, 'MORNING', true);
+    expect(first.autoReserveUsers).toBeGreaterThanOrEqual(2); // pooled + legacy
+
+    const pools = await poolOf(pooled);
+    expect(pools).toHaveLength(1);
+    expect(Number(pools[0]!.locked_amount)).toBe(300);
+    const notif = await client.query<{ n: number }>(
+      `select count(*)::int as n from notifications
+       where user_id = $1 and notification_type = 'AUTO_POOL_RESERVED'`,
+      [pooled],
+    );
+    expect(notif.rows[0]!.n).toBe(1);
+
+    // 未設定ユーザーはSINGLE(177.16ロック)の従来経路
+    const singles = await client.query<{ n: number }>(
+      `select count(*)::int as n from purchase_sessions
+       where user_id = $1 and session_mode = 'SINGLE' and status = 'PENDING_ASSIGNMENT'`,
+      [legacy],
+    );
+    expect(singles.rows[0]!.n).toBe(1);
+
+    // 102未満はプールを張らない
+    expect(await poolOf(broke)).toHaveLength(0);
+
+    // 再実行: 冪等(プール1本のまま・通知も増えない)
+    await runMarketPostBatch(client, today, 'MORNING', true);
+    expect(await poolOf(pooled)).toHaveLength(1);
+    const notifAgain = await client.query<{ n: number }>(
+      `select count(*)::int as n from notifications
+       where user_id = $1 and notification_type = 'AUTO_POOL_RESERVED'`,
+      [pooled],
+    );
+    expect(notifAgain.rows[0]!.n).toBe(1);
+  });
+
+  it('never overrides a manually created live pool', async () => {
+    const user = await newUser('2000', 500);
+    // 手動プール(1000)を先に作る
+    const { createOrUpdatePoolSession } = await import('@sevendays/settlement-engine');
+    await createOrUpdatePoolSession(client, {
+      userId: user,
+      amount: '1000',
+      idempotencyKey: `manual:${user}`,
+    });
+
+    await runMarketPostBatch(client, today, 'MORNING', true);
+    const pools = await poolOf(user);
+    expect(pools).toHaveLength(1);
+    expect(Number(pools[0]!.locked_amount)).toBe(1000); // 手動の金額のまま
+  });
+});
