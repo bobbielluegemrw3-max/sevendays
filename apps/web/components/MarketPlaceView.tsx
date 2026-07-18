@@ -212,7 +212,7 @@ export function MarketPlaceView({
                   {item.total_value !== null && item.total_value !== undefined ? (
                     <span className={s.shelfTv} style={tvChipStyle(item.total_value)}>
                       総合値{' '}
-                      <b style={{ ...tvNumStyle(item.total_value), fontSize: '15px' }}>{item.total_value}</b>
+                      <b style={{ ...tvNumStyle(item.total_value), fontSize: '15px' }}>{Number(item.total_value).toFixed(1)}</b>
                     </span>
                   ) : (
                     <span className={`${s.rar} ${s[`rar${rarClass(item.rarity)}`]}`}>{item.rarity}</span>

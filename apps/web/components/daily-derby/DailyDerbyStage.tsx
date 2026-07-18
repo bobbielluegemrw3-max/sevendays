@@ -767,7 +767,7 @@ function TonightEntryCards({ myHorses, engineV2 = false }: { myHorses: readonly 
               <div className={s.tn1NameRow}>
                 <span className={s.tn1Name}>{h.name}</span>
                 {h.totalValue !== null && h.totalValue !== undefined ? (
-                  <b className={s.tn1Tv} style={tvNumStyle(h.totalValue)}>{h.totalValue}</b>
+                  <b className={s.tn1Tv} style={tvNumStyle(h.totalValue)}>{Number(h.totalValue).toFixed(1)}</b>
                 ) : null}
               </div>
               <div className={s.tn1Dots}>
@@ -802,7 +802,7 @@ function TonightPaddock({ myHorses, engineV2 = false }: { myHorses: readonly MyD
           <div className={s.tn2Day}>
             {engineV2 ? 'LV.' : 'DAY'}{h.currentDay ?? 0}
             {h.totalValue !== null && h.totalValue !== undefined ? (
-              <b style={{ ...tvNumStyle(h.totalValue), marginLeft: 6 }}>{h.totalValue}</b>
+              <b style={{ ...tvNumStyle(h.totalValue), marginLeft: 6 }}>{Number(h.totalValue).toFixed(1)}</b>
             ) : null}
           </div>
         </div>

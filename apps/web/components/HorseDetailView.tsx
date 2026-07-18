@@ -12,7 +12,7 @@ import { HorseTransferForm } from '@/components/HorseTransferForm';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { uncollectedGain } from '@/components/stable-shared';
 import { APP_COPY, isLvDisplayMode, type Lang } from '@/lib/i18n';
-import { tvArtGlowStyle, tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
+import { tvArtGlowStyle, tvChipStyle, tvNumStyle, tvMedalStyle } from '@/lib/tv-tier';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
 
@@ -351,7 +351,7 @@ export function HorseDetailView({
             <span className={s.title}>{horse.name}</span>
             {horse.total_value !== null && horse.total_value !== undefined ? (
               <span className={`${s.badge} ${s.tvBadge}`} style={tvChipStyle(horse.total_value)}>
-                {ts.tv_chip} <b style={tvNumStyle(horse.total_value)}>{horse.total_value}</b>
+                {ts.tv_chip} <b style={tvNumStyle(horse.total_value)}>{Number(horse.total_value).toFixed(1)}</b>
               </span>
             ) : null}
             <span className={`${s.badge} ${s.typeBadge}`}>{horse.horse_type}</span>
@@ -415,7 +415,7 @@ export function HorseDetailView({
                   {horse.total_value !== null && horse.total_value !== undefined ? (
                     <div className={s.tvBig}>
                       <div className="l">TOTAL</div>
-                      <div className="v" style={tvNumStyle(horse.total_value)}>{horse.total_value}</div>
+                      <div className="v" style={tvMedalStyle(horse.total_value)}>{Number(horse.total_value).toFixed(1)}</div>
                     </div>
                   ) : null}
                   <div className={s.dayBig}>

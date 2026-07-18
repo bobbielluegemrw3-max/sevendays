@@ -4,7 +4,7 @@ import { DAY0_MINT_FEE, ITEM_BY_KEY_V2 } from '@sevendays/domain';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import type { DerbyNightResults } from '@/lib/daily-derby';
-import { tvNumStyle } from '@/lib/tv-tier';
+import { tvMedalStyle } from '@/lib/tv-tier';
 import s from '../../app/races.module.css';
 
 /* 表示は実際に動いたお金(2026-07-14 オーナー指摘):
@@ -21,7 +21,7 @@ function TvBig({ tv }: { tv?: string | null | undefined }) {
   if (tv === null || tv === undefined) return null;
   const v = Number(tv);
   return (
-    <span style={{ ...tvNumStyle(v), fontSize: 21, fontWeight: 900, minWidth: 58, textAlign: 'right', fontVariantNumeric: 'tabular-nums', letterSpacing: 0.3 }}>
+    <span style={{ ...tvMedalStyle(v), fontSize: 26, fontWeight: 900, minWidth: 64, textAlign: 'right' }}>
       {v.toFixed(1)}
     </span>
   );
@@ -151,7 +151,7 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
     <div>
       {day7.length > 0 && (
         <div className={s.grp}>
-          <GroupHead tone={s.g7} label="DAY7 走破" count={day7.length} />
+          <GroupHead tone={s.g7} label="LV.7 走破" count={day7.length} />
           <div className={s.recList}>{day7Rows}</div>
         </div>
       )}

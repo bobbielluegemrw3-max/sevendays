@@ -35,7 +35,7 @@ function TvChip({ h, t, extraCls = '' }: { h: StableHorse; t: T; extraCls?: stri
   return (
     <span className={`${s.tvChip} ${extraCls}`} style={tvChipStyle(h.total_value)}>
       {t.tv_chip}{' '}
-      <b style={{ ...tvNumStyle(h.total_value), fontSize: '17px' }}>{h.total_value}</b>
+      <b style={{ ...tvNumStyle(h.total_value), fontSize: '17px' }}>{Number(h.total_value).toFixed(1)}</b>
     </span>
   );
 }

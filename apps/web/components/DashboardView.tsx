@@ -99,7 +99,7 @@ function HorseStrip({ h, t }: { h: DashHorse; t: AppDict['dash'] }) {
       {h.total_value !== null && h.total_value !== undefined ? (
         /* ティアカラー(2026-07-18): レアリティ枠は総合値へ置換 — 一目で強さが分かる */
         <span className={s.rar} style={{ ...tvChipStyle(h.total_value), fontWeight: 800 }}>
-          <b style={{ ...tvNumStyle(h.total_value), fontSize: '13px' }}>{h.total_value}</b>
+          <b style={{ ...tvNumStyle(h.total_value), fontSize: '16px', fontWeight: 900 }}>{Number(h.total_value).toFixed(1)}</b>
         </span>
       ) : (
         <span className={`${s.rar} ${rarClass(h.rarity)}`}>{h.rarity}</span>

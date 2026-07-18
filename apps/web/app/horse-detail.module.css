@@ -117,10 +117,10 @@
 .capBlocks { display: flex; align-items: flex-end; gap: 16px; flex: none; }
 .tvBig { text-align: right; }
 .tvBig :global(.l) { font-family: var(--font-display); font-size: 8.5px; color: var(--faint); letter-spacing: 0.14em; }
-.tvBig :global(.v) { font-family: var(--font-display); font-weight: 800; font-size: 31px; line-height: 1; }
+.tvBig :global(.v) { font-family: var(--font-display); font-weight: 900; font-size: 38px; line-height: 1; }
 @media (max-width: 480px) {
   .capBlocks { gap: 11px; }
-  .tvBig :global(.v) { font-size: 25px; }
+  .tvBig :global(.v) { font-size: 30px; }
   .dayBig :global(.v) { font-size: 21px; }
 }
 .dayBig { text-align: right; }
