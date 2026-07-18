@@ -178,6 +178,9 @@ export function DerbyLive() {
   // 開始までの残り秒: バッチが走り出していれば started_at 基準の経過(負値)、
   // まだなら次回20:00までの残り。
   const now = Date.now() + offsetRef.current;
+  // V2(1日2レース)はレース間隔が12時間。V1由来の「1日=1レース」前提の計算を
+  // すべてこのインターバルで置き換える。
+  const intervalMs = status.engine_v2 === true ? 43_200_000 : 86_400_000;
   let secondsToStart: number;
   if (
     (status.phase === 'LIVE' || status.phase === 'COMPLETED' || status.phase === 'FAILED_SAFE_MODE') &&
@@ -188,7 +191,7 @@ export function DerbyLive() {
     // (グレース中に進んだオープニングが巻き戻らない)。大幅に遅れて始まった
     // バッチ(自己修復の再実行等)は実開始時刻をアンカーにする。
     const startedMs = new Date(status.live_started_at).getTime();
-    const derbyTodayMs = new Date(status.next_derby_at).getTime() - 86_400_000;
+    const derbyTodayMs = new Date(status.next_derby_at).getTime() - intervalMs;
     const anchor = startedMs - derbyTodayMs < 120_000 && startedMs >= derbyTodayMs ? derbyTodayMs : startedMs;
     secondsToStart = -((now - anchor) / 1000);
   } else {
@@ -197,14 +200,22 @@ export function DerbyLive() {
     // next_derby_at が翌日に切り替わるため素直に計算すると「23:59:xx」の
     // カウントダウンに戻ってしまう(2026-07-14 初ライブで実発生)。直前の20:00
     // からの経過が10分以内なら、経過秒でオープニング演出を続けて実開始を待つ。
-    const sincePrevDerby = 86_400 - secondsToStart;
+    const sincePrevDerby = intervalMs / 1000 - secondsToStart;
     if (status.phase === 'WAITING' && sincePrevDerby >= 0 && sincePrevDerby < 600) {
       secondsToStart = -sincePrevDerby;
     }
   }
   // COMPLETEDで既にショー時間を過ぎている(後から開いた)場合は個人結果へ直行。
+  // V2は次のレースが12時間後に控えるため、結果画面を占有し続けず(ショー後1時間で)
+  // 次のレースへのカウントダウンに戻す — 「カウントダウンが出ない」実発生の修正。
   if (status.phase === 'COMPLETED' && -secondsToStart > SHOW_TOTAL + 3600) {
-    secondsToStart = -(SHOW_TOTAL + 1);
+    if (status.engine_v2 === true) {
+      const toNext = (new Date(status.next_derby_at).getTime() - now) / 1000;
+      const sincePrev = intervalMs / 1000 - toNext;
+      secondsToStart = sincePrev >= 0 && sincePrev < 600 ? -sincePrev : toNext;
+    } else {
+      secondsToStart = -(SHOW_TOTAL + 1);
+    }
   }
   // リプレイ判定用にライブの経過秒を記録(効果①②が読む)
   liveElapsedRef.current = -secondsToStart;

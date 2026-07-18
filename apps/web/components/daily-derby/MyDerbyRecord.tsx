@@ -86,7 +86,7 @@ function NightDigest({ iso, data }: { iso: string; data: MyResults }) {
       </div>
       {data.conditions && <DayConditions c={conditionsView(data.conditions)} />}
       {empty ? (
-        <div className={s.digestEmpty}>この夜は、あなたの出走・売買はありませんでした。</div>
+        <div className={s.digestEmpty}>この日は、あなたの出走・売買はありませんでした。</div>
       ) : (
         <>
           <div className={s.tally}>

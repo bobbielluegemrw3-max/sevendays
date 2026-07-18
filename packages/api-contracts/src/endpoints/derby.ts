@@ -540,7 +540,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       return {
         ...shared,
         server_time: now.toISOString(),
-        next_derby_at: nextDerbyAt(now), // server_timeと同時刻基準(キャッシュより新鮮に)
+        next_derby_at: sharedV2 ? nextDerbyAtV2(now) : nextDerbyAt(now), // server_timeと同時刻基準(キャッシュより新鮮に)
         personal: null, // 旧フィールド互換(2026-07-12撤去 — 実個人結果は my-results/:date)
         my_horse_names: myHorses.rows.map((r) => r.name),
         my_horses: myHorses.rows,

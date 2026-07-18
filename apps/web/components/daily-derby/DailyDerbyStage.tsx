@@ -30,6 +30,14 @@ import { DerbyVerdict, type VerdictInfo } from '@/components/daily-derby/DerbyVe
 import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { NightResultsList, nightResultsCount } from '@/components/daily-derby/NightResultsList';
 import { NftHorseArt } from '@/components/NftHorseArt';
+import { nextRaceInstant } from '@/lib/race-time';
+
+/** V2: 次のレースのスロット表示名(00:00 UTC=朝8:00 MYT / 12:00 UTC=夜20:00 MYT)。 */
+function nextSlotV2(): { ja: string; time: string } {
+  return nextRaceInstant().getUTCHours() === 0
+    ? { ja: 'モーニングレース', time: '朝8:00' }
+    : { ja: 'ナイターレース', time: '夜20:00' };
+}
 import { deriveNftLook } from '@/lib/nft-visual';
 import { DailyDerbyFailureState } from '@/components/daily-derby/DailyDerbyFailureState';
 import s from '../../app/daily-derby.module.css';
@@ -558,6 +566,7 @@ export function DailyDerbyStage({
             jackpot={jackpot}
             forecast={tomorrowForecast}
             field={tonightField}
+            engineV2={engineV2}
           />
         )}
       </div>
@@ -696,7 +705,13 @@ function Waiting({
         {board && (
           <>
             <div className={s.waitSec}>
-              {boardIsForecast ? 'TONIGHT FORECAST · 今夜の予報(的中率70%)' : 'TONIGHT · 今夜のレース条件'}
+              {engineV2
+                ? boardIsForecast
+                  ? `NEXT RACE FORECAST · 次の${nextSlotV2().ja}の予報(的中率70%)`
+                  : `NEXT RACE · 次の${nextSlotV2().ja}の条件`
+                : boardIsForecast
+                  ? 'TONIGHT FORECAST · 今夜の予報(的中率70%)'
+                  : 'TONIGHT · 今夜のレース条件'}
             </div>
             <div className={s.waitBoard}>
               <b style={{ color: CONDITION_COLORS[board.weather] }}>{board.weather_ja}</b>
@@ -1206,13 +1221,17 @@ function LogPhase({
 function TomorrowForecast({
   forecast,
   field,
+  engineV2 = false,
 }: {
   forecast: DerbyConditionsView;
   field: { entrants: number; burnSlotsMin: number; burnSlotsMax: number } | null;
+  engineV2?: boolean;
 }) {
   return (
     <div className={s.fcWrap}>
-      <div className={s.fcK}>— 明日の予報 —</div>
+      <div className={s.fcK}>
+        {engineV2 ? `— 次の${nextSlotV2().ja}(${nextSlotV2().time})の予報 —` : '— 明日の予報 —'}
+      </div>
       <div className={s.fcRow}>
         <span className={s.condK}>天候</span>
         <b style={{ color: CONDITION_COLORS[forecast.weather] }}>{forecast.weather_ja}</b>
@@ -1300,12 +1319,14 @@ function PersonalOrDone({
   jackpot,
   forecast,
   field,
+  engineV2 = false,
 }: {
   night: DerbyNightResults | null;
   pool: PoolActView | null;
   jackpot: DerbyJackpotView | null;
   forecast: DerbyConditionsView | null;
   field: { entrants: number; burnSlotsMin: number; burnSlotsMax: number } | null;
+  engineV2?: boolean;
 }) {
   if (night && nightResultsCount(night) > 0) {
     return (
@@ -1318,7 +1339,7 @@ function PersonalOrDone({
         {pool && <PoolStableAct pool={pool} />}
         <NightResultsList results={night} />
         <div className={s.nightSumNote}>この結果はレースページの「あなたのレース記録」でいつでも見返せます。</div>
-        {forecast && <TomorrowForecast forecast={forecast} field={field} />}
+        {forecast && <TomorrowForecast forecast={forecast} field={field} engineV2={engineV2} />}
         {jackpot && <JackpotAct jackpot={jackpot} />}
       </div>
     );
@@ -1331,7 +1352,7 @@ function PersonalOrDone({
         <div className={s.liveRule} />
       </div>
       {pool && <PoolStableAct pool={pool} />}
-      {forecast && <TomorrowForecast forecast={forecast} field={field} />}
+      {forecast && <TomorrowForecast forecast={forecast} field={field} engineV2={engineV2} />}
       {jackpot && <JackpotAct jackpot={jackpot} />}
     </div>
   );
