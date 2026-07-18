@@ -20,6 +20,13 @@ import s from './landing.module.css';
  * (率の宣言なし・架空統計なし・SHOWCASE明示・禁止語彙なし)。
  */
 
+/** V2表示: ショーケース生成器のレアリティ段階を総合値の見せ値に変換(見た目のみ)。 */
+const SHOWCASE_TOTAL: Record<string, number> = {
+  LEGENDARY: 94, EPIC: 88, RARE: 81, UNCOMMON: 72, COMMON: 63,
+};
+const showcaseTotal = (h: { rarity: string; seed: number }) =>
+  ((SHOWCASE_TOTAL[h.rarity] ?? 60) + (h.seed % 50) / 10).toFixed(1);
+
 const TYPE_COLOR: Record<string, string> = {
   ENDURANCE: '#c6ff3a',
   POWER: '#ff8fe4',
@@ -154,7 +161,7 @@ export function Landing({
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <span className={`${s.tag} ${s.cy}`}>ENDURANCE</span>
-                  <span className={`${s.tag} ${s.gold}`}>LEGENDARY</span>
+                  <span className={`${s.tag} ${s.gold}`}>TOTAL 96.4</span>
                 </div>
               </div>
             </div>
@@ -297,7 +304,7 @@ export function Landing({
                 <div className={s.plate}>
                   <span className={s.nm}>{h.name}</span>
                   <span className={s.rr} style={{ color: f.frameLine, border: `1px solid ${f.frameGlow}` }}>
-                    {h.rarity}
+                    {showcaseTotal(h)}
                   </span>
                 </div>
               </div>
@@ -398,7 +405,7 @@ export function Landing({
                           <span className={s.idn}>#{line.id}</span>
                           <span className={s.nmn}>{line.name}</span>
                           <span className={s.dy}>
-                            DAY {line.day} → DAY {line.day + 1}
+                            LV.{line.day} → LV.{line.day + 1}
                           </span>
                         </div>
                       ))}
@@ -626,7 +633,7 @@ export function Landing({
                   </span>
                   <span className={s.lk}>♡ {h.likes}</span>
                   <span className={s.rib} style={{ background: h.rarityRibbon, color: h.rarityInk }}>
-                    {h.rarity}
+                    TOTAL {showcaseTotal(h)}
                   </span>
                   <NftHorseArt look={f} />
                 </div>
@@ -648,7 +655,7 @@ export function Landing({
                         {price} <span className={s.u}>USDT</span>
                       </div>
                     </div>
-                    <span className={s.last}>DAY {day}</span>
+                    <span className={s.last}>LV.{day}</span>
                   </div>
                   <GoogleLoginButton label={t.login_buy} className={`${s.galGoogle}`} />
                 </div>
@@ -775,7 +782,7 @@ export function Landing({
               </div>
               <div className={s.gatePlate}>
                 <div>
-                  <div className={s.gpt}>YOUR STALL · DAY 0</div>
+                  <div className={s.gpt}>YOUR STALL · LV.0</div>
                   <div className={s.gpn}>{t.gate_name}</div>
                 </div>
                 <span className={s.gpTag}>{t.gate_slot}</span>
