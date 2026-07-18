@@ -12,7 +12,7 @@ import {
   type DashNotification,
 } from '@/components/DashboardView';
 
-interface Me { id: string; stable_name?: string | null }
+interface Me { id: string; stable_name?: string | null; training_tickets?: number; jackpot?: { enabled: boolean; prize_usdt: string; winners: number } | null }
 interface Session { id: string; status: string }
 interface RaceResultRow { horse_id: string; final_score: string; final_rank: number; is_burned: boolean }
 
@@ -69,6 +69,8 @@ export default async function Dashboard() {
         notifications: notifR.status === 200 ? notifR.body.notifications : [],
         trade: tradeR.status === 200 ? tradeR.body : null,
         stableName: me.stable_name ?? null,
+        weeklyTickets: me.training_tickets ?? 0,
+        jackpot: me.jackpot ?? null,
       }}
     />
   );

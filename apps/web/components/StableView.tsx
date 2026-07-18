@@ -94,13 +94,12 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
             <div className="k">{t.stat_value_k}</div>
             <div className="v">{money(stableValue)}<small>USDT</small></div>
           </div>
-          {(data.trainingTickets ?? 0) > 0 ? (
-            <div className={`${s.stat} ${s.statTickets}`}>
-              <div className="k">{t.tickets_k}</div>
-              <div className="v">{data.trainingTickets}</div>
-            </div>
-          ) : null}
+          <div className={`${s.stat} ${s.statTickets}`}>
+            <div className="k">{t.tickets_k}</div>
+            <div className="v">{data.trainingTickets ?? 0}</div>
+          </div>
         </div>
+        <div className={s.ticketsNote}>{t.tickets_note}</div>
       </div>
 
       {/* ===== 獲得した称号(隠し実績・EASTER_EGG_PLAN.md) ===== */}

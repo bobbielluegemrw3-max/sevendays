@@ -62,6 +62,10 @@ export interface DashboardData {
   trade: TradeSettings | null;
   /** 厩舎名(Decision 097)。未設定はマイ厩舎表示。 */
   stableName?: string | null;
+  /** 今週のジャックポット応募口数(=今週の調教確定数・/me由来)。 */
+  weeklyTickets?: number;
+  /** 週次ジャックポット設定(無効時 null)。 */
+  jackpot?: { enabled: boolean; prize_usdt: string; winners: number } | null;
 }
 
 /* ---- helpers -------------------------------------------------------------- */
@@ -186,6 +190,16 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
           <span>RUNNERS <b>{active.length}</b></span>
         </div>
         <div className={s.countNote}>{t.tonight_note}</div>
+        {data.jackpot?.enabled ? (
+          <div className={s.jpBox}>
+            <div className={s.jpHead}>
+              <span className={s.jpK}>WEEKLY JACKPOT</span>
+              <span className={s.jpPrize}>{fill(t.jp_prize_tpl, { p: money(data.jackpot.prize_usdt) })}</span>
+            </div>
+            <div className={s.jpTickets}>{fill(t.jp_tickets_tpl, { n: num(data.weeklyTickets ?? 0) })}</div>
+            <div className={s.jpDesc}>{t.jp_desc}</div>
+          </div>
+        ) : null}
         <Link href="/races" className={s.showCta}>{t.watch_show}</Link>
       </section>
 

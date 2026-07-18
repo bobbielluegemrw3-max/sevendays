@@ -24,6 +24,7 @@
 .headSub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 5px; letter-spacing: 0.06em; }
 .headStats { display: flex; gap: 12px; }
 .stat { border-radius: 13px; padding: 11px 16px; flex: 1; min-width: 0; }
+.ticketsNote { font-family: var(--font-mono); font-size: 8.5px; color: var(--faint); margin-top: 7px; line-height: 1.6; }
 .stat :global(.k) { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; }
 .stat :global(.v) { font-family: var(--font-display); font-weight: 700; font-size: 22px; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .stat :global(.v) small { font-size: 11px; color: var(--faint); margin-left: 3px; }

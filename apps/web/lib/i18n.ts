@@ -54,6 +54,7 @@ export interface AppDict {
     countdown_to: string;
     tonight_note: string;
     watch_show: string;
+    jp_tickets_tpl: string; jp_prize_tpl: string; jp_desc: string;
 
     tasks_label: string;
     untrained_suffix: string; // 「 が未調教」(直前に <b>{n}頭</b>)
@@ -572,7 +573,7 @@ export interface AppDict {
     badges_title: string;
     tv_chip: string; band_safe: string; band_mid: string; band_risk: string;
     rank_tpl: string; rank_note: string; sort_total: string;
-    uncollected_tpl: string; tickets_k: string; bulk_harvest_tpl: string;
+    uncollected_tpl: string; tickets_k: string; tickets_note: string; bulk_harvest_tpl: string;
     legend_title: string; legend_note: string; legend_chip_tpl: string;
   };
   /** /horses/[id](馬詳細)+ 調教フォーム + ページャ + ブースト + 転送。 */
@@ -647,6 +648,8 @@ const ja: AppDict = {
     countdown_to: '発走まで',
     tonight_note: '成績下位の馬はBurn=消滅。生き残った馬はレースごとに価値が上がります。全記録は台帳で公開。',
     watch_show: '今夜のショーを見る →',
+    jp_tickets_tpl: '今週の応募 {n} 口', jp_prize_tpl: '賞金 {p} USDT',
+    jp_desc: '調教を確定するたび自動で1口たまります(操作は不要)。毎週日曜夜のショー最終幕で抽選し、当選金はウォレットへ自動で支払われます。',
     tasks_label: '今日やること',
     untrained_suffix: ' が未調教',
     pending_suffix: ' が割当待ち',
@@ -1175,7 +1178,7 @@ const ja: AppDict = {
     badges_title: '獲得した称号',
     tv_chip: '総合値', band_safe: '安全圏', band_mid: '中位', band_risk: '危険圏',
     rank_tpl: '今夜 {r}位 / {n}頭', rank_note: '順位は目安 — 当日の運と条件で変動します', sort_total: '総合値が高い順',
-    uncollected_tpl: '未回収 +{v}$', tickets_k: '調教チケット', bulk_harvest_tpl: '+{v}$ をまとめて回収!',
+    uncollected_tpl: '未回収 +{v}$', tickets_k: '調教チケット(今週)', tickets_note: '調教確定1回=週次ジャックポット応募1口。毎週日曜夜のショーで自動抽選・当選金は自動支払い(操作は不要です)。', bulk_harvest_tpl: '+{v}$ をまとめて回収!',
     legend_title: 'レアリティ', legend_note: '加点は毎晩のレーススコアに常時反映(公開ルール)',
     legend_chip_tpl: '{pct} · スコア+{n}',
   },
@@ -1287,6 +1290,8 @@ const en: AppDict = {
     countdown_to: 'To post',
     tonight_note: 'The lowest-placed horses are Burned. Survivors rise in value with every race. Every record is published on the ledger.',
     watch_show: 'Watch tonight’s show →',
+    jp_tickets_tpl: 'This week’s entries: {n}', jp_prize_tpl: 'Prize {p} USDT',
+    jp_desc: 'Every training confirm automatically adds one entry — nothing to redeem. The draw runs in the final act of Sunday night’s show, and winnings are paid straight to your wallet.',
     tasks_label: 'Today’s tasks',
     untrained_suffix: ' untrained',
     pending_suffix: ' awaiting assignment',
@@ -1815,7 +1820,7 @@ const en: AppDict = {
     badges_title: 'Titles earned',
     tv_chip: 'TOTAL', band_safe: 'Safe zone', band_mid: 'Mid', band_risk: 'Danger zone',
     rank_tpl: 'Tonight {r} / {n}', rank_note: 'Rank is a guide — luck and conditions vary on the night', sort_total: 'Highest total',
-    uncollected_tpl: 'Unclaimed +{v}$', tickets_k: 'Training tickets', bulk_harvest_tpl: 'Claimed +{v}$ in one go!',
+    uncollected_tpl: 'Unclaimed +{v}$', tickets_k: 'Training tickets (this week)', tickets_note: 'Each training confirm = one entry in the weekly jackpot. Drawn automatically in Sunday night’s show; winnings are paid to your wallet — nothing to redeem.', bulk_harvest_tpl: 'Claimed +{v}$ in one go!',
     legend_title: 'Rarity', legend_note: 'Bonuses apply to every night’s race score (public rule)',
     legend_chip_tpl: '{pct} · score +{n}',
   },
@@ -1927,6 +1932,8 @@ const zh: AppDict = {
     countdown_to: '距起跑',
     tonight_note: '成绩垫底的马被Burn=消灭。存活的马每场比赛身价上涨。全部记录公开在账本。',
     watch_show: '观看今晚的演出 →',
+    jp_tickets_tpl: '本周报名 {n} 口', jp_prize_tpl: '奖金 {p} USDT',
+    jp_desc: '每次确定训练自动累计1口(无需任何操作)。每周日晚演出的最终幕开奖，奖金自动支付到钱包。',
     tasks_label: '今日待办',
     untrained_suffix: ' 未训练',
     pending_suffix: ' 等待分配',
@@ -2455,7 +2462,7 @@ const zh: AppDict = {
     badges_title: '获得的称号',
     tv_chip: '综合值', band_safe: '安全圈', band_mid: '中位', band_risk: '危险圈',
     rank_tpl: '今晚 {r}位 / {n}匹', rank_note: '排名仅供参考 — 当晚的运气与条件会变动', sort_total: '综合值从高到低',
-    uncollected_tpl: '未领取 +{v}$', tickets_k: '训练券', bulk_harvest_tpl: '一次性领取 +{v}$!',
+    uncollected_tpl: '未领取 +{v}$', tickets_k: '训练券(本周)', tickets_note: '每确定1次训练=每周大奖1口报名。周日晚演出自动开奖、奖金自动支付(无需操作)。', bulk_harvest_tpl: '一次性领取 +{v}$!',
     legend_title: '稀有度', legend_note: '加分每晚都计入比赛得分(公开规则)',
     legend_chip_tpl: '{pct} · 得分+{n}',
   },
@@ -2567,6 +2574,8 @@ const ko: AppDict = {
     countdown_to: '출발까지',
     tonight_note: '성적 하위권 말은 Burn=소멸. 살아남은 말은 레이스마다 가치가 오릅니다. 모든 기록은 원장에 공개.',
     watch_show: '오늘 밤 쇼 보기 →',
+    jp_tickets_tpl: '이번 주 응모 {n}구', jp_prize_tpl: '상금 {p} USDT',
+    jp_desc: '조교를 확정할 때마다 자동으로 1구 쌓입니다(별도 조작 불요). 매주 일요일 밤 쇼 최종막에서 추첨하며, 당첨금은 지갑으로 자동 지급됩니다.',
     tasks_label: '오늘 할 일',
     untrained_suffix: ' 미조련',
     pending_suffix: ' 배정 대기',
@@ -3095,7 +3104,7 @@ const ko: AppDict = {
     badges_title: '획득한 칭호',
     tv_chip: '종합치', band_safe: '안전권', band_mid: '중위', band_risk: '위험권',
     rank_tpl: '오늘 밤 {r}위 / {n}마리', rank_note: '순위는 참고용 — 당일 운과 조건에 따라 변동합니다', sort_total: '종합치 높은 순',
-    uncollected_tpl: '미회수 +{v}$', tickets_k: '조교 티켓', bulk_harvest_tpl: '+{v}$ 한 번에 회수!',
+    uncollected_tpl: '미회수 +{v}$', tickets_k: '조교 티켓(이번 주)', tickets_note: '조교 확정 1회=주간 잭팟 응모 1구. 일요일 밤 쇼에서 자동 추첨・당첨금 자동 지급(조작 불요).', bulk_harvest_tpl: '+{v}$ 한 번에 회수!',
     legend_title: '레어리티', legend_note: '가산점은 매일 밤 레이스 점수에 상시 반영(공개 규칙)',
     legend_chip_tpl: '{pct} · 점수+{n}',
   },
@@ -3207,6 +3216,8 @@ const ms: AppDict = {
     countdown_to: 'Ke pelepasan',
     tonight_note: 'Kuda berkedudukan terendah di-Burn (musnah). Yang terselamat naik nilai setiap perlumbaan. Setiap rekod diterbitkan pada lejar.',
     watch_show: 'Tonton pertunjukan malam ini →',
+    jp_tickets_tpl: 'Penyertaan minggu ini: {n}', jp_prize_tpl: 'Hadiah {p} USDT',
+    jp_desc: 'Setiap pengesahan latihan menambah satu penyertaan secara automatik — tiada apa perlu ditebus. Cabutan berlangsung pada babak akhir persembahan malam Ahad, dan kemenangan dibayar terus ke dompet anda.',
     tasks_label: 'Tugas hari ini',
     untrained_suffix: ' belum dilatih',
     pending_suffix: ' menunggu penetapan',
@@ -3735,7 +3746,7 @@ const ms: AppDict = {
     badges_title: 'Gelaran diperoleh',
     tv_chip: 'NILAI', band_safe: 'Zon selamat', band_mid: 'Pertengahan', band_risk: 'Zon bahaya',
     rank_tpl: 'Malam ini {r} / {n}', rank_note: 'Kedudukan hanyalah panduan — tuah dan keadaan malam berbeza', sort_total: 'Nilai tertinggi',
-    uncollected_tpl: 'Belum dituntut +{v}$', tickets_k: 'Tiket latihan', bulk_harvest_tpl: '+{v}$ dituntut sekali gus!',
+    uncollected_tpl: 'Belum dituntut +{v}$', tickets_k: 'Tiket latihan (minggu ini)', tickets_note: 'Setiap pengesahan latihan = satu penyertaan jackpot mingguan. Dicabut secara automatik dalam persembahan malam Ahad; kemenangan dibayar ke dompet anda.', bulk_harvest_tpl: '+{v}$ dituntut sekali gus!',
     legend_title: 'Kejarangan', legend_note: 'Bonus sentiasa dikira dalam skor perlumbaan setiap malam (peraturan umum)',
     legend_chip_tpl: '{pct} · skor +{n}',
   },

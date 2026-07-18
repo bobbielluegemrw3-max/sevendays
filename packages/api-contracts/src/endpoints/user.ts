@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Money, batchDateFor, addDays, insertNotification } from '@sevendays/shared';
+import { Money, batchDateFor, addDays, mytWeekStart, insertNotification } from '@sevendays/shared';
 import {
   MIN_WITHDRAWAL_AMOUNT,
   DEFAULT_CHAIN,
@@ -116,16 +116,32 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     path: '/api/v1/me',
     auth: 'user',
     handler: async (ctx) => {
+      // 調教チケット = 週次ジャックポットの応募口数。エンジンの集計
+      // (jackpot/draws.ts: effective_race_date between 週初..週末)と同じ窓で数える —
+      // 全期間累計は誤解を生むため廃止(2026-07-19 オーナー指摘: 保有と用途が見えない)。
+      const jpWeekStart = mytWeekStart(batchDateFor(new Date()));
       const r = await ctx.client.query<{ id: string; email: string; status: string; created_at: string }>(
         `select id, email, status::text as status, created_at::text as created_at,
                 stable_name,
-                (select count(*)::int from training_sessions t where t.user_id = users.id) as training_tickets
+                (select count(*)::int from training_sessions t
+                  where t.user_id = users.id
+                    and t.effective_race_date between $2::date and $2::date + 6) as training_tickets
            from users where id = $1`,
-        [ctx.userId],
+        [ctx.userId, jpWeekStart],
       );
       if (!r.rows[0]) throw new ApiError('NOT_FOUND', 'User not found');
+      const jp = await ctx.client.query<{ value: { enabled?: boolean; prize_usdt?: string; winners?: number } | null }>(
+        `select value from system_settings where key = 'jackpot'`,
+      );
+      const jpv = jp.rows[0]?.value ?? null;
       // 管理者ナビの出し分け用(2026-07-09)。権限そのものは各adminエンドポイントが検証する
-      return { ...r.rows[0], is_admin: ctx.auth.kind === 'admin' };
+      return {
+        ...r.rows[0],
+        is_admin: ctx.auth.kind === 'admin',
+        jackpot: jpv?.enabled === true
+          ? { enabled: true, prize_usdt: String(jpv.prize_usdt ?? '0'), winners: Number(jpv.winners ?? 1) }
+          : null,
+      };
     },
   });
 
