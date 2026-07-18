@@ -89,7 +89,7 @@ export function GuideView({ lang = 'ja' }: { lang?: Lang }) {
         <span className={s.heroGrid} aria-hidden="true" />
         <span className={s.heroArt}><NftHorseArt look={deriveNftLook(dna('c9'), 'Golden Wind')} /></span>
         <div className={s.heroBody}>
-          <div className={s.heroKicker}>7-DAY SURVIVAL RACE</div>
+          <div className={s.heroKicker}>SURVIVAL RACE TO LV.7</div>
           <div className={s.heroTitle}>{t.hero_title}</div>
           <div className={s.heroP}>{rich(t.hero_p)}</div>
         </div>

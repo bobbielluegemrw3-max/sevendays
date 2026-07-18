@@ -112,7 +112,7 @@ function HorseStrip({ h, t }: { h: DashHorse; t: AppDict['dash'] }) {
 
 /* ---- main ----------------------------------------------------------------- */
 export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang?: Lang }) {
-  const { wallet, horses, buff, pendingCount, lastRace, myResults, buybacks } = data;
+  const { wallet, horses, pendingCount, lastRace, myResults, buybacks } = data;
   const t = APP_COPY[lang].dash;
   const c = APP_COPY[lang].common;
 
@@ -233,17 +233,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
           <div className="v">{stableValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
           <div className="s">{fill(t.stable_val_s_tpl, { n: active.length })}</div>
         </Link>
-        <div className={`${s.kpi} ${s.kpiBuff}`}>
-          <div className="k">REVENGE BUFF</div>
-          {/* 加点はNUMERIC(20,8)の生文字列(+4.00000000)だと0が多すぎてモバイル幅を
-              はみ出す(オーナー指摘 2026-07-16 #7)— 末尾0を落として表示 */}
-          <div className="v">
-            {buff
-              ? `${buff.buff_rarity} +${Number(buff.buff_bonus_score).toLocaleString('en-US', { maximumFractionDigits: 2 })}`
-              : t.buff_none}
-          </div>
-          <div className="s">{buff ? t.buff_active_s : t.buff_none_s}</div>
-        </div>
+        {/* Revenge BuffカードはV2で撤去(Decision 109: バフ廃止 — 弔いはBurnドロップへ) */}
       </section>
 
       {/* ===== マイ厩舎(要約ストリップ + 直接購入) ===== */}

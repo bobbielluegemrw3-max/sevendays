@@ -623,7 +623,11 @@ function Waiting({
       <div className={s.waitInner}>
         <div className={`${s.waitLabel} ${soon ? s.waitLabelSoon : ''}`}>{label}</div>
         <div className={`${s.waitClock} ${finalHour ? s.waitClockFinal : ''}`}>{`${pad(h)}:${pad(m)}:${pad(sec)}`}</div>
-        <div className={s.waitNote}>20:00 (GMT+8) — One Race. One World. Every Day.</div>
+        <div className={s.waitNote}>
+          {engineV2
+            ? '8:00 & 20:00 (GMT+8) — Two Races. One World. Every Day.'
+            : '20:00 (GMT+8) — One Race. One World. Every Day.'}
+        </div>
 
         {/* ③ 調教リマインド(実データ: 次レースの調教が未記録の馬) */}
         {untrained.length > 0 && (
@@ -636,12 +640,12 @@ function Waiting({
             馬ゼロの空状態はマーケットへの招待カード(2026-07-13)。 */}
         {myHorses.length > 0 ? (
           <>
-            <div className={s.waitSec}>TONIGHT&apos;S ENTRIES · 今夜の出走({myHorses.length})</div>
+            <div className={s.waitSec}>NEXT RACE ENTRIES · 次のレースの出走({myHorses.length})</div>
             <TonightEntryCards myHorses={myHorses} engineV2={engineV2} />
           </>
         ) : (
           <>
-            <div className={s.waitSec}>TONIGHT&apos;S ENTRIES · 今夜の出走</div>
+            <div className={s.waitSec}>NEXT RACE ENTRIES · 次のレースの出走</div>
             <Link href="/market" className={s.waitInvite}>
               <span className={s.waitInviteT}>出走馬がいません</span>
               <span className={s.waitInviteD}>
@@ -814,7 +818,7 @@ function PreShowCountdown({
       <div className={`${s.cdClock} ${alert ? s.cdClockAlert : ''}`}>
         <SegmentClock text={text} blinkColon={blink} />
       </div>
-      <div className={s.cdNote}>20:00 (GMT+8)</div>
+      <div className={s.cdNote}>{engineV2 ? '8:00 / 20:00 (GMT+8)' : '20:00 (GMT+8)'}</div>
       {myHorses.length > 0 && (
         <div className={s.tonight}>
           <div className={s.tonightK}>本日のレースに参加するあなたの馬</div>

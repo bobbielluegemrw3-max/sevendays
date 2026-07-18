@@ -15,12 +15,11 @@ import { tvChipStyle, tvNumStyle, tvCardGlowStyle } from '@/lib/tv-tier';
  * StableBrowser — 出走中 / 過去 の馬リストを「検索・ソート・絞り込み・
  * ページネーション」で捌くクライアントコンポーネント。100頭規模でも軽快に。
  *
- * kind='active': 検索 + ソート(価値/レアリティ/コンディション/未調教/名前) +
- *                レアリティ絞り込み + 未調教のみ + ページング。カードは縦/横リフロー。
- * kind='past':   検索 + ソート(状態/名前/レアリティ) + 状態絞り込み + ページング。
+ * kind='active': 検索 + ソート(価値/総合値/未調教/名前) +
+ *                未調教のみ + ページング。カードは縦/横リフロー。
+ * kind='past':   検索 + ソート(総合値/名前) + ページング。
  * ========================================================================== */
 
-const RANK: Record<string, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4 };
 type T = AppDict['stable'];
 
 /* 総合値チップ+安全圏(FUN_V2_PLAN.md §3 A1)。band色はCSS側で管理。 */
@@ -219,14 +218,14 @@ const ACTIVE_SORTS: Record<string, (a: StableHorse, b: StableHorse) => number> =
 };
 // 過去セクションはBURNED専用になった(チャンピオンは金枠ギャラリーへ、Decision 087監査)
 const PAST_SORTS: Record<string, (a: StableHorse, b: StableHorse) => number> = {
-  rarity: (a, b) => RANK[b.rarity]! - RANK[a.rarity]! || a.name.localeCompare(b.name),
-  name:   (a, b) => a.name.localeCompare(b.name),
+  total: (a, b) => (b.total_value ?? 0) - (a.total_value ?? 0) || a.name.localeCompare(b.name),
+  name:  (a, b) => a.name.localeCompare(b.name),
 };
 
 /* ---- 本体 ----------------------------------------------------------------- */
 export function StableBrowser({ kind, horses, t }: { kind: 'active' | 'past'; horses: StableHorse[]; t: T }) {
   const [q, setQ] = useState('');
-  const [sort, setSort] = useState(kind === 'active' ? 'value_desc' : 'rarity');
+  const [sort, setSort] = useState(kind === 'active' ? 'value_desc' : 'total');
   const [untrainedOnly, setUntrainedOnly] = useState(false);
   const [pageSize, setPageSize] = useState(24);
   const [page, setPage] = useState(0);
@@ -274,7 +273,7 @@ export function StableBrowser({ kind, horses, t }: { kind: 'active' | 'past'; ho
             { value: 'untrained', label: t.sort_untrained },
             { value: 'name', label: t.sort_name },
           ] : [
-            { value: 'rarity', label: t.sort_rarity },
+            { value: 'total', label: t.sort_total },
             { value: 'name', label: t.sort_name },
           ]}
         />

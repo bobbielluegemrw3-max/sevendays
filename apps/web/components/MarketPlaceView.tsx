@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
-import { RarityLegend } from '@/components/RarityLegend';
 import { localDate, localDateTime } from '@/lib/format-time';
 import s from '../app/market.module.css';
 import { tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
@@ -247,7 +246,7 @@ export function MarketPlaceView({
           指名購入はありません — すべての取引は毎晩20:00の一斉マッチング(先着順)で公平に成立します。
           カードをタップすると仕組みの説明が見られます。
         </p>
-        <div className={s.legendWrap}><RarityLegend /></div>
+        {/* レアリティ凡例はV2で撤去(Decision 101: レアリティ廃止・強さは総合値ティア) */}
       </section>
 
       {/* ---- 第2幕: 購入予約パネル+予約一覧(page.tsx から注入) ---- */}

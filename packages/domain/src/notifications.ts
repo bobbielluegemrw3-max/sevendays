@@ -64,7 +64,7 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   },
   HORSE_BURNED: {
     title: '{horse_name} は本日のレースでBurnされました。',
-    body: 'Revenge Buffが付与されました。',
+    body: '形見のアイテムが厩舎に届いています。',
   },
   REVENGE_BUFF_GENERATED: {
     title: 'Revenge Buffを獲得しました。',
@@ -120,7 +120,7 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   },
   AUTO_RESERVED: {
     title: '自動購入予約を作成しました。',
-    body: '{count}頭(最大ロック {total} USDT)。今夜20:00に処理されます。設定はダッシュボードから変更できます。',
+    body: '{count}頭(最大ロック {total} USDT)。次のレースで処理されます。設定はダッシュボードから変更できます。',
   },
   SUPPORT_CELEBRATION_PAID: {
     title: 'あなたの組織からチャンピオンが誕生しました。',

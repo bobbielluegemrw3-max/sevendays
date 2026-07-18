@@ -15,7 +15,7 @@ import m from '@/components/maintenance.module.css';
 
 export const metadata: Metadata = {
   title: 'Seven Days Derby',
-  description: '7日間のサバイバルレース。毎晩20:00、その日のすべての馬が一斉に発走。',
+  description: 'LV.7を目指すサバイバルレース。毎日 朝8:00・夜20:00(GMT+8)、すべての馬が一斉に発走。',
   // PWA(ホーム画面追加)対応。SWは /sw.js(キャッシュなし・プッシュ受け皿のみ)。
   manifest: '/manifest.webmanifest',
   icons: {

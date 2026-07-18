@@ -510,7 +510,25 @@ export function HorseDetailView({
       <ValueLadder horse={horse} mode={mode} t={t} />
 
       {/* LOWER ROW: 状態と能力 | 戦績 */}
+      {/* V2(Decision 101): 調子・疲労・能力値は総合値に内包 — 凍結された旧数値を
+          見せると誤解を生むため、V2では正直な説明カードに置き換える */}
       <div className={s.lowRow}>
+        {horse.engine_v2 ? (
+          <div>
+            <div className={s.secLabel}>TOTAL VALUE</div>
+            <div className={s.vitals}>
+              <div className={`${s.mini} ${s.miniCond}`} style={{ gridColumn: '1 / -1' }}>
+                <div className={s.miniK}>強さは総合値ひとつ</div>
+                <div style={{ fontSize: '11px', color: 'var(--muted)', lineHeight: 1.7, marginTop: '4px' }}>
+                  この馬の強さは総合値(0〜100)に集約されています。調子・疲労・能力値という
+                  個別ステータスはありません。総合値は調教で伸び、レースごとに−2.0減衰します
+                  (RESTで1回無効)。「大好物」「苦手」の隠れた好みは公開されません —
+                  調教の結果から探り当てるのがこのゲームの攻略です。
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
         <div>
           <div className={s.secLabel}>{t.vit_sec}</div>
           <div className={s.vitals}>
@@ -544,6 +562,7 @@ export function HorseDetailView({
             ))}
           </div>
         </div>
+        )}
 
         {history.length > 0 ? (
           <div>
