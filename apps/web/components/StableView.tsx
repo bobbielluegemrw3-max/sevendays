@@ -44,6 +44,8 @@ export interface StableHorse {
 }
 // status: 'ACTIVE'(出走中) | 'BURNED'(消滅) | 'DAY7_CLEARED'(チャンピオン) | 'MEMORIALIZED'(記念馬)
 export interface StableData {
+  /** V2エンジン稼働中(一括調教=V1機能を隠す)。 */
+  engineV2?: boolean;
   /** 厩舎名(Decision 097)。未設定はマイ厩舎。 */
   stableName?: string | null;
   /** 調教チケット累計(/me由来・A2)。 */
@@ -127,7 +129,9 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
         </div>
         {racing.length > 0 ? (
           <>
-            <BulkTrainButton untrainedCount={racing.filter((h) => !h.trained_for_next_race).length} uncollectedTotal={uncollectedTotal} t={t} />
+            {!data.engineV2 && (
+              <BulkTrainButton untrainedCount={racing.filter((h) => !h.trained_for_next_race).length} uncollectedTotal={uncollectedTotal} t={t} />
+            )}
             <StableBrowser kind="active" horses={racing} t={t} />
           </>
         ) : (

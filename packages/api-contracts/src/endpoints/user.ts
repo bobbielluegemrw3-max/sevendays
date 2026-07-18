@@ -1116,6 +1116,17 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       if ((await getMarketplaceState(ctx.client)) !== 'OPEN') {
         throw new ApiError('MARKETPLACE_LOCKED', 'Training intake is closed during Daily Settlement');
       }
+      // V2ゲート(2026-07-18 実発生): V1の「おすすめ一括適用」がV1形状の調教行を
+      // (翌日, NIGHT)へ書き、正しいサイクルのV2調教をTRAINING_ALREADY_EXISTSで
+      // ブロックした。V2の調教は6メニューの戦略選択+確定即最終(Decision 107)なので
+      // 一括おすすめは成立しない — 各馬のページから確定してもらう。
+      const activeEngine = await ctx.client.query<{ version: string }>(
+        `select version from race_engine_versions
+         where activated_at is not null and deactivated_at is null`,
+      );
+      if (activeEngine.rows.length === 1 && isRaceEngineV2(activeEngine.rows[0]!.version)) {
+        throw new ApiError('V2_MENU_TRAINING', 'Bulk training is a V1 feature — under V2, confirm menus per horse');
+      }
       const today = batchDateFor(new Date());
       const completedToday = await ctx.client.query(
         `select 1 from batch_runs where batch_date = $1 and status = 'COMPLETED'`,
