@@ -43,7 +43,7 @@ function itemName(key: string | null): string | null {
 }
 
 function HorseThumb({ dna, name }: { dna: string; name: string }) {
-  return <NftHorseArt look={deriveNftLook(dna, name)} className={s.recArt} />;
+  return <NftHorseArt look={deriveNftLook(dna, name)} className={s.recArt} size={128} />;
 }
 
 export function nightResultsCount(r: DerbyNightResults): number {

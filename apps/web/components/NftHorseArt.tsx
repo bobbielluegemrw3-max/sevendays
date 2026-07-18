@@ -69,37 +69,44 @@ function transform(d: Uint8ClampedArray, mode: 'rot' | 'mono' | 'desat', value: 
   }
 }
 
-export function NftHorseArt({ look, className }: { look: NftLook; className?: string | undefined }) {
+export function NftHorseArt({ look, className, size }: { look: NftLook; className?: string | undefined; size?: number }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
   const maneKey = `${look.mane.kind}:${'deg' in look.mane ? look.mane.deg : 'hue' in look.mane ? look.mane.hue : ''}`;
 
   useEffect(() => {
+    // サムネイル用途はここで縮小して描く(768のままCSS縮小するとGPUバイリニアで
+    // 滲む — 2026-07-18 オーナー指摘)。呼び出し側は「表示px×2(Retina)」を渡す。
+    const R = size ?? S;
     let cancelled = false;
     void (async () => {
       const imgs = await Promise.all(LAYERS.map((l) => loadImg(`/horses/nft/${look.arch}_${l}.png`)));
       if (cancelled) return;
       const canvas = ref.current;
       if (!canvas) return;
-      canvas.width = S;
-      canvas.height = S;
+      canvas.width = R;
+      canvas.height = R;
       const cx = canvas.getContext('2d');
       if (!cx) return;
-      cx.clearRect(0, 0, S, S);
+      cx.imageSmoothingEnabled = true;
+      cx.imageSmoothingQuality = 'high';
+      cx.clearRect(0, 0, R, R);
       const work = document.createElement('canvas');
-      work.width = S;
-      work.height = S;
+      work.width = R;
+      work.height = R;
       const wx = work.getContext('2d', { willReadFrequently: true })!;
+      wx.imageSmoothingEnabled = true;
+      wx.imageSmoothingQuality = 'high';
       LAYERS.forEach((layer, li) => {
         const img = imgs[li];
         if (!img) return;
         const needs = layer === 'coat' ? look.bodyDeg !== 0 : layer === 'mane_tail';
         if (!needs) {
-          cx.drawImage(img, 0, 0, S, S);
+          cx.drawImage(img, 0, 0, R, R);
           return;
         }
-        wx.clearRect(0, 0, S, S);
-        wx.drawImage(img, 0, 0, S, S);
-        const id = wx.getImageData(0, 0, S, S);
+        wx.clearRect(0, 0, R, R);
+        wx.drawImage(img, 0, 0, R, R);
+        const id = wx.getImageData(0, 0, R, R);
         if (layer === 'coat') {
           transform(id.data, 'rot', look.bodyDeg);
         } else {
@@ -113,14 +120,14 @@ export function NftHorseArt({ look, className }: { look: NftLook; className?: st
           }
         }
         wx.putImageData(id, 0, 0);
-        cx.drawImage(work, 0, 0, S, S);
+        cx.drawImage(work, 0, 0, R, R);
       });
     })();
     return () => {
       cancelled = true;
     };
     // maneKey が look.mane の内容を安定に表現する(オブジェクト参照の揺れで再描画しない)
-  }, [look.arch, look.bodyDeg, maneKey]);
+  }, [look.arch, look.bodyDeg, maneKey, size]);
 
   return <canvas ref={ref} className={className} aria-hidden="true" />;
 }

@@ -84,7 +84,7 @@ function rarClass(rarity: string): string {
 /** dna_hash から決定論生成された HorseArt を厩舎用に描画。 */
 function StableArt({ horse }: { horse: DashHorse }) {
   const look = deriveNftLook(horse.dna_hash, horse.name);
-  return <NftHorseArt look={look} className={s.hartCanvas} />;
+  return <NftHorseArt look={look} className={s.hartCanvas} size={128} />;
 }
 
 /** 厩舎ストリップの1頭 — 要約行のみ(詳細はSTABLEページの仕事)。 */

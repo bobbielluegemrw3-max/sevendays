@@ -237,9 +237,10 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     path: '/api/v1/horses',
     auth: 'user',
     handler: async (ctx) => {
-      // trained_for_next_race mirrors the POST /training target: today's race
-      // unless today's batch already completed (then tonight's training was
-      // recorded against tomorrow's race).
+      // trained_for_next_race mirrors the POST /training target — V2(2026-07-18):
+      // 「次に走るサイクル」= (今日MORNING→今日NIGHT→明日MORNING…)のうち
+      // バッチ未完了の最初の1つ。旧「当日バッチ完了→翌日扱い」はV1の1日1レース
+      // 前提で、V2ではスロット違いの調教が「未調教」に見える実バグだった。
       // 効力日の判定はCTEで本体クエリに畳み込み(2026-07-16 §D: 往復1本削減)。
       const today = batchDateFor(new Date());
       // listing: 'SMART' | 'MANUAL' | null — 厩舎UIが「出品中(手動=今夜走らない)」を
@@ -251,15 +252,23 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         tonight_training: string | null; effective_race_date: string; listing: string | null;
       }>(
         `with eff as (
-           select case when exists (select 1 from batch_runs where batch_date = $2 and status = 'COMPLETED')
-                       then ($2::date + 1) else $2::date end as race_date
+           select c.race_date, c.slot from (
+             values ($2::date, 'MORNING'::race_slot, 1),
+                    ($2::date, 'NIGHT'::race_slot, 2),
+                    (($2::date + 1), 'MORNING'::race_slot, 3),
+                    (($2::date + 1), 'NIGHT'::race_slot, 4)
+           ) as c(race_date, slot, ord)
+           where not exists (select 1 from batch_runs b
+                             where b.batch_date = c.race_date and b.slot = c.slot and b.status = 'COMPLETED')
+           order by c.ord limit 1
          )
          select h.id, h.name, h.status::text as status, h.current_day, h.horse_type::text as horse_type,
                 h.rarity::text as rarity, h.condition::text as condition, h.fatigue::text as fatigue,
                 h.dna_hash, h.gifted_at::text as gifted_at,
                 h.ability_json, h.dna_modifier::text as dna_modifier,
-                (select t.training_type::text from training_sessions t
+                (select coalesce(t.training_type::text, 'V2') from training_sessions t
                   where t.horse_id = h.id and t.effective_race_date = (select race_date from eff)
+                    and (t.slot is null or t.slot = (select slot from eff))
                   limit 1) as tonight_training,
                 (select race_date from eff)::text as effective_race_date,
                 (select l.source::text from market_listings l
@@ -317,8 +326,15 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       const today = batchDateFor(new Date());
       const rows = await ctx.client.query(
         `with eff as (
-           select case when exists (select 1 from batch_runs where batch_date = $3 and status = 'COMPLETED')
-                       then ($3::date + 1) else $3::date end as race_date
+           select c.race_date, c.slot from (
+             values ($3::date, 'MORNING'::race_slot, 1),
+                    ($3::date, 'NIGHT'::race_slot, 2),
+                    (($3::date + 1), 'MORNING'::race_slot, 3),
+                    (($3::date + 1), 'NIGHT'::race_slot, 4)
+           ) as c(race_date, slot, ord)
+           where not exists (select 1 from batch_runs b
+                             where b.batch_date = c.race_date and b.slot = c.slot and b.status = 'COMPLETED')
+           order by c.ord limit 1
          )
          select id, name, status::text as status, current_day, horse_type::text as horse_type,
                 rarity::text as rarity, dna_hash, dna_modifier::text as dna_modifier,
@@ -326,8 +342,9 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
                 mint_seed_hash, horse_generation_version, gifted_at::text as gifted_at,
                 (select l.source::text from market_listings l
                  where l.horse_id = horses.id and l.status = 'LISTED' limit 1) as listing,
-                (select t.training_type::text from training_sessions t
+                (select coalesce(t.training_type::text, 'V2') from training_sessions t
                   where t.horse_id = horses.id and t.effective_race_date = (select race_date from eff)
+                    and (t.slot is null or t.slot = (select slot from eff))
                   limit 1) as tonight_training,
                 (select race_date from eff)::text as effective_race_date
          from horses where id = $1 and owner_user_id = $2`,

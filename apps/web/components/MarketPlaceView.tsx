@@ -206,7 +206,7 @@ export function MarketPlaceView({
               >
                 <span className={s.shelfOrder}>#{i + 1}</span>
                 {myIds.has(item.horse_id) && <span className={s.mineTag}>MINE</span>}
-                <NftHorseArt look={deriveNftLook(item.dna_hash, item.name)} className={s.shelfArt} />
+                <NftHorseArt look={deriveNftLook(item.dna_hash, item.name)} className={s.shelfArt} size={224} />
                 <div className={s.shelfName}>{item.name}</div>
                 <div className={s.shelfRar}>
                   {item.total_value !== null && item.total_value !== undefined ? (
@@ -233,7 +233,7 @@ export function MarketPlaceView({
                 onKeyDown={(e) => { if (e.key === 'Enter') setFunnel({ name: m.horse_name, sold: true }); }}
               >
                 <span className={s.soldTag}>{m.is_mint ? 'SOLD · 新規発行' : 'SOLD'}</span>
-                <NftHorseArt look={deriveNftLook(m.dna_hash, m.horse_name)} className={`${s.shelfArt} ${s.soldArt}`} />
+                <NftHorseArt look={deriveNftLook(m.dna_hash, m.horse_name)} className={`${s.shelfArt} ${s.soldArt}`} size={224} />
                 <div className={s.shelfName}>{m.horse_name}</div>
                 <div className={s.shelfRar}><span className={`${s.rar} ${s[`rar${rarClass(m.rarity)}`]}`}>{m.rarity}</span></div>
                 <div className={s.shelfMeta}>{localDate(m.matched_at).slice(5)} 成約 → {m.buyer}</div>
@@ -265,7 +265,7 @@ export function MarketPlaceView({
         ) : (
           data.my_listings.map((l) => (
             <div key={l.listing_id} className={s.myRow}>
-              <NftHorseArt look={deriveNftLook(l.dna_hash, l.name)} className={s.myArt} />
+              <NftHorseArt look={deriveNftLook(l.dna_hash, l.name)} className={s.myArt} size={112} />
               <span className={s.myName}>{l.name}</span>
               <span className={`${s.rar} ${s[`rar${rarClass(l.rarity)}`]}`}>{l.rarity}</span>
               <span className={`${s.srcBadge} ${l.source === 'SMART' ? s.srcSmart : ''}`}>

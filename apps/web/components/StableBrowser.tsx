@@ -62,7 +62,7 @@ function StableArt({ horse, t }: { horse: StableHorse; t: T }) {
   const color = horse.color_variant ? COLOR_OVERLAY[horse.color_variant] : null;
   return (
     <span className={`${s.artWrap} ${horse.golden_aura ? s.artAura : ''}`}>
-      <NftHorseArt look={look} className={s.hartCanvas} />
+      <NftHorseArt look={look} className={s.hartCanvas} size={288} />
       {color ? (
         <span
           className={s.colorSkin}
