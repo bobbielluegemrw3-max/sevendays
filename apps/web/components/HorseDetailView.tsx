@@ -10,7 +10,8 @@ import { ItemPrepPanelV3 } from '@/components/ItemPrepPanelV3';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { uncollectedGain } from '@/components/stable-shared';
-import { APP_COPY, type Lang } from '@/lib/i18n';
+import { APP_COPY, isLvDisplayMode, type Lang } from '@/lib/i18n';
+import { tvArtGlowStyle, tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
 
@@ -344,8 +345,8 @@ export function HorseDetailView({
           <div className={s.titleRow}>
             <span className={s.title}>{horse.name}</span>
             {horse.total_value !== null && horse.total_value !== undefined ? (
-              <span className={`${s.badge} ${s.tvBadge} ${bandClsDetail(horse.tonight_band)}`}>
-                {ts.tv_chip} <b>{horse.total_value}</b>
+              <span className={`${s.badge} ${s.tvBadge}`} style={tvChipStyle(horse.total_value)}>
+                {ts.tv_chip} <b style={tvNumStyle(horse.total_value)}>{horse.total_value}</b>
               </span>
             ) : null}
             <span className={`${s.badge} ${s.typeBadge}`}>{horse.horse_type}</span>
@@ -369,7 +370,10 @@ export function HorseDetailView({
       <div className={s.heroRow}>
         <div className={`${s.hero} ${mode === 'BURNED' ? s.heroBurned : ''}`}>
           <div className={s.heroInner}>
-            <div className={`${s.artBox} ${horse.golden_aura ? s.heroAura : ''}`}>
+            <div
+              className={`${s.artBox} ${horse.golden_aura ? s.heroAura : ''}`}
+              style={tvArtGlowStyle(horse.total_value)}
+            >
               <NftHorseArt look={look} className={s.heroCanvas} />
               {/* 隠し演出(EASTER_EGG_PLAN.md) */}
               {horse.color_variant ? (
@@ -390,9 +394,17 @@ export function HorseDetailView({
                   <div className={s.artCapK}>{horse.name.toUpperCase()}</div>
                   <div className={s.artCapSub}>{horse.horse_type}</div>
                 </div>
-                <div className={s.dayBig}>
-                  <div className="l">DAY</div>
-                  <div className="v">{Math.min(7, horse.current_day)}<small>/7</small></div>
+                <div className={s.capBlocks}>
+                  {horse.total_value !== null && horse.total_value !== undefined ? (
+                    <div className={s.tvBig}>
+                      <div className="l">TOTAL</div>
+                      <div className="v" style={tvNumStyle(horse.total_value)}>{horse.total_value}</div>
+                    </div>
+                  ) : null}
+                  <div className={s.dayBig}>
+                    <div className="l">{isLvDisplayMode() ? 'LV' : 'DAY'}</div>
+                    <div className="v">{Math.min(7, horse.current_day)}<small>/7</small></div>
+                  </div>
                 </div>
               </div>
               {/* 前/次の馬へ(厩舎に戻らず回れる) */}

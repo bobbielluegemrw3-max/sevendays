@@ -33,6 +33,7 @@ import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { DailyDerbyFailureState } from '@/components/daily-derby/DailyDerbyFailureState';
 import s from '../../app/daily-derby.module.css';
+import { tvNumStyle } from '@/lib/tv-tier';
 
 /**
  * THE DAILY DERBY のステージ全体。「開始までの残り秒数」(負値 = 開始後の経過)
@@ -71,6 +72,8 @@ export interface DailyDerbyStageProps {
   tomorrowForecast?: DerbyConditionsView | null;
   /** V2実装-7c: このバッチで解決したジャックポット(日曜夜のみ非null・当選者マスク済)。 */
   jackpot?: DerbyJackpotView | null;
+  /** V2シーズン(表示のLV化・パドックのティア表示用)。 */
+  engineV2?: boolean;
   /** 見逃しリプレイ再生中(2026-07-16): REPLAYバー表示+タイトルのLIVEバッジをREPLAYに。 */
   replay?: boolean;
   /** リプレイの「スキップして結果へ」ボタン(replay時のみ使用)。 */
@@ -133,6 +136,7 @@ export function DailyDerbyStage({
   tonightField = null,
   tomorrowForecast = null,
   jackpot = null,
+  engineV2 = false,
   replay = false,
   onReplaySkip,
   debugVerdict,
@@ -527,13 +531,14 @@ export function DailyDerbyStage({
           <Waiting
             secondsToStart={secondsToStart}
             myHorses={myHorses}
+            engineV2={engineV2}
             conditions={conditions}
             forecast={tonightForecast}
             field={tonightField}
             night={nightResults}
           />
         ) : secondsToStart > 0 ? (
-          <PreShowCountdown secondsToStart={secondsToStart} myHorses={myHorses} variant={tonightVariant} />
+          <PreShowCountdown secondsToStart={secondsToStart} myHorses={myHorses} variant={tonightVariant} engineV2={engineV2} />
         ) : elapsed < SHOW_TOTAL ? (
           <LiveShow
             elapsed={elapsed}
@@ -580,6 +585,7 @@ export function DailyDerbyStage({
 function Waiting({
   secondsToStart,
   myHorses,
+  engineV2 = false,
   conditions,
   forecast,
   field,
@@ -587,6 +593,7 @@ function Waiting({
 }: {
   secondsToStart: number;
   myHorses: readonly MyDerbyHorse[];
+  engineV2?: boolean;
   conditions: DerbyConditionsView | null;
   forecast: DerbyConditionsView | null;
   field: { entrants: number; burnSlotsMin: number; burnSlotsMax: number } | null;
@@ -630,7 +637,7 @@ function Waiting({
         {myHorses.length > 0 ? (
           <>
             <div className={s.waitSec}>TONIGHT&apos;S ENTRIES · 今夜の出走({myHorses.length})</div>
-            <TonightEntryCards myHorses={myHorses} />
+            <TonightEntryCards myHorses={myHorses} engineV2={engineV2} />
           </>
         ) : (
           <>
@@ -725,7 +732,7 @@ function dnaOf(h: MyDerbyHorse): string {
 }
 
 /** 案1: 出走カード — 実NFTアート+DAY進行7点+今夜の価値(実価格テーブルのみ)。 */
-function TonightEntryCards({ myHorses }: { myHorses: readonly MyDerbyHorse[] }) {
+function TonightEntryCards({ myHorses, engineV2 = false }: { myHorses: readonly MyDerbyHorse[]; engineV2?: boolean }) {
   return (
     <div className={s.tn1Grid}>
       {myHorses.slice(0, 8).map((h) => {
@@ -736,12 +743,17 @@ function TonightEntryCards({ myHorses }: { myHorses: readonly MyDerbyHorse[] }) 
           <div key={h.name} className={s.tn1Card}>
             <NftHorseArt look={deriveNftLook(dnaOf(h), h.name)} className={s.tn1Art} />
             <div className={s.tn1Body}>
-              <div className={s.tn1Name}>{h.name}</div>
+              <div className={s.tn1NameRow}>
+                <span className={s.tn1Name}>{h.name}</span>
+                {h.totalValue !== null && h.totalValue !== undefined ? (
+                  <b className={s.tn1Tv} style={tvNumStyle(h.totalValue)}>{h.totalValue}</b>
+                ) : null}
+              </div>
               <div className={s.tn1Dots}>
                 {[1, 2, 3, 4, 5, 6, 7].map((i) => (
                   <span key={i} className={`${s.tn1Dot} ${i <= day ? s.tn1DotOn : ''} ${i === 7 ? s.tn1DotGoal : ''}`} />
                 ))}
-                <span className={s.tn1DayTag}>DAY{day}</span>
+                <span className={s.tn1DayTag}>{engineV2 ? 'LV.' : 'DAY'}{day}</span>
               </div>
               <div className={s.tn1Price}>
                 {now} → <b className={day >= 6 ? s.tn1NextGold : ''}>{next}</b> USDT
@@ -756,7 +768,7 @@ function TonightEntryCards({ myHorses }: { myHorses: readonly MyDerbyHorse[] }) 
 }
 
 /** 案2: パドック風の出走表 — 枠番+実NFTアートの横並び。 */
-function TonightPaddock({ myHorses }: { myHorses: readonly MyDerbyHorse[] }) {
+function TonightPaddock({ myHorses, engineV2 = false }: { myHorses: readonly MyDerbyHorse[]; engineV2?: boolean }) {
   return (
     <div className={s.tn2Row}>
       {myHorses.slice(0, 12).map((h, i) => (
@@ -766,7 +778,12 @@ function TonightPaddock({ myHorses }: { myHorses: readonly MyDerbyHorse[] }) {
             <NftHorseArt look={deriveNftLook(dnaOf(h), h.name)} className={s.tn2Art} />
           </div>
           <div className={s.tn2Name}>{h.name}</div>
-          <div className={s.tn2Day}>DAY{h.currentDay ?? 0}</div>
+          <div className={s.tn2Day}>
+            {engineV2 ? 'LV.' : 'DAY'}{h.currentDay ?? 0}
+            {h.totalValue !== null && h.totalValue !== undefined ? (
+              <b style={{ ...tvNumStyle(h.totalValue), marginLeft: 6 }}>{h.totalValue}</b>
+            ) : null}
+          </div>
         </div>
       ))}
       {myHorses.length > 12 && <div className={s.tn2More}>+{myHorses.length - 12}頭</div>}
@@ -778,10 +795,12 @@ function PreShowCountdown({
   secondsToStart,
   myHorses,
   variant = 0,
+  engineV2 = false,
 }: {
   secondsToStart: number;
   myHorses: readonly MyDerbyHorse[];
   variant?: 0 | 1 | 2;
+  engineV2?: boolean;
 }) {
   const total = Math.max(0, Math.ceil(secondsToStart));
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -800,15 +819,15 @@ function PreShowCountdown({
         <div className={s.tonight}>
           <div className={s.tonightK}>本日のレースに参加するあなたの馬</div>
           {variant === 1 ? (
-            <TonightEntryCards myHorses={myHorses} />
+            <TonightEntryCards myHorses={myHorses} engineV2={engineV2} />
           ) : variant === 2 ? (
-            <TonightPaddock myHorses={myHorses} />
+            <TonightPaddock myHorses={myHorses} engineV2={engineV2} />
           ) : (
             <div className={s.tonightChips}>
               {myHorses.slice(0, 4).map((h) => (
                 <span key={h.name} className={s.tonightChip}>
                   {h.name}
-                  {h.currentDay !== undefined && <b> DAY{h.currentDay}</b>}
+                  {h.currentDay !== undefined && <b> {engineV2 ? 'LV.' : 'DAY'}{h.currentDay}</b>}
                 </span>
               ))}
               {myHorses.length > 4 && (

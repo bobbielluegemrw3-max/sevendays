@@ -377,16 +377,17 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
           : { date: today, slot: sharedSlot };
       const myHorses = await ctx.client.query<{
         name: string; dna_hash: string; current_day: number; trained_for_next_race: boolean;
+        total_value: number | null;
       }>(
         sharedV2
-          ? `select h.name, h.dna_hash, h.current_day,
+          ? `select h.name, h.dna_hash, h.current_day, h.total_value::float8 as total_value,
                     exists(
                       select 1 from training_sessions t
                       where t.horse_id = h.id and t.effective_race_date = $2
                         and t.slot = $3::race_slot
                     ) as trained_for_next_race
              from horses h where h.owner_user_id = $1 and h.status = 'ACTIVE' limit 200`
-          : `select h.name, h.dna_hash, h.current_day,
+          : `select h.name, h.dna_hash, h.current_day, h.total_value::float8 as total_value,
                     exists(
                       select 1 from training_sessions t
                       where t.horse_id = h.id and t.effective_race_date = $2

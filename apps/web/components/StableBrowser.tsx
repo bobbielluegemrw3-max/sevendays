@@ -9,6 +9,7 @@ import { horseValue, uncollectedGain } from '@/components/stable-shared';
 import type { StableHorse } from '@/components/StableView';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
+import { tvChipStyle, tvNumStyle, tvCardGlowStyle } from '@/lib/tv-tier';
 
 /* ============================================================================
  * StableBrowser — 出走中 / 過去 の馬リストを「検索・ソート・絞り込み・
@@ -31,9 +32,11 @@ function bandLabel(band: string | null | undefined, t: T): string {
 }
 function TvChip({ h, t, extraCls = '' }: { h: StableHorse; t: T; extraCls?: string }) {
   if (h.total_value === null || h.total_value === undefined) return null;
+  // ティアカラー(2026-07-18): チップの色は「価値の帯」。今夜の安全圏はRankLineが担う。
   return (
-    <span className={`${s.tvChip} ${bandCls(h.tonight_band)} ${extraCls}`}>
-      {t.tv_chip} <b>{h.total_value}</b>
+    <span className={`${s.tvChip} ${extraCls}`} style={tvChipStyle(h.total_value)}>
+      {t.tv_chip}{' '}
+      <b style={{ ...tvNumStyle(h.total_value), fontSize: '17px' }}>{h.total_value}</b>
     </span>
   );
 }
@@ -93,7 +96,11 @@ function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
   const trainCls = untrained ? s.trainNo : s.trainYes;
   const trainText = untrained ? t.badge_untrained : t.badge_trained;
   return (
-    <Link href={`/horses/${h.id}`} className={`${s.hcard} ${untrained ? s.untrained : ''}`}>
+    <Link
+      href={`/horses/${h.id}`}
+      className={`${s.hcard} ${untrained ? s.untrained : ''}`}
+      style={tvCardGlowStyle(h.total_value)}
+    >
       <div className={s.hart}>
         <StableArt horse={h} t={t} />
         <TvChip h={h} t={t} extraCls={`${s.artBadge} ${s.artRarity}`} />
@@ -128,7 +135,7 @@ function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
  */
 export function ListedCard({ h, t }: { h: StableHorse; t: T }) {
   return (
-    <Link href="/market" className={`${s.hcard} ${s.listedCard}`}>
+    <Link href="/market" className={`${s.hcard} ${s.listedCard}`} style={tvCardGlowStyle(h.total_value)}>
       <div className={s.hart}>
         <StableArt horse={h} t={t} />
         <TvChip h={h} t={t} extraCls={`${s.artBadge} ${s.artRarity}`} />

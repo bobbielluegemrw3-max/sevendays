@@ -8,6 +8,7 @@ import { NftHorseArt } from '@/components/NftHorseArt';
 import { RarityLegend } from '@/components/RarityLegend';
 import { localDate, localDateTime } from '@/lib/format-time';
 import s from '../app/market.module.css';
+import { tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
 import d from '../app/support.module.css';
 
 /**
@@ -210,7 +211,10 @@ export function MarketPlaceView({
                 <div className={s.shelfName}>{item.name}</div>
                 <div className={s.shelfRar}>
                   {item.total_value !== null && item.total_value !== undefined ? (
-                    <span className={s.shelfTv}>総合値 <b>{item.total_value}</b></span>
+                    <span className={s.shelfTv} style={tvChipStyle(item.total_value)}>
+                      総合値{' '}
+                      <b style={{ ...tvNumStyle(item.total_value), fontSize: '15px' }}>{item.total_value}</b>
+                    </span>
                   ) : (
                     <span className={`${s.rar} ${s[`rar${rarClass(item.rarity)}`]}`}>{item.rarity}</span>
                   )}

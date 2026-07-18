@@ -782,8 +782,11 @@
 .tn1Art { width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0; overflow: hidden;
   background: radial-gradient(80% 78% at 50% 42%, rgba(0, 234, 255, 0.1), rgba(10, 8, 19, 0.92) 74%); }
 .tn1Body { flex: 1; min-width: 0; }
+.tn1NameRow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
 .tn1Name { font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* 総合値(ティアカラー 2026-07-18)— 名前と衝突しないよう右端固定・縮まない */
+.tn1Tv { font-family: var(--font-display); font-weight: 800; font-size: 15px; line-height: 1; flex: none; }
 .tn1Dots { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
 .tn1Dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); }
 .tn1DotOn { background: var(--gold, #c9a86a); box-shadow: 0 0 8px rgba(201, 168, 106, 0.7); }

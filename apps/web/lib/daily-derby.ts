@@ -404,6 +404,8 @@ export interface MyDerbyHorse {
   currentDay?: number;
   /** 次のレースに向けて調教済みか(待機パドックのリマインド用・不明はundefined) */
   trainedForNextRace?: boolean | undefined;
+  /** 総合値(ティアカラー表示 2026-07-18)。 */
+  totalValue?: number | null;
 }
 
 export function conditionsView(c: {

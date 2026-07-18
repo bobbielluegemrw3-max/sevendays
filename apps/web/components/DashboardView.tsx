@@ -11,6 +11,8 @@ import { uncollectedGain } from '@/components/stable-shared';
 import { APP_COPY, type Lang, type AppDict } from '@/lib/i18n';
 import { formatMonthDay } from '@/lib/i18n-shared';
 import s from '../app/dashboard.module.css';
+import { tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
+import { isLvDisplayMode } from '@/lib/i18n';
 
 /** テンプレ文字列の {name} を値で埋める(多言語の語順差を吸収)。 */
 function fill(tpl: string, vars: Record<string, string | number>): string {
@@ -37,6 +39,8 @@ export interface DashHorse {
   horse_type: string; rarity: string; condition: string; fatigue: string;
   dna_hash: string; trained_for_next_race: boolean;
   listing?: string | null;
+  /** 総合値(A1/V2)。GET /horses がそのまま供給する。 */
+  total_value?: number | null;
 }
 export interface DashWallet { available: string; locked: string }
 export interface DashBuff { buff_rarity: string; buff_bonus_score: string; status: string }
@@ -92,8 +96,15 @@ function HorseStrip({ h, t }: { h: DashHorse; t: AppDict['dash'] }) {
         <StableArt horse={h} />
       </div>
       <span className={s.sname}>{h.name}</span>
-      <span className={`${s.rar} ${rarClass(h.rarity)}`}>{h.rarity}</span>
-      <span className={s.sday}>Day {Math.min(7, h.current_day)}/7</span>
+      {h.total_value !== null && h.total_value !== undefined ? (
+        /* ティアカラー(2026-07-18): レアリティ枠は総合値へ置換 — 一目で強さが分かる */
+        <span className={s.rar} style={{ ...tvChipStyle(h.total_value), fontWeight: 800 }}>
+          <b style={{ ...tvNumStyle(h.total_value), fontSize: '13px' }}>{h.total_value}</b>
+        </span>
+      ) : (
+        <span className={`${s.rar} ${rarClass(h.rarity)}`}>{h.rarity}</span>
+      )}
+      <span className={s.sday}>{isLvDisplayMode() ? 'LV.' : 'Day '}{Math.min(7, h.current_day)}/7</span>
       <span className={`${s.trainBadge} ${trained ? s.trainYes : s.trainNo}`}>{trained ? t.train_yes : t.train_no}</span>
     </Link>
   );

@@ -27,6 +27,8 @@ const HORSE: HorseDetail = {
   condition: '82.00000000', fatigue: '34.00000000',
   mint_seed_hash: '0x77aa'.concat('19be'.repeat(15)), horse_generation_version: 'v1.0.0',
   listing: 'SMART',
+  // ティアカラーQA(2026-07-18): GOLD帯のヒーロー表示を確認する
+  total_value: 92.5, tonight_rank: 12, tonight_entrants: 78, tonight_band: 'SAFE',
   history: [
     { batch_date: '2026-07-06', final_rank: 812, final_score: '71.42', is_burned: false, participant_count: 1520, weather: 'SUNNY', track_condition: 'GOOD', surface: 'TURF' },
     { batch_date: '2026-07-07', final_rank: 233, final_score: '84.09', is_burned: false, participant_count: 1618, weather: 'CLOUDY', track_condition: 'FAST', surface: 'TURF' },
@@ -41,6 +43,7 @@ const HORSE_LISTED: HorseDetail = {
   ...HORSE,
   id: 'b2c5d8e1', name: 'Velvet Storm', rarity: 'RARE', horse_type: 'SPRINTER',
   current_day: 5, listing: 'MANUAL',
+  total_value: 68, tonight_band: 'MID',
   dna_hash: '0xb2c5' + 'd8e1'.repeat(15),
   history: HORSE.history.slice(0, 4),
 };
