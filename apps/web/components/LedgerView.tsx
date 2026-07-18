@@ -16,6 +16,8 @@ import s from '../app/races.module.css';
 
 interface LedgerDay {
   date: string;
+  /** V2(-7a): 同日2レースの区別(MORNING/NIGHT)。V1データでは常にNIGHT。 */
+  slot?: string;
   race_id: string;
   participants: number;
   survived: number;
@@ -107,8 +109,8 @@ export function LedgerView({ t }: { t: AppDict['ledger'] }) {
     if (!days || !viewMonth) return;
     const rows = days.filter((d) => d.date.startsWith(viewMonth)).sort((a, b) => a.date.localeCompare(b.date));
     downloadCsv(`sevendays-ledger-${viewMonth}.csv`, [
-      ['date', 'participants', 'survived', 'burned', 'burn_rate', 'day7_cleared', 'p2p_matched', 'matched_volume_usdt', 'day0_mints', 'weather', 'track', 'surface'],
-      ...rows.map((d) => [d.date, d.participants, d.survived, d.burned, d.burn_rate, d.day7, d.matched, d.matched_volume, d.mints, d.weather, d.track_condition, d.surface]),
+      ['date', 'slot', 'participants', 'survived', 'burned', 'burn_rate', 'day7_cleared', 'p2p_matched', 'matched_volume_usdt', 'day0_mints', 'weather', 'track', 'surface'],
+      ...rows.map((d) => [d.date, d.slot ?? 'NIGHT', d.participants, d.survived, d.burned, d.burn_rate, d.day7, d.matched, d.matched_volume, d.mints, d.weather, d.track_condition, d.surface]),
     ]);
   }, [days, viewMonth]);
 

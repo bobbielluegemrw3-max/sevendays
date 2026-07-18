@@ -417,9 +417,13 @@ export function registerItemEndpoints(registry: ApiRegistry): void {
           [ctx.params.id, ctx.userId, effectiveRaceDate],
         );
         if (!usage.rows[0]) throw new ApiError('ITEM_USAGE_NOT_FOUND', 'No pending item on this horse');
-        await ctx.client.query(`update user_items set status = 'AVAILABLE' where id = $1`, [
-          usage.rows[0].user_item_id,
-        ]);
+        // 100点診断(2026-07-18): 複数行取消(V2は過去サイクルの残留PENDINGも同時に
+        // 掃除される)で在庫を1個しか戻さないとユニットが宙に浮く — 全行ぶん戻す
+        for (const row of usage.rows) {
+          await ctx.client.query(`update user_items set status = 'AVAILABLE' where id = $1`, [
+            row.user_item_id,
+          ]);
+        }
         await ctx.client.query('commit');
       } catch (error) {
         await ctx.client.query('rollback').catch(() => undefined);
