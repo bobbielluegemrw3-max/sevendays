@@ -11,6 +11,7 @@ import {
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { AppSelect } from '@/components/AppSelect';
 import { effectSummaryJa, type CatalogItem, type InventoryData } from '@/lib/items';
+import { projectAfterRace, type TrainingFxDetail } from '@/components/HeroArtFx';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
 
@@ -67,6 +68,7 @@ export function TrainingFormV2({
   t,
   confirmed = null,
   lv = 0,
+  totalValue = null,
   preview = false,
 }: {
   horseId: string;
@@ -75,6 +77,8 @@ export function TrainingFormV2({
   confirmed?: TrainingV2Confirmed | null;
   /** 馬のLV(current_day)— アイテムのLV制限判定に使用。 */
   lv?: number;
+  /** 現在の総合値(確定演出の予測値計算に使用)。 */
+  totalValue?: number | null;
   preview?: boolean;
 }) {
   const router = useRouter();
@@ -204,7 +208,23 @@ export function TrainingFormV2({
       setError(errorMessage(res.body) ?? t.train_fail);
       return;
     }
-    setResult(res.body as RollResult);
+    const body = res.body as RollResult;
+    setResult(body);
+    // 馬アートの生体反応(HeroArtFx)— 実ロール値をそのまま渡す
+    if (typeof totalValue === 'number') {
+      const gain = body.delta + (body.item_bonus ?? 0);
+      const detail: TrainingFxDetail = {
+        horseId,
+        delta: body.delta,
+        synergy: body.synergy,
+        itemBonus: body.item_bonus ?? 0,
+        itemKey: body.item_key ?? null,
+        restsDecay: body.rests_decay,
+        before: totalValue,
+        projected: projectAfterRace(totalValue, gain, body.rests_decay),
+      };
+      window.dispatchEvent(new CustomEvent<TrainingFxDetail>('sdd:training-confirmed', { detail }));
+    }
     router.refresh();
   }
 

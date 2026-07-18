@@ -375,6 +375,9 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       let trainingV2: {
         menus: string[]; delta: number; synergy: number; rests_decay: boolean; slot: string;
       } | null = null;
+      // V2アイテムの常駐表示(装備バッジ+減衰シールド 2026-07-18)
+      let raceItemV2: { item_key: string; effective_race_date: string; slot: string } | null = null;
+      let decayShieldV2 = 0;
       {
         const active = await ctx.client.query<{ version: string }>(
           `select version from race_engine_versions
@@ -413,6 +416,21 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
               slot: cycle.slot,
             };
           }
+          const pendingItem = await ctx.client.query<{
+            item_key: string; effective_race_date: string; slot: string;
+          }>(
+            `select item_key, effective_race_date::text as effective_race_date, slot::text as slot
+             from item_usages
+             where horse_id = $1 and status = 'PENDING' and usage_kind = 'RACE'
+             order by created_at desc limit 1`,
+            [ctx.params.id],
+          );
+          raceItemV2 = pendingItem.rows[0] ?? null;
+          const shield = await ctx.client.query<{ decay_shield_v2: number }>(
+            `select decay_shield_v2 from horses where id = $1`,
+            [ctx.params.id],
+          );
+          decayShieldV2 = shield.rows[0]?.decay_shield_v2 ?? 0;
         }
       }
       const { tonight_training: tt, effective_race_date: efd, ...detailRest } = hRow;
@@ -420,6 +438,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       return {
         ...detailRest,
         engine_v2: engineV2,
+        race_item_v2: raceItemV2,
+        decay_shield_v2: decayShieldV2,
         training_v2: trainingV2,
         trained_for_next_race: tt !== null,
         /** 今夜向けに確定済みの調教タイプ(やり直しUIの初期値・A2)。 */

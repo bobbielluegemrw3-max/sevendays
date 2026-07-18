@@ -118,6 +118,8 @@ export function ItemPrepPanelV3({
     setMessage(
       `${fill(t.boost_applied_tpl, { date: res.effective_race_date })}${res.slot ? `(${res.slot === 'MORNING' ? '朝' : '夜'})` : ''}`,
     );
+    // 馬アートの吸い込み演出(HeroArtFx)
+    window.dispatchEvent(new CustomEvent('sdd:item-applied', { detail: { horseId, itemKey: selected } }));
     await reload();
     router.refresh();
   }
@@ -136,6 +138,7 @@ export function ItemPrepPanelV3({
       return;
     }
     setMessage(`減衰シールドを${(r.body as { decay_shield_added: number }).decay_shield_added}レース分まといました。`);
+    window.dispatchEvent(new CustomEvent('sdd:item-applied', { detail: { horseId, itemKey } }));
     await reload();
     router.refresh();
   }

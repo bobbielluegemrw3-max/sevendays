@@ -7,6 +7,7 @@ import { TrainingForm } from '@/components/TrainingForm';
 import { TrainingFormV2, type TrainingV2Confirmed } from '@/components/TrainingFormV2';
 import { ItemBoostPanel } from '@/components/ItemBoostPanel';
 import { ItemPrepPanelV3 } from '@/components/ItemPrepPanelV3';
+import { HeroArtFx } from '@/components/HeroArtFx';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { uncollectedGain } from '@/components/stable-shared';
@@ -71,6 +72,10 @@ export interface HorseDetail {
   engine_v2?: boolean;
   /** 次サイクルの確定済みV2ロール(Decision 107: 変更不可の完了表示)。 */
   training_v2?: TrainingV2Confirmed | null;
+  /** 次レースに装着中のレースアイテム(装備バッジ 2026-07-18)。 */
+  race_item_v2?: { item_key: string; effective_race_date: string; slot: string } | null;
+  /** 減衰シールドの残レース数(星霜の砂)。 */
+  decay_shield_v2?: number;
   /** 隠し演出(EASTER_EGG_PLAN.md)。 */
   night_variant?: boolean;
   golden_star?: boolean;
@@ -374,7 +379,19 @@ export function HorseDetailView({
               className={`${s.artBox} ${horse.golden_aura ? s.heroAura : ''}`}
               style={tvArtGlowStyle(horse.total_value)}
             >
-              <NftHorseArt look={look} className={s.heroCanvas} />
+              <HeroArtFx horseId={horse.id}>
+                <NftHorseArt look={look} className={s.heroCanvas} />
+                {(horse.decay_shield_v2 ?? 0) > 0 ? <span className={s.shieldFilm} aria-hidden="true" /> : null}
+              </HeroArtFx>
+              {horse.race_item_v2 ? (
+                /* 装備バッジ(常駐): この馬は次のレースに備えている — 戦略の可視化 */
+                <span className={s.gearBadge} title={`装着中: ${horse.race_item_v2.item_key}`}>
+                  <img src={`/items/${horse.race_item_v2.item_key}.webp`} alt="装着中のレースアイテム" />
+                </span>
+              ) : null}
+              {(horse.decay_shield_v2 ?? 0) > 0 ? (
+                <span className={s.shieldChip}>SHIELD ×{horse.decay_shield_v2}</span>
+              ) : null}
               {/* 隠し演出(EASTER_EGG_PLAN.md) */}
               {horse.color_variant ? (
                 <span
@@ -438,6 +455,7 @@ export function HorseDetailView({
                     horseId={horse.id}
                     confirmed={horse.training_v2 ?? null}
                     lv={horse.current_day}
+                    totalValue={horse.total_value ?? null}
                     t={t}
                   />
                 ) : (
