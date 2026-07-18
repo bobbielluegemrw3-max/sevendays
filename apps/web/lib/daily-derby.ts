@@ -110,14 +110,14 @@ export const LOG_SECTIONS: readonly LogSection[] = [
   { key: 'BURN', tone: 'burn', header: '═══ BURN RESOLUTION ═══', startAt: 30, endAt: 40, rate: 6 },
   { key: 'SURVIVE', tone: 'survive', header: '═══ SURVIVORS ═══', startAt: 40, endAt: 50, rate: 6 },
   { key: 'VALUE', tone: 'value', header: '═══ VALUE PROGRESSION ═══', startAt: 50, endAt: 58, rate: 5 },
-  { key: 'DAY7', tone: 'day7', header: '═══ DAY7 CLEAR ═══', startAt: 58, endAt: 62, rate: 2.5 },
+  { key: 'DAY7', tone: 'day7', header: '═══ LV.7 CLEAR ═══', startAt: 58, endAt: 62, rate: 2.5 },
   { key: 'RACE_END', tone: 'end', header: '═══ RACE TURN COMPLETE ═══', startAt: 62, endAt: 62.2, rate: 0 },
   { key: 'LIST', tone: 'list', header: '═══ P2P MARKETPLACE — SELL ORDERS ═══', startAt: 66, endAt: 72, rate: 6 },
   { key: 'BID', tone: 'bid', header: '═══ P2P MARKETPLACE — BUY ORDERS ═══', startAt: 72, endAt: 78, rate: 6 },
   { key: 'MATCH', tone: 'match', header: '═══ P2P MATCHING ═══', startAt: 78, endAt: 85, rate: 6 },
-  { key: 'MINT', tone: 'mint', header: '═══ DAY0 NEW HORSES ═══', startAt: 85, endAt: 90, rate: 5 },
+  { key: 'MINT', tone: 'mint', header: '═══ LV.0 NEW HORSES ═══', startAt: 85, endAt: 90, rate: 5 },
   { key: 'MLM', tone: 'mlm', header: '═══ SUPPORT BONUS ═══', startAt: 90, endAt: 93.5, rate: 6 },
-  { key: 'ITEM', tone: 'item', header: '═══ REVENGE BUFF DROPS ═══', startAt: 93.5, endAt: 96.5, rate: 6 },
+  { key: 'ITEM', tone: 'item', header: '═══ MEMORIAL DROPS ═══', startAt: 93.5, endAt: 96.5, rate: 6 },
 ] as const;
 
 export const LOGS_FROM = 30;
@@ -134,13 +134,19 @@ export function turnLabel(elapsed: number): string {
   return 'REWARDS TURN';
 }
 
-/** マッチングカウンター(MATCHセクション中に総成約数まで数え上げ)。 */
+/** P2P成立数(assignmentsはミント割当も含むため、P2Pのみに絞る)。 */
+export function p2pMatchTotal(counts: DerbyCounts): number {
+  return Math.max(0, counts.assignments - counts.mints);
+}
+
+/** マッチングカウンター(MATCHセクション中にP2P成約数まで数え上げ)。 */
 export function matchingCount(elapsed: number, counts: DerbyCounts): number {
+  const total = p2pMatchTotal(counts);
   const sec = LOG_SECTIONS.find((s) => s.key === 'MATCH')!;
   const t = (elapsed - sec.startAt) / (sec.endAt - sec.startAt);
   if (t <= 0) return 0;
-  if (t >= 1) return counts.assignments;
-  return Math.floor(counts.assignments * (1 - Math.pow(1 - t, 2.2)));
+  if (t >= 1) return total;
+  return Math.floor(total * (1 - Math.pow(1 - t, 2.2)));
 }
 
 /* ---- 決定論ログ生成 ------------------------------------------------------ */
@@ -205,17 +211,17 @@ function makeLine(section: LogSection, i: number): LogLine {
     case 'BURN': {
       const day = dayOf(i, 1);
       const name = horseName(i, 1);
-      return { id, tone: 'burn', name, text: `${tag('BURN')}${horseId(i, 1)}  ${pad(name, NAME_W)}  DAY ${day}  ELIMINATED` };
+      return { id, tone: 'burn', name, text: `${tag('BURN')}${horseId(i, 1)}  ${pad(name, NAME_W)}  LV.${day}  ELIMINATED` };
     }
     case 'SURVIVE': {
       const day = dayOf(i, 2, 0, 5);
       const name = horseName(i, 2);
-      return { id, tone: 'survive', name, text: `${tag('SRVD')}${horseId(i, 2)}  ${pad(name, NAME_W)}  DAY ${day} → DAY ${day + 1}` };
+      return { id, tone: 'survive', name, text: `${tag('SRVD')}${horseId(i, 2)}  ${pad(name, NAME_W)}  LV.${day} → LV.${day + 1}` };
     }
     case 'VALUE': {
       const day = dayOf(i, 3);
       const name = horseName(i, 3);
-      return { id, tone: 'value', name, text: `${tag('VAL')}${pad(name, NAME_W)}  DAY ${day}  ${priceOfDay(day)} USDT  ▲` };
+      return { id, tone: 'value', name, text: `${tag('VAL')}${pad(name, NAME_W)}  LV.${day}  ${priceOfDay(day)} USDT  ▲` };
     }
     case 'DAY7':
     {
@@ -239,7 +245,7 @@ function makeLine(section: LogSection, i: number): LogLine {
     case 'MINT':
     {
       const name = horseName(i, 8);
-      return { id, tone: 'mint', name, text: `${tag('MINT')}${pad(name, NAME_W)}  DAY0 → ${userId(i, 8)}` };
+      return { id, tone: 'mint', name, text: `${tag('MINT')}${pad(name, NAME_W)}  LV.0 → ${userId(i, 8)}` };
     }
     case 'MLM': {
       // サポートボーナス(Decision 092): チャンピオン誕生のお祝い金 T1=3 / T2=2 / T3-7=1 USDT
@@ -248,9 +254,8 @@ function makeLine(section: LogSection, i: number): LogLine {
       return { id, tone: 'mlm', text: `${tag('CELEB')}T${t}  +${tiers[t - 1]!} USDT → ${userId(i, 9)}` };
     }
     case 'ITEM': {
-      const rarities = ['N', 'N', 'N', 'R', 'R', 'SR'] as const;
-      const rarity = rarities[mix(i, 31) % rarities.length]!;
-      return { id, tone: 'item', text: `${tag('ITEM')}REVENGE BUFF (${rarity}) → ${userId(i, 10)}` };
+      // V2: BURN馬の形見ドロップ(Revenge Buffは旧シーズンの概念)。
+      return { id, tone: 'item', text: `${tag('ITEM')}MEMORIAL DROP → ${userId(i, 10)}` };
     }
     default:
       return { id, tone: section.tone, text: section.header };
@@ -267,7 +272,7 @@ function sectionCap(key: string, c: DerbyCounts): number {
     case 'DAY7': return c.day7;
     case 'LIST': return c.listed;
     case 'BID': return c.listed;
-    case 'MATCH': return c.assignments;
+    case 'MATCH': return Math.max(0, c.assignments - c.mints); // P2Pのみ(ミント割当は含めない)
     case 'MINT': return c.mints;
     case 'MLM': return c.celebrations;
     case 'ITEM': return c.buffs;
@@ -330,10 +335,10 @@ export function fixtureMyHorseNames(): string[] {
         /api/v1/daily-derby/my-results/:date と同じ形 — 下の記録にも残り続ける)。 */
 
 export interface DerbyNightResults {
-  burned: { name: string; dna_hash: string; day: number | null; used_item_key: string | null; drop_item_key: string | null }[];
-  survived: { name: string; dna_hash: string; from_day: number; to_day: number; day7: boolean }[];
-  sold: { name: string; dna_hash: string; price: string; day: number | null; counterpart: string }[];
-  bought: { name: string; dna_hash: string; price: string; day: number | null; is_mint: boolean; counterpart: string | null }[];
+  burned: { name: string; dna_hash: string; day: number | null; used_item_key: string | null; drop_item_key: string | null; total_value?: string | null }[];
+  survived: { name: string; dna_hash: string; from_day: number; to_day: number; day7: boolean; total_value?: string | null }[];
+  sold: { name: string; dna_hash: string; price: string; day: number | null; counterpart: string; total_value?: string | null }[];
+  bought: { name: string; dna_hash: string; price: string; day: number | null; is_mint: boolean; counterpart: string | null; total_value?: string | null }[];
   /** V2実装-7c: このレースで精算された自分のプール(YOUR NEW STABLE幕)。 */
   pool?: PoolActView | null;
 }

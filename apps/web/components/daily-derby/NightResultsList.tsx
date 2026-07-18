@@ -4,6 +4,7 @@ import { DAY0_MINT_FEE, ITEM_BY_KEY_V2 } from '@sevendays/domain';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import type { DerbyNightResults } from '@/lib/daily-derby';
+import { tvNumStyle } from '@/lib/tv-tier';
 import s from '../../app/races.module.css';
 
 /* 表示は実際に動いたお金(2026-07-14 オーナー指摘):
@@ -14,6 +15,17 @@ const money = (v: string | number): string =>
 const MINT_FEE = Number(DAY0_MINT_FEE);
 const mintPaid = (price: string): string => money(Number(price) + MINT_FEE);
 const soldNet = (price: string): string => money(Number(price) * 0.98);
+
+/* V2: 総合値を行の主役に(ワクワクの源泉 — オーナー指示 2026-07-18)。 */
+function TvBig({ tv }: { tv?: string | null | undefined }) {
+  if (tv === null || tv === undefined) return null;
+  const v = Number(tv);
+  return (
+    <span style={{ ...tvNumStyle(v), fontSize: 21, fontWeight: 900, minWidth: 58, textAlign: 'right', fontVariantNumeric: 'tabular-nums', letterSpacing: 0.3 }}>
+      {v.toFixed(1)}
+    </span>
+  );
+}
 
 /**
  * ある夜の自分の全結果(BURN/生存/DAY7/P2P売買/新規発行)の行リスト。
@@ -57,9 +69,10 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
       <HorseThumb dna={h.dna_hash} name={h.name} />
       <div className={s.recBody}>
         <div className={s.recName}>{h.name}</div>
-        <div className={s.recSub}>DAY7 走破 — CHAMPION</div>
+        <div className={s.recSub}>LV.7 走破 — CHAMPION</div>
       </div>
-      <span className={`${s.recBadge} ${s.recBadgeGold}`}>DAY7</span>
+      <TvBig tv={h.total_value} />
+      <span className={`${s.recBadge} ${s.recBadgeGold}`}>LV.7</span>
     </div>
   ));
 
@@ -68,8 +81,9 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
       <HorseThumb dna={h.dna_hash} name={h.name} />
       <div className={s.recBody}>
         <div className={s.recName}>{h.name}</div>
-        <div className={s.recSub}>DAY{h.from_day} → <b className={s.recGood}>DAY{h.to_day}</b> 生存</div>
+        <div className={s.recSub}>LV.{h.from_day} → <b className={s.recGood}>LV.{h.to_day}</b> 生存</div>
       </div>
+      <TvBig tv={h.total_value} />
       <span className={`${s.recBadge} ${s.recBadgeGood}`}>生存</span>
     </div>
   ));
@@ -80,13 +94,14 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
       <div className={s.recBody}>
         <div className={s.recName}>{h.name}</div>
         <div className={s.recSub}>
-          {h.day !== null ? `DAY${h.day} — BURN` : 'BURN'}
+          {h.day !== null ? `LV.${h.day} — BURN` : 'BURN'}
           {itemName(h.used_item_key) && ` · 使用アイテム(消費): ${itemName(h.used_item_key)}`}
           {itemName(h.drop_item_key) && (
             <> · <b className={s.recGold}>BURNドロップ獲得: {itemName(h.drop_item_key)}</b></>
           )}
         </div>
       </div>
+      <TvBig tv={h.total_value} />
       <span className={`${s.recBadge} ${s.recBadgeBad}`}>BURN</span>
     </div>
   ));
@@ -98,6 +113,7 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
         <div className={s.recName}>{h.name}</div>
         <div className={s.recSub}>{h.counterpart} と売却マッチング成立 {money(h.price)} — 受取 <b className={s.recGold}>{soldNet(h.price)} USDT</b>(手数料2%)</div>
       </div>
+      <TvBig tv={h.total_value} />
       <span className={`${s.recBadge} ${s.recBadgeCyan}`}>売却</span>
     </div>
   ));
@@ -109,10 +125,11 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
         <div className={s.recName}>{h.name}</div>
         <div className={s.recSub}>
           {h.is_mint
-            ? <>新規発行(DAY0)で入手 — 支払 <b className={s.recGold}>{mintPaid(h.price)} USDT</b>({money(h.price)}+手数料{MINT_FEE})</>
-            : <>{h.counterpart} と購入マッチング成立(DAY{h.day}) — 支払 <b className={s.recGold}>{money(h.price)} USDT</b></>}
+            ? <>新規発行(LV.0)で入手 — 支払 <b className={s.recGold}>{mintPaid(h.price)} USDT</b>({money(h.price)}+手数料{MINT_FEE})</>
+            : <>{h.counterpart} と購入マッチング成立(LV.{h.day}) — 支払 <b className={s.recGold}>{money(h.price)} USDT</b></>}
         </div>
       </div>
+      <TvBig tv={h.total_value} />
       <span className={`${s.recBadge} ${h.is_mint ? s.recBadgeMint : s.recBadgeCyan}`}>
         {h.is_mint ? '新規発行' : '購入'}
       </span>

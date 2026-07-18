@@ -25,6 +25,7 @@ import {
   type ShowStep,
 } from '@/lib/daily-derby';
 import type { DerbyConditionsView, MyDerbyHorse } from '@/lib/daily-derby';
+import { p2pMatchTotal } from '@/lib/daily-derby';
 import { SegmentClock } from '@/components/daily-derby/SegmentClock';
 import { DerbyVerdict, type VerdictInfo } from '@/components/daily-derby/DerbyVerdict';
 import { PRICE_TABLE_V1 } from '@sevendays/domain';
@@ -389,6 +390,7 @@ export function DailyDerbyStage({
         info: {
           name: r.name, kind: 'match', horse: horseOf(r.name, r.dna_hash, r.day),
           dropKey: null, usedItemKey: null, matchSide: 'buy', counterpart: r.counterpart ?? undefined,
+          isMint: r.is_mint === true,
         },
       });
     });
@@ -659,7 +661,7 @@ function Waiting({
               <span className={s.waitInviteT}>出走馬がいません</span>
               <span className={s.waitInviteD}>
                 マーケットプレイスで馬を迎えると、ここに出走カードが並びます。
-                今夜20:00までの購入予約はマッチング後、明晩から出走します。
+                プール予約は次のバッチ(朝8:00/夜20:00)でマッチングされ、その次のレースから出走します。
               </span>
               <span className={s.waitInviteA}>マーケットプレイスへ →</span>
             </Link>
@@ -1045,13 +1047,13 @@ function Counters({ elapsed: propElapsed, counts }: { elapsed: number; counts: D
       <div className={s.counters}>
         <div className={`${s.counter} ${s.counterCyan}`}>
           <b>
-            {matched.toLocaleString('en-US')} / {counts.assignments.toLocaleString('en-US')}
+            {matched.toLocaleString('en-US')} / {p2pMatchTotal(counts).toLocaleString('en-US')}
           </b>
-          <span>MATCHED</span>
+          <span>P2P MATCHED</span>
         </div>
         <div className={`${s.counter} ${s.counterGold}`}>
           <b>{Math.round(counts.mints * easeOut((elapsed - p2pAt) / (rewardsAt - p2pAt))).toLocaleString('en-US')}</b>
-          <span>DAY0 MINTS</span>
+          <span>LV.0 MINTS</span>
         </div>
       </div>
     );
@@ -1061,7 +1063,7 @@ function Counters({ elapsed: propElapsed, counts }: { elapsed: number; counts: D
     <div className={s.counters}>
       <div className={`${s.counter} ${s.counterGold}`}>
         <b>{Math.round(counts.buffs * p).toLocaleString('en-US')}</b>
-        <span>REVENGE BUFFS</span>
+        <span>MEMORIAL DROPS</span>
       </div>
     </div>
   );
@@ -1189,10 +1191,10 @@ function LogPhase({
                   : s.myEvSurvive;
                 const day = ev.horse?.currentDay;
                 const sub =
-                  ev.kind === 'day7' ? 'DAY7 走破 — CHAMPION'
-                  : ev.kind === 'burn' ? (day !== undefined ? `DAY${day} — BURN` : 'BURN')
-                  : ev.kind === 'match' ? `${ev.matchSide === 'buy' ? '購入' : '売却'}マッチング成立`
-                  : day !== undefined ? `DAY${day} → DAY${Math.min(7, day + 1)} 生存` : '生存';
+                  ev.kind === 'day7' ? 'LV.7 走破 — CHAMPION'
+                  : ev.kind === 'burn' ? (day !== undefined ? `LV.${day} — BURN` : 'BURN')
+                  : ev.kind === 'match' ? (ev.isMint ? '新規ミント — 厩舎に加入' : `${ev.matchSide === 'buy' ? '購入' : '売却'}マッチング成立`)
+                  : day !== undefined ? `LV.${day} → LV.${Math.min(7, day + 1)} 生存` : '生存';
                 return (
                   <div key={`${ev.kind}:${ev.name}:${i}`} className={`${s.myEv} ${cls}`}>
                     <div className={s.myEvN}>{ev.name}</div>

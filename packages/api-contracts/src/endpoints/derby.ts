@@ -417,6 +417,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
           is_mint: boolean | null;
           cp_email: string | null;
           cp_stable: string | null;
+          tv: string | null;
         }>(
           `with race as (
              select r.id, r.batch_run_id
@@ -428,11 +429,13 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
            )
            select 'READY' as kind, null as name, null as dna_hash, null::int as day,
                   null as used_item_key, null as drop_item_key, null as price,
-                  null::boolean as is_mint, null as cp_email, null as cp_stable
+                  null::boolean as is_mint, null as cp_email, null as cp_stable,
+                  null as tv
            from race
            union all
            select 'BURN', h.name, h.dna_hash, s.current_day,
-                  iu.item_key, ui.item_key, null, null, null, null
+                  iu.item_key, ui.item_key, null, null, null, null,
+                  h.total_value::text
            from horse_burns hb
            join race on race.id = hb.race_id
            join horses h on h.id = hb.horse_id
@@ -443,7 +446,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
            where hb.owner_user_id_at_snapshot = $1
            union all
            select 'SURVIVE', h.name, h.dna_hash, s.current_day,
-                  null, null, null, null, null, null
+                  null, null, null, null, null, null,
+                  h.total_value::text
            from race_participant_snapshots s
            join race on race.id = s.race_id
            join horses h on h.id = s.horse_id
@@ -451,7 +455,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
            where s.owner_user_id = $1 and hb.id is null
            union all
            select 'SOLD', h.name, h.dna_hash, l.current_day,
-                  null, null, a.assigned_price::text, null, u.email, u.stable_name
+                  null, null, a.assigned_price::text, null, u.email, u.stable_name,
+                  h.total_value::text
            from ownership_assignments a
            join race on race.batch_run_id = a.batch_run_id
            join horses h on h.id = a.horse_id
@@ -461,7 +466,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
            union all
            select 'BOUGHT', h.name, h.dna_hash, coalesce(l.current_day, 0),
                   null, null, a.assigned_price::text,
-                  (a.market_listing_id is null), u.email, u.stable_name
+                  (a.market_listing_id is null), u.email, u.stable_name,
+                  h.total_value::text
            from ownership_assignments a
            join race on race.batch_run_id = a.batch_run_id
            join horses h on h.id = a.horse_id
@@ -504,6 +510,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
                 day: r.day,
                 used_item_key: r.used_item_key,
                 drop_item_key: r.drop_item_key,
+                total_value: r.tv,
               })),
             survived: ev.rows
               .filter((r) => r.kind === 'SURVIVE')
@@ -513,6 +520,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
                 from_day: r.day ?? 0,
                 to_day: Math.min(7, (r.day ?? 0) + 1),
                 day7: r.day === 6,
+                total_value: r.tv,
               })),
             sold: ev.rows
               .filter((r) => r.kind === 'SOLD')
@@ -522,6 +530,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
                 price: r.price,
                 day: r.day,
                 counterpart: cp(r),
+                total_value: r.tv,
               })),
             bought: ev.rows
               .filter((r) => r.kind === 'BOUGHT')
@@ -532,6 +541,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
                 day: r.day,
                 is_mint: r.is_mint === true,
                 counterpart: r.is_mint === true ? null : cp(r),
+                total_value: r.tv,
               })),
           };
         }
@@ -621,9 +631,11 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         day: number | null;
         used_item_key: string | null;
         drop_item_key: string | null;
+        tv: string | null;
       }>(
         `select h.name, h.dna_hash, s.current_day as day,
-                iu.item_key as used_item_key, ui.item_key as drop_item_key
+                iu.item_key as used_item_key, ui.item_key as drop_item_key,
+                h.total_value::text as tv
          from horse_burns hb
          join horses h on h.id = hb.horse_id
          left join race_participant_snapshots s on s.race_id = hb.race_id and s.horse_id = hb.horse_id
@@ -639,8 +651,10 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         name: string;
         dna_hash: string;
         from_day: number;
+        tv: string | null;
       }>(
-        `select h.name, h.dna_hash, s.current_day as from_day
+        `select h.name, h.dna_hash, s.current_day as from_day,
+                h.total_value::text as tv
          from race_participant_snapshots s
          join horses h on h.id = s.horse_id
          left join horse_burns hb on hb.race_id = s.race_id and hb.horse_id = s.horse_id
@@ -656,9 +670,11 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         day: number | null;
         buyer_email: string | null;
         buyer_stable: string | null;
+        tv: string | null;
       }>(
         `select h.name, h.dna_hash, a.assigned_price::text as price,
-                l.current_day as day, u.email as buyer_email, u.stable_name as buyer_stable
+                l.current_day as day, u.email as buyer_email, u.stable_name as buyer_stable,
+                h.total_value::text as tv
          from ownership_assignments a
          join horses h on h.id = a.horse_id
          join users u on u.id = a.buyer_user_id
@@ -676,11 +692,13 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         is_mint: boolean;
         seller_email: string | null;
         seller_stable: string | null;
+        tv: string | null;
       }>(
         `select h.name, h.dna_hash, a.assigned_price::text as price,
                 coalesce(l.current_day, 0) as day,
                 (a.market_listing_id is null) as is_mint,
-                u.email as seller_email, u.stable_name as seller_stable
+                u.email as seller_email, u.stable_name as seller_stable,
+                h.total_value::text as tv
          from ownership_assignments a
          join horses h on h.id = a.horse_id
          left join users u on u.id = a.seller_user_id
@@ -700,6 +718,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
           day: r.day,
           used_item_key: r.used_item_key,
           drop_item_key: r.drop_item_key,
+          total_value: r.tv,
         })),
         survived: survived.rows.map((r) => ({
           name: r.name,
@@ -707,6 +726,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
           from_day: r.from_day,
           to_day: Math.min(7, r.from_day + 1),
           day7: r.from_day === 6,
+          total_value: r.tv,
         })),
         sold: sold.rows.map((r) => ({
           name: r.name,
@@ -714,6 +734,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
           price: r.price,
           day: r.day,
           counterpart: r.buyer_stable ?? mask(r.buyer_email),
+          total_value: r.tv,
         })),
         bought: bought.rows.map((r) => ({
           name: r.name,
@@ -722,6 +743,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
           day: r.day,
           is_mint: r.is_mint,
           counterpart: r.is_mint ? null : (r.seller_stable ?? mask(r.seller_email)),
+          total_value: r.tv,
         })),
       };
     },

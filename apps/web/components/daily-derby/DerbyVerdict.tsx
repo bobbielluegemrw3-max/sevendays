@@ -29,6 +29,8 @@ export interface VerdictInfo {
   matchSide?: 'sell' | 'buy' | undefined;
   /** P2P相手のマスク済みメール(match時のみ)。 */
   counterpart?: string | undefined;
+  /** V2: プール/ミントで新規発行された馬(P2P相手は存在しない)。 */
+  isMint?: boolean;
 }
 
 /** dna未取得時のフォールバック(馬名から擬似dna — プレビュー/旧APIレスポンス用)。 */
@@ -52,8 +54,8 @@ export function DerbyVerdict({ verdict, queued = 0 }: { verdict: VerdictInfo; qu
 
   const kicker =
     verdict.kind === 'burn' ? 'BURNED'
-    : verdict.kind === 'day7' ? 'DAY7 — CHAMPION'
-    : verdict.kind === 'match' ? 'P2P MATCHED'
+    : verdict.kind === 'day7' ? 'LV.7 — CHAMPION'
+    : verdict.kind === 'match' ? (verdict.isMint ? 'NEW HORSE — LV.0' : 'P2P MATCHED')
     : 'SURVIVED';
   const kickerCls =
     verdict.kind === 'burn' ? s.verdictKickerBurn
@@ -78,7 +80,7 @@ export function DerbyVerdict({ verdict, queued = 0 }: { verdict: VerdictInfo; qu
           <div className={s.verdictSub}>
             {day !== undefined ? (
               <>
-                DAY{day} <span className={s.vDayArrow}>→</span> <b className={s.vDayNew}>DAY{Math.min(7, day + 1)}</b>
+                LV.{day} <span className={s.vDayArrow}>→</span> <b className={s.vDayNew}>LV.{Math.min(7, day + 1)}</b>
               </>
             ) : (
               '生存'
@@ -86,11 +88,13 @@ export function DerbyVerdict({ verdict, queued = 0 }: { verdict: VerdictInfo; qu
           </div>
         ) : verdict.kind === 'match' ? (
           <div className={s.verdictSub}>
-            {verdict.counterpart ?? '???'} と{verdict.matchSide === 'buy' ? '購入' : '売却'}マッチング成立
+            {verdict.isMint
+              ? '新規ミント — あなたの厩舎へようこそ'
+              : <>{verdict.counterpart ?? '???'} と{verdict.matchSide === 'buy' ? '購入' : '売却'}マッチング成立</>}
           </div>
         ) : (
           <div className={s.verdictSub}>
-            {verdict.kind === 'day7' ? 'DAY7 走破' : day !== undefined ? `DAY${day} — BURN` : 'BURN'}
+            {verdict.kind === 'day7' ? 'LV.7 走破' : day !== undefined ? `LV.${day} — BURN` : 'BURN'}
           </div>
         )}
         {verdict.kind === 'burn' && used && (
