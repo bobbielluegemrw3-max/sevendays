@@ -33,7 +33,7 @@ import {
   trainingItemEligibilityV3,
   type TotalValueInputV0,
 } from '@sevendays/race-engine';
-import type { HorseType, Rarity, TrainingType } from '@sevendays/domain';
+import type { HorseType, Rarity } from '@sevendays/domain';
 import { ApiError } from '../errors.js';
 import { sendCsEmail } from '../cs/mail.js';
 import type { ApiRegistry } from '../router.js';
