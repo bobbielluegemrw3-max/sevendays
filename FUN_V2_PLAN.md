@@ -442,7 +442,14 @@
   視覚QA=ヘッドレス実撮影で被り2件を発見・修正(バッジ位置を上コーナー固定)。
   QA導線: `/dev/pages-preview?fx=up|down|rest|promo|insurance|synergy|item`。
   reduced-motion対応。厩舎チップは17px・ヒーローTOTALは31px(モバイル25px)
-- [ ] **テストネット試運転開始**(§7チェックリスト+HANDOVER_SESSION_20260718B §2:
+- [x] **テストネット試運転 開始(2026-07-18 約14:00 MYT・オーナーGO・`b258c44`)**:
+  リセットマイグレーション `20260718100000_v2_trial_reset.sql`(goldbenchanガード付き)で
+  全ゲームデータ消去+**race_engine_v2.0有効化**+アイテム棚切替(V3=35点active)+
+  広告費1,000シード+**JP有効化(週100×1)**を単一トランザクション実行。
+  本番DB実測: engine=v2.0 / horses=0 / items active=RACE16+TRAINING19 /
+  marketing=1000 / jackpot enabled / marketplace OPEN / users11温存。
+  初のV2レース=当日20:00 MYT・朝レース=翌8:00・初JP抽選=日曜夜。
+  **デプロイ禁止帯は再開: 20:00±1hに加えて朝8:00±1hも対象(2レース制)**(§7チェックリスト+HANDOVER_SESSION_20260718B §2:
   リセット→total_value付与→activatePolicy→アイテムカタログ切替→JP有効化(残高整合後)→
   CS注記削除。デプロイ禁止帯再開)→ 試運転の視覚QA(ショー新幕含む)
 - [ ] ローンチ前: Landing/ガイドのV2コンテンツ改修(散文の書き直し)→ メインネットリセット=ローンチ
