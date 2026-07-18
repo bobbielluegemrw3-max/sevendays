@@ -58,7 +58,16 @@ function totalValueInputFromRow(r: {
     dnaModifier: Number(r.dna_modifier),
     condition: Number(r.condition),
     fatigue: Number(r.fatigue),
-    training: (r.tonight_training as TrainingType | null) ?? null,
+    // 2026-07-19 本番障害の修正: tonight_training はV2調教の存在マーカーとして
+    // 'V2' を返すことがある(調教済みフラグ用)。V1の総合値計算に既知外の値を
+    // 流すと trainingModifierV1 等が undefined → NaN → 表示層のtvTierが落ちて
+    // 全ページがServer Componentsエラーになった(digest 3579376556/2055885450)。
+    training:
+      r.tonight_training === 'SPEED_TRAINING' ||
+      r.tonight_training === 'POWER_TRAINING' ||
+      r.tonight_training === 'RECOVERY_TRAINING'
+        ? (r.tonight_training as TrainingType)
+        : null,
   };
 }
 

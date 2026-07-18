@@ -92,6 +92,10 @@ const TIERS: readonly (TvTierDef & { min: number })[] = [
 ];
 
 export function tvTier(value: number): TvTierDef {
+  // 2026-07-19 本番障害の教訓: NaN/undefinedが渡ると find が undefined を返し、
+  // .color 参照で全ページのレンダーが死ぬ。表示ヘルパーは絶対に落ちない —
+  // 不正値は最下帯(IRON)として描画する。
+  if (!Number.isFinite(value)) return TIERS[TIERS.length - 1]!;
   return TIERS.find((t) => value >= t.min)!;
 }
 
