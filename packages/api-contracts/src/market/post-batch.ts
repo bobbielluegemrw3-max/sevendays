@@ -39,6 +39,9 @@ export interface PostBatchResult {
   soldMails: number;
   autoReserveUsers: number;
   autoReserveSessions: number;
+  /** 100点診断(2026-07-18): 対象レースが完了したのに未消化のPENDINGアイテム使用を
+   *  解放してユニットを在庫へ戻した件数(手動出品スキップ等のスタック解消)。 */
+  staleUsagesReleased?: number;
 }
 
 export async function runMarketPostBatch(
@@ -63,9 +66,36 @@ export async function runMarketPostBatch(
     [batchDate, slot],
   );
   if (!batch.rows[0] || batch.rows[0].status !== 'COMPLETED') {
-    return { skipped: 'batch not completed', soldMails: 0, autoReserveUsers: 0, autoReserveSessions: 0 };
+    return {
+      skipped: 'batch not completed',
+      soldMails: 0,
+      autoReserveUsers: 0,
+      autoReserveSessions: 0,
+      staleUsagesReleased: 0,
+    };
   }
   const batchRunId = batch.rows[0].id;
+
+  // ---- 0. スタックアイテム掃除(100点診断 2026-07-18) --------------------
+  // 対象サイクルのバッチがCOMPLETEDなのにPENDINGのままのアイテム使用は、
+  // その馬がレースを走らなかった(手動出品のMarket Lock等)ことを意味する。
+  // 使用を取り消してユニットを在庫へ戻す(未来サイクル向けのPENDINGは対象外)。
+  // 冪等: 対象が無ければ何もしない。V1のスタック(既知エッジ)も同時に解消される。
+  const stale = await client.query<{ user_item_id: string }>(
+    `update item_usages u set status = 'CANCELLED'
+     from batch_runs b
+     where u.status = 'PENDING'
+       and b.batch_date = u.effective_race_date and b.slot = u.slot
+       and b.status = 'COMPLETED'
+     returning u.user_item_id`,
+  );
+  for (const row of stale.rows) {
+    await client.query(
+      `update user_items set status = 'AVAILABLE' where id = $1 and status = 'APPLIED'`,
+      [row.user_item_id],
+    );
+  }
+  const staleUsagesReleased = stale.rows.length;
 
   // ---- 1. 売却メール(売り手ごとに1通・複数頭はまとめる) ----------------
   const sold = await client.query<{
@@ -152,9 +182,12 @@ export async function runMarketPostBatch(
           amount: String(target),
           idempotencyKey: `autopool:${batchDate}${keySuffix}:${user.user_id}`,
         });
-        if (pool.alreadyExists) continue; // 再実行(冪等)
-        autoReserveUsers += 1;
-        autoReserveSessions += 1;
+        if (!pool.alreadyExists) {
+          autoReserveUsers += 1;
+          autoReserveSessions += 1;
+        }
+        // 通知はdedupeキーが二重送信を吸収する — 再実行でも常に試行することで
+        // 「作成直後にクラッシュして通知だけ欠落」の窓を自己修復する(100点診断)
         const rendered = renderNotification('AUTO_POOL_RESERVED', { total: String(target) });
         await insertNotification(client, {
           userId: user.user_id,
@@ -243,5 +276,5 @@ export async function runMarketPostBatch(
     }
   }
 
-  return { soldMails, autoReserveUsers, autoReserveSessions };
+  return { soldMails, autoReserveUsers, autoReserveSessions, staleUsagesReleased };
 }

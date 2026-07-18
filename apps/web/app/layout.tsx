@@ -47,7 +47,7 @@ async function TopNavLoader({ lang }: { lang: Lang }) {
   ]);
   const isAdmin = me.status === 200 && me.body.is_admin === true;
   const unread = notif.status === 200 ? notif.body.unread : 0;
-  return <TopNav isAdmin={isAdmin} unread={unread} lang={lang} />;
+  return <TopNav isAdmin={isAdmin} unread={unread} lang={lang} engineV2={await isEngineV2Active()} />;
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

@@ -771,7 +771,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
          join races r on r.batch_run_id = b.id
          where r.status = 'FINALIZED'
          order by b.batch_date desc, b.slot desc
-         limit 60`,
+         limit 120`,
         [],
       );
       return {

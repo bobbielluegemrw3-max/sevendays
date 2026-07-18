@@ -15,27 +15,34 @@ import { SHOW_TOTAL } from '@/lib/daily-derby';
 // ワーカーの開始ラグ(30秒tick+起動)でショー実体が後ろにずれる分の余裕。
 const LIVE_WINDOW_SECONDS = SHOW_TOTAL + 60;
 
-function secondsToNext(): number {
+/** V2実装-7c(100点診断): V2は朝8:00/夜20:00 MYTの近い方へ。V1は20:00のみ(不変)。 */
+function nextAndPrev(engineV2: boolean): { seconds: number; sinceLast: number } {
   const now = Date.now();
   const d = new Date();
-  const candidate = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12, 0, 0, 0);
-  const next = candidate <= now ? candidate + 24 * 3600 * 1000 : candidate;
-  return (next - now) / 1000;
+  const hours = engineV2 ? [0, 12] : [12];
+  const candidates: number[] = [];
+  for (const dayOffset of [-1, 0, 1]) {
+    for (const h of hours) {
+      candidates.push(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + dayOffset, h, 0, 0, 0));
+    }
+  }
+  const next = Math.min(...candidates.filter((t) => t > now));
+  const prev = Math.max(...candidates.filter((t) => t <= now));
+  return { seconds: (next - now) / 1000, sinceLast: (now - prev) / 1000 };
 }
 
-export function DerbyCountdown() {
-  const [seconds, setSeconds] = useState<number | null>(null);
+export function DerbyCountdown({ engineV2 = false }: { engineV2?: boolean }) {
+  const [clock, setClock] = useState<{ seconds: number; sinceLast: number } | null>(null);
 
   useEffect(() => {
-    setSeconds(secondsToNext());
-    const id = setInterval(() => setSeconds(secondsToNext()), 1000);
+    setClock(nextAndPrev(engineV2));
+    const id = setInterval(() => setClock(nextAndPrev(engineV2)), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [engineV2]);
 
-  if (seconds === null) return null; // SSRとの不一致を避ける(マウント後に表示)
+  if (clock === null) return null; // SSRとの不一致を避ける(マウント後に表示)
 
-  // 直近の20:00からの経過(secondsToNextが翌日を指している間のショー窓判定)
-  const sinceLast = 24 * 3600 - seconds;
+  const { seconds, sinceLast } = clock;
   const live = sinceLast >= 0 && sinceLast < LIVE_WINDOW_SECONDS;
 
   if (live) {

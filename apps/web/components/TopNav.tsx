@@ -12,7 +12,7 @@ import { APP_COPY, type Lang } from '@/lib/i18n';
  * pages (localized labels, dimmer). On narrow screens the link row drops
  * below the brand and scrolls horizontally.
  */
-export function TopNav({ isAdmin = false, unread = 0, lang = 'ja' }: { isAdmin?: boolean; unread?: number; lang?: Lang }) {
+export function TopNav({ isAdmin = false, unread = 0, lang = 'ja', engineV2 = false }: { isAdmin?: boolean; unread?: number; lang?: Lang; engineV2?: boolean }) {
   const t = APP_COPY[lang].nav;
   return (
     <nav className="topnav">
@@ -45,7 +45,7 @@ export function TopNav({ isAdmin = false, unread = 0, lang = 'ja' }: { isAdmin?:
         )}
       </div>
       <span className="spacer" />
-      <DerbyCountdown />
+      <DerbyCountdown engineV2={engineV2} />
       <LanguageSwitcher current={lang} />
       <LogoutButton label={t.logout} />
     </nav>
