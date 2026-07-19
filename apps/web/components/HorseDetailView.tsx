@@ -8,6 +8,7 @@ import { TrainingFormV2, type TrainingV2Confirmed } from '@/components/TrainingF
 import { ItemBoostPanel } from '@/components/ItemBoostPanel';
 import { ItemPrepPanelV3 } from '@/components/ItemPrepPanelV3';
 import { HeroArtFx } from '@/components/HeroArtFx';
+import { HeroReactionOverlay } from '@/components/HeroReactionOverlay';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { uncollectedGain } from '@/components/stable-shared';
@@ -379,6 +380,8 @@ export function HorseDetailView({
               className={`${s.artBox} ${horse.golden_aura ? s.heroAura : ''}`}
               style={tvArtGlowStyle(horse.total_value)}
             >
+              {/* モバイル中央反応(案A): アートがスクロールアウトしていても反応を見せる */}
+              <HeroReactionOverlay horseId={horse.id} horseName={horse.name} dnaHash={horse.dna_hash} />
               <HeroArtFx horseId={horse.id}>
                 <NftHorseArt look={look} className={s.heroCanvas} />
                 {(horse.decay_shield_v2 ?? 0) > 0 ? <span className={s.shieldFilm} aria-hidden="true" /> : null}

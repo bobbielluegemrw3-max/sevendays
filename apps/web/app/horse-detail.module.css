@@ -719,3 +719,61 @@
   .fxPromo::before, .fxItemIn, .fxItemPlay::after, .shieldFilm { animation: none !important; }
   .fxPop, .fxPopMain, .fxPop .fxPopRows, .fxPop .fxPopNext { animation: none; opacity: 1; }
   .fxPromoTag, .fxShieldCatch { animation: none; opacity: 1; } }
+
+
+/* ============ モバイル中央反応・案A(2026-07-19 ハンドオフB): 調教/アイテム確定の
+   瞬間、馬アートがスクロールアウトしていても画面中央に一瞬ポップ ============ */
+.rx { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  padding: 20px; background: rgba(4, 3, 9, 0.55); backdrop-filter: blur(2px);
+  opacity: 0; pointer-events: none; transition: opacity 0.22s ease; }
+.rxOn { opacity: 1; pointer-events: auto; }
+.rxCard { width: min(300px, 86%); text-align: center; transform: scale(0.9);
+  transition: transform 0.32s cubic-bezier(0.2, 1.5, 0.4, 1); }
+.rxOn .rxCard { transform: scale(1); }
+.rxKick { font-family: var(--font-display); font-weight: 800; font-size: 11px; letter-spacing: 0.34em; text-indent: 0.34em; }
+.rxKickUp { color: var(--good); }
+.rxKickDown { color: var(--magenta-soft); }
+.rxKickRest { color: var(--cyan); }
+.rxKickItem { color: #b18cff; }
+.rxArt { position: relative; width: 190px; height: 190px; margin: 12px auto 6px; border-radius: 18px; overflow: hidden;
+  background: radial-gradient(80% 78% at 50% 42%, rgba(0, 234, 255, 0.14), rgba(10, 8, 19, 0.94) 74%); }
+.rxArtCanvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.rxArtUp { box-shadow: 0 0 46px rgba(53, 208, 127, 0.4) inset, 0 0 30px -6px rgba(0, 234, 255, 0.5); }
+.rxArtDown { box-shadow: 0 0 46px rgba(255, 45, 196, 0.32) inset; }
+.rxArtItem { box-shadow: 0 0 40px rgba(177, 140, 255, 0.4) inset; }
+.rxArtUp::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.5) 50%, transparent 60%);
+  transform: translateX(-120%); animation: rxSweep 0.8s ease 0.05s; }
+@keyframes rxSweep { to { transform: translateX(120%); } }
+.rxName { font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--text); margin-top: 4px; }
+.rxPop { margin-top: 8px; display: inline-flex; flex-direction: column; align-items: center; gap: 3px; }
+.rxRows { display: flex; gap: 12px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.rxRows b { color: var(--text); }
+.rxRows b.rxNeg, .rxNeg { color: var(--magenta-soft); }
+.rxMain { font-family: var(--font-display); font-weight: 900; font-size: 34px; line-height: 1; color: var(--good);
+  text-shadow: 0 0 22px rgba(53, 208, 127, 0.4); }
+.rxMainNeg { color: var(--magenta-soft); text-shadow: 0 0 22px rgba(255, 45, 196, 0.35); }
+.rxMainRest { color: var(--cyan); font-size: 24px; text-shadow: 0 0 22px rgba(0, 234, 255, 0.4); }
+.rxNext { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 6px; }
+.rxNext b { color: var(--gold-bright); font-size: 12px; }
+.rxNext small { display: block; color: var(--faint); font-size: 8.5px; margin-top: 2px; }
+.rxTier { margin-top: 9px; display: inline-block; font-family: var(--font-display); font-weight: 800; font-size: 9px;
+  letter-spacing: 0.14em; color: #04141a; background: linear-gradient(92deg, var(--gold), var(--gold-bright));
+  border-radius: 999px; padding: 4px 12px; }
+.rxSpark { position: absolute; inset: 0; pointer-events: none; }
+.rxSpark i { position: absolute; left: 50%; top: 60%; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gold-bright); opacity: 0; box-shadow: 0 0 8px var(--gold-bright); }
+.rxOn .rxSpark i { animation: rxSparkFly 1s ease 0.1s; }
+.rxSpark i:nth-child(1) { --dx: -70px; --dy: -90px; }
+.rxSpark i:nth-child(2) { --dx: 60px; --dy: -100px; }
+.rxSpark i:nth-child(3) { --dx: -100px; --dy: -30px; }
+.rxSpark i:nth-child(4) { --dx: 100px; --dy: -50px; }
+.rxSpark i:nth-child(5) { --dx: -40px; --dy: -120px; }
+.rxSpark i:nth-child(6) { --dx: 40px; --dy: -70px; }
+@keyframes rxSparkFly {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.4); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .rx, .rxCard, .rxArtUp::after, .rxOn .rxSpark i { transition: none; animation: none !important; }
+  .rxPop { opacity: 1; } }

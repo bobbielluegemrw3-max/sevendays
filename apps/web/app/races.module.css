@@ -255,10 +255,35 @@
   background: linear-gradient(92deg, #f6ecd2, var(--gold-bright, #f2e4bf));
   -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+/* ============================================================
+   MORNING SKIN v2 (2026-07-19) — races.module.css
+   ------------------------------------------------------------
+   ▼ 差し替え方法(ドロップイン):
+     apps/web/app/races.module.css の末尾にある
+     「MORNING SKIN(ショー最終幕の結果リストが…2026-07-19)」
+     ブロックを、この内容で置き換える。それより上は変更しない。
 
-/* MORNING SKIN(ショー最終幕の結果リストがステージ内に出る分・2026-07-19) */
+   ▼ 対象: ショー最終幕(YOUR RESULTS)がステージ内に出る際に
+     使われる /races 由来の結果リスト部品(.recRow 等)。
+     朝は白の半透明カード＋濃色テキストで揃える。
+   ============================================================ */
+
+:global(.sddMorning) .recList { }
 :global(.sddMorning) .recRow { background: rgba(255, 255, 255, 0.78); border-color: rgba(29, 42, 78, 0.14); }
-:global(.sddMorning) .recName { color: #1d2340; }
+:global(.sddMorning) .recName { color: #1b2340; }
 :global(.sddMorning) .recSub { color: #6b7694; }
-:global(.sddMorning) .grpName { color: #1d2340; }
+:global(.sddMorning) .recGood { color: #0c7f4a; }
+:global(.sddMorning) .recGold { color: #8f6b1f; }
+
+/* 記録バッジ(白地で読める彩度へ・赤=BURN専用のまま) */
+:global(.sddMorning) .recBadgeGood { color: #0c7f4a; border-color: rgba(12, 127, 74, 0.4); background: rgba(12, 127, 74, 0.09); }
+:global(.sddMorning) .recBadgeBad { color: #d21f3c; border-color: rgba(210, 31, 60, 0.4); background: rgba(210, 31, 60, 0.09); }
+:global(.sddMorning) .recBadgeGold { color: #3a2606; background: linear-gradient(92deg, #e6b24a, #ffd97a); }
+:global(.sddMorning) .recBadgeCyan { color: #0a7f9e; border-color: rgba(10, 127, 158, 0.4); background: rgba(10, 127, 158, 0.09); }
+:global(.sddMorning) .recBadgeMint { color: #b0398f; border-color: rgba(176, 57, 143, 0.4); background: rgba(176, 57, 143, 0.08); }
+
+/* グループ見出し */
+:global(.sddMorning) .grpName { color: #1b2340; }
 :global(.sddMorning) .grpCount { color: #5c688a; }
+:global(.sddMorning) .recGroupK { color: #5c688a; }
+:global(.sddMorning) .recGroupN { color: #b8862f; }

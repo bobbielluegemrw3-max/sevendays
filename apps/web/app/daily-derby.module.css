@@ -960,61 +960,182 @@
 }
 .replayBtn:hover { color: var(--cyan); border-color: var(--border-strong); filter: none; }
 
-
 /* ============================================================
-   MORNING SKIN(2026-07-19 オーナー指示): 朝レース=夜明けの白基調。
-   ルートの .stage に付くグローバル .sddMorning 配下だけを上書きする。
-   色相の役割は維持: シアン=情報 / マゼンタ=下振れ / 金=栄光 / 赤=BURNのみ。
+   MORNING SKIN v2 (2026-07-19) — 「夜明けのレース場」
+   ------------------------------------------------------------
+   ▼ 差し替え方法(ドロップイン):
+     apps/web/app/daily-derby.module.css の末尾にある
+     「MORNING SKIN(2026-07-19 オーナー指示)」コメント以降の
+     ブロック全体(約60行)を、この内容で置き換える。
+     それより上(NIGHT の全スタイル)は一切変更しない。
+
+   ▼ 設計方針:
+     - 朝は「夜の色反転」ではなく夜明けとして設計する。
+       stage 背景に昇る陽のグロー(下中央)＋淡い空色→朝焼けの
+       グラデを焼き込む(DOM追加なし=TSX変更不要)。
+     - 色の役割は不変: シアン=情報 / マゼンタ=下振れ / 金=栄光 /
+       赤(#d21f3c)=BURN専用。白地で全トーンが読める彩度・明度へ。
+     - :global(.sddMorning) 経由でルートの .stage 配下だけ上書き。
    ============================================================ */
+
+/* ---- 夜明けのステージ(昇る陽のグローを背景に焼き込む) ---- */
 .stage:global(.sddMorning) {
   background:
-    radial-gradient(720px 420px at 50% -10%, #fff6e0 0%, #eef3fb 55%, #dfe8f4 100%),
-    #e6edf7;
-  border-color: rgba(29, 42, 78, 0.18);
-  color: #1d2340;
+    radial-gradient(120% 88% at 50% 118%, rgba(255,201,120,0.55) 0%, rgba(255,224,170,0.26) 26%, transparent 52%),
+    radial-gradient(720px 420px at 50% -10%, #eaf3ff 0%, #eef1fb 46%, #f6f1ea 78%, #fdf3e2 100%),
+    linear-gradient(180deg, #eaf3ff 0%, #eef1fb 40%, #f6f1ea 72%, #fdf3e2 100%);
+  border-color: rgba(29, 42, 78, 0.16);
+  color: #1b2340;
+  box-shadow: 0 30px 70px -34px rgba(60, 74, 122, 0.5);
 }
-:global(.sddMorning) .soundBtn { background: rgba(255, 255, 255, 0.7); color: #1d2340; border-color: rgba(29, 42, 78, 0.22); }
-:global(.sddMorning) .waitLabel, :global(.sddMorning) .cdTitle, :global(.sddMorning) .logTurn,
-:global(.sddMorning) .mylaneK, :global(.sddMorning) .nightSumK, :global(.sddMorning) .tonightK,
-:global(.sddMorning) .rKicker, :global(.sddMorning) .rollSub, :global(.sddMorning) .fcK { color: #5c688a; }
-:global(.sddMorning) .waitClock, :global(.sddMorning) .cdClock, :global(.sddMorning) .rollName,
-:global(.sddMorning) .rName, :global(.sddMorning) .verdictName, :global(.sddMorning) .doneText,
-:global(.sddMorning) .liveTitleText, :global(.sddMorning) .showTitleBig { color: #1d2340; text-shadow: none; }
-:global(.sddMorning) .waitNote, :global(.sddMorning) .cdSub, :global(.sddMorning) .cdNote,
-:global(.sddMorning) .tonightNote, :global(.sddMorning) .nightSumNote, :global(.sddMorning) .fcNote,
-:global(.sddMorning) .mylaneEmpty, :global(.sddMorning) .rNote, :global(.sddMorning) .verdictSub { color: #6b7694; }
-:global(.sddMorning) .logBrand { color: #0a7f9e; }
+
+/* ---- サウンド/待機/カウントダウンの文字 ---- */
+:global(.sddMorning) .soundBtn { background: rgba(255, 255, 255, 0.72); color: #1d2340; border-color: rgba(29, 42, 78, 0.2); }
+:global(.sddMorning) .soundBtn:hover { color: #0a7f9e; border-color: rgba(10, 127, 158, 0.5); }
+:global(.sddMorning) .waitLabel, :global(.sddMorning) .cdTitle, :global(.sddMorning) .cdSub,
+:global(.sddMorning) .logTurn, :global(.sddMorning) .mylaneK, :global(.sddMorning) .nightSumK,
+:global(.sddMorning) .tonightK, :global(.sddMorning) .rKicker, :global(.sddMorning) .rollSub,
+:global(.sddMorning) .fcK, :global(.sddMorning) .chapNo, :global(.sddMorning) .waitSec,
+:global(.sddMorning) .waitFieldK { color: #5c688a; }
+:global(.sddMorning) .waitLabelSoon { color: #b8862f; }
+
+/* 見出し・数字(白地で沈むので影を外して濃色に) */
+:global(.sddMorning) .waitClock, :global(.sddMorning) .rollName, :global(.sddMorning) .rName,
+:global(.sddMorning) .verdictName, :global(.sddMorning) .doneText, :global(.sddMorning) .myEvN,
+:global(.sddMorning) .rBig, :global(.sddMorning) .waitFieldV, :global(.sddMorning) .chapName,
+:global(.sddMorning) .digestDate { color: #1b2340; text-shadow: none; }
+:global(.sddMorning) .waitClockFinal { color: #b8862f; text-shadow: 0 2px 18px rgba(184,134,47,0.28); }
+:global(.sddMorning) .cdClock { color: #0a6d86; text-shadow: 0 2px 20px rgba(10, 127, 158, 0.26); }
+:global(.sddMorning) .cdClockAlert { color: #cf2d6e; text-shadow: 0 2px 20px rgba(207, 45, 110, 0.32); }
+
+/* タイトル(朝焼けグラデ: 金→ティール→ローズ) */
+:global(.sddMorning) .liveTitleText, :global(.sddMorning) .showTitleBig {
+  background: linear-gradient(92deg, #c68a1f, #0a7f9e 46%, #cf2d6e);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.55));
+}
+
+/* 補足テキスト */
+:global(.sddMorning) .waitNote, :global(.sddMorning) .cdNote, :global(.sddMorning) .tonightNote,
+:global(.sddMorning) .nightSumNote, :global(.sddMorning) .fcNote, :global(.sddMorning) .mylaneEmpty,
+:global(.sddMorning) .rNote, :global(.sddMorning) .verdictSub, :global(.sddMorning) .myEvS,
+:global(.sddMorning) .verdictQueued { color: #6b7694; }
+
+/* ライブドット(朝はティール) */
+:global(.sddMorning) .liveDot { background: #0a7f9e; box-shadow: 0 0 10px rgba(10, 127, 158, 0.55); }
+:global(.sddMorning) .liveBadge { color: #0a7f9e; }
+
+/* ターミナル・ログ濁流 */
+:global(.sddMorning) .logBrand { background: linear-gradient(92deg, #0a6d86, #0a7f9e 60%, #cf2d6e); -webkit-background-clip: text; background-clip: text; color: transparent; }
 :global(.sddMorning) .logHead { border-color: rgba(29, 42, 78, 0.14); }
+:global(.sddMorning) .logCounter { color: #0a7f9e; text-shadow: none; }
 :global(.sddMorning) .logStream, :global(.sddMorning) .terminal {
   background: rgba(255, 255, 255, 0.62); border-color: rgba(29, 42, 78, 0.13); }
+:global(.sddMorning) .tLine { color: #5c688a; }
+:global(.sddMorning) .tLineDone { color: #1b2340; }
+
+/* ログ各トーン(白地で読める・赤=BURN専用のまま) */
 :global(.sddMorning) .lg { color: #46506e; }
-:global(.sddMorning) .lgHeader { color: #8b94ac; }
-:global(.sddMorning) .lgBurn { color: #cf2d6e; }
+:global(.sddMorning) .lgHeader, :global(.sddMorning) .lgEnd { color: #8b94ac; }
+:global(.sddMorning) .lgBurn { color: #d21f3c; text-shadow: none; }
 :global(.sddMorning) .lgSurvive { color: #0c7f4a; }
-:global(.sddMorning) .lgValue { color: #9b7714; }
-:global(.sddMorning) .lgDay7 { color: #8f6b1f; }
-:global(.sddMorning) .lgList, :global(.sddMorning) .lgMatch, :global(.sddMorning) .lgBid { color: #0a7f9e; }
-:global(.sddMorning) .lgMint { color: #8f6b1f; }
+:global(.sddMorning) .lgValue { color: #8f6b1f; }
+:global(.sddMorning) .lgDay7 { color: #8f6b1f; text-shadow: none; }
+:global(.sddMorning) .lgList { color: #0a7f9e; }
+:global(.sddMorning) .lgBid { color: #0a7f9e; }
+:global(.sddMorning) .lgMatch { color: #0a6d86; text-shadow: none; }
+:global(.sddMorning) .lgMint { color: #b0398f; }
 :global(.sddMorning) .lgMlm { color: #b0398f; }
 :global(.sddMorning) .lgItem { color: #7345c9; }
-:global(.sddMorning) .counter, :global(.sddMorning) .mylane, :global(.sddMorning) .rollcall,
-:global(.sddMorning) .fcWrap, :global(.sddMorning) .tonight, :global(.sddMorning) .waitBoard,
-:global(.sddMorning) .waitField, :global(.sddMorning) .waitInvite, :global(.sddMorning) .rCard,
-:global(.sddMorning) .verdictCard, :global(.sddMorning) .failCard, :global(.sddMorning) .chapCard {
-  background: rgba(255, 255, 255, 0.74); border-color: rgba(29, 42, 78, 0.15); color: #1d2340; }
-:global(.sddMorning) .counterBurn b { color: #cf2d6e; }
+/* 自分該当行(朝はティールの帯) */
+:global(.sddMorning) .lgMine {
+  background: linear-gradient(90deg, rgba(10, 127, 158, 0.18), rgba(10, 127, 158, 0.05) 70%, transparent);
+  border-left-color: #0a7f9e; color: #0a5f76; text-shadow: none; }
+
+/* 動く数字カウンタ */
+:global(.sddMorning) .counter span { color: #6b7694; }
+:global(.sddMorning) .counterBurn b { color: #d21f3c; }
 :global(.sddMorning) .counterGold b { color: #8f6b1f; }
 :global(.sddMorning) .counterCyan b { color: #0a7f9e; }
-:global(.sddMorning) .myEvN, :global(.sddMorning) .rBig, :global(.sddMorning) .waitFieldV { color: #1d2340; }
-:global(.sddMorning) .myEvS { color: #6b7694; }
-:global(.sddMorning) .waitSec, :global(.sddMorning) .waitFieldK { color: #5c688a; }
-:global(.sddMorning) .ticker { background: rgba(255, 255, 255, 0.6); border-color: rgba(29, 42, 78, 0.12); }
+
+/* MY LANE / パネル類(白の半透明カード) */
+:global(.sddMorning) .mylane { border-left-color: rgba(29, 42, 78, 0.14);
+  background: linear-gradient(180deg, rgba(10, 127, 158, 0.06), transparent); }
+:global(.sddMorning) .mylaneK { border-color: rgba(29, 42, 78, 0.14); color: #0a7f9e; }
+:global(.sddMorning) .myEv,
+:global(.sddMorning) .rollcall, :global(.sddMorning) .fcWrap, :global(.sddMorning) .tonight,
+:global(.sddMorning) .waitBoard, :global(.sddMorning) .waitField, :global(.sddMorning) .waitInvite,
+:global(.sddMorning) .rCard, :global(.sddMorning) .failCard {
+  background: rgba(255, 255, 255, 0.74); border-color: rgba(29, 42, 78, 0.15); color: #1b2340; }
+:global(.sddMorning) .myEvBurn { border-color: rgba(210, 31, 60, 0.4); }
+:global(.sddMorning) .myEvBurn .myEvS { color: #d21f3c; }
+:global(.sddMorning) .myEvSurvive { border-color: rgba(12, 127, 74, 0.4); }
+:global(.sddMorning) .myEvSurvive .myEvS { color: #0c7f4a; }
+:global(.sddMorning) .myEvDay7 { border-color: rgba(184, 134, 47, 0.5); background: rgba(255, 238, 200, 0.7); }
+:global(.sddMorning) .myEvDay7 .myEvS { color: #8f6b1f; }
+:global(.sddMorning) .myEvMatch { border-color: rgba(10, 127, 158, 0.4); }
+:global(.sddMorning) .myEvMatch .myEvS { color: #0a7f9e; }
+
+/* チャプターカード(朝は明るいベール) */
+:global(.sddMorning) .chapCard { background: rgba(240, 245, 253, 0.9); }
+:global(.sddMorning) .chapCyan { color: #0a7f9e; }
+:global(.sddMorning) .chapMag { color: #cf2d6e; }
+:global(.sddMorning) .chapGold { background: linear-gradient(92deg, #c68a1f, #8f6b1f); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* 審判オーバーレイ(朝は白いベール・インセットグローを昼向けに) */
+:global(.sddMorning) .verdictOverlay { background: rgba(238, 243, 251, 0.86); }
+:global(.sddMorning) .verdictKicker { color: #0c7f4a; }
+:global(.sddMorning) .verdictKickerBurn { color: #d21f3c; }
+:global(.sddMorning) .verdictKickerGold { color: #8f6b1f; }
+:global(.sddMorning) .verdictKickerCyan { color: #0a7f9e; }
+:global(.sddMorning) .vHorse { background: radial-gradient(80% 78% at 50% 42%, rgba(10, 127, 158, 0.12), rgba(233, 241, 251, 0.95) 74%); }
+:global(.sddMorning) .vHorseSurvive { box-shadow: 0 0 34px rgba(12, 127, 74, 0.28) inset; }
+:global(.sddMorning) .vHorseDay7 { box-shadow: 0 0 40px rgba(255, 214, 140, 0.55) inset; }
+:global(.sddMorning) .vHorseMatch { box-shadow: 0 0 34px rgba(10, 127, 158, 0.3) inset; }
+:global(.sddMorning) .vDayNew { color: #0c7f4a; text-shadow: none; }
+
+/* リザルト系(rCardの派生・kick) */
+:global(.sddMorning) .rCardGold { border-color: rgba(184,134,47,0.55); background: radial-gradient(420px 260px at 50% -8%, rgba(255,214,140,0.35), transparent 70%), rgba(255,255,255,0.8); }
+:global(.sddMorning) .rNameGold, :global(.sddMorning) .rBigGold {
+  background: linear-gradient(92deg, #c68a1f, #8f6b1f); -webkit-background-clip: text; background-clip: text; color: transparent; filter: none; }
+
+/* ティッカー */
+:global(.sddMorning) .ticker { background: rgba(255, 255, 255, 0.62); border-color: rgba(29, 42, 78, 0.12); }
 :global(.sddMorning) .tickerItem { color: #5c688a; }
-:global(.sddMorning) .chapNo { color: #0a7f9e; }
-:global(.sddMorning) .chapName { color: #1d2340; }
-:global(.sddMorning) .verdictOverlay { background: rgba(238, 243, 251, 0.88); }
-:global(.sddMorning) .tn1Card, :global(.sddMorning) .tn2Row {
+
+/* 出走枠・掲示板・ダイジェスト(待機パドック) */
+:global(.sddMorning) .waitFieldBurn .waitFieldV { color: #cf2d6e; }
+:global(.sddMorning) .waitFieldTagFixed { color: #8f6b1f; border-color: rgba(184,134,47,0.5); background: rgba(184,134,47,0.12); }
+:global(.sddMorning) .waitFieldTagSafe { color: #0c7f4a; border-color: rgba(12,127,74,0.4); background: rgba(12,127,74,0.09); }
+:global(.sddMorning) .waitFieldNote { color: #6b7694; }
+:global(.sddMorning) .waitBoardSep { color: #8b94ac; }
+:global(.sddMorning) .waitBoardLink { color: #0a7f9e; }
+:global(.sddMorning) .waitSec::after { background: rgba(29, 42, 78, 0.14); }
+:global(.sddMorning) .waitTrain { color: #8f6b1f; border-color: rgba(184,134,47,0.4); background: rgba(184,134,47,0.1); }
+:global(.sddMorning) .waitTrain:hover { background: rgba(184,134,47,0.16); }
+:global(.sddMorning) .waitInviteT { color: #1b2340; }
+:global(.sddMorning) .waitInviteD { color: #5c688a; }
+:global(.sddMorning) .waitInviteA { color: #0a7f9e; }
+:global(.sddMorning) .waitChip { background: rgba(255,255,255,0.7); border-color: rgba(29,42,78,0.14); color: #5c688a; }
+:global(.sddMorning) .waitChipGood { color: #0c7f4a; border-color: rgba(12,127,74,0.4); background: rgba(12,127,74,0.08); }
+:global(.sddMorning) .waitChipBad { color: #d21f3c; border-color: rgba(210,31,60,0.4); background: rgba(210,31,60,0.08); }
+:global(.sddMorning) .waitChipGold { color: #8f6b1f; border-color: rgba(184,134,47,0.5); background: rgba(184,134,47,0.12); }
+
+/* 出走馬カード(案1/案2) */
+:global(.sddMorning) .tn1Card, :global(.sddMorning) .tn2ArtWrap {
   background: rgba(255, 255, 255, 0.72); border-color: rgba(29, 42, 78, 0.14); }
-:global(.sddMorning) .tn1Name, :global(.sddMorning) .tn2Name { color: #1d2340; }
-:global(.sddMorning) .babaWrap { background: rgba(255, 255, 255, 0.7); border-color: rgba(29, 42, 78, 0.14); }
+:global(.sddMorning) .tn1Name, :global(.sddMorning) .tn2Name { color: #1b2340; }
+:global(.sddMorning) .tn1Price { color: #5c688a; }
+:global(.sddMorning) .tn1Price b { color: #0c7f4a; }
+:global(.sddMorning) .tn1Dot { background: rgba(29,42,78,0.14); }
+
+/* 馬場発表スタンプ */
+:global(.sddMorning) .babaWrap { }
 :global(.sddMorning) .babaK, :global(.sddMorning) .babaStampK { color: #5c688a; }
+:global(.sddMorning) .babaStamp { background: radial-gradient(120% 120% at 50% 0%, rgba(184,134,47,0.14), rgba(255,255,255,0.7)); border-color: rgba(184,134,47,0.55); }
+:global(.sddMorning) .babaFes { background: linear-gradient(92deg, #c68a1f, #8f6b1f); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* 明日の予報 */
+:global(.sddMorning) .fcSafe { color: #0c7f4a; }
+
+/* prefers-reduced-motion は NIGHT 側の定義がそのまま効く(色のみの上書きのため) */
