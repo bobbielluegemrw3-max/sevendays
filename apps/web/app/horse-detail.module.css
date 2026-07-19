@@ -68,6 +68,15 @@
    (2026-07-18 オーナー指摘)。余った縦は中央寄せで吸収する。 */
 .heroCanvas { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; align-self: center;
   object-fit: contain; padding: 16px 10px 30px; box-sizing: border-box; }
+/* 1カラム時(2026-07-19 オーナー指摘: 重なりが酷い) — 器を実高で広げ、
+   上部チップ帯(位置表示/未調教ジャンプ)と下部キャプション帯(名前/TOTAL/LV)を
+   アートから分離する。旧: 250pxの器に幅基準の正方形canvasが溢れ、蹄が
+   フッターの進捗バーやキャプションに被っていた。 */
+@media (max-width: 979px) {
+  .artBox { min-height: 0; height: min(118vw, 560px); flex: none; }
+  .heroCanvas { height: 100%; aspect-ratio: auto; padding: 54px 8px 96px; }
+  .scrim { background: linear-gradient(180deg, rgba(10, 8, 19, 0) 58%, rgba(10, 8, 19, 0.92) 90%); }
+}
 
 /* 前/次の馬ページャ(HorsePager) — 馬アート左右の ‹ › + 上部の位置表示 */
 .pager { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
