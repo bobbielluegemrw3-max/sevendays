@@ -959,3 +959,62 @@
   cursor: pointer;
 }
 .replayBtn:hover { color: var(--cyan); border-color: var(--border-strong); filter: none; }
+
+
+/* ============================================================
+   MORNING SKIN(2026-07-19 オーナー指示): 朝レース=夜明けの白基調。
+   ルートの .stage に付くグローバル .sddMorning 配下だけを上書きする。
+   色相の役割は維持: シアン=情報 / マゼンタ=下振れ / 金=栄光 / 赤=BURNのみ。
+   ============================================================ */
+.stage:global(.sddMorning) {
+  background:
+    radial-gradient(720px 420px at 50% -10%, #fff6e0 0%, #eef3fb 55%, #dfe8f4 100%),
+    #e6edf7;
+  border-color: rgba(29, 42, 78, 0.18);
+  color: #1d2340;
+}
+:global(.sddMorning) .soundBtn { background: rgba(255, 255, 255, 0.7); color: #1d2340; border-color: rgba(29, 42, 78, 0.22); }
+:global(.sddMorning) .waitLabel, :global(.sddMorning) .cdTitle, :global(.sddMorning) .logTurn,
+:global(.sddMorning) .mylaneK, :global(.sddMorning) .nightSumK, :global(.sddMorning) .tonightK,
+:global(.sddMorning) .rKicker, :global(.sddMorning) .rollSub, :global(.sddMorning) .fcK { color: #5c688a; }
+:global(.sddMorning) .waitClock, :global(.sddMorning) .cdClock, :global(.sddMorning) .rollName,
+:global(.sddMorning) .rName, :global(.sddMorning) .verdictName, :global(.sddMorning) .doneText,
+:global(.sddMorning) .liveTitleText, :global(.sddMorning) .showTitleBig { color: #1d2340; text-shadow: none; }
+:global(.sddMorning) .waitNote, :global(.sddMorning) .cdSub, :global(.sddMorning) .cdNote,
+:global(.sddMorning) .tonightNote, :global(.sddMorning) .nightSumNote, :global(.sddMorning) .fcNote,
+:global(.sddMorning) .mylaneEmpty, :global(.sddMorning) .rNote, :global(.sddMorning) .verdictSub { color: #6b7694; }
+:global(.sddMorning) .logBrand { color: #0a7f9e; }
+:global(.sddMorning) .logHead { border-color: rgba(29, 42, 78, 0.14); }
+:global(.sddMorning) .logStream, :global(.sddMorning) .terminal {
+  background: rgba(255, 255, 255, 0.62); border-color: rgba(29, 42, 78, 0.13); }
+:global(.sddMorning) .lg { color: #46506e; }
+:global(.sddMorning) .lgHeader { color: #8b94ac; }
+:global(.sddMorning) .lgBurn { color: #cf2d6e; }
+:global(.sddMorning) .lgSurvive { color: #0c7f4a; }
+:global(.sddMorning) .lgValue { color: #9b7714; }
+:global(.sddMorning) .lgDay7 { color: #8f6b1f; }
+:global(.sddMorning) .lgList, :global(.sddMorning) .lgMatch, :global(.sddMorning) .lgBid { color: #0a7f9e; }
+:global(.sddMorning) .lgMint { color: #8f6b1f; }
+:global(.sddMorning) .lgMlm { color: #b0398f; }
+:global(.sddMorning) .lgItem { color: #7345c9; }
+:global(.sddMorning) .counter, :global(.sddMorning) .mylane, :global(.sddMorning) .rollcall,
+:global(.sddMorning) .fcWrap, :global(.sddMorning) .tonight, :global(.sddMorning) .waitBoard,
+:global(.sddMorning) .waitField, :global(.sddMorning) .waitInvite, :global(.sddMorning) .rCard,
+:global(.sddMorning) .verdictCard, :global(.sddMorning) .failCard, :global(.sddMorning) .chapCard {
+  background: rgba(255, 255, 255, 0.74); border-color: rgba(29, 42, 78, 0.15); color: #1d2340; }
+:global(.sddMorning) .counterBurn b { color: #cf2d6e; }
+:global(.sddMorning) .counterGold b { color: #8f6b1f; }
+:global(.sddMorning) .counterCyan b { color: #0a7f9e; }
+:global(.sddMorning) .myEvN, :global(.sddMorning) .rBig, :global(.sddMorning) .waitFieldV { color: #1d2340; }
+:global(.sddMorning) .myEvS { color: #6b7694; }
+:global(.sddMorning) .waitSec, :global(.sddMorning) .waitFieldK { color: #5c688a; }
+:global(.sddMorning) .ticker { background: rgba(255, 255, 255, 0.6); border-color: rgba(29, 42, 78, 0.12); }
+:global(.sddMorning) .tickerItem { color: #5c688a; }
+:global(.sddMorning) .chapNo { color: #0a7f9e; }
+:global(.sddMorning) .chapName { color: #1d2340; }
+:global(.sddMorning) .verdictOverlay { background: rgba(238, 243, 251, 0.88); }
+:global(.sddMorning) .tn1Card, :global(.sddMorning) .tn2Row {
+  background: rgba(255, 255, 255, 0.72); border-color: rgba(29, 42, 78, 0.14); }
+:global(.sddMorning) .tn1Name, :global(.sddMorning) .tn2Name { color: #1d2340; }
+:global(.sddMorning) .babaWrap { background: rgba(255, 255, 255, 0.7); border-color: rgba(29, 42, 78, 0.14); }
+:global(.sddMorning) .babaK, :global(.sddMorning) .babaStampK { color: #5c688a; }

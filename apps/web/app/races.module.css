@@ -254,3 +254,11 @@
 .digestFes { margin-left: 8px; font-family: var(--font-display); font-weight: 800; font-size: 11.5px;
   background: linear-gradient(92deg, #f6ecd2, var(--gold-bright, #f2e4bf));
   -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+
+/* MORNING SKIN(ショー最終幕の結果リストがステージ内に出る分・2026-07-19) */
+:global(.sddMorning) .recRow { background: rgba(255, 255, 255, 0.78); border-color: rgba(29, 42, 78, 0.14); }
+:global(.sddMorning) .recName { color: #1d2340; }
+:global(.sddMorning) .recSub { color: #6b7694; }
+:global(.sddMorning) .grpName { color: #1d2340; }
+:global(.sddMorning) .grpCount { color: #5c688a; }
