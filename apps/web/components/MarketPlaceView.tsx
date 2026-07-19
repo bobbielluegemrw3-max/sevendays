@@ -161,13 +161,13 @@ export function MarketPlaceView({
     <div className={s.wrap}>
       <div className={s.head}>
         <span className={s.h1}>Marketplace</span>
-        <span className={s.headNote}>毎晩20:00 (GMT+8) のバッチが、買い予約と出品を古い順に自動マッチングします</span>
+        <span className={s.headNote}>朝8:00・夜20:00 (GMT+8) のバッチが、プール予約と出品を古い順に自動マッチングします</span>
       </div>
 
       {/* ---- 市場の鼓動 ---- */}
       <div className={s.pulse}>
         <div className={`${s.pulseCard} ${s.pulseBuy}`}>
-          <div className={s.pulseK}>今夜の買い予約(需要)</div>
+          <div className={s.pulseK}>次のレースの買い予約(需要)</div>
           <div className={s.pulseV}>{data.pending_buy_count.toLocaleString('en-US')}<span className={s.pulseUnit}> 件</span></div>
           <div className={s.pulseSub}>全プレイヤー合計(匿名)</div>
         </div>
