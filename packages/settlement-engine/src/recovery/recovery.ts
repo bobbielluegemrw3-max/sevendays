@@ -227,11 +227,13 @@ export async function executeRecovery(
     approval_status: string;
     completed_at: string | null;
     batch_date: string;
+    batch_slot: string;
     batch_status: string;
   }>(
     `select r.batch_run_id, r.approval_status::text as approval_status,
             r.completed_at::text as completed_at,
-            b.batch_date::text as batch_date, b.status::text as batch_status
+            b.batch_date::text as batch_date, b.slot::text as batch_slot,
+            b.status::text as batch_status
      from recovery_snapshots r join batch_runs b on b.id = r.batch_run_id
      where r.id = $1`,
     [input.recoveryId],
@@ -272,7 +274,14 @@ export async function executeRecovery(
   }
 
   const handlerArgs = input.handlers === undefined ? {} : { handlers: input.handlers };
-  const result = await runBatch(client, { batchDate: row.batch_date, ...handlerArgs });
+  // 2026-07-19 実障害の修正: slot未指定だと runBatch が既定'NIGHT'で「別のバッチを
+  // 新規作成して実行」してしまう(朝バッチのリカバリが夜レースを前倒し実行し、
+  // 週次ジャックポットまで走った)。必ず失敗バッチ自身のslotで再開する。
+  const result = await runBatch(client, {
+    batchDate: row.batch_date,
+    slot: row.batch_slot as 'MORNING' | 'NIGHT',
+    ...handlerArgs,
+  });
 
   if (result.status === 'COMPLETED') {
     const afterHash = await stateHash(client, row.batch_run_id);
@@ -368,7 +377,7 @@ export async function checkRecoveryTimeouts(
     batch_date: string;
     hours_open: string;
   }>(
-    `select r.id, r.batch_run_id, b.batch_date::text as batch_date,
+    `select r.id, r.batch_run_id, b.batch_date::text as batch_date, b.slot::text as batch_slot,
             (extract(epoch from (now() - r.created_at)) / 3600)::text as hours_open
      from recovery_snapshots r join batch_runs b on b.id = r.batch_run_id
      where r.completed_at is null

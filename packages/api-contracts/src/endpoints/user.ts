@@ -284,7 +284,10 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
                     (($2::date + 1), 'NIGHT'::race_slot, 4)
            ) as c(race_date, slot, ord)
            where not exists (select 1 from batch_runs b
-                             where b.batch_date = c.race_date and b.slot = c.slot and b.status = 'COMPLETED')
+                             where b.batch_date = c.race_date and b.slot = c.slot
+                               and (b.status = 'COMPLETED'
+                                    or exists (select 1 from races r
+                                               where r.batch_run_id = b.id and r.status = 'FINALIZED')))
            order by c.ord limit 1
          )
          select h.id, h.name, h.status::text as status, h.current_day, h.horse_type::text as horse_type,
@@ -358,7 +361,10 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
                     (($3::date + 1), 'NIGHT'::race_slot, 4)
            ) as c(race_date, slot, ord)
            where not exists (select 1 from batch_runs b
-                             where b.batch_date = c.race_date and b.slot = c.slot and b.status = 'COMPLETED')
+                             where b.batch_date = c.race_date and b.slot = c.slot
+                               and (b.status = 'COMPLETED'
+                                    or exists (select 1 from races r
+                                               where r.batch_run_id = b.id and r.status = 'FINALIZED')))
            order by c.ord limit 1
          )
          select id, name, status::text as status, current_day, horse_type::text as horse_type,
@@ -435,7 +441,11 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
           let cycle = cycles[cycles.length - 1]!;
           for (const c of cycles) {
             const done = await ctx.client.query(
-              `select 1 from batch_runs where batch_date = $1 and slot = $2::race_slot and status = 'COMPLETED'`,
+              `select 1 from batch_runs b
+             where b.batch_date = $1 and b.slot = $2::race_slot
+               and (b.status = 'COMPLETED'
+                    or exists (select 1 from races r
+                               where r.batch_run_id = b.id and r.status = 'FINALIZED'))`,
               [c.date, c.slot],
             );
             if (!done.rows[0]) { cycle = c; break; }
@@ -809,7 +819,11 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         let target = candidates[candidates.length - 1]!;
         for (const c of candidates) {
           const done = await ctx.client.query(
-            `select 1 from batch_runs where batch_date = $1 and slot = $2::race_slot and status = 'COMPLETED'`,
+            `select 1 from batch_runs b
+             where b.batch_date = $1 and b.slot = $2::race_slot
+               and (b.status = 'COMPLETED'
+                    or exists (select 1 from races r
+                               where r.batch_run_id = b.id and r.status = 'FINALIZED'))`,
             [c.date, c.slot],
           );
           if (!done.rows[0]) {
