@@ -48,6 +48,30 @@ const CONDITION_JA: Record<string, string> = {
 const sign = (n: number): string => (n >= 0 ? `+${n}` : String(n));
 
 /** カタログV2の効果を正直な一行に(的中と外れを必ず併記 — R1)。 */
+/** カード式選択(2026-07-19)用の超短縮効果表記。詳細は effectSummaryJa が担う。
+    外れで下がる系は必ず外れも併記(R1: 正直表示)。 */
+export function effectShortJa(effect: ItemEffectV3): string {
+  switch (effect.kind) {
+    case 'BONUS': {
+      const range = effect.min === effect.max ? sign(effect.min) : `${sign(effect.min)}〜${sign(effect.max)}`;
+      return `ロールに${range}`;
+    }
+    case 'FLOOR_ZERO':
+      return '保険: 0未満→0';
+    case 'SYNERGY_DOUBLE':
+      return 'シナジー2倍';
+    case 'DECAY_SHIELD':
+      return `減衰無効 ${effect.races}レース`;
+    case 'GROUP_PREP':
+    case 'PINPOINT_PREP':
+      return `的中${sign(effect.hit)} / 外れ${sign(effect.miss)}`;
+    case 'DUAL_PREP':
+      return `両軸 的中${sign(effect.hit)} / 外れ${sign(effect.miss)}`;
+    case 'DUAL_FLOOR':
+      return '適性の下振れ保険';
+  }
+}
+
 export function effectSummaryJa(effect: ItemEffectV3): string {
   switch (effect.kind) {
     case 'BONUS': {

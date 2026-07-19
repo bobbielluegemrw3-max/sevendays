@@ -153,6 +153,9 @@
 .dayBig :global(.v) small { font-size: 13px; color: var(--faint); }
 /* 高さを馬ごとに揺らさない(2026-07-19: 矢印で馬を切り替えるたび順位行/注記の
    行数差でカード高が変わり不安定だった) — 2行分を常に確保 */
+/* カード式アイテム添付の小見出し(2026-07-19 案2) */
+.tv2AttachHead { font-family: var(--font-display); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; color: var(--muted); margin: 4px 0 6px; }
 .heroFoot { padding: 13px 16px 15px; min-height: 88px; box-sizing: border-box; }
 @media (max-width: 480px) { .heroFoot { min-height: 102px; } }
 .dayNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 9px; line-height: 1.55; }

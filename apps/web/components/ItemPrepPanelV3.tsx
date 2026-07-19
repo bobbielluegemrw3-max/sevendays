@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { AppSelect } from '@/components/AppSelect';
 import { fill, type AppDict } from '@/lib/i18n-shared';
+import { ItemCardPicker } from '@/components/ItemCardPicker';
 import {
-  BAND_LABEL,
-  BAND_ORDER,
   effectSummaryJa,
   type CatalogItem,
   type InventoryData,
@@ -183,30 +182,19 @@ export function ItemPrepPanelV3({
         </div>
       ) : (
         <>
+          {/* カード式選択(2026-07-19 案2): 分類チップ+効果+価格を見て選ぶ */}
+          <ItemCardPicker
+            items={raceItems}
+            ownedByKey={ownedByKey}
+            selected={selected}
+            onSelect={setSelected}
+            ariaLabel={t.boost_pick_aria}
+          />
           <div className={s.boostRow}>
-            <AppSelect
-              className={s.boostSelect}
-              value={selected}
-              onChange={setSelected}
-              ariaLabel={t.boost_pick_aria}
-              options={[
-                { value: '', label: t.boost_pick },
-                ...BAND_ORDER.flatMap((band) =>
-                  raceItems
-                    .filter((c) => c.band === band)
-                    .map((c) => {
-                      const owned = ownedByKey.get(c.key) ?? 0;
-                      return {
-                        value: c.key,
-                        label: `${c.name_ja}${owned > 0 ? fill(t.boost_owned_tpl, { n: owned }) : fill(t.boost_price_tpl, { p: c.price })}`,
-                        group: BAND_LABEL[band],
-                      };
-                    }),
-                ),
-              ]}
-            />
             <button type="button" disabled={busy || !selected} onClick={() => void applySelected()}>
-              {selected && (ownedByKey.get(selected) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}
+              {selected
+                ? `${selectedItem?.name_ja ?? ''}を${(ownedByKey.get(selected) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}`
+                : t.boost_pick}
             </button>
           </div>
           {needsGroups ? (

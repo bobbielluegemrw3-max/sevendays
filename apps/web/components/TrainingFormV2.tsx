@@ -9,7 +9,7 @@ import {
   type TrainingMenuV2,
 } from '@sevendays/domain';
 import { apiFetch, errorMessage } from '@/lib/client-api';
-import { AppSelect } from '@/components/AppSelect';
+import { ItemCardPicker } from '@/components/ItemCardPicker';
 import { effectSummaryJa, type CatalogItem, type InventoryData } from '@/lib/items';
 import { projectAfterConfirm, type TrainingFxDetail } from '@/components/HeroArtFx';
 import { fill, type AppDict } from '@/lib/i18n-shared';
@@ -319,26 +319,22 @@ export function TrainingFormV2({
         </div>
       ) : null}
       {attachable.length > 0 && menus.length > 0 ? (
-        <div className={s.tv2Chips} style={{ alignItems: 'center', gap: '0.45rem' }}>
-          <AppSelect
-            value={itemKey}
-            onChange={setItemKey}
+        <div>
+          {/* カード式選択(2026-07-19 案2): 分類チップ+効果+価格を見て選ぶ */}
+          <div className={s.tv2AttachHead}>調教アイテムを添付(任意) — 確定ロールに上乗せ</div>
+          <ItemCardPicker
+            items={attachable}
+            ownedByKey={ownedByKey}
+            selected={itemKey}
+            onSelect={setItemKey}
+            allowNone
+            noneLabel="アイテムなし"
             ariaLabel="調教アイテムを添付"
-            options={[
-              { value: '', label: 'アイテムなし(任意)' },
-              ...attachable.map((c) => {
-                const owned = ownedByKey.get(c.key) ?? 0;
-                return {
-                  value: c.key,
-                  label: `${c.name_ja} ${owned > 0 ? `(所持${owned})` : `(${c.price} USDT)`}`,
-                };
-              }),
-            ]}
           />
           {attachedItem?.effect ? (
-            <span style={{ color: 'var(--faint)', fontSize: '0.72rem' }}>
+            <div style={{ color: 'var(--faint)', fontSize: '0.72rem', marginTop: '0.2rem' }}>
               {effectSummaryJa(attachedItem.effect)}
-            </span>
+            </div>
           ) : null}
         </div>
       ) : null}
