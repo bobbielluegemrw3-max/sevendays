@@ -91,7 +91,7 @@ export interface DailyDerbyStageProps {
   debugVerdict?: 'burn' | 'survive' | 'day7' | 'match_sell' | 'match_buy' | undefined;
   /** 出走馬カードの案切替(検討用 2026-07-10): 0=現行チップ / 1=出走カード / 2=パドック。 */
   tonightVariant?: 0 | 1 | 2;
-  /** 朝スキン(2026-07-19): MORNING=白ベース / NIGHT=ダーク(既定)。 */
+  /** 上映中レースのスロット。演出は朝夜共通ダーク(2026-07-20)— 呼び出し側互換のため受理のみ。 */
   slot?: 'MORNING' | 'NIGHT';
 }
 
@@ -152,7 +152,6 @@ export function DailyDerbyStage({
   onReplaySkip,
   debugVerdict,
   tonightVariant = 1,
-  slot = 'NIGHT',
 }: DailyDerbyStageProps) {
   const elapsed = -secondsToStart;
   const [soundOn, setSoundOn] = useState(true);
@@ -527,8 +526,8 @@ export function DailyDerbyStage({
           )}
         </div>
       )}
-    {/* 朝スキン: sddMorning はグローバルクラス — 両CSSモジュールから :global で上書き */}
-    <div className={`${s.stage} ${stageHit ? s.stageHit : ''} ${slot === 'MORNING' ? 'sddMorning' : ''}`}>
+    {/* 朝/夜ともダーク基調(2026-07-20 オーナー指示で朝スキン撤去 — スロット表記のみ残す) */}
+    <div className={`${s.stage} ${stageHit ? s.stageHit : ''}`}>
       <button
         type="button"
         className={s.soundBtn}
