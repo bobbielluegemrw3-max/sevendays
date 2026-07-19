@@ -231,7 +231,7 @@
    プルダウンでは分類が伝わらない → サムネ+分類チップ+効果+価格のミニカード。
    横スクロール(モバイルはスワイプ)。分類色: 調教=シアン/レース=マゼンタ/形見=金 */
 .pickRow { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px;
-  scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  min-width: 0; max-width: 100%; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
 .pickRow::-webkit-scrollbar { height: 6px; }
 .pickRow::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 999px; }
 .pickCard { flex: none; width: 118px; scroll-snap-align: start; box-sizing: border-box;
