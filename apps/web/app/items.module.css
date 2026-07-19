@@ -244,10 +244,13 @@
   display:flex;gap:9px;overflow-x:auto;padding:6px 2px 14px;
   min-width:0;max-width:100%;                 /* ← 撤去禁止（親グリッド崩れ防止） */
   scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;scrollbar-color:rgba(0,234,255,.45) rgba(255,255,255,.07); /* Firefox */
 }
-.pickRow::-webkit-scrollbar{height:6px}
-.pickRow::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:999px}
-.pickRow::-webkit-scrollbar-track{background:transparent}
+/* スクロールバーは常に見える太さ・色に(2026-07-20 オーナー指摘: 見えず操作できない) */
+.pickRow::-webkit-scrollbar{height:9px}
+.pickRow::-webkit-scrollbar-thumb{background:rgba(0,234,255,.4);border-radius:999px}
+.pickRow::-webkit-scrollbar-thumb:hover{background:rgba(0,234,255,.65)}
+.pickRow::-webkit-scrollbar-track{background:rgba(255,255,255,.06);border-radius:999px}
 
 .pickCard{
   position:relative;flex:none;width:128px;scroll-snap-align:start;box-sizing:border-box;
@@ -255,9 +258,11 @@
   padding:0 0 10px;border-radius:14px;border:1px solid var(--border);
   background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
   cursor:pointer;text-align:center;font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;
+  box-shadow:none;letter-spacing:normal;  /* globals.css の button(シアングロー+字間)を遮断 */
   transition:border-color .16s,background .16s,box-shadow .16s,transform .16s;
 }
-.pickCard:hover{border-color:rgba(0,234,255,.4);transform:translateY(-2px)}
+.pickCard:hover{border-color:rgba(0,234,255,.4);transform:translateY(-2px);filter:none}
+.pickCard:active{transform:translateY(0)}
 
 /* 分類はカード上端の全幅カラー帯に昇格（横スクロールでも種類が一目で分かる） */
 .pickCls{

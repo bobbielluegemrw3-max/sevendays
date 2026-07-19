@@ -318,7 +318,9 @@ export function TrainingFormV2({
           ))}
         </div>
       ) : null}
-      {attachable.length > 0 && menus.length > 0 ? (
+      {/* メニュー未選択でも表示(2026-07-20 オーナー指摘: 存在に気づけない)。
+          メニュー条件付きアイテムは選択に応じて自動で増減する */}
+      {attachable.length > 0 ? (
         <div>
           {/* カード式選択(2026-07-19 案2): 分類チップ+効果+価格を見て選ぶ */}
           <div className={s.tv2AttachHead}>調教アイテムを添付(任意) — 確定ロールに上乗せ</div>
