@@ -463,7 +463,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       // 確定済みロールを返す — 詳細ページがメニューUI/確定済み表示へ切り替えるため。
       let engineV2 = false;
       let trainingV2: {
-        menus: string[]; delta: number; synergy: number; rests_decay: boolean; item_bonus: number; slot: string;
+        menus: string[]; delta: number; synergy: number; rests_decay: boolean; item_bonus: number;
+        item_key: string | null; slot: string;
       } | null = null;
       // V2アイテムの常駐表示(装備バッジ+減衰シールド 2026-07-18)
       let raceItemV2: { item_key: string; effective_race_date: string; slot: string } | null = null;
@@ -494,10 +495,10 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
           }
           const v2row = await ctx.client.query<{
             menus_v2: string[]; delta_v2: string; synergy_v2: string; rests_decay_v2: boolean;
-            item_bonus_v3: string | null;
+            item_bonus_v3: string | null; item_key_v3: string | null;
           }>(
             `select menus_v2, delta_v2::text as delta_v2, synergy_v2::text as synergy_v2, rests_decay_v2,
-                    item_bonus_v3::text as item_bonus_v3
+                    item_bonus_v3::text as item_bonus_v3, item_key_v3
              from training_sessions
              where horse_id = $1 and effective_race_date = $2 and slot = $3::race_slot
                and menus_v2 is not null`,
@@ -510,6 +511,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
               synergy: Number(v2row.rows[0].synergy_v2),
               rests_decay: v2row.rows[0].rests_decay_v2,
               item_bonus: v2row.rows[0].item_bonus_v3 === null ? 0 : Number(v2row.rows[0].item_bonus_v3),
+              // Decision 113: 後付け添付UIが「添付済みか」を判定するためのキー
+              item_key: v2row.rows[0].item_key_v3,
               slot: cycle.slot,
             };
           }
@@ -788,7 +791,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       item_key: z.string().optional(),
     }),
     handler: async (ctx, input) => {
-      if (input.menus === undefined) {
+      // Decision 113 (2026-07-20): menusなし+item_keyのみ = 確定済みロールへの後付け添付
+      if (input.menus === undefined && input.item_key === undefined) {
         if (
           input.training_type === undefined ||
           !(TRAINING_TYPES as readonly string[]).includes(input.training_type)
@@ -1048,6 +1052,153 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
           total_value: appliedTotalValue,
           training_tickets: ticketsV2.rows[0]?.n ?? 0,
         };
+      }
+
+      // ---- V2 post-attach (Decision 113, 2026-07-20) ----------------------
+      // 確定済みロールへの調教アイテム後付け。調教は無料・アイテムは有料の
+      // 上乗せ手段なので、レース処理前なら確定後でも1個添付できる。
+      // ボーナスは確定時と同一の決定論シードでロールし、その瞬間に総合値へ
+      // 反映(112)。添付は即最終(107)— 1サイクル1個のまま。
+      if (input.menus === undefined && input.item_key !== undefined) {
+        const active = await ctx.client.query<{ version: string }>(
+          `select version from race_engine_versions
+           where activated_at is not null and deactivated_at is null`,
+        );
+        if (active.rows.length !== 1 || !isRaceEngineV2(active.rows[0]!.version)) {
+          throw new ApiError('TRAINING_V2_NOT_AVAILABLE', 'Item attach opens with the V2 season');
+        }
+        const cat = await ctx.client.query<{ item_class: string; active: boolean }>(
+          `select item_class, active from item_catalog where key = $1`,
+          [input.item_key],
+        );
+        if (!cat.rows[0] || !cat.rows[0].active || cat.rows[0].item_class !== 'TRAINING') {
+          throw new ApiError('ITEM_NOT_FOUND', 'Unknown or non-training item');
+        }
+        // 対象サイクル = 次に走るレース(確定側と同一の決定則)
+        const todayV2 = batchDateFor(new Date());
+        const candidates: { date: string; slot: 'MORNING' | 'NIGHT' }[] = [
+          { date: todayV2, slot: 'MORNING' },
+          { date: todayV2, slot: 'NIGHT' },
+          { date: addDays(todayV2, 1), slot: 'MORNING' },
+        ];
+        let target = candidates[candidates.length - 1]!;
+        for (const c of candidates) {
+          const done = await ctx.client.query(
+            `select 1 from batch_runs b
+             where b.batch_date = $1 and b.slot = $2::race_slot
+               and (b.status = 'COMPLETED'
+                    or exists (select 1 from races r
+                               where r.batch_run_id = b.id and r.status = 'FINALIZED'))`,
+            [c.date, c.slot],
+          );
+          if (!done.rows[0]) {
+            target = c;
+            break;
+          }
+        }
+        try {
+          await ctx.client.query('begin');
+          // 確定済みロールを行ロック(二重添付の競合防止)
+          const row = await ctx.client.query<{
+            id: string;
+            menus_v2: string[] | null;
+            synergy_v2: string | null;
+            delta_v2: string | null;
+            item_key_v3: string | null;
+            snapshot_included_at: string | null;
+          }>(
+            `select id, menus_v2, synergy_v2::text as synergy_v2, delta_v2::text as delta_v2,
+                    item_key_v3, snapshot_included_at::text as snapshot_included_at
+             from training_sessions
+             where horse_id = $1 and effective_race_date = $2 and slot = $3::race_slot
+             for update`,
+            [ctx.params.id, target.date, target.slot],
+          );
+          const tr = row.rows[0];
+          if (!tr || tr.menus_v2 === null) {
+            throw new ApiError('TRAINING_NOT_CONFIRMED', 'Confirm training first — items ride the confirmed roll');
+          }
+          if (tr.snapshot_included_at !== null) {
+            throw new ApiError('TRAINING_FROZEN', 'This cycle is already frozen into a race');
+          }
+          // バッチ実行中はスナップショット作成と交錯し得る(こちらの総合値反映が
+          // 減衰更新に上書きされる等)ため受け付けない — レース後は次サイクルへ
+          const running = await ctx.client.query(
+            `select 1 from batch_runs
+             where batch_date = $1 and slot = $2::race_slot and status in ('PENDING', 'RUNNING')`,
+            [target.date, target.slot],
+          );
+          if (running.rows[0]) {
+            throw new ApiError('BATCH_IN_PROGRESS', 'The race batch is running — attach again after the race');
+          }
+          if (tr.item_key_v3 !== null) {
+            throw new ApiError('ITEM_ALREADY_ATTACHED', 'A training item is already attached for this cycle (one per race)');
+          }
+          const menusConfirmed = tr.menus_v2 as TrainingMenuV2[];
+          const prefs = hiddenPreferencesV2(horse.rows[0].dna_hash, horse.rows[0].horse_type);
+          const eligibility = trainingItemEligibilityV3(input.item_key, {
+            menus: menusConfirmed,
+            favoriteMenu: prefs.favorite,
+            lv: horse.rows[0].current_day,
+          });
+          if (!eligibility.ok) {
+            throw new ApiError('ITEM_NOT_ELIGIBLE', eligibility.reason ?? 'Item does not fit this roll');
+          }
+          const unit = await ctx.client.query<{ id: string; unit_price: string }>(
+            `select id, unit_price::text as unit_price from user_items
+             where user_id = $1 and item_key = $2 and status = 'AVAILABLE'
+             order by acquired_at asc, id asc limit 1 for update`,
+            [ctx.userId, input.item_key],
+          );
+          if (!unit.rows[0]) throw new ApiError('ITEM_NOT_OWNED', 'You do not own this item');
+          const rollSeed = `${ctx.params.id}:${target.date}:${target.slot}`;
+          const itemBonus = resolveTrainingItemV3(input.item_key, rollSeed, {
+            menus: menusConfirmed,
+            favoriteMenu: prefs.favorite,
+            lv: horse.rows[0].current_day,
+            roll: { delta: Number(tr.delta_v2), synergy: Number(tr.synergy_v2) },
+          }).itemBonus;
+          await ctx.client.query(
+            `insert into item_usages
+               (user_item_id, horse_id, user_id, item_key, unit_price,
+                effective_race_date, slot, usage_kind)
+             values ($1, $2, $3, $4, $5, $6, $7::race_slot, 'TRAINING')`,
+            [unit.rows[0].id, ctx.params.id, ctx.userId, input.item_key,
+             unit.rows[0].unit_price, target.date, target.slot],
+          );
+          await ctx.client.query(`update user_items set status = 'APPLIED' where id = $1`, [unit.rows[0].id]);
+          await ctx.client.query(
+            `update training_sessions
+                set item_key_v3 = $1, item_bonus_v3 = $2, item_user_item_id = $3
+              where id = $4`,
+            [input.item_key, itemBonus, unit.rows[0].id, tr.id],
+          );
+          // Decision 112: 上乗せはその瞬間に総合値へ反映
+          let appliedTotalValue: number | null = null;
+          const tvRow = await ctx.client.query<{ total_value: string | null }>(
+            `select total_value from horses where id = $1 for update`,
+            [ctx.params.id],
+          );
+          if (tvRow.rows[0]?.total_value != null) {
+            appliedTotalValue = applyTotalValueGainV2(Number(tvRow.rows[0].total_value), itemBonus);
+            await ctx.client.query(
+              `update horses set total_value = $1 where id = $2`,
+              [appliedTotalValue, ctx.params.id],
+            );
+          }
+          await ctx.client.query('commit');
+          return {
+            horse_id: ctx.params.id,
+            item_key: input.item_key,
+            item_bonus: itemBonus,
+            total_value: appliedTotalValue,
+            effective_race_date: target.date,
+            slot: target.slot,
+          };
+        } catch (error) {
+          await ctx.client.query('rollback').catch(() => undefined);
+          throw error;
+        }
       }
 
       // ---- V1 path (unchanged — rollless redo, Decision 066 / A2) --------

@@ -29,8 +29,10 @@ export interface TrainingV2Confirmed {
   delta: number;
   synergy: number;
   rests_decay: boolean;
-  /** 調教アイテムの上乗せ(確定時添付・なければ0)。 */
+  /** 調教アイテムの上乗せ(確定時添付 or 後付け・なければ0)。 */
   item_bonus?: number;
+  /** 添付済みアイテムのキー(Decision 113: 後付けUIの表示判定)。 */
+  item_key?: string | null;
   slot: string;
 }
 
@@ -97,7 +99,8 @@ export function TrainingFormV2({
   const [itemKey, setItemKey] = useState('');
 
   useEffect(() => {
-    if (preview || confirmed) return;
+    // Decision 113: 確定済みでもアイテム未添付なら後付け用にカタログを読む
+    if (preview || (confirmed && confirmed.item_key)) return;
     void (async () => {
       const [cat, inv] = await Promise.all([
         apiFetch<{ engine_v2?: boolean; items: CatalogItem[] }>('/api/v1/items/catalog'),
@@ -115,19 +118,24 @@ export function TrainingFormV2({
     [inventory],
   );
   // 添付できる = TRAINING系(即時適用を除く)で、選択中メニュー・LVの条件を満たすもの
+  // Decision 113: 確定済みならメニュー条件は「確定したメニュー」で判定する
+  const menusBasis = useMemo(
+    () => (confirmed ? (confirmed.menus as TrainingMenuV2[]) : menus),
+    [confirmed, menus],
+  );
   const attachable = useMemo(
     () =>
       catalog.filter((c) => {
         if (c.item_class !== 'TRAINING' || !c.effect || c.effect.kind === 'DECAY_SHIELD') return false;
         if (!c.sellable && (ownedByKey.get(c.key) ?? 0) === 0) return false;
         if (c.effect.kind === 'BONUS') {
-          if (c.effect.requiresMenu && !menus.includes(c.effect.requiresMenu as TrainingMenuV2)) return false;
+          if (c.effect.requiresMenu && !menusBasis.includes(c.effect.requiresMenu as TrainingMenuV2)) return false;
           if (c.effect.lvMin !== undefined && lv < c.effect.lvMin) return false;
           if (c.effect.lvMax !== undefined && lv > c.effect.lvMax) return false;
         }
         return true;
       }),
-    [catalog, ownedByKey, menus, lv],
+    [catalog, ownedByKey, menusBasis, lv],
   );
   // メニュー変更で条件を外れたら選択を自動解除
   useEffect(() => {
@@ -135,9 +143,58 @@ export function TrainingFormV2({
   }, [attachable, itemKey]);
   const attachedItem = itemKey ? catalog.find((c) => c.key === itemKey) : undefined;
 
+  // Decision 113: 確定済みロールへのアイテム後付け(購入→添付→総合値即反映)
+  async function attachItem() {
+    if (!itemKey) return;
+    setBusy(true);
+    setError(null);
+    if ((ownedByKey.get(itemKey) ?? 0) === 0) {
+      const buy = await apiFetch('/api/v1/items/purchase', {
+        method: 'POST',
+        body: { item_key: itemKey, quantity: 1 },
+      });
+      if (buy.status !== 200) {
+        setBusy(false);
+        setError(errorMessage(buy.body) ?? t.train_fail);
+        return;
+      }
+    }
+    const res = await apiFetch<{ item_key: string; item_bonus: number; total_value: number | null }>(
+      `/api/v1/horses/${horseId}/training`,
+      { method: 'POST', body: { item_key: itemKey } },
+    );
+    setBusy(false);
+    if (res.status !== 200) {
+      setError(errorMessage(res.body) ?? t.train_fail);
+      return;
+    }
+    const body = res.body as { item_key: string; item_bonus: number; total_value: number | null };
+    if (result) setResult({ ...result, item_key: body.item_key, item_bonus: body.item_bonus });
+    // 馬アートの生体反応 — アイテム上乗せぶんのポップ(調教行は出ない: delta 0)
+    if (typeof totalValue === 'number') {
+      const detail: TrainingFxDetail = {
+        horseId,
+        delta: 0,
+        synergy: 0,
+        itemBonus: body.item_bonus,
+        itemKey: body.item_key,
+        restsDecay: false,
+        before: totalValue,
+        projected: body.total_value ?? projectAfterConfirm(totalValue, body.item_bonus),
+      };
+      window.dispatchEvent(new CustomEvent<TrainingFxDetail>('sdd:training-confirmed', { detail }));
+    }
+    setItemKey('');
+    router.refresh();
+  }
+
   // 確定済み(props経由 or この場でロール済み)= 変更不可の結果表示(Decision 107)
   const done: TrainingV2Confirmed | null = result
-    ? { menus: result.per_menu.map((m) => m.menu), delta: result.delta, synergy: result.synergy, rests_decay: result.rests_decay, slot: result.slot }
+    ? {
+        menus: result.per_menu.map((m) => m.menu), delta: result.delta, synergy: result.synergy,
+        rests_decay: result.rests_decay, item_bonus: result.item_bonus ?? 0,
+        item_key: result.item_key ?? null, slot: result.slot,
+      }
     : confirmed;
   if (done) {
     return (
@@ -169,10 +226,16 @@ export function TrainingFormV2({
               {done.menus.map((m, i) => (
                 <span key={`${m}-${i}`} className={s.tv2Roll}>{menuLabel(m as TrainingMenuV2, t)}</span>
               ))}
+              {done.item_key ? (
+                <span className={s.tv2Roll}>
+                  <img src={`/items/${done.item_key}.webp`} alt="" width={16} height={16} style={{ verticalAlign: '-3px', borderRadius: 3 }} />
+                  {(done.item_bonus ?? 0) !== 0 ? <> <b className={s.tv2Pos}>{fmtSigned(done.item_bonus ?? 0)}</b></> : null}
+                </span>
+              ) : null}
             </div>
           )}
-          <div className={`${s.tv2Delta} ${done.delta + (result?.item_bonus ?? 0) < 0 ? s.tv2Neg : s.tv2Pos}`}>
-            {fill(t.tv2_delta_tpl, { n: fmtSigned(done.delta + (result?.item_bonus ?? 0)) })}
+          <div className={`${s.tv2Delta} ${done.delta + (done.item_bonus ?? 0) < 0 ? s.tv2Neg : s.tv2Pos}`}>
+            {fill(t.tv2_delta_tpl, { n: fmtSigned(Math.round((done.delta + (done.item_bonus ?? 0)) * 100) / 100) })}
           </div>
           {done.rests_decay ? <div className={s.tv2RestDone}>{t.tv2_rest_done}</div> : null}
           {result ? (
@@ -183,6 +246,33 @@ export function TrainingFormV2({
           ) : null}
           <div className={s.tv2DoneNote}>{t.tv2_done_note}</div>
         </div>
+        {/* Decision 113 (2026-07-20): 確定後でもレース処理前なら調教アイテムを
+            1個後付けできる(有料の上乗せ手段・総合値へ即反映) */}
+        {!done.item_key && attachable.length > 0 ? (
+          <div>
+            <div className={s.tv2AttachHead}>調教アイテムを後から使う(任意) — 上乗せは総合値へ即反映</div>
+            <ItemCardPicker
+              items={attachable}
+              ownedByKey={ownedByKey}
+              selected={itemKey}
+              onSelect={setItemKey}
+              ariaLabel="調教アイテムを使う"
+            />
+            {attachedItem?.effect ? (
+              <div style={{ color: 'var(--faint)', fontSize: '0.72rem', margin: '0.2rem 0 0.4rem' }}>
+                {effectSummaryJa(attachedItem.effect)}
+              </div>
+            ) : null}
+            {error ? <p className="error">{error}</p> : null}
+            <button type="button" disabled={busy || !itemKey} onClick={() => void attachItem()}>
+              {busy
+                ? t.train_busy
+                : itemKey && attachedItem
+                  ? `${attachedItem.name_ja}を${(ownedByKey.get(itemKey) ?? 0) > 0 ? '使う' : '買って使う'}`
+                  : 'アイテムを選ぶ…'}
+            </button>
+          </div>
+        ) : null}
       </div>
     );
   }
