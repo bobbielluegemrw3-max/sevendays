@@ -62,7 +62,7 @@ describe('notification templates (Decision 065)', () => {
         current_day: 3,
         price: '253.10',
       }).body,
-    ).toBe('Royal Thunder / Day 3 / Price 253.10 USDT');
+    ).toBe('Royal Thunder / LV.3 / Price 253.10 USDT');
     expect(renderNotification('HORSE_BURNED', { horse_name: 'Black Wind' }).title).toBe(
       'Black Wind は本日のレースでBurnされました。',
     );

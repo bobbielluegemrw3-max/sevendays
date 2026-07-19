@@ -121,15 +121,15 @@ export function GuideView({ lang = 'ja' }: { lang?: Lang }) {
           <Arrow />
           <FBox icon="moon" title={t.buy_b2_t} desc={rich(t.buy_b2_d)} />
           <Arrow />
-          <FBox horse={{ seed: 'd4', name: 'Day0' }} title={t.buy_b3_t} desc={rich(t.buy_b3_d)} />
+          <FBox horse={{ seed: 'd4', name: 'LV.0' }} title={t.buy_b3_t} desc={rich(t.buy_b3_d)} />
           <Arrow />
           <FBox icon="coins" title={t.buy_b4_t} desc={rich(t.buy_b4_d)} tone="good" />
         </div>
         <p className={s.p}>{rich(t.buy_p2)}</p>
         <div className={s.priceChart}>
           {[
-            ['Day0', '100.00'], ['Day1', '110.00'], ['Day2', '121.00'], ['Day3', '133.10'],
-            ['Day4', '146.41'], ['Day5', '161.05'], ['Day6', '177.16'],
+            ['LV.0', '100.00'], ['LV.1', '110.00'], ['LV.2', '121.00'], ['LV.3', '133.10'],
+            ['LV.4', '146.41'], ['LV.5', '161.05'], ['LV.6', '177.16'],
           ].map(([d, v], i) => (
             <div key={d} className={`${s.priceCell} ${i === 6 ? s.pcTop : ''}`}>
               <div className={s.priceV}>{v}</div>

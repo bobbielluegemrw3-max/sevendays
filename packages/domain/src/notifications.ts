@@ -52,7 +52,7 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   },
   ASSIGNMENT_COMPLETED: {
     title: '新しい馬が割り当てられました。',
-    body: '{horse_name} / Day {current_day} / Price {price} USDT',
+    body: '{horse_name} / LV.{current_day} / Price {price} USDT',
   },
   TRAINING_COMPLETED: {
     title: 'トレーニングが完了しました。',
@@ -116,7 +116,7 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   },
   AUTO_LISTED: {
     title: '{horse_name} が自動出品されました。',
-    body: '今夜のマッチング対象です(価格 {price} USDT)。出品中もレースに出走します。',
+    body: '次のバッチのマッチング対象です(価格 {price} USDT)。出品中もレースに出走します。',
   },
   AUTO_RESERVED: {
     title: '自動購入予約を作成しました。',
@@ -128,7 +128,7 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   },
   HORSE_GIFT_RECEIVED: {
     title: '馬が届きました。',
-    body: '{sender} さんから {horse_name} が贈られました。今夜からあなたの厩舎で出走します。',
+    body: '{sender} さんから {horse_name} が贈られました。次のレースからあなたの厩舎で出走します。',
   },
   JACKPOT_WON: {
     title: 'ジャックポット当選!',
