@@ -76,6 +76,9 @@
   .artBox { min-height: 0; height: min(118vw, 560px); flex: none; }
   .heroCanvas { height: 100%; aspect-ratio: auto; padding: 54px 8px 96px; }
   .scrim { background: linear-gradient(180deg, rgba(10, 8, 19, 0) 58%, rgba(10, 8, 19, 0.92) 90%); }
+  /* 馬切替(ページャ)でバッジ数・名前の長さにより 1〜2 行に揺れると
+     ヒーローが上下に跳ねる — 2行ぶんを常に確保して高さを固定する */
+  .titleRow { min-height: 66px; align-content: flex-start; }
 }
 
 /* 前/次の馬ページャ(HorsePager) — 馬アート左右の ‹ › + 上部の位置表示 */

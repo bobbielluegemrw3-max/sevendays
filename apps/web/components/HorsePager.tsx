@@ -43,8 +43,9 @@ export function HorsePager({ nav, t }: { nav: PagerNav; t: AppDict['horse'] }) {
       const el = document.activeElement as HTMLElement | null;
       const tag = el?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el?.isContentEditable) return;
-      if (e.key === 'ArrowLeft' && prev) { e.preventDefault(); router.push(`/horses/${prev.id}`); }
-      else if (e.key === 'ArrowRight' && next) { e.preventDefault(); router.push(`/horses/${next.id}`); }
+      // scroll: false — 切替のたびに先頭へ戻るとヒーローが跳ねて見える(2026-07-19)
+      if (e.key === 'ArrowLeft' && prev) { e.preventDefault(); router.push(`/horses/${prev.id}`, { scroll: false }); }
+      else if (e.key === 'ArrowRight' && next) { e.preventDefault(); router.push(`/horses/${next.id}`, { scroll: false }); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -59,6 +60,7 @@ export function HorsePager({ nav, t }: { nav: PagerNav; t: AppDict['horse'] }) {
           aria-label={fill(t.pgr_prev_tpl, { name: prev.name })}
           title={fill(t.pgr_prev_tpl, { name: prev.name })}
           prefetch
+          scroll={false}
         >
           ‹
         </Link>
@@ -76,6 +78,7 @@ export function HorsePager({ nav, t }: { nav: PagerNav; t: AppDict['horse'] }) {
             className={s.pagerJump}
             title={fill(t.pgr_next_tpl, { name: nextUntrained.name })}
             prefetch
+            scroll={false}
           >
             {t.pgr_jump}
             {untrainedRemaining > 0 ? <span className={s.pagerJumpN}>{fill(t.pgr_rest_tpl, { n: untrainedRemaining })}</span> : null}
@@ -92,6 +95,7 @@ export function HorsePager({ nav, t }: { nav: PagerNav; t: AppDict['horse'] }) {
           aria-label={fill(t.pgr_next_tpl, { name: next.name })}
           title={fill(t.pgr_next_tpl, { name: next.name })}
           prefetch
+          scroll={false}
         >
           ›
         </Link>
