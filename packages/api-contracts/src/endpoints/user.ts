@@ -76,14 +76,16 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
   // 「今夜の安全圏」用: 今夜の出走馬(ACTIVE・手動出品を除く)の総合値分布。
   // 全ユーザー共通なのでプロセス内キャッシュ(既定60秒・テストは env で 0 に)。
   // FUN_V2_PLAN.md §3 A1 — 順位は目安(BURN選定には運が絡む)。降順ソート済み。
-  let tonightDist: { key: string; at: number; values: number[] } | null = null;
+  // Decision 111 (2026-07-19): BURNはLV帯別選定になったため、安全圏の分布も
+  // 帯(current_day)ごとに持つ — 順位・母数・SAFE/RISKすべて「同じ帯の中」で計算する。
+  let tonightDist: { key: string; at: number; byDay: Map<number, number[]> } | null = null;
   async function tonightDistribution(
     client: import('@sevendays/shared').SqlClient,
     effectiveRaceDate: string,
-  ): Promise<number[]> {
+  ): Promise<Map<number, number[]>> {
     const ttl = Number(process.env.TOTAL_VALUE_DIST_CACHE_MS ?? 60000);
     if (tonightDist && tonightDist.key === effectiveRaceDate && Date.now() - tonightDist.at < ttl) {
-      return tonightDist.values;
+      return tonightDist.byDay;
     }
     const rows = await client.query<{
       ability_json: Record<string, number>;
@@ -96,7 +98,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     }>(
       `select h.ability_json, h.horse_type::text as horse_type, h.rarity::text as rarity,
               h.dna_modifier::text as dna_modifier, h.condition::text as condition,
-              h.fatigue::text as fatigue,
+              h.fatigue::text as fatigue, h.current_day,
               (select t.training_type::text from training_sessions t
                 where t.horse_id = h.id and t.effective_race_date = $1 limit 1) as tonight_training
          from horses h
@@ -105,11 +107,16 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
                           where ml.horse_id = h.id and ml.status = 'LISTED' and ml.source = 'MANUAL')`,
       [effectiveRaceDate],
     );
-    const values = rows.rows
-      .map((r) => totalValueV0(totalValueInputFromRow(r)))
-      .sort((a, b) => b - a);
-    tonightDist = { key: effectiveRaceDate, at: Date.now(), values };
-    return values;
+    const byDay = new Map<number, number[]>();
+    for (const r of rows.rows as (typeof rows.rows[number] & { current_day: number })[]) {
+      const v = totalValueV0(totalValueInputFromRow(r));
+      const list = byDay.get(r.current_day);
+      if (list) list.push(v);
+      else byDay.set(r.current_day, [v]);
+    }
+    byDay.forEach((list) => list.sort((a, b) => b - a));
+    tonightDist = { key: effectiveRaceDate, at: Date.now(), byDay };
+    return byDay;
   }
   registry.register({
     method: 'GET',
@@ -309,7 +316,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       // 総合値V0+今夜の安全圏(FUN_V2_PLAN.md §3 A1)。分布はプロセス内キャッシュ。
       const effDate = rows.rows[0]?.effective_race_date ?? today;
       const hasActive = rows.rows.some((r) => r.status === 'ACTIVE');
-      const dist = hasActive ? await tonightDistribution(ctx.client, effDate) : [];
+      const dist = hasActive ? await tonightDistribution(ctx.client, effDate) : new Map<number, number[]>();
       const horses = rows.rows.map((r) => {
         const l = looks.get(r.id);
         const { ability_json, dna_modifier, tonight_training, effective_race_date, ...rest } = r;
@@ -320,14 +327,15 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         const totalValue = isActive ? totalValueV0(totalValueInputFromRow(r)) : null;
         // 手動出品中は今夜走らない=順位なし(総合値のみ)
         const runs = isActive && r.listing !== 'MANUAL';
-        const rank = runs && totalValue !== null ? 1 + dist.filter((v) => v > totalValue).length : null;
+        const bandValues = runs ? dist.get(r.current_day) ?? [] : [];
+        const rank = runs && totalValue !== null ? 1 + bandValues.filter((v) => v > totalValue).length : null;
         return {
           ...rest,
           trained_for_next_race: tonight_training !== null,
           total_value: totalValue,
           tonight_rank: rank,
-          tonight_entrants: runs ? dist.length : null,
-          tonight_band: rank !== null ? tonightBand(rank, dist.length) : null,
+          tonight_entrants: runs ? bandValues.length : null,
+          tonight_band: rank !== null ? tonightBand(rank, bandValues.length) : null,
           night_variant: l?.nightVariant ?? false,
           golden_star: l?.goldenStar ?? false,
           golden_aura: l?.goldenAura ?? false,
@@ -388,6 +396,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         horse_type: string; rarity: string; dna_modifier: string;
         condition: string; fatigue: string; tonight_training: string | null;
         effective_race_date: string; status: string; listing: string | null;
+        current_day: number;
       };
       const isActiveHorse = hRow.status === 'ACTIVE';
       const totalValue = isActiveHorse ? totalValueV0(totalValueInputFromRow(hRow)) : null;
@@ -396,8 +405,9 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       let tonightEntrants: number | null = null;
       if (runsTonight && totalValue !== null) {
         const dist = await tonightDistribution(ctx.client, hRow.effective_race_date);
-        tonightRank = 1 + dist.filter((v) => v > totalValue).length;
-        tonightEntrants = dist.length;
+        const bandValues = dist.get(hRow.current_day) ?? [];
+        tonightRank = 1 + bandValues.filter((v) => v > totalValue).length;
+        tonightEntrants = bandValues.length;
       }
       // 隠し演出ルック(EASTER_EGG_PLAN.md)— 詳細ページ用の真偽フラグ。
       const looks = await computeHiddenLooks(ctx.client, [ctx.params.id!], ctx.userId);

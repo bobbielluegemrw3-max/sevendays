@@ -16,6 +16,7 @@ import {
   rankParticipants,
   rollBuffRarity,
   selectBurnTargets,
+  selectBurnTargetsBandedV2,
   unitFromParts,
 } from '@sevendays/race-engine';
 import { itemSettlement } from '@sevendays/ledger';
@@ -76,9 +77,10 @@ export async function finalizeAndBurn(
   const snapshots = await client.query<{
     horse_id: string;
     owner_user_id: string;
+    current_day: number;
     final_score: string | null;
   }>(
-    `select horse_id, owner_user_id, final_score::text as final_score
+    `select horse_id, owner_user_id, current_day, final_score::text as final_score
      from race_participant_snapshots where race_id = $1 order by horse_id`,
     [input.raceId],
   );
@@ -103,7 +105,12 @@ export async function finalizeAndBurn(
     ? burnTargetCountV2(eligible, input.economyStatus, input.raceSeed)
     : { count: burnTargetCount(eligible, input.economyStatus), rate: BURN_TARGET_RATE_V1[input.economyStatus] };
   const count = burn.count;
-  const burnTargets = new Set(selectBurnTargets(ranking, count));
+  // Decision 111 (2026-07-19): V2はLV帯別の下位選定(総数=器のまま・配分は最大剰余法)。
+  // V1(過去レースのリプレイ)は従来のグローバル下位のまま — 互換維持。
+  const dayByHorse = new Map(snapshots.rows.map((r) => [r.horse_id, r.current_day]));
+  const burnTargets = isRaceEngineV2(input.raceEngineVersion)
+    ? new Set(selectBurnTargetsBandedV2(ranking, dayByHorse, count))
+    : new Set(selectBurnTargets(ranking, count));
 
   // 4. Persist race results with final burn flags (immutable after insert).
   for (const r of ranking) {

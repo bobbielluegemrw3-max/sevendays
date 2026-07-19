@@ -52,6 +52,8 @@ export interface DerbyCounts {
   day7: number;
   /** 今夜起票された祝い金の行数(同上)。 */
   celebrations: number;
+  /** Decision 111: LV帯別の実数(帯別BURN)。濁流のLVチャプター描画に使う。 */
+  bands?: { day: number; horses: number; burns: number }[];
 }
 
 /* ---- タイムライン(秒、T0 = 20:00) ------------------------------------- */
@@ -102,6 +104,8 @@ export interface LogSection {
   endAt: number;
   /** 1秒あたりの行数(猛スピード感の調整口)。 */
   rate: number;
+  /** Decision 111: LVチャプター(BAND)専用 — この帯の実数。 */
+  band?: { day: number; horses: number; burns: number };
 }
 
 /* 流量はオーナー承認の案A(2026-07-10): 毎秒約6行 —
@@ -119,6 +123,46 @@ export const LOG_SECTIONS: readonly LogSection[] = [
   { key: 'MLM', tone: 'mlm', header: '═══ SUPPORT BONUS ═══', startAt: 90, endAt: 93.5, rate: 6 },
   { key: 'ITEM', tone: 'item', header: '═══ MEMORIAL DROPS ═══', startAt: 93.5, endAt: 96.5, rate: 6 },
 ] as const;
+
+/**
+ * Decision 111 (2026-07-19): RACE TURN を LVチャプターに分割する。
+ * counts.bands があるとき、BURN/SURVIVE/VALUE(30〜58秒)を
+ * 「LV.0 BRACKET → LV.1 BRACKET → …」の帯チャプターに置き換える(帯昇順)。
+ * 各帯の尺は頭数比例(最短2秒)・帯内は BURN行→生存行 の順で実数キャップ。
+ * DAY7以降(58秒〜)と P2P/REWARDS のタイムラインは不変(音のキューも不変)。
+ */
+export function sectionsForCounts(counts?: DerbyCounts): readonly LogSection[] {
+  const bands = counts?.bands;
+  if (!bands || bands.length === 0) return LOG_SECTIONS;
+  const from = 30;
+  const to = 58;
+  const span = to - from;
+  const total = bands.reduce((sum, b) => sum + b.horses, 0);
+  if (total === 0) return LOG_SECTIONS;
+  const minDur = Math.min(2, span / bands.length);
+  const raw = bands.map((b) => Math.max(minDur, (span * b.horses) / total));
+  const scale = span / raw.reduce((a, b) => a + b, 0);
+  const out: LogSection[] = [];
+  let at = from;
+  bands.forEach((b, i) => {
+    const dur = raw[i]! * scale;
+    out.push({
+      key: `BAND_${b.day}`,
+      tone: 'survive',
+      header: `═══ LV.${b.day} BRACKET — ${b.horses}頭 ═══`,
+      startAt: at,
+      endAt: at + dur,
+      rate: 6,
+      band: b,
+    });
+    at += dur;
+  });
+  // DAY7 以降の固定セクションはそのまま引き継ぐ
+  for (const sec of LOG_SECTIONS) {
+    if (sec.startAt >= to) out.push(sec);
+  }
+  return out;
+}
 
 export const LOGS_FROM = 30;
 /** P2Pターンの開幕演出(62-66s、GLOBAL MARKETPLACE OPENING)。 */
@@ -207,6 +251,16 @@ const NAME_W = 18;
 function makeLine(section: LogSection, i: number): LogLine {
   const id = `${section.key}:${i}`;
   const tag = (t: string) => pad(t, TAG_W);
+  // Decision 111: LVチャプター — 帯のBURN実数ぶんはBURN行、残りは生存行(帯のLVで表記)
+  if (section.band) {
+    const day = section.band.day;
+    if (i < section.band.burns) {
+      const name = horseName(i, 100 + day);
+      return { id, tone: 'burn', name, text: `${tag('BURN')}${horseId(i, 100 + day)}  ${pad(name, NAME_W)}  LV.${day}  ELIMINATED` };
+    }
+    const name = horseName(i, 200 + day);
+    return { id, tone: 'survive', name, text: `${tag('SRVD')}${horseId(i, 200 + day)}  ${pad(name, NAME_W)}  LV.${day} → LV.${day + 1}` };
+  }
   switch (section.key) {
     case 'BURN': {
       const day = dayOf(i, 1);
@@ -264,7 +318,8 @@ function makeLine(section: LogSection, i: number): LogLine {
 
 /** セクションごとの「実件数」上限(2026-07-14: 案①の結線漏れ修正 —
  *  行はダミー生成のままだが、流れる行数は当夜の実数を超えない)。 */
-function sectionCap(key: string, c: DerbyCounts): number {
+function sectionCap(key: string, c: DerbyCounts, band?: { horses: number }): number {
+  if (band) return band.horses;
   switch (key) {
     case 'BURN': return c.burns;
     case 'SURVIVE': return Math.max(0, c.horses - c.burns);
@@ -292,11 +347,12 @@ export function logWindow(
   myNames?: ReadonlySet<string>,
   counts?: DerbyCounts,
 ): LogLine[] {
+  const sections = sectionsForCounts(counts);
   const out: LogLine[] = [];
-  for (let sIdx = LOG_SECTIONS.length - 1; sIdx >= 0 && out.length < window; sIdx--) {
-    const sec = LOG_SECTIONS[sIdx]!;
+  for (let sIdx = sections.length - 1; sIdx >= 0 && out.length < window; sIdx--) {
+    const sec = sections[sIdx]!;
     if (elapsed < sec.startAt) continue;
-    const cap = counts ? sectionCap(sec.key, counts) : Number.POSITIVE_INFINITY;
+    const cap = counts ? sectionCap(sec.key, counts, sec.band) : Number.POSITIVE_INFINITY;
     const emitted = Math.min(
       Math.floor((Math.min(elapsed, sec.endAt) - sec.startAt) * sec.rate),
       cap,

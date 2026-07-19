@@ -182,6 +182,18 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       const a = agg.rows[0]!;
       // 2026-07-14: day7/celebrations はログ濁流の「件数だけ実数」結線用
       // (固定レートのダミー行が実件数を超えて流れないようにするキャップ)。
+      // Decision 111: LV帯別BURNに合わせ、濁流のLVチャプター用に帯別実数も返す。
+      const bandAgg = await client.query<{ day: number; horses: number; burns: number }>(
+        `select s.current_day as day, count(*)::int as horses,
+                count(*) filter (where rr.is_burned)::int as burns
+         from race_results rr
+         join race_participant_snapshots s
+           on s.race_id = rr.race_id and s.horse_id = rr.horse_id
+         where rr.race_id = $1
+         group by s.current_day
+         order by s.current_day`,
+        [raceRow.id],
+      );
       counts = {
         horses: raceRow.participant_count ?? 0,
         burns: a.burns,
@@ -191,6 +203,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         mints: a.mints,
         day7: a.day7,
         celebrations: a.celebrations,
+        bands: bandAgg.rows,
       };
 
       // Anonymized ticker: recent settled matches / burns / day7 clears.

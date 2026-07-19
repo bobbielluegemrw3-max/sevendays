@@ -20,6 +20,7 @@ import {
   type ScenarioResult,
 } from '@sevendays/economy-engine';
 import {
+  allocateBurnsByBandV2,
   computeScore,
   computeScoreV2,
   deriveTrackCondition,
@@ -545,14 +546,58 @@ async function verifyBurnOutcome(
   }
 
   if (aspect === 'count' || aspect === 'selection') {
-    // burned flags must exactly cover the bottom ranks
-    const misplaced = await ctx.client.query<{ count: string }>(
-      `select count(*)::text as count from race_results
-       where race_id = $1 and is_burned <> (final_rank > $2)`,
-      [raceId, total - burned],
-    );
-    if (misplaced.rows[0]!.count !== '0') {
-      throw new Error(`INVALID_BATCH_STATE: burn flags do not match bottom ranks (race ${raceId})`);
+    if (isRaceEngineV2(lockedVersion(ctx, 'race_engine_versions'))) {
+      // Decision 111: V2はLV帯別選定 — 検証も帯単位で行う。
+      // (1) 各帯で「BURNされた馬は帯内の最下位グループ」であること
+      const bandMisplaced = await ctx.client.query<{ count: string }>(
+        `select count(*)::text as count
+         from race_results rb
+         join race_participant_snapshots sb
+           on sb.race_id = rb.race_id and sb.horse_id = rb.horse_id
+         where rb.race_id = $1 and rb.is_burned
+           and exists (
+             select 1 from race_results ru
+             join race_participant_snapshots su
+               on su.race_id = ru.race_id and su.horse_id = ru.horse_id
+             where ru.race_id = $1 and not ru.is_burned
+               and su.current_day = sb.current_day
+               and ru.final_rank > rb.final_rank
+           )`,
+        [raceId],
+      );
+      if (bandMisplaced.rows[0]!.count !== '0') {
+        throw new Error(`INVALID_BATCH_STATE: burns are not the bottom of their LV band (race ${raceId})`);
+      }
+      // (2) 帯ごとの配分が最大剰余法の再計算と一致すること
+      const bands = await ctx.client.query<{ day: number; horses: string; burns: string }>(
+        `select s.current_day as day, count(*)::text as horses,
+                count(*) filter (where rr.is_burned)::text as burns
+         from race_results rr
+         join race_participant_snapshots s
+           on s.race_id = rr.race_id and s.horse_id = rr.horse_id
+         where rr.race_id = $1
+         group by s.current_day`,
+        [raceId],
+      );
+      const sizes = new Map<number, number>(bands.rows.map((b) => [b.day, Number(b.horses)]));
+      const expected = allocateBurnsByBandV2(sizes, burned);
+      for (const b of bands.rows) {
+        if ((expected.get(b.day) ?? 0) !== Number(b.burns)) {
+          throw new Error(
+            `INVALID_BATCH_STATE: band LV.${b.day} burned ${b.burns}, expected ${expected.get(b.day) ?? 0} (race ${raceId})`,
+          );
+        }
+      }
+    } else {
+      // V1: burned flags must exactly cover the bottom ranks (global)
+      const misplaced = await ctx.client.query<{ count: string }>(
+        `select count(*)::text as count from race_results
+         where race_id = $1 and is_burned <> (final_rank > $2)`,
+        [raceId, total - burned],
+      );
+      if (misplaced.rows[0]!.count !== '0') {
+        throw new Error(`INVALID_BATCH_STATE: burn flags do not match bottom ranks (race ${raceId})`);
+      }
     }
   }
   if (aspect === 'execution') {

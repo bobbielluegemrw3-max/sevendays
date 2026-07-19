@@ -957,7 +957,8 @@ function Terminal({
       {steps.map((step) => {
         if (elapsed < step.startAt) return null;
         const running = elapsed < step.startAt + step.duration;
-        const n = step.countKey ? counts[step.countKey] : undefined;
+        const raw = step.countKey ? counts[step.countKey] : undefined;
+        const n = typeof raw === 'number' ? raw : undefined;
         const doneLine = step.doneLine.replace('{n}', n === undefined ? '' : n.toLocaleString('en-US'));
         const progress = step.progress
           ? Math.min(1, (elapsed - step.startAt) / step.duration)
