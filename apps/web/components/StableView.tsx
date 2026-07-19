@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { PURCHASE_LOCK_AMOUNT } from '@sevendays/domain';
 import { money, horseValue, uncollectedGain } from '@/components/stable-shared';
 import { BulkTrainButton } from '@/components/BulkTrainButton';
 import { ChampionCard, ListedCard, StableBrowser } from '@/components/StableBrowser';
@@ -15,7 +14,7 @@ import s from '../app/stable.module.css';
  * クライアントの <StableBrowser>(検索・ソート・絞り込み・ページネーション)に委譲。
  * 100頭規模の一括所有でも快適に一覧・選択できる。
  *
- * 表示してよい数値は StableData + PRICE_TABLE_V1 + PURCHASE_LOCK_AMOUNT のみ。
+ * 表示してよい数値は StableData + PRICE_TABLE_V1 のみ(V2: 旧177.16表示は廃止)。
  * 馬の絵は既存 HorseArt(dna_hash 決定論)のみ。データ取得層 page.tsx は依頼側で結線。
  * ========================================================================== */
 
@@ -75,7 +74,7 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
     fill(t.sub_burned_tpl, { n: burned.length }),
   ];
   // {amt} の前後に分割して金額だけ太字にする(語順の言語差を吸収)
-  const [welcome1, welcome2] = t.welcome_text_tpl.split('{amt}');
+
 
   return (
     <div className={s.app}>
@@ -112,7 +111,7 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
         <div>
           <div className={s.welcomeTitle}>{t.welcome_title}</div>
           <div className={s.welcomeText}>
-            {welcome1}<b>{money(PURCHASE_LOCK_AMOUNT)} USDT</b>{welcome2}
+            {t.welcome_text_tpl}
             {pendingCount > 0 ? <span className={s.welcomePending}>{fill(t.welcome_pending_tpl, { n: pendingCount })}</span> : null}
           </div>
         </div>
