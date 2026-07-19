@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/block-raw-db-push.mjs",
+            "timeout": 15,
+            "statusMessage": "db push ガードを確認中"
+          }
+        ]
+      }
+    ]
+  }
+}

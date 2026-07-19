@@ -85,6 +85,23 @@
 - UI: 確定済み表示の下に後付けカードピッカー(未所持は購入→即使用)。文言はja直書き(items系i18nバックログ)
 - テスト: v3-items に後付け7ケース(シード一致・TV反映・DB不変性・各ガード)
 
+## 4.7 ★事故: db push によるリセット再実行(2026-07-20朝)— 復旧済み・恒久対策済み
+
+Decision 113 のマイグレーション適用の `supabase db push` が、**手動適用済みで
+supabase_migrations.schema_migrations に未記録**だった `20260719120000_v2_trial_reset2.sql` を
+「未適用」とみなして再実行 → 試運転データ(馬27頭・調教・grants・ledger)が再消失した。
+- **復旧(=リセット第3弾・オーナー指示)**: admin fund-grant 1000×4 を管理APIで再付与
+  (bobbie/goldbenchan/kusano/guri・idempotency-key `reseed3-20260720:*`・台帳整合確認済み)。
+  馬はプール購入からやり直し(guriは自動プール)
+- **恒久対策**:
+  1. 両マイグレーションとも記録済みになった(同一ファイルでの再発はもう起きない)
+  2. `scripts/safe-db-push.mjs` — リモート記録とローカルfilesを突合し、pending が
+     **引数で明示したバージョン集合と完全一致する場合のみ** push(不一致は中断+repair案内)
+  3. `.claude/settings.json` の PreToolUse フックが生の `supabase db push` を機械的にブロック
+     (発火確認済み)。適用は必ず `node scripts/safe-db-push.mjs <version>`
+  4. 運用則: マイグレーションを手動適用したら**その場で**
+     `supabase migration repair --status applied <version>` で記録する
+
 ## 5. 次セッションの再開点
 
 1. **明朝8:00の検証**: 帯別BURN(LV.1帯の配分・検証ステップ通過)・LVチャプター演出・白フラッシュ解消・朝スキン実機

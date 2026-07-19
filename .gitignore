@@ -44,3 +44,4 @@ yarn-error.log*
 /apps/web/public/horse-bases-sheet.html
 /apps/web/public/horse-bases-sheet-v3.html
 /apps/web/public/horses/bases_v3/
+.claude/settings.local.json
