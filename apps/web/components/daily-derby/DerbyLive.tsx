@@ -221,10 +221,13 @@ export function DerbyLive() {
   // スキンのスロット(2026-07-19 オーナー指摘): 「今の時間帯」ではなく
   // 「待っているレース」に従う。待機/カウントダウン中は next_derby_at の
   // スロット(00:00Z=朝白 / 12:00Z=夜黒)、上映・結果表示中はそのレースのスロット。
+  // 上映・結果中は「取得時点のstatus.slot」ではなく現在時刻(サーバー補正済み)から
+  // 導出する — 20:00切替の瞬間、直前に取得したstatusのslot(=MORNING)を参照して
+  // 白が一瞬出る実障害の修正(2026-07-19夜)。
   const displaySlot: 'MORNING' | 'NIGHT' =
     secondsToStart > 0
       ? (new Date(status.next_derby_at).getUTCHours() === 0 ? 'MORNING' : 'NIGHT')
-      : (status.slot ?? 'NIGHT');
+      : (new Date(now).getUTCHours() >= 12 ? 'NIGHT' : 'MORNING');
 
   // リプレイ判定用にライブの経過秒を記録(効果①②が読む)
   liveElapsedRef.current = -secondsToStart;
