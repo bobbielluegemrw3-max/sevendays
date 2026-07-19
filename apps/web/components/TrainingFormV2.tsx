@@ -29,6 +29,8 @@ export interface TrainingV2Confirmed {
   delta: number;
   synergy: number;
   rests_decay: boolean;
+  /** 調教アイテムの上乗せ(確定時添付・なければ0)。 */
+  item_bonus?: number;
   slot: string;
 }
 

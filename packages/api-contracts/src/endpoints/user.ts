@@ -431,7 +431,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       // 確定済みロールを返す — 詳細ページがメニューUI/確定済み表示へ切り替えるため。
       let engineV2 = false;
       let trainingV2: {
-        menus: string[]; delta: number; synergy: number; rests_decay: boolean; slot: string;
+        menus: string[]; delta: number; synergy: number; rests_decay: boolean; item_bonus: number; slot: string;
       } | null = null;
       // V2アイテムの常駐表示(装備バッジ+減衰シールド 2026-07-18)
       let raceItemV2: { item_key: string; effective_race_date: string; slot: string } | null = null;
@@ -462,8 +462,10 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
           }
           const v2row = await ctx.client.query<{
             menus_v2: string[]; delta_v2: string; synergy_v2: string; rests_decay_v2: boolean;
+            item_bonus_v3: string | null;
           }>(
-            `select menus_v2, delta_v2::text as delta_v2, synergy_v2::text as synergy_v2, rests_decay_v2
+            `select menus_v2, delta_v2::text as delta_v2, synergy_v2::text as synergy_v2, rests_decay_v2,
+                    item_bonus_v3::text as item_bonus_v3
              from training_sessions
              where horse_id = $1 and effective_race_date = $2 and slot = $3::race_slot
                and menus_v2 is not null`,
@@ -475,6 +477,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
               delta: Number(v2row.rows[0].delta_v2),
               synergy: Number(v2row.rows[0].synergy_v2),
               rests_decay: v2row.rows[0].rests_decay_v2,
+              item_bonus: v2row.rows[0].item_bonus_v3 === null ? 0 : Number(v2row.rows[0].item_bonus_v3),
               slot: cycle.slot,
             };
           }

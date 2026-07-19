@@ -120,6 +120,9 @@
    リテラル子孫 class は :global()(過去の事故点)。数字の色はティア(inline)が塗る。 */
 .capBlocks { display: flex; align-items: flex-end; gap: 16px; flex: none; }
 .tvBig { text-align: right; }
+.tvPending { font-family: var(--font-mono); font-size: 8.5px; color: var(--muted); margin-top: 3px;
+  white-space: nowrap; }
+.tvPending b { font-family: var(--font-display); font-size: 11px; }
 .tvBig :global(.l) { font-family: var(--font-display); font-size: 8.5px; color: var(--faint); letter-spacing: 0.14em; }
 .tvBig :global(.v) { font-family: var(--font-display); font-weight: 900; font-size: 38px; line-height: 1; }
 @media (max-width: 480px) {

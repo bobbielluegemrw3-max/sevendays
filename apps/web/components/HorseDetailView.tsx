@@ -9,6 +9,7 @@ import { ItemBoostPanel } from '@/components/ItemBoostPanel';
 import { ItemPrepPanelV3 } from '@/components/ItemPrepPanelV3';
 import { HeroArtFx } from '@/components/HeroArtFx';
 import { HeroReactionOverlay } from '@/components/HeroReactionOverlay';
+import { projectAfterRace } from '@/components/HeroArtFx';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { uncollectedGain } from '@/components/stable-shared';
@@ -419,6 +420,17 @@ export function HorseDetailView({
                     <div className={s.tvBig}>
                       <div className="l">TOTAL</div>
                       <div className="v" style={tvMedalStyle(horse.total_value)}>{Number(horse.total_value).toFixed(1)}</div>
+                      {/* 確定済みロールの常設表示(2026-07-19 オーナー指摘: +2.5が消えて見える) —
+                          反映は次のレース時(上乗せ→減衰を一括適用)なので、それまで予告を出す */}
+                      {horse.training_v2 ? (
+                        <div className={s.tvPending}>
+                          {(() => {
+                            const roll = Math.round((horse.training_v2.delta + (horse.training_v2.item_bonus ?? 0)) * 10) / 10;
+                            const proj = projectAfterRace(Number(horse.total_value), roll, horse.training_v2.rests_decay);
+                            return <>調教確定 {roll >= 0 ? `+${roll}` : roll} → 次のレース後 <b style={tvNumStyle(proj)}>{proj.toFixed(1)}</b></>;
+                          })()}
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                   <div className={s.dayBig}>
