@@ -218,6 +218,14 @@ export function DerbyLive() {
       secondsToStart = -(SHOW_TOTAL + 1);
     }
   }
+  // スキンのスロット(2026-07-19 オーナー指摘): 「今の時間帯」ではなく
+  // 「待っているレース」に従う。待機/カウントダウン中は next_derby_at の
+  // スロット(00:00Z=朝白 / 12:00Z=夜黒)、上映・結果表示中はそのレースのスロット。
+  const displaySlot: 'MORNING' | 'NIGHT' =
+    secondsToStart > 0
+      ? (new Date(status.next_derby_at).getUTCHours() === 0 ? 'MORNING' : 'NIGHT')
+      : (status.slot ?? 'NIGHT');
+
   // リプレイ判定用にライブの経過秒を記録(効果①②が読む)
   liveElapsedRef.current = -secondsToStart;
 
@@ -245,7 +253,7 @@ export function DerbyLive() {
         totalValue: h.total_value ?? null,
       }))}
       engineV2={status.engine_v2 === true}
-      slot={status.slot ?? 'NIGHT'}
+      slot={displaySlot}
       conditions={status.conditions ? conditionsView(status.conditions) : null}
       tonightForecast={
         status.tonight_forecast ? conditionsView({ ...status.tonight_forecast, night_name: null }) : null
