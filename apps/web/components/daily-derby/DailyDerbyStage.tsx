@@ -516,7 +516,7 @@ export function DailyDerbyStage({
             <span className={s.replayDot} />
             REPLAY
           </span>
-          <span className={s.replayText}>今夜のダービー(録画)— 見逃し再生は今夜1回だけ</span>
+          <span className={s.replayText}>直近のダービー(録画)— 見逃し再生は1回だけ</span>
           {onReplaySkip && (
             <button type="button" className={s.replayBtn} onClick={onReplaySkip}>
               スキップして結果へ →
@@ -673,7 +673,7 @@ function Waiting({
             掲示できる。少頭数ほど枠が小さい=生き残りやすい夜(Decision 093)。 */}
         {field && field.entrants > 0 && (
           <>
-            <div className={s.waitSec}>TONIGHT&apos;S FIELD · 今夜の出走枠</div>
+            <div className={s.waitSec}>NEXT RACE FIELD · 次のレースの出走枠</div>
             <div className={s.waitField}>
               <span className={s.waitFieldStat}>
                 <span className={s.waitFieldK}>出走予定</span>
@@ -1073,11 +1073,11 @@ function Counters({ elapsed: propElapsed, counts }: { elapsed: number; counts: D
 function RollcallEmpty({ debutCount }: { debutCount: number }) {
   return (
     <div className={s.rollcall}>
-      <div className={s.rollName}>今夜の出走はありません</div>
+      <div className={s.rollName}>このレースの出走はありません</div>
       <div className={s.rollSub}>
         {debutCount > 0
-          ? `あなたの新しい馬 ${debutCount}頭は、明晩 20:00 (GMT+8) にデビューします`
-          : '静かな夜 — 明晩のダービーをお待ちください'}
+          ? `あなたの新しい馬 ${debutCount}頭は、次のレース(朝8:00/夜20:00 GMT+8)でデビューします`
+          : '静かな回 — 次のダービーをお待ちください'}
       </div>
     </div>
   );

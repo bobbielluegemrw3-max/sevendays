@@ -43,7 +43,7 @@ function sessionStory(ss: Session): string {
     case 'PENDING_ASSIGNMENT':
       return isPool
         ? `予算 ${money(ss.locked_amount)} USDT をロック中。次のレースで出品馬→新規発行の順に予算いっぱい割り当てられます(締切前なら金額変更・キャンセル可)。`
-        : `最大 ${money(ss.locked_amount)} USDT をロック中。今夜20:00のマッチングで馬が割り当てられます(20:00前ならキャンセルで全額返金)。`;
+        : `最大 ${money(ss.locked_amount)} USDT をロック中。次のレース(朝8:00/夜20:00)のバッチで馬が割り当てられます(バッチ前ならキャンセルで全額返金)。`;
     case 'ASSIGNED':
     case 'COMPLETED': {
       const paid = money(ss.assigned_price);

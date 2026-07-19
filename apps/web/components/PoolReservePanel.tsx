@@ -109,11 +109,12 @@ export function PoolReservePanel({
   return (
     <div className={s.poolBox}>
       <div className={s.poolHead}>
-        {pool ? `現在のプール: ${fmt(current)} USDT(変更可)` : '◯◯$厩舎 — 予算で丸ごと予約'}
+        {pool ? `現在のプール予約: ${fmt(current)} USDT(変更可)` : 'プール予約 — 予算いっぱい馬を迎える'}
       </div>
       <p className={s.poolNote}>
-        予算を決めるだけ。次のレースで出品馬→新規発行の順に自動で厩舎が組まれます
-        (同じ価格でも中身は千差万別 — 宝探しはそこから)。
+        予算額をロックすると、次のレース(朝8:00/夜20:00)のバッチで、マーケットの出品馬 →
+        新規発行(102 USDT)の順に、予算のかぎり自動で割り当てられます。使い切れなかった余りは自動返金。
+        総合値は割り当てられて初めて分かります — 同じ予算でも、迎える馬は一頭ごとに違います。
       </p>
       <div className={s.poolBadges}>
         {POOL_PACKAGES_V2.map((p) => {
@@ -136,7 +137,7 @@ export function PoolReservePanel({
         <input
           className={s.poolInput}
           inputMode="numeric"
-          placeholder={`自由入力(${MIN}〜${maxAmount.toLocaleString('en-US')})`}
+          placeholder={`金額を自由入力(最低${MIN}・上限は残高)`}
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
         />

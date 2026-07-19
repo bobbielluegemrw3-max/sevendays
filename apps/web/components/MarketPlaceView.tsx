@@ -134,7 +134,7 @@ export function MarketPlaceView({
     setBusy(false);
     if (result.status === 200) {
       setDialogOpen(false);
-      setNotice(`${pick.name} を出品しました。今夜からレースには出走しません。`);
+      setNotice(`${pick.name} を出品しました。次のレースから出走しません。`);
       router.refresh();
     } else {
       setError(errorMessage(result.body) ?? '出品に失敗しました。');
@@ -150,7 +150,7 @@ export function MarketPlaceView({
       : await apiFetch('/api/v1/market/unlist', { method: 'POST', body: { horse_id: listing.horse_id } });
     setBusy(false);
     if (result.status === 200) {
-      setNotice(`${listing.name} の取り下げを受け付けました。今夜のバッチ後に外れ、明日からレースに戻ります。`);
+      setNotice(`${listing.name} の取り下げを受け付けました。次のバッチ後に外れ、その後のレースから戻ります。`);
       if (!preview) router.refresh();
     } else {
       setNotice(errorMessage(result.body) ?? '取り下げに失敗しました。');
@@ -192,7 +192,7 @@ export function MarketPlaceView({
           <span className={s.shelfHeadNote}>先頭から順にマッチングされます</span>
         </div>
         {data.shelf.length === 0 && data.recent_matches.length === 0 ? (
-          <p className="empty">まだ出品も成約もありません。今夜の最初の取引者になりましょう。</p>
+          <p className="empty">まだ出品も成約もありません。最初の取引者になりましょう。</p>
         ) : (
           <div className={s.shelfGrid}>
             {data.shelf.map((item, i) => (
@@ -243,7 +243,7 @@ export function MarketPlaceView({
           </div>
         )}
         <p className={s.shelfNote}>
-          指名購入はありません — すべての取引は毎晩20:00の一斉マッチング(先着順)で公平に成立します。
+          指名購入はありません — すべての取引は各レース(朝8:00/夜20:00)のバッチでの一斉マッチング(先着順)で公平に成立します。
           カードをタップすると仕組みの説明が見られます。
         </p>
         {/* レアリティ凡例はV2で撤去(Decision 101: レアリティ廃止・強さは総合値ティア) */}
@@ -274,7 +274,7 @@ export function MarketPlaceView({
               <span className={s.myMeta}>Day {l.current_day} · {fmt(l.price)} USDT · 出品 {localDate(l.listed_at)}</span>
               <span className={s.mySpacer} />
               {l.cancel_after_batch ? (
-                <span className={s.pendingBadge}>取り下げ予約済(今夜のバッチ後)</span>
+                <span className={s.pendingBadge}>取り下げ予約済(次のバッチ後)</span>
               ) : l.source === 'SMART' ? (
                 <span className={s.myMeta}>取り下げはAUTO設定のスマート出品OFFで(翌バッチ反映)</span>
               ) : (
@@ -286,8 +286,8 @@ export function MarketPlaceView({
           ))
         )}
         <p className={s.lockNote}>
-          出品中の馬はレースに出走しません(Dayと価値は凍結)。価格は出品時のDay価格で固定。
-          取り下げは翌バッチから反映(今夜売れた場合は売却が優先)。出品操作は馬ごとに1日1回です。
+          出品中の馬はレースに出走しません(LVと価値は凍結)。価格は出品時のLV価格で固定。
+          取り下げは翌バッチから反映(その前に売れた場合は売却が優先)。出品操作は馬ごとに1日1回です。
         </p>
       </section>
 
@@ -317,11 +317,11 @@ export function MarketPlaceView({
             </div>
             <p className={s.funnelText}>
               公平性のため、特定の馬を選んで買う仕組みはありません。
-              すべての取引は毎晩20:00の一斉マッチングで、購入予約の先着順に自動で成立します
+              すべての取引は各レースのバッチでの一斉マッチングで、プール予約の先着順に自動で成立します
               (人の手や優先枠は一切入りません)。
             </p>
             <p className={s.funnelText}>
-              購入予約をすると、今夜のマッチングでこの棚の出品馬、または新規発行馬が
+              プール予約をすると、次のバッチのマッチングでこの棚の出品馬、または新規発行馬が
               あなたの厩舎に割り当てられます。
             </p>
             <div className={d.dialogActions}>
@@ -338,7 +338,7 @@ export function MarketPlaceView({
           <div className={d.dialog}>
             <div className={d.dialogTitle}>馬を出品する</div>
             {listable.length === 0 ? (
-              <p className={s.pickEmpty}>出品できる馬がいません(Day1〜6のACTIVE馬のみ出品できます)。</p>
+              <p className={s.pickEmpty}>出品できる馬がいません(LV.1〜6のACTIVE馬のみ出品できます)。</p>
             ) : (
               <div className={s.pickGrid}>
                 {listable.map((h) => (
@@ -356,7 +356,7 @@ export function MarketPlaceView({
               </div>
             )}
             <div className={d.warnBox}>
-              ⚠ 出品中はレースに出走しません(Dayと価値は凍結)。価格は当日のDay価格で固定です。
+              ⚠ 出品中はレースに出走しません(LVと価値は凍結)。価格は当日のLV価格で固定です。
               取り下げは翌バッチからの反映になり、出品操作は馬ごとに1日1回です。
             </div>
             <label className={d.confirmLabel}>

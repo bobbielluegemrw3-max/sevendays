@@ -125,7 +125,7 @@ export function AdminDashboardView({ data }: { data: AdminCockpitData }) {
       {/* ===== ①今夜のダービー ===== */}
       <div className={s.statRow}>
         <div className={`${s.stat} ${s.statBig} ${s.cdCard}`}>
-          <div className={s.statK}>今夜のダービーまで</div>
+          <div className={s.statK}>次のダービーまで</div>
           <div className={`${s.statV} ${s.cd}`}>
             {derby ? (
               <AdminDerbyCountdown targetIso={derby.next_derby_at} serverNowIso={derby.server_time} />
@@ -133,10 +133,10 @@ export function AdminDashboardView({ data }: { data: AdminCockpitData }) {
               '—'
             )}
           </div>
-          <div className={s.statSub}>毎晩 20:00 MYT・37ステップ一斉精算</div>
+          <div className={s.statSub}>毎日 8:00/20:00 MYT・37ステップ一斉精算</div>
         </div>
         <div className={s.stat}>
-          <div className={s.statK}>今夜の出走</div>
+          <div className={s.statK}>次の出走</div>
           <div className={s.statV}>
             {derby?.tonight_field ? derby.tonight_field.entrants.toLocaleString() : '—'}
             <span className={s.u}>頭</span>
@@ -144,7 +144,7 @@ export function AdminDashboardView({ data }: { data: AdminCockpitData }) {
           <div className={s.statSub}>ACTIVE−手動出品(直前購入は明晩デビュー)</div>
         </div>
         <div className={s.stat}>
-          <div className={s.statK}>今夜のBURN枠</div>
+          <div className={s.statK}>次のBURN枠</div>
           <div className={s.statV}>
             {slots ?? '—'}
             <span className={s.u}>頭</span>

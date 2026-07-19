@@ -53,7 +53,7 @@ export function AssignmentList({ assignments }: { assignments: Assignment[] }) {
   const reset = () => setPage(0);
 
   if (total === 0) {
-    return <div className={s.empty}>入手・売却した馬はまだありません。今夜のバッチで馬が割り当てられるとここに表示されます。</div>;
+    return <div className={s.empty}>入手・売却した馬はまだありません。次のバッチで馬が割り当てられるとここに表示されます。</div>;
   }
 
   return (

@@ -40,7 +40,7 @@ export function Splash() {
           <span className={s.brandL2}>DERBY</span>
         </span>
       </div>
-      <div className={s.tagline}>7日間のサバイバルレース — 毎晩20:00、全馬一斉に発走。</div>
+      <div className={s.tagline}>LV.7へのサバイバルレース — 毎日 朝8:00・夜20:00、全馬一斉に発走。</div>
       <div className={s.dots}>
         <span className={s.dot} />
         <span className={s.dot} style={{ animationDelay: '.18s' }} />

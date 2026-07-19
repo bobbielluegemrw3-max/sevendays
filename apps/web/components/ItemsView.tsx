@@ -177,13 +177,13 @@ export function ItemsView({
 
   return (
     <>
-      {/* ---- ① ヘッダ + 今夜のレース条件(Decision 082) ---- */}
+      {/* ---- ① ヘッダ + 直近のレース条件(Decision 082) ---- */}
       <section className="panel">
         <h1>ITEMS</h1>
         <p className={s.intro}>
-          アイテムは馬のパラメータ(タイプ・調子・疲労・Day)との相性と、
-          <b>当夜のレース条件(天候・馬場・コース)への適性</b>で効きます。
-          1頭のレースに使えるのは1個まで。効果はすべて公開ルールです。
+          アイテムは2分類 — <b>調教アイテム</b>は調教の確定ロールに上乗せ(確定と同時に添付)、
+          <b>レースアイテム</b>は予報(的中率70%)への「備え」で、的中すれば適性が上限側へ、
+          外れれば下限側へ動きます。レースアイテムは1頭のレースに1個まで。効果はすべて公開ルールです。
         </p>
 
         {/* 条件の結果(本日/昨日) + 今夜は未確定 */}
@@ -202,7 +202,7 @@ export function ItemsView({
                   className={s.settingResultLabel}
                   style={{ color: WEATHER_COLOR[latest.weather] ?? 'var(--cyan)' }}
                 >
-                  {todayRevealed ? '本日のレース条件' : '前回のレース条件'}
+                  {todayRevealed ? '直近のレース条件' : '前回のレース条件'}
                 </span>
                 <span className={s.settingResultDate}>{latest.date.slice(5).replace('-', '/')}</span>
               </div>
@@ -217,15 +217,15 @@ export function ItemsView({
               </div>
               <div className={s.settingResultNote}>
                 {todayRevealed
-                  ? '本日のレースで公開された条件です。今夜の条件は次のレースまで分かりません。'
-                  : '前回のレースで公開された条件(参考)。今夜の条件は発走後の結果で公開されます。'}
+                  ? '直近のレースで公開された条件です。次のレースの条件は発走まで分かりません。'
+                  : '前回のレースで公開された条件(参考)。次のレースの条件は発走後に公開されます。'}
               </div>
             </div>
             <div className={s.settingTonight}>
-              <div className={s.settingTonightK}>今夜の条件</div>
+              <div className={s.settingTonightK}>次のレースの条件</div>
               <div className={s.settingTonightQ}>?</div>
               <div className={s.settingTonightNote}>
-                発走(20:00 GMT+8)まで、本人にも運営にも分かりません。適性アイテムの選択はあなたの読み次第。
+                発走(朝8:00/夜20:00 GMT+8)まで、本人にも運営にも分かりません。予報を読んで備えるかはあなた次第。
               </div>
             </div>
           </div>
@@ -282,8 +282,9 @@ export function ItemsView({
             ))}
           </div>
           <div className={s.settingNote}>
-            各アイテムの<b>適性</b>(芝巧者・雨の鬼・道悪の鬼など)が当夜の条件と噛み合うと効果は最大×1.5、
-            逆条件では×0.5まで変わります。使った馬がBurnされた場合、アイテム代金は全額サポートボーナス(チャンピオン誕生のお祝い金)の財源になります。
+            レースアイテムは<b>備えた条件グループ</b>(晴れ系/雨系・良系/道悪系など)が実際の条件と
+            一致すると該当適性が上限側に置き換わり、外れると下限側に沈みます — 上がりも下がりも公開ルールです。
+            使った馬がBurnされた場合、アイテム代金は全額サポートボーナス(チャンピオン誕生のお祝い金)の財源になります。
           </div>
         </div>
 
@@ -321,7 +322,7 @@ export function ItemsView({
               )}
             </div>
             <div className={s.calNote}>
-              毎晩のレースで公開された条件の履歴。天候の字色で一目、ホバーで馬場・コースも(抽選は毎回独立です)。
+              各レース(朝8:00/夜20:00)で公開された条件の履歴。天候の字色で一目、ホバーで馬場・コースも(抽選は毎回独立です)。
             </div>
           </div>
         ) : null}
