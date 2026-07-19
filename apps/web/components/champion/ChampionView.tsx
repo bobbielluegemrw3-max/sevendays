@@ -7,6 +7,7 @@ import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { ChampionHero } from '@/components/champion/ChampionHero';
 import { SAMPLE_CHAMPIONS } from '@/lib/champion-fixtures';
+import { tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../../app/champion.module.css';
 
@@ -31,7 +32,8 @@ export interface HallChampion {
   name: string;
   dna_hash: string;
   horse_type: string;
-  rarity: string;
+  /** V2: 走破時点の総合値(旧レアリティ表示は廃止 2026-07-19)。 */
+  total_value?: number | null;
   owner: string;
   cleared_at: string | null;
 }
@@ -41,14 +43,11 @@ const SAMPLE_HALL: HallChampion[] = SAMPLE_CHAMPIONS.slice(0, 8).map((h, i) => (
   name: h.name,
   dna_hash: h.dna_hash,
   horse_type: ['SPRINTER', 'POWER', 'BALANCED', 'ENDURANCE', 'LUCK'][i % 5]!,
-  rarity: ['LEGENDARY', 'EPIC', 'RARE', 'UNCOMMON', 'COMMON'][i % 5]!,
+  // V2: 走破馬の総合値サンプル(85+ — チャンピオンの説得力・オーナー指示 2026-07-19)
+  total_value: [96.4, 93.2, 91.8, 90.5, 89.1, 87.7, 86.4, 85.2][i]!,
   owner: ['yu***', 'mi***', '0x9fe3…12aa', 'ta***', 'ke***', 'sa***', '0x77cd…09be', 'no***'][i]!,
   cleared_at: `2026-07-${String(1 + i).padStart(2, '0')}`,
 }));
-
-const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
-const RARITY_FILTER = ['ALL', 'LEGENDARY', 'EPIC', 'RARE', 'UNCOMMON', 'COMMON'] as const;
-const rarClass = (r: string): string => (RARITIES.includes(r) ? r : 'COMMON');
 
 type SortKey = 'recent' | 'oldest' | 'name';
 
@@ -66,7 +65,6 @@ export function ChampionView({
   const isSample = hall.length === 0;
   const source = isSample ? SAMPLE_HALL : hall;
 
-  const [rar, setRar] = useState<(typeof RARITY_FILTER)[number]>('ALL');
   const [sort, setSort] = useState<SortKey>('recent');
 
   // 最新チャンピオン(絞り込みに関係なく全体から)
@@ -76,13 +74,12 @@ export function ChampionView({
   );
 
   const shown = useMemo(() => {
-    const filtered = rar === 'ALL' ? source : source.filter((c) => c.rarity === rar);
-    return [...filtered].sort((a, b) => {
+    return [...source].sort((a, b) => {
       if (sort === 'name') return a.name.localeCompare(b.name);
       if (sort === 'oldest') return (a.cleared_at ?? '').localeCompare(b.cleared_at ?? '');
       return (b.cleared_at ?? '').localeCompare(a.cleared_at ?? '');
     });
-  }, [source, rar, sort]);
+  }, [source, sort]);
 
   return (
     <>
@@ -117,20 +114,8 @@ export function ChampionView({
               </div>
             )}
 
-            {/* 絞り込み + 並び替え */}
+            {/* 並び替え(V2: レアリティ絞り込みは廃止 — 強さは総合値ひとつ) */}
             <div className={s.hallControls}>
-              <div className={s.rarTabs}>
-                {RARITY_FILTER.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    className={rar === r ? s.rarTabOn : s.rarTab}
-                    onClick={() => setRar(r)}
-                  >
-                    {r === 'ALL' ? t.filter_all : r}
-                  </button>
-                ))}
-              </div>
               <AppSelect
                 className={s.sortSelect}
                 value={sort}
@@ -145,7 +130,7 @@ export function ChampionView({
             </div>
 
             {/* 最新チャンピオンのスポットライト */}
-            {rar === 'ALL' && spotlight && (
+            {spotlight && (
               <div className={s.spotlightFrame}>
                 <div className={s.spotlight}>
                   <span className={s.spotlightTag}>★ LATEST CHAMPION</span>
@@ -156,7 +141,11 @@ export function ChampionView({
                     <div className={s.spotlightName}>{spotlight.name}</div>
                     <div className={s.spotlightChips}>
                       <span className={s.typeChip}>{spotlight.horse_type}</span>
-                      <span className={`${s.rar} ${s[`rar${rarClass(spotlight.rarity)}`]}`}>{spotlight.rarity}</span>
+                      {spotlight.total_value != null && (
+                        <span className={s.rar} style={tvChipStyle(spotlight.total_value)}>
+                          <b style={tvNumStyle(spotlight.total_value)}>{spotlight.total_value.toFixed(1)}</b>
+                        </span>
+                      )}
                     </div>
                     <div className={s.spotlightMeta}>
                       {spotlight.cleared_at && <span>{t.crowned} <b>{spotlight.cleared_at}</b></span>}
@@ -176,7 +165,11 @@ export function ChampionView({
                   </div>
                   <div className={s.hallName}>{c.name}</div>
                   <div className={s.hallMetaRow}>
-                    <span className={`${s.rar} ${s[`rar${rarClass(c.rarity)}`]}`}>{c.rarity}</span>
+                    {c.total_value != null && (
+                      <span className={s.rar} style={tvChipStyle(c.total_value)}>
+                        <b style={tvNumStyle(c.total_value)}>{c.total_value.toFixed(1)}</b>
+                      </span>
+                    )}
                     <span className={s.typeChip}>{c.horse_type}</span>
                     <span className={s.hallOwner}>{c.owner}</span>
                   </div>

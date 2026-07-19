@@ -55,12 +55,14 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         dna_hash: string;
         horse_type: string;
         rarity: string;
+        total_value: number | null;
         email: string;
         stable_name: string | null;
         day7_clear_date: string | null;
       }>(
         `select h.id, h.name, h.dna_hash, h.horse_type::text as horse_type,
-                h.rarity::text as rarity, u.email, u.stable_name,
+                h.rarity::text as rarity, h.total_value::float8 as total_value,
+                u.email, u.stable_name,
                 bb.day7_clear_date::text as day7_clear_date
          from horses h
          join users u on u.id = h.owner_user_id
@@ -77,6 +79,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
           dna_hash: r.dna_hash,
           horse_type: r.horse_type,
           rarity: r.rarity,
+          total_value: r.total_value,
           owner: r.stable_name
             ?? (r.email.endsWith('@user.sevendays')
               ? 'ウォレットユーザー'
