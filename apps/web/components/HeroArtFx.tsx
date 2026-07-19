@@ -10,7 +10,7 @@ import s from '../app/horse-detail.module.css';
  * 調教確定・アイテム使用の瞬間に、馬の画像そのものが反応する:
  *  - 駆け出し(モーション演出: 前傾+バウンド+スピードライン+砂埃)
  *  - ティア色のオーラ一閃 / 上振れ=金粒子 / 下振れ=暗転+砂埃 / REST=湯気
- *  - 数値ポップ(内訳つき・「次のレース後」の予測値まで正直に)
+ *  - 数値ポップ(内訳つき・反映後の総合値まで表示 — Decision 112: 確定即反映)
  *  - 保険(下振れ0止め)の盾キャッチ / シナジー2倍の弾み / ティア昇格リング
  *  - アイテム使用: アイコンが馬に吸い込まれてフラッシュ
  * TrainingFormV2 / ItemPrepPanelV3 からの CustomEvent で駆動(親子結線なし)。
@@ -25,7 +25,7 @@ export interface TrainingFxDetail {
   itemKey: string | null;
   restsDecay: boolean;
   before: number;
-  /** 次のレース後の予測値(ソフトキャップ+減衰込み・確定ロールなので決定論)。 */
+  /** 反映後の総合値(Decision 112: 確定と同時に適用・ソフトキャップ込み)。 */
   projected: number;
 }
 
@@ -181,7 +181,7 @@ export function HeroArtFx({ horseId, children }: { horseId: string; children: Re
           </b>
           <span className={s.fxPopNext}>
             {t.before} → <b>{t.projected}</b>
-            <small>{rest ? '(減衰を1回無効)' : '(次のレース後・減衰込み)'}</small>
+            <small>{rest ? '(次のレースの減衰を無効化)' : '(総合値に反映済み)'}</small>
           </span>
         </span>
       ) : null}
@@ -205,10 +205,11 @@ export function HeroArtFx({ horseId, children }: { horseId: string; children: Re
 }
 
 /**
- * 確定ロールから「次のレース後」の総合値を予測する(確定即最終=決定論なので正直)。
- * エンジンの applyTotalValueGainV2/applyDecayV2 と同じ数式(定数はdomainの実定数)。
+ * 確定ロールから反映後の総合値を計算する(Decision 112: 確定と同時に適用)。
+ * エンジンの applyTotalValueGainV2 と同じ数式(定数はdomainの実定数)。
+ * 減衰(-2.0)はレース時に別途かかる — ここには含めない。
  */
-export function projectAfterRace(before: number, gain: number, restsDecay: boolean): number {
+export function projectAfterConfirm(before: number, gain: number): number {
   const TV = TOTAL_VALUE_V2;
   let next: number;
   if (gain <= 0) next = before + gain;
@@ -217,6 +218,5 @@ export function projectAfterRace(before: number, gain: number, restsDecay: boole
     const headroom = TV.softCap - before;
     next = gain <= headroom ? before + gain : TV.softCap + (gain - headroom) * TV.softCapFactor;
   }
-  const afterDecay = restsDecay ? next : next - TV.decayPerRace;
-  return Math.round(Math.max(TV.min, Math.min(TV.max, afterDecay)) * 100) / 100;
+  return Math.round(Math.max(TV.min, Math.min(TV.max, next)) * 100) / 100;
 }

@@ -11,7 +11,7 @@ import {
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { AppSelect } from '@/components/AppSelect';
 import { effectSummaryJa, type CatalogItem, type InventoryData } from '@/lib/items';
-import { projectAfterRace, type TrainingFxDetail } from '@/components/HeroArtFx';
+import { projectAfterConfirm, type TrainingFxDetail } from '@/components/HeroArtFx';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
 
@@ -44,6 +44,8 @@ interface RollResult {
   training_tickets: number;
   item_key?: string | null;
   item_bonus?: number | null;
+  /** Decision 112: 確定と同時に反映された総合値(サーバー計算の実値)。 */
+  total_value?: number | null;
 }
 
 function menuLabel(menu: TrainingMenuV2, t: AppDict['horse']): string {
@@ -223,7 +225,8 @@ export function TrainingFormV2({
         itemKey: body.item_key ?? null,
         restsDecay: body.rests_decay,
         before: totalValue,
-        projected: projectAfterRace(totalValue, gain, body.rests_decay),
+        // Decision 112: 総合値は確定した瞬間に反映済み — サーバーの実値を優先
+        projected: body.total_value ?? projectAfterConfirm(totalValue, gain),
       };
       window.dispatchEvent(new CustomEvent<TrainingFxDetail>('sdd:training-confirmed', { detail }));
     }

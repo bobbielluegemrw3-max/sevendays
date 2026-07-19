@@ -25,6 +25,7 @@ import { verifyWalletLink } from '@sevendays/blockchain';
 import { evaluateHiddenBadges } from '../hidden/achievements.js';
 import { computeHiddenLooks } from '../hidden/looks.js';
 import {
+  applyTotalValueGainV2,
   hiddenPreferencesV2,
   resolveTrainingItemV3,
   resolveTrainingRollV2,
@@ -78,6 +79,22 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
   // FUN_V2_PLAN.md §3 A1 — 順位は目安(BURN選定には運が絡む)。降順ソート済み。
   // Decision 111 (2026-07-19): BURNはLV帯別選定になったため、安全圏の分布も
   // 帯(current_day)ごとに持つ — 順位・母数・SAFE/RISKすべて「同じ帯の中」で計算する。
+  // Decision 112 (2026-07-19): V2の表示総合値はDBの実値(horses.total_value)。
+  // V0計算(調子/疲労/レアリティ由来)はV1シーズン専用。判定はプロセス内キャッシュ。
+  let engineFlag: { at: number; v2: boolean } | null = null;
+  async function engineV2Active(
+    client: import('@sevendays/shared').SqlClient,
+  ): Promise<boolean> {
+    const ttl = Number(process.env.TOTAL_VALUE_DIST_CACHE_MS ?? 60000);
+    if (engineFlag && Date.now() - engineFlag.at < ttl) return engineFlag.v2;
+    const rows = await client.query<{ version: string }>(
+      `select version from race_engine_versions
+       where activated_at is not null and deactivated_at is null`,
+    );
+    const v2 = rows.rows.length === 1 && isRaceEngineV2(rows.rows[0]!.version);
+    engineFlag = { at: Date.now(), v2 };
+    return v2;
+  }
   let tonightDist: { key: string; at: number; byDay: Map<number, number[]> } | null = null;
   async function tonightDistribution(
     client: import('@sevendays/shared').SqlClient,
@@ -95,8 +112,10 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       condition: string;
       fatigue: string;
       tonight_training: string | null;
+      total_value: number | null;
     }>(
-      `select h.ability_json, h.horse_type::text as horse_type, h.rarity::text as rarity,
+      `select h.total_value::float8 as total_value,
+              h.ability_json, h.horse_type::text as horse_type, h.rarity::text as rarity,
               h.dna_modifier::text as dna_modifier, h.condition::text as condition,
               h.fatigue::text as fatigue, h.current_day,
               (select t.training_type::text from training_sessions t
@@ -107,9 +126,12 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
                           where ml.horse_id = h.id and ml.status = 'LISTED' and ml.source = 'MANUAL')`,
       [effectiveRaceDate],
     );
+    const v2Season = await engineV2Active(client);
     const byDay = new Map<number, number[]>();
     for (const r of rows.rows as (typeof rows.rows[number] & { current_day: number })[]) {
-      const v = totalValueV0(totalValueInputFromRow(r));
+      const v = v2Season && r.total_value !== null
+        ? Number(r.total_value)
+        : totalValueV0(totalValueInputFromRow(r));
       const list = byDay.get(r.current_day);
       if (list) list.push(v);
       else byDay.set(r.current_day, [v]);
@@ -282,6 +304,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         rarity: string; condition: string; fatigue: string; dna_hash: string;
         gifted_at: string | null; ability_json: Record<string, number>; dna_modifier: string;
         tonight_training: string | null; effective_race_date: string; listing: string | null;
+        total_value: number | null;
       }>(
         `with eff as (
            select c.race_date, c.slot from (
@@ -299,7 +322,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
          )
          select h.id, h.name, h.status::text as status, h.current_day, h.horse_type::text as horse_type,
                 h.rarity::text as rarity, h.condition::text as condition, h.fatigue::text as fatigue,
-                h.dna_hash, h.gifted_at::text as gifted_at,
+                h.dna_hash, h.gifted_at::text as gifted_at, h.total_value::float8 as total_value,
                 h.ability_json, h.dna_modifier::text as dna_modifier,
                 (select coalesce(t.training_type::text, 'V2') from training_sessions t
                   where t.horse_id = h.id and t.effective_race_date = (select race_date from eff)
@@ -317,6 +340,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       const effDate = rows.rows[0]?.effective_race_date ?? today;
       const hasActive = rows.rows.some((r) => r.status === 'ACTIVE');
       const dist = hasActive ? await tonightDistribution(ctx.client, effDate) : new Map<number, number[]>();
+      const v2Season = await engineV2Active(ctx.client);
       const horses = rows.rows.map((r) => {
         const l = looks.get(r.id);
         const { ability_json, dna_modifier, tonight_training, effective_race_date, ...rest } = r;
@@ -324,7 +348,10 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         void dna_modifier;
         void effective_race_date;
         const isActive = r.status === 'ACTIVE';
-        const totalValue = isActive ? totalValueV0(totalValueInputFromRow(r)) : null;
+        // Decision 112: V2は実値(調教確定が即反映された horses.total_value)を表示
+        const totalValue = isActive
+          ? (v2Season && r.total_value !== null ? Number(r.total_value) : totalValueV0(totalValueInputFromRow(r)))
+          : null;
         // 手動出品中は今夜走らない=順位なし(総合値のみ)
         const runs = isActive && r.listing !== 'MANUAL';
         const bandValues = runs ? dist.get(r.current_day) ?? [] : [];
@@ -378,6 +405,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
          select id, name, status::text as status, current_day, horse_type::text as horse_type,
                 rarity::text as rarity, dna_hash, dna_modifier::text as dna_modifier,
                 ability_json, condition::text as condition, fatigue::text as fatigue,
+                total_value::float8 as total_value,
                 mint_seed_hash, horse_generation_version, gifted_at::text as gifted_at,
                 (select l.source::text from market_listings l
                  where l.horse_id = horses.id and l.status = 'LISTED' limit 1) as listing,
@@ -396,10 +424,14 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         horse_type: string; rarity: string; dna_modifier: string;
         condition: string; fatigue: string; tonight_training: string | null;
         effective_race_date: string; status: string; listing: string | null;
-        current_day: number;
+        current_day: number; total_value: number | null;
       };
       const isActiveHorse = hRow.status === 'ACTIVE';
-      const totalValue = isActiveHorse ? totalValueV0(totalValueInputFromRow(hRow)) : null;
+      // Decision 112: V2は実値(調教確定が即反映された horses.total_value)を表示
+      const v2Season = await engineV2Active(ctx.client);
+      const totalValue = isActiveHorse
+        ? (v2Season && hRow.total_value !== null ? Number(hRow.total_value) : totalValueV0(totalValueInputFromRow(hRow)))
+        : null;
       const runsTonight = isActiveHorse && hRow.listing !== 'MANUAL';
       let tonightRank: number | null = null;
       let tonightEntrants: number | null = null;
@@ -901,6 +933,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
           }
         }
 
+        let appliedTotalValue: number | null = null;
         try {
           await ctx.client.query('begin');
           if (input.item_key !== undefined) {
@@ -955,6 +988,24 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
               itemUnitId,
             ],
           );
+          // Decision 112 (2026-07-19): ロール(+アイテム上乗せ)は確定した瞬間に
+          // 総合値へ反映する(ソフトキャップ込み)。レース時は減衰(-2.0)のみ。
+          // P2P売買・安全圏・表示すべてが確定直後から実値で揃う。
+          const tvRow = await ctx.client.query<{ total_value: string | null }>(
+            `select total_value from horses where id = $1 for update`,
+            [ctx.params.id],
+          );
+          const tvBefore = tvRow.rows[0]?.total_value;
+          if (tvBefore != null) {
+            appliedTotalValue = applyTotalValueGainV2(
+              Number(tvBefore),
+              roll.delta + (itemBonus ?? 0),
+            );
+            await ctx.client.query(
+              `update horses set total_value = $1 where id = $2`,
+              [appliedTotalValue, ctx.params.id],
+            );
+          }
           const rendered = renderNotification('TRAINING_COMPLETED', {
             horse_name: horse.rows[0].name,
             training_type: menus.join('+'),
@@ -993,6 +1044,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
           first_confirm: true,
           item_key: input.item_key ?? null,
           item_bonus: itemBonus,
+          // Decision 112: 確定と同時に反映された総合値(UIが即座に新値を表示できる)
+          total_value: appliedTotalValue,
           training_tickets: ticketsV2.rows[0]?.n ?? 0,
         };
       }

@@ -138,6 +138,8 @@ describe('catalog V3 engine wiring (Decision 109)', () => {
        values ($1, $2, $3, $3, $4, $5, 0, 3.0, false, 'royal_banquet', 4.0, $6)`,
       [horseB, owner, setup.batchDate, ['HILL'], JSON.stringify([{ menu: 'HILL', roll: 3 }]), unitB],
     );
+    // Decision 112: ロール+アイテム上乗せは確定と同時に総合値へ反映(60 +7 = 67)
+    await client.query(`update horses set total_value = 67 where id = $1`, [horseB]);
 
     // C: 減衰シールド(星霜の砂適用済み=残2)— RESTなしでも減衰しない
     const horseC = await newHorseV2(owner, 'BALANCED', 70);

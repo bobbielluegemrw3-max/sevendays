@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createTestDb } from '@sevendays/database';
 import type { SqlClient } from '@sevendays/shared';
 import {
+  applyTotalValueGainV2,
   computeScoreV2,
   deriveTrackCondition,
   deriveWeather,
@@ -78,6 +79,15 @@ async function addTrainingV2(
      returning id`,
     [horseId, userId, batchDate, menus, JSON.stringify(menus.map((m) => ({ menu: m, roll: delta }))), delta, restsDecay],
   );
+  // Decision 112: 確定と同時に総合値へ反映(APIの確定トランザクションを模す)
+  const tv = await client.query<{ total_value: string }>(
+    `select total_value::text as total_value from horses where id = $1`,
+    [horseId],
+  );
+  await client.query(`update horses set total_value = $1 where id = $2`, [
+    applyTotalValueGainV2(Number(tv.rows[0]!.total_value), delta),
+    horseId,
+  ]);
   return r.rows[0]!.id;
 }
 
@@ -153,7 +163,7 @@ describe('engine V2 wiring (Decision 101/104)', () => {
     });
     expect(created).toBe(5);
 
-    // 漸化の凍結値(ロール適用→ソフトキャップ→減衰、RESTは減衰無効)
+    // 漸化の凍結値(Decision 112: ロールは確定時に反映済み — レースは減衰のみ、RESTは減衰無効)
     expect(Number((await snapshotOf(setup.raceId, horseA)).total_value)).toBe(54);
     expect(Number((await snapshotOf(setup.raceId, horseB)).total_value)).toBe(84.5);
     expect(Number((await snapshotOf(setup.raceId, horseC)).total_value)).toBe(70);

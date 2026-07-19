@@ -20,7 +20,6 @@ import {
 } from '@sevendays/domain';
 import {
   applyDecayV2,
-  applyTotalValueGainV2,
   computeDailyState,
   deriveSurface,
   deriveTrackCondition,
@@ -414,15 +413,16 @@ async function createParticipantSnapshotsV2(
     const trainingUsage = usages.rows.find((u) => u.usage_kind === 'TRAINING') ?? null;
 
     const itemBonus = v2Roll?.item_key_v3 ? Number(v2Roll.item_bonus_v3) : 0;
-    const delta = v2Roll ? round2(Number(v2Roll.delta_v2) + itemBonus) : null;
 
     // Decay shield (aeon_sand): negates the decay tick when REST does not
     // already cover it; consumed one race at a time.
     const shieldUsed = !restsDecay && horse.decay_shield_v2 > 0;
 
     const before = Number(horse.total_value);
-    const afterGain = delta === null ? before : applyTotalValueGainV2(before, delta);
-    const totalValue = applyDecayV2(afterGain, restsDecay || shieldUsed);
+    // Decision 112 (2026-07-19): 調教ロール(+アイテム上乗せ)は確定時に
+    // horses.total_value へ適用済み。レースで起こる変化は減衰(-2.0)のみ。
+    // delta はスナップショットへの凍結(監査・演出)にだけ使う。
+    const totalValue = applyDecayV2(before, restsDecay || shieldUsed);
 
     const naturalWeatherMod = weatherModifier(weather, horse.horse_type);
     const naturalTrackMod = trackModifier(track, horse.horse_type);

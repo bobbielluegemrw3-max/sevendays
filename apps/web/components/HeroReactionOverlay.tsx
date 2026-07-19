@@ -120,7 +120,7 @@ export function HeroReactionOverlay({
             </b>
             <div className={s.rxNext}>
               {t.before} → <b>{t.projected}</b>
-              <small>{rest ? '(減衰を1回無効)' : '(次のレース後・減衰込み)'}</small>
+              <small>{rest ? '(次のレースの減衰を無効化)' : '(総合値に反映済み)'}</small>
             </div>
             {promoted && tier ? <span className={s.rxTier}>TIER UP — {tier.label}</span> : null}
           </div>
