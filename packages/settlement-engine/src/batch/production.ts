@@ -298,6 +298,10 @@ export function buildProductionHandlers(): StepHandlers {
       await verifyBurnOutcome(ctx, 'execution');
     },
     GENERATE_REVENGE_BUFFS: async (ctx) => {
+      // V2(Decision 109): Revenge BuffはV2で生成停止(BURN形見ドロップに置換)。
+      // 「全BURNにbuffがあるはず」という不変条件はV1専用 — 2026-07-19朝、
+      // V2初の実BURNで誤爆しバッチがFAILEDした実障害の修正。
+      if (isRaceEngineV2(lockedVersion(ctx, 'race_engine_versions'))) return;
       await verifyBurnOutcome(ctx, 'buffs');
     },
     // Step 16 (PAY_MLM_REWARDS) is retryable: re-invoking finalizeAndBurn is
