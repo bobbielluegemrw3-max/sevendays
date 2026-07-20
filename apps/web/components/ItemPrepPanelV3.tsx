@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { refreshAfterFx, refreshSoft } from '@/lib/deferred-refresh';
 import { TrainStep, StepLink, stepStyles as st } from '@/components/TrainStep';
+import { Button } from '@/components/ui/Button';
 import { AppSelect } from '@/components/AppSelect';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import { ItemCardPicker } from '@/components/ItemCardPicker';
@@ -205,13 +206,11 @@ export function ItemPrepPanelV3({
           />
           {/* カード列(横スクロールバー)と密着しないよう一呼吸(2026-07-20 オーナー指摘) */}
           <div className={s.boostRow} style={{ marginTop: '0.6rem' }}>
-            <button type="button" className={busy ? 'btnRolling' : ''} disabled={busy || !selected} onClick={() => void applySelected()}>
-              {busy
-                ? '装備中…'
-                : selected
-                  ? `${selectedItem?.name_ja ?? ''}を${(ownedByKey.get(selected) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}`
-                  : t.boost_pick}
-            </button>
+            <Button variant="primary" busy={busy} busyLabel="装備中…" disabled={!selected} onClick={() => void applySelected()}>
+              {selected
+                ? `${selectedItem?.name_ja ?? ''}を${(ownedByKey.get(selected) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}`
+                : t.boost_pick}
+            </Button>
             {/* 買わない人のための明示的な出口(2026-07-20 オーナー指示) */}
             <StepLink onClick={() => { setSelected(''); setSkip(true); }}>{t.step_skip}</StepLink>
           </div>

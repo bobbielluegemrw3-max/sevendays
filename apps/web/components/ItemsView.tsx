@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { refreshSoft } from '@/lib/deferred-refresh';
+import { Button } from '@/components/ui/Button';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { AppSelect } from '@/components/AppSelect';
 import {
@@ -404,13 +405,15 @@ export function ItemsView({
                   }))}
                 />
               </label>
-              <button
+              <Button
                 type="submit"
-                className={busyKey === 'gift' ? 'btnRolling' : ''}
-                disabled={busyKey === 'gift' || !giftKey || !giftEmail}
+                variant="primary"
+                busy={busyKey === 'gift'}
+                busyLabel="送付中…"
+                disabled={!giftKey || !giftEmail}
               >
-                {busyKey === 'gift' ? '送付中…' : giftKey && qty > 1 ? `${qty}個 贈る` : '贈る'}
-              </button>
+                {giftKey && qty > 1 ? `${qty}個 贈る` : '贈る'}
+              </Button>
             </form>
             <div className={s.giftNote}>
               送付は即時確定で取り消せません。登録済みのメールアドレス宛にのみ届きます(1日20回まで)。
@@ -477,9 +480,11 @@ export function ItemsView({
                       </div>
                       {item.sellable ? (
                         <div className={s.cardActions}>
-                          <button type="button" className={busyKey === item.key ? 'btnRolling' : ''} disabled={busyKey === item.key} onClick={() => void buy(item)}>
-                            {busyKey === item.key ? '購入中…' : '購入する'}
-                          </button>
+                          {/* グリッドの反復ボタンは静かに揃える(1画面1主アクションの原則)。
+                              主アクションはギフト送付側に置く */}
+                          <Button variant="ghost" busy={busyKey === item.key} busyLabel="購入中…" onClick={() => void buy(item)}>
+                            購入する
+                          </Button>
                         </div>
                       ) : null}
                     </div>

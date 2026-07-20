@@ -2,6 +2,7 @@ import { WalletHistory, type HistoryEntry } from '@/components/WalletHistory';
 import { WithdrawForm } from '@/components/WithdrawForm';
 import { OnrampGuide } from '@/components/OnrampGuide';
 import { TotalAssetsCard } from '@/components/TotalAssetsCard';
+import { Stat } from '@/components/ui/Stat';
 import type { AppDict } from '@/lib/i18n';
 import s from '../app/wallet.module.css';
 
@@ -17,10 +18,6 @@ import s from '../app/wallet.module.css';
 
 export interface Wallet { available: string; locked: string }
 export interface DepositInfo { address: string; chain_id: string; asset: string; confirmations_required: number }
-
-function money(v: string): string {
-  return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 export function WalletView({
   wallet, deposit, history, stableValue, uncollected = 0, assetsCopy,
@@ -50,16 +47,14 @@ export function WalletView({
         t={assetsCopy}
       />
 
-      {/* 残高 */}
+      {/* 残高(2026-07-21・1-1: Stat 部品へ。値が変わると登る) */}
       <div className={s.balances}>
         <div className={s.balAvail}>
-          <div className={s.balK}>利用可能 · AVAILABLE</div>
-          <div className={s.balV}>{money(wallet.available)}<small>USDT</small></div>
+          <Stat label="利用可能 · AVAILABLE" value={Number(wallet.available)} unit="USDT" digits={2} group size="lg" tone="cyan" />
           <div className={s.balNote}>出金・馬の購入に使えます</div>
         </div>
         <div className={s.balLocked}>
-          <div className={s.balK}>ロック中 · LOCKED</div>
-          <div className={s.balV}>{money(wallet.locked)}<small>USDT</small></div>
+          <Stat label="ロック中 · LOCKED" value={Number(wallet.locked)} unit="USDT" digits={2} group size="lg" />
           <div className={s.balNote}>{hasLocked ? '購入・チャンピオン報酬で一時的に確保中' : 'ロック中の資金はありません'}</div>
         </div>
       </div>
