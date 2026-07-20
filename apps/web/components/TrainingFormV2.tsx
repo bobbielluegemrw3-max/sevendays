@@ -289,7 +289,7 @@ export function TrainingFormV2({
               onClick={() => void attachItem()}
             >
               {busy
-                ? t.train_busy
+                ? '上乗せ中…'
                 : itemKey && attachedItem
                   ? `${attachedItem.name_ja}を${(ownedByKey.get(itemKey) ?? 0) > 0 ? '使う' : '買って使う'}`
                   : 'アイテムを選ぶ…'}

@@ -195,9 +195,11 @@ export function ItemPrepPanelV3({
           {/* カード列(横スクロールバー)と密着しないよう一呼吸(2026-07-20 オーナー指摘) */}
           <div className={s.boostRow} style={{ marginTop: '0.6rem' }}>
             <button type="button" className={busy ? 'btnRolling' : ''} disabled={busy || !selected} onClick={() => void applySelected()}>
-              {selected
-                ? `${selectedItem?.name_ja ?? ''}を${(ownedByKey.get(selected) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}`
-                : t.boost_pick}
+              {busy
+                ? '装備中…'
+                : selected
+                  ? `${selectedItem?.name_ja ?? ''}を${(ownedByKey.get(selected) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}`
+                  : t.boost_pick}
             </button>
           </div>
           {needsGroups ? (
@@ -246,7 +248,7 @@ export function ItemPrepPanelV3({
         <div className={s.boostRow} style={{ marginTop: '0.4rem' }}>
           {shieldItems.map((c) => (
             <button key={c.key} type="button" className="secondary" disabled={busy} onClick={() => void useShield(c.key)}>
-              {`${c.name_ja}を使う(所持${ownedByKey.get(c.key) ?? 0})`}
+              {busy ? '使用中…' : `${c.name_ja}を使う(所持${ownedByKey.get(c.key) ?? 0})`}
             </button>
           ))}
         </div>

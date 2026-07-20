@@ -404,8 +404,12 @@ export function ItemsView({
                   }))}
                 />
               </label>
-              <button type="submit" disabled={busyKey === 'gift' || !giftKey || !giftEmail}>
-                {giftKey && qty > 1 ? `${qty}個 贈る` : '贈る'}
+              <button
+                type="submit"
+                className={busyKey === 'gift' ? 'btnRolling' : ''}
+                disabled={busyKey === 'gift' || !giftKey || !giftEmail}
+              >
+                {busyKey === 'gift' ? '送付中…' : giftKey && qty > 1 ? `${qty}個 贈る` : '贈る'}
               </button>
             </form>
             <div className={s.giftNote}>
@@ -473,7 +477,9 @@ export function ItemsView({
                       </div>
                       {item.sellable ? (
                         <div className={s.cardActions}>
-                          <button type="button" className={busyKey === item.key ? 'btnRolling' : ''} disabled={busyKey === item.key} onClick={() => void buy(item)}>購入する</button>
+                          <button type="button" className={busyKey === item.key ? 'btnRolling' : ''} disabled={busyKey === item.key} onClick={() => void buy(item)}>
+                            {busyKey === item.key ? '購入中…' : '購入する'}
+                          </button>
                         </div>
                       ) : null}
                     </div>
