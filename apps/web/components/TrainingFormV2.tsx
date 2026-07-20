@@ -99,8 +99,8 @@ export function TrainingFormV2({
   const [itemKey, setItemKey] = useState('');
 
   useEffect(() => {
-    // Decision 113: 確定済みでもアイテム未添付なら後付け用にカタログを読む
-    if (preview || (confirmed && confirmed.item_key)) return;
+    // 使用済み表示でもアイテム名を出すため、カタログは常に読む(2026-07-20)
+    if (preview) return;
     void (async () => {
       const [cat, inv] = await Promise.all([
         apiFetch<{ engine_v2?: boolean; items: CatalogItem[] }>('/api/v1/items/catalog'),
@@ -247,7 +247,22 @@ export function TrainingFormV2({
           <div className={s.tv2DoneNote}>{t.tv2_done_note}</div>
         </div>
         {/* Decision 113 (2026-07-20): 調教アイテムは調教とは別の行為 — 確定済みロールに
-            レース処理前なら1個使える(有料の上乗せ手段・総合値へ即反映) */}
+            レース処理前なら1個使える(有料の上乗せ手段・総合値へ即反映)。
+            使用済みでもセクションは消さず「使用済み」を示す(2026-07-20 オーナー指摘:
+            消えると調教アイテムがどこへ行ったか分からない) */}
+        {done.item_key ? (
+          <div>
+            <div className={s.tv2AttachHead}>調教アイテム(任意・調教とは別) — このレース分は使用済み</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', color: 'var(--faint)', fontSize: '0.8rem' }}>
+              <img src={`/items/${done.item_key}.webp`} alt="" width={30} height={30} style={{ borderRadius: 6 }} />
+              <span>
+                {catalog.find((c) => c.key === done.item_key)?.name_ja ?? done.item_key}
+                {(done.item_bonus ?? 0) !== 0 ? <> <b className={s.tv2Pos}>{fmtSigned(done.item_bonus ?? 0)}</b></> : null}
+                {' — 1レースに1個。次のサイクルでまた使えます'}
+              </span>
+            </div>
+          </div>
+        ) : null}
         {!done.item_key && attachable.length > 0 ? (
           <div>
             <div className={s.tv2AttachHead}>調教アイテムを使う(任意) — 上乗せは総合値へ即反映</div>
