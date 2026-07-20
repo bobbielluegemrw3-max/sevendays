@@ -452,7 +452,8 @@ export function HorseDetailView({
                 <span className={s.trainTitle}>{t.train_title}</span>
                 <span className={s.freeTag}>{t.free_tag}</span>
               </div>
-              <div className={s.trainDesc}>{t.train_desc}</div>
+              {/* V2は手順UI(案B・2026-07-20): 長い説明は①の「?」に畳むのでここには出さない */}
+              {horse.engine_v2 ? null : <div className={s.trainDesc}>{t.train_desc}</div>}
               <div className={s.trainForm}>
                 {horse.engine_v2 ? (
                   <TrainingFormV2
@@ -460,6 +461,7 @@ export function HorseDetailView({
                     confirmed={horse.training_v2 ?? null}
                     lv={horse.current_day}
                     totalValue={horse.total_value ?? null}
+                    desc={t.train_desc}
                     t={t}
                   />
                 ) : (

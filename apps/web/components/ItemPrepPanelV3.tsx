@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { refreshAfterFx, refreshSoft } from '@/lib/deferred-refresh';
+import { TrainStep, StepLink, stepStyles as st } from '@/components/TrainStep';
 import { AppSelect } from '@/components/AppSelect';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import { ItemCardPicker } from '@/components/ItemCardPicker';
@@ -39,6 +40,8 @@ export function ItemPrepPanelV3({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // 案B(2026-07-20): 買わない人のための「使わない」— この段を畳む(表示のみ)
+  const [skip, setSkip] = useState(false);
 
   async function reload() {
     const [cat, inv] = await Promise.all([
@@ -158,17 +161,22 @@ export function ItemPrepPanelV3({
     refreshSoft(router);
   }
 
-  return (
-    <div className={s.boost}>
-      <div className={s.boostTitle}>
-        {'レースアイテム — 予報に備える'}
-        <span className={s.boostPaid}>{t.boost_paid}</span>
-      </div>
-      <div className={s.boostDesc}>
-        {'予報(的中率70%)を読んで次のレースに備える。的中なら適性が上限側へ、外れたら下限側へ — 外れは下がります。'}
-      </div>
+  // ③のステップ状態(案B・2026-07-20): 装備済み or 使わない = 完了
+  const stepState = pendingHere || skip ? 'done' : 'active';
+  const stepTitle = pendingHere
+    ? t.step_race_done
+    : skip
+      ? `${t.step_race_title} — ${t.step_skip}`
+      : t.step_race_title;
 
-      {pendingHere ? (
+  return (
+    <TrainStep n={3} optional state={stepState} title={stepTitle}>
+      {skip && !pendingHere ? (
+        <>
+          <span className={st.sum}>{t.step_skipped}</span>
+          <StepLink onClick={() => setSkip(false)}>{t.step_unskip}</StepLink>
+        </>
+      ) : pendingHere ? (
         <div className={s.boostApplied}>
           <img className={s.thumb} src={`/items/${pendingHere.item_key}.webp`} alt="" width={42} height={42} />
           <span className={s.pendingBadge}>{t.boost_pending}</span>
@@ -184,6 +192,9 @@ export function ItemPrepPanelV3({
         </div>
       ) : (
         <>
+          <div className={s.boostDesc}>
+            {'予報(的中率70%)を読んで次のレースに備える。的中なら適性が上限側へ、外れたら下限側へ — 外れは下がります。'}
+          </div>
           {/* カード式選択(2026-07-19 案2): 分類チップ+効果+価格を見て選ぶ */}
           <ItemCardPicker
             items={raceItems}
@@ -201,6 +212,8 @@ export function ItemPrepPanelV3({
                   ? `${selectedItem?.name_ja ?? ''}を${(ownedByKey.get(selected) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}`
                   : t.boost_pick}
             </button>
+            {/* 買わない人のための明示的な出口(2026-07-20 オーナー指示) */}
+            <StepLink onClick={() => { setSelected(''); setSkip(true); }}>{t.step_skip}</StepLink>
           </div>
           {needsGroups ? (
             <div className={s.boostRow}>
@@ -229,7 +242,7 @@ export function ItemPrepPanelV3({
         </>
       )}
 
-      {!pendingHere ? (
+      {!pendingHere && !skip ? (
         /* 常時マウント+最低高さ(2026-07-19): 選択のたびに枠の高さが跳ねて
            ページ全体がガタつく不安定さの解消。未選択時は案内文を表示 */
         <div className={s.boostHint} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minHeight: 50 }}>
@@ -256,6 +269,6 @@ export function ItemPrepPanelV3({
 
       {error ? <p className="error">{error}</p> : null}
       {message ? <p className="ok">{message}</p> : null}
-    </div>
+    </TrainStep>
   );
 }

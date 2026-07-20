@@ -10,6 +10,7 @@ import {
 } from '@sevendays/domain';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { refreshAfterFx } from '@/lib/deferred-refresh';
+import { TrainStep, StepLink, stepStyles as st } from '@/components/TrainStep';
 import { ItemCardPicker } from '@/components/ItemCardPicker';
 import { effectSummaryJa, type CatalogItem, type InventoryData } from '@/lib/items';
 import { projectAfterConfirm, type TrainingFxDetail } from '@/components/HeroArtFx';
@@ -17,12 +18,12 @@ import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
 
 /**
- * V2調教フォーム(Decision 104/107)。
- *  - 6メニューを公開レンジ付きで表示(数字は TRAINING_MENUS_V2 実定数のみ — 架空値なし)
- *  - 2つまで選択(同一メニュー×2可)。RESTは減衰無効(レンジ0)
- *  - 確定は2段階: 選択 → 最終確認(「やり直しはできません」= Decision 107)→ POST
- *  - 結果(メニュー別ロール・シナジー・合計)は確定の瞬間にサーバーでロールされ、
- *    そのまま表示する。以後このサイクルは変更不可
+ * V2調教フォーム(Decision 104/107)— 手順UI ①② を担当(2026-07-20 案B)。
+ *  - ① 調教を確定する: 6メニューを公開レンジ付きで表示(実定数のみ・架空値なし)、
+ *    2つまで選択(同一メニュー×2可)、最終確認を経て確定。以後このサイクルは変更不可
+ *  - ② 調教アイテムで上乗せする(任意・Decision 113): 確定済みロールへ1個だけ使う。
+ *    買わない人のために「使わない」で段を畳める(見送りは表示のみ・サーバー影響なし)
+ *  - ③「次のレースに備える」は ItemPrepPanelV3 が同じ体裁で続けて描く
  */
 
 export interface TrainingV2Confirmed {
@@ -76,6 +77,7 @@ export function TrainingFormV2({
   confirmed = null,
   lv = 0,
   totalValue = null,
+  desc,
   preview = false,
 }: {
   horseId: string;
@@ -86,6 +88,8 @@ export function TrainingFormV2({
   lv?: number;
   /** 現在の総合値(確定演出の予測値計算に使用)。 */
   totalValue?: number | null;
+  /** 調教のルール説明(手順UIでは①の「?」に畳む・2026-07-20 案B)。 */
+  desc?: string;
   preview?: boolean;
 }) {
   const router = useRouter();
@@ -98,6 +102,9 @@ export function TrainingFormV2({
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [inventory, setInventory] = useState<InventoryData | null>(null);
   const [itemKey, setItemKey] = useState('');
+  // 案B: 説明は既定で畳む / ②を「使わない」で見送る(このサイクルの表示のみ)
+  const [showHelp, setShowHelp] = useState(false);
+  const [skipItem, setSkipItem] = useState(false);
 
   useEffect(() => {
     // 使用済み表示でもアイテム名を出すため、カタログは常に読む(2026-07-20)
@@ -190,7 +197,7 @@ export function TrainingFormV2({
     refreshAfterFx(router, 3100);
   }
 
-  // 確定済み(props経由 or この場でロール済み)= 変更不可の結果表示(Decision 107)
+  // 確定済み(props経由 or この場でロール済み)= 変更不可の結果(Decision 107)
   const done: TrainingV2Confirmed | null = result
     ? {
         menus: result.per_menu.map((m) => m.menu), delta: result.delta, synergy: result.synergy,
@@ -198,112 +205,12 @@ export function TrainingFormV2({
         item_key: result.item_key ?? null, slot: result.slot,
       }
     : confirmed;
-  if (done) {
-    return (
-      <div className={s.tStack}>
-        <div className={s.tv2Result}>
-          <div className={s.tv2ResultHead}>{t.tv2_result_title}</div>
-          {result ? (
-            <div className={s.tv2Rolls}>
-              {result.per_menu.map((m, i) => (
-                <span key={`${m.menu}-${i}`} className={s.tv2Roll}>
-                  {menuLabel(m.menu, t)} <b className={m.roll < 0 ? s.tv2Neg : s.tv2Pos}>{fmtSigned(m.roll)}</b>
-                </span>
-              ))}
-              {result.synergy > 0 ? (
-                <span className={s.tv2Roll}>
-                  {t.tv2_synergy_k} <b className={s.tv2Pos}>{fmtSigned(result.synergy)}</b>
-                </span>
-              ) : null}
-              {result.item_key && result.item_bonus != null ? (
-                <span className={s.tv2Roll}>
-                  <img src={`/items/${result.item_key}.webp`} alt="" width={16} height={16} style={{ verticalAlign: '-3px', borderRadius: 3 }} />
-                  {' '}
-                  <b className={s.tv2Pos}>{fmtSigned(result.item_bonus)}</b>
-                </span>
-              ) : null}
-            </div>
-          ) : (
-            <div className={s.tv2Rolls}>
-              {done.menus.map((m, i) => (
-                <span key={`${m}-${i}`} className={s.tv2Roll}>{menuLabel(m as TrainingMenuV2, t)}</span>
-              ))}
-              {done.item_key ? (
-                <span className={s.tv2Roll}>
-                  <img src={`/items/${done.item_key}.webp`} alt="" width={16} height={16} style={{ verticalAlign: '-3px', borderRadius: 3 }} />
-                  {(done.item_bonus ?? 0) !== 0 ? <> <b className={s.tv2Pos}>{fmtSigned(done.item_bonus ?? 0)}</b></> : null}
-                </span>
-              ) : null}
-            </div>
-          )}
-          <div className={`${s.tv2Delta} ${done.delta + (done.item_bonus ?? 0) < 0 ? s.tv2Neg : s.tv2Pos}`}>
-            {fill(t.tv2_delta_tpl, { n: fmtSigned(Math.round((done.delta + (done.item_bonus ?? 0)) * 100) / 100) })}
-          </div>
-          {done.rests_decay ? <div className={s.tv2RestDone}>{t.tv2_rest_done}</div> : null}
-          {result ? (
-            <div className={s.tv2Target}>
-              {fill(t.tv2_target_tpl, { date: result.effective_race_date, slot: slotLabel(result.slot, t) })}
-              {' '}{fill(t.ticket_nth_tpl, { n: result.training_tickets })}
-            </div>
-          ) : null}
-          <div className={s.tv2DoneNote}>{t.tv2_done_note}</div>
-        </div>
-        {/* Decision 113 (2026-07-20): 調教アイテムは調教とは別の行為 — 確定済みロールに
-            レース処理前なら1個使える(有料の上乗せ手段・総合値へ即反映)。
-            使用済みでもセクションは消さず「使用済み」を示す(2026-07-20 オーナー指摘:
-            消えると調教アイテムがどこへ行ったか分からない) */}
-        {done.item_key ? (
-          <div>
-            <div className={s.tv2AttachHead}>調教アイテム(任意・調教とは別) — このレース分は使用済み</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', color: 'var(--faint)', fontSize: '0.8rem' }}>
-              <img src={`/items/${done.item_key}.webp`} alt="" width={30} height={30} style={{ borderRadius: 6 }} />
-              <span>
-                {catalog.find((c) => c.key === done.item_key)?.name_ja ?? done.item_key}
-                {(done.item_bonus ?? 0) !== 0 ? <> <b className={s.tv2Pos}>{fmtSigned(done.item_bonus ?? 0)}</b></> : null}
-                {' — 1レースに1個。次のサイクルでまた使えます'}
-              </span>
-            </div>
-          </div>
-        ) : null}
-        {!done.item_key && attachable.length > 0 ? (
-          <div>
-            <div className={s.tv2AttachHead}>調教アイテムを使う(任意) — 上乗せは総合値へ即反映</div>
-            <ItemCardPicker
-              items={attachable}
-              ownedByKey={ownedByKey}
-              selected={itemKey}
-              onSelect={setItemKey}
-              ariaLabel="調教アイテムを使う"
-            />
-            {/* 効果説明行は常時確保 — 選択で「使う」ボタンが動かない */}
-            <div style={{ color: 'var(--faint)', fontSize: '0.72rem', margin: '0.2rem 0 0.4rem', minHeight: '1.1rem' }}>
-              {attachedItem?.effect ? effectSummaryJa(attachedItem.effect) : t.boost_hint_empty}
-            </div>
-            {error ? <p className="error">{error}</p> : null}
-            <button
-              type="button"
-              className={busy ? 'btnRolling' : ''}
-              disabled={busy || !itemKey}
-              style={{ marginTop: '0.55rem' }}
-              onClick={() => void attachItem()}
-            >
-              {busy
-                ? '上乗せ中…'
-                : itemKey && attachedItem
-                  ? `${attachedItem.name_ja}を${(ownedByKey.get(itemKey) ?? 0) > 0 ? '使う' : '買って使う'}`
-                  : 'アイテムを選ぶ…'}
-            </button>
-          </div>
-        ) : null}
-      </div>
-    );
-  }
 
   async function submit() {
     setBusy(true);
     setError(null);
     // 調教アイテムは調教とは別の行為(2026-07-20 オーナー指示)— 確定はメニューのみ。
-    // アイテムは確定後に専用ボタンで使う(Decision 113 の後付け・選択は持ち越す)
+    // アイテムは確定後に②で使う(Decision 113 の後付け)
     const res = await apiFetch<RollResult>(`/api/v1/horses/${horseId}/training`, {
       method: 'POST',
       body: { menus },
@@ -339,115 +246,198 @@ export function TrainingFormV2({
   const countOf = (menu: TrainingMenuV2): number => menus.filter((m) => m === menu).length;
   const full = menus.length >= TRAINING_COMBO_SIZE_V2;
 
-  if (confirming) {
-    // 最終確認(Decision 107: 確定即最終)
-    return (
-      <div className={s.tStack}>
-        <div className={s.tv2Confirm}>
-          <div className={s.tv2ConfirmHead}>{t.tv2_confirm_title}</div>
-          <div className={s.tv2Rolls}>
-            {menus.map((m, i) => (
-              <span key={`${m}-${i}`} className={s.tv2Roll}>{menuLabel(m, t)}</span>
-            ))}
-          </div>
-          <div className={s.tv2Warn}>{t.tv2_confirm_warn}</div>
-          {error ? <p className="error">{error}</p> : null}
-          <div className={s.tv2ConfirmRow}>
-            <button type="button" className={busy ? 'btnRolling' : ''} disabled={busy} onClick={() => void submit()}>
-              {busy ? t.train_busy : t.tv2_confirm_go}
-            </button>
-            <button type="button" className={s.redoBtn} disabled={busy} onClick={() => setConfirming(false)}>
-              {t.tv2_back}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // ---- ステップの状態(案B) ------------------------------------------------
+  const itemUsed = !!done?.item_key;
+  const step2State = itemUsed || skipItem ? 'done' : done ? 'active' : 'locked';
+  const step2Title = itemUsed
+    ? t.step_titem_done
+    : skipItem
+      ? `${t.step_titem_title} — ${t.step_skip}`
+      : t.step_titem_title;
 
   return (
     <div className={s.tStack}>
-      <div className={s.tv2Hint}>{t.tv2_pick_hint}</div>
-      <div className={s.tv2Grid}>
-        {TRAINING_MENUS_V2.map((spec) => {
-          const n = countOf(spec.key);
-          const isRest = spec.key === 'REST';
-          return (
-            <button
-              key={spec.key}
-              type="button"
-              className={`${s.tCard} ${n > 0 ? s.tCardOn : ''}`}
-              aria-pressed={n > 0}
-              onClick={() => {
-                if (!full) setMenus([...menus, spec.key]);
-                else if (n > 0) setMenus(menus.filter((m) => m !== spec.key));
-              }}
-            >
-              <span className={s.tCardK}>
-                {menuLabel(spec.key, t)}
-                {n === 2 ? <span className={s.tReco}>{t.tv2_x2}</span> : null}
-              </span>
-              <span className={s.tCardBonus}>
-                {t.tv2_range_k}{' '}
-                <b>{isRest ? '—' : `${fmtSigned(spec.min)}..${fmtSigned(spec.max)}`}</b>
-              </span>
-              {isRest ? (
-                <span className={`${s.tCardSub} ${s.tCardGood}`}>
-                  {t.tv2_rest_note}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-      {/* チップ行は常時確保(空でも同じ高さ)— 選ぶたびに確定ボタンが動かない */}
-      <div className={s.tv2Chips}>
-        {menus.map((m, i) => (
-          <button
-            key={`${m}-${i}`}
-            type="button"
-            className={s.tv2Chip}
-            onClick={() => setMenus(menus.filter((_, idx) => idx !== i))}
-          >
-            {menuLabel(m, t)} ✕
-          </button>
-        ))}
-      </div>
-      {error ? <p className="error">{error}</p> : null}
-      {/* 調教の確定はメニューだけで完結する — アイテムより先に置く(2026-07-20 オーナー指示:
-          ボタンがアイテム列の下にあると「アイテム込みの確定」に見える) */}
-      <button
-        type="button"
-        disabled={busy || menus.length === 0}
-        onClick={() => setConfirming(true)}
+      {/* ---- ① 調教を確定する --------------------------------------------- */}
+      <TrainStep
+        n={1}
+        first
+        state={done ? 'done' : 'active'}
+        title={done ? t.step_confirm_done : t.step_confirm_title}
       >
-        {t.train_submit}
-      </button>
-      <div className={s.tv2Cap}>
-        {`SOFT CAP ${TOTAL_VALUE_V2.softCap} / DECAY −${TOTAL_VALUE_V2.decayPerRace.toFixed(1)}`}
-      </div>
-      {/* 調教アイテムは調教とは別の行為・専用ボタン(2026-07-20 オーナー指示)。
-          使えるのは確定済みロールに対してのみ(Decision 113)なので、確定前は
-          ボタンを無効表示にして案内する。メニュー未選択でも一覧は見せる */}
-      {attachable.length > 0 ? (
-        <div style={{ marginTop: '0.6rem' }}>
-          <div className={s.tv2AttachHead}>調教アイテム(任意・調教とは別) — 確定ロールに上乗せ</div>
-          <ItemCardPicker
-            items={attachable}
-            ownedByKey={ownedByKey}
-            selected={itemKey}
-            onSelect={setItemKey}
-            ariaLabel="調教アイテム"
-          />
-          {/* 効果説明行も常時確保 — 選択で枠の高さが跳ねない */}
-          <div style={{ color: 'var(--faint)', fontSize: '0.72rem', margin: '0.2rem 0 0', minHeight: '1.1rem' }}>
-            {attachedItem?.effect ? effectSummaryJa(attachedItem.effect) : t.boost_hint_empty}
+        {done ? (
+          <>
+            {result ? (
+              <div className={s.tv2Rolls}>
+                {result.per_menu.map((m, i) => (
+                  <span key={`${m.menu}-${i}`} className={s.tv2Roll}>
+                    {menuLabel(m.menu, t)} <b className={m.roll < 0 ? s.tv2Neg : s.tv2Pos}>{fmtSigned(m.roll)}</b>
+                  </span>
+                ))}
+                {result.synergy > 0 ? (
+                  <span className={s.tv2Roll}>
+                    {t.tv2_synergy_k} <b className={s.tv2Pos}>{fmtSigned(result.synergy)}</b>
+                  </span>
+                ) : null}
+              </div>
+            ) : (
+              <div className={s.tv2Rolls}>
+                {done.menus.map((m, i) => (
+                  <span key={`${m}-${i}`} className={s.tv2Roll}>{menuLabel(m as TrainingMenuV2, t)}</span>
+                ))}
+              </div>
+            )}
+            <div className={`${s.tv2Delta} ${done.delta + (done.item_bonus ?? 0) < 0 ? s.tv2Neg : s.tv2Pos}`}>
+              {fill(t.tv2_delta_tpl, { n: fmtSigned(Math.round((done.delta + (done.item_bonus ?? 0)) * 100) / 100) })}
+            </div>
+            {done.rests_decay ? <div className={s.tv2RestDone}>{t.tv2_rest_done}</div> : null}
+            {result ? (
+              <div className={s.tv2Target}>
+                {fill(t.tv2_target_tpl, { date: result.effective_race_date, slot: slotLabel(result.slot, t) })}
+                {' '}{fill(t.ticket_nth_tpl, { n: result.training_tickets })}
+              </div>
+            ) : null}
+            <div className={s.tv2DoneNote}>{t.tv2_done_note}</div>
+          </>
+        ) : confirming ? (
+          /* 最終確認(Decision 107: 確定即最終) */
+          <div className={s.tv2Confirm}>
+            <div className={s.tv2ConfirmHead}>{t.tv2_confirm_title}</div>
+            <div className={s.tv2Rolls}>
+              {menus.map((m, i) => (
+                <span key={`${m}-${i}`} className={s.tv2Roll}>{menuLabel(m, t)}</span>
+              ))}
+            </div>
+            <div className={s.tv2Warn}>{t.tv2_confirm_warn}</div>
+            {error ? <p className="error">{error}</p> : null}
+            <div className={s.tv2ConfirmRow}>
+              <button type="button" className={busy ? 'btnRolling' : ''} disabled={busy} onClick={() => void submit()}>
+                {busy ? t.train_busy : t.tv2_confirm_go}
+              </button>
+              <button type="button" className={s.redoBtn} disabled={busy} onClick={() => setConfirming(false)}>
+                {t.tv2_back}
+              </button>
+            </div>
           </div>
-          <button type="button" disabled style={{ marginTop: '0.55rem' }}>
-            使うには先に調教を確定
-          </button>
-        </div>
-      ) : null}
+        ) : (
+          <>
+            {/* 長いルール説明は「?」に畳む(案B: 一画面に収める) */}
+            <div className={st.row}>
+              <span className={s.tv2Hint}>{t.tv2_pick_hint}</span>
+              {desc ? (
+                <button
+                  type="button"
+                  className={st.helpBtn}
+                  aria-expanded={showHelp}
+                  aria-label={t.train_title}
+                  onClick={() => setShowHelp(!showHelp)}
+                >?</button>
+              ) : null}
+            </div>
+            {showHelp && desc ? <div className={st.help}>{desc}</div> : null}
+            <div className={s.tv2Grid}>
+              {TRAINING_MENUS_V2.map((spec) => {
+                const n = countOf(spec.key);
+                const isRest = spec.key === 'REST';
+                return (
+                  <button
+                    key={spec.key}
+                    type="button"
+                    className={`${s.tCard} ${n > 0 ? s.tCardOn : ''}`}
+                    aria-pressed={n > 0}
+                    onClick={() => {
+                      if (!full) setMenus([...menus, spec.key]);
+                      else if (n > 0) setMenus(menus.filter((m) => m !== spec.key));
+                    }}
+                  >
+                    <span className={s.tCardK}>
+                      {menuLabel(spec.key, t)}
+                      {n === 2 ? <span className={s.tReco}>{t.tv2_x2}</span> : null}
+                    </span>
+                    <span className={s.tCardBonus}>
+                      {t.tv2_range_k}{' '}
+                      <b>{isRest ? '—' : `${fmtSigned(spec.min)}..${fmtSigned(spec.max)}`}</b>
+                    </span>
+                    {isRest ? <span className={`${s.tCardSub} ${s.tCardGood}`}>{t.tv2_rest_note}</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+            {/* チップ行は常時確保 — 選ぶたびに確定ボタンが動かない */}
+            <div className={s.tv2Chips}>
+              {menus.map((m, i) => (
+                <button
+                  key={`${m}-${i}`}
+                  type="button"
+                  className={s.tv2Chip}
+                  onClick={() => setMenus(menus.filter((_, idx) => idx !== i))}
+                >
+                  {menuLabel(m, t)} ✕
+                </button>
+              ))}
+            </div>
+            {error ? <p className="error">{error}</p> : null}
+            <button type="button" disabled={busy || menus.length === 0} onClick={() => setConfirming(true)}>
+              {t.train_submit}
+            </button>
+            <div className={s.tv2Cap}>
+              {`SOFT CAP ${TOTAL_VALUE_V2.softCap} / DECAY −${TOTAL_VALUE_V2.decayPerRace.toFixed(1)}`}
+            </div>
+          </>
+        )}
+      </TrainStep>
+
+      {/* ---- ② 調教アイテムで上乗せする(任意・Decision 113) ---------------- */}
+      <TrainStep n={2} optional state={step2State} title={step2Title}>
+        {itemUsed && done ? (
+          <div className={`${st.sum} ${st.sumRow}`}>
+            <img className={st.sumThumb} src={`/items/${done.item_key}.webp`} alt="" width={30} height={30} />
+            <span>
+              {catalog.find((c) => c.key === done.item_key)?.name_ja ?? done.item_key}
+              {(done.item_bonus ?? 0) !== 0 ? <> <b className={s.tv2Pos}>{fmtSigned(done.item_bonus ?? 0)}</b></> : null}
+            </span>
+          </div>
+        ) : skipItem ? (
+          <>
+            <span className={st.sum}>{t.step_skipped}</span>
+            <StepLink onClick={() => setSkipItem(false)}>{t.step_unskip}</StepLink>
+          </>
+        ) : !done ? (
+          <span className={st.sum}>{t.step_locked_note}</span>
+        ) : attachable.length === 0 ? (
+          <span className={st.sum}>{t.boost_hint_empty}</span>
+        ) : (
+          <>
+            <ItemCardPicker
+              items={attachable}
+              ownedByKey={ownedByKey}
+              selected={itemKey}
+              onSelect={setItemKey}
+              ariaLabel={t.step_titem_title}
+            />
+            {/* 効果説明行は常時確保 — 選択でボタンが動かない */}
+            <div className={st.sum} style={{ minHeight: '1.1rem' }}>
+              {attachedItem?.effect ? effectSummaryJa(attachedItem.effect) : t.boost_hint_empty}
+            </div>
+            {error ? <p className="error">{error}</p> : null}
+            <div className={st.row}>
+              <button
+                type="button"
+                className={busy ? 'btnRolling' : ''}
+                disabled={busy || !itemKey}
+                onClick={() => void attachItem()}
+              >
+                {busy
+                  ? '上乗せ中…'
+                  : itemKey && attachedItem
+                    ? `${attachedItem.name_ja}を${(ownedByKey.get(itemKey) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}`
+                    : t.boost_pick}
+              </button>
+              {/* 買わない人のための明示的な出口(2026-07-20 オーナー指示) */}
+              <StepLink onClick={() => { setItemKey(''); setSkipItem(true); }}>{t.step_skip}</StepLink>
+            </div>
+          </>
+        )}
+      </TrainStep>
     </div>
   );
 }

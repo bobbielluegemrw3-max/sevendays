@@ -1,0 +1,53 @@
+/* 調教パネルの手順表示(案B・2026-07-20 オーナー決定)。
+   ①調教を確定 → ②調教アイテムで上乗せ → ③次のレースに備える。
+   TrainingFormV2(①②)と ItemPrepPanelV3(③)が同じ見た目で並ぶよう、
+   両者から使う共有CSSモジュールとして切り出している。 */
+
+.step { display: flex; gap: 10px; padding: 12px 0; }
+.stepFirst { padding-top: 0; }
+.stepSep { border-top: 1px solid var(--border); }
+.stepLocked { opacity: 0.5; }
+
+.mark {
+  flex: none; width: 22px; height: 22px; border-radius: 999px;
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; line-height: 1;
+}
+.markDone { background: #35d07f; color: #04141a; }
+.markActive { background: var(--cyan); color: #04141a; }
+.markLocked { border: 1px solid rgba(255, 255, 255, 0.2); color: var(--muted); }
+
+.body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.title {
+  font-family: var(--font-display); font-weight: 700; font-size: 0.79rem;
+  letter-spacing: 0.02em; line-height: 1.4;
+}
+.titleDone { color: #35d07f; }
+.opt { font-family: var(--font-mono); font-size: 0.62rem; color: var(--faint); margin-left: 6px; }
+
+/* 完了/スキップ後の1行サマリ */
+.sum { color: var(--faint); font-size: 0.73rem; line-height: 1.6; }
+.sumRow { display: flex; align-items: center; gap: 0.5rem; }
+.sumThumb { border-radius: 6px; flex: none; }
+
+/* 「使わない」「やっぱり使う」— ボタンではなく控えめなリンク */
+.link {
+  align-self: flex-start; background: none; border: none; box-shadow: none; padding: 0;
+  font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.02em;
+  color: var(--muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.link:hover { color: var(--cyan); filter: none; }
+
+.row { display: flex; gap: 0.55rem; flex-wrap: wrap; align-items: center; }
+
+/* 説明の折りたたみ(長文は既定で畳む — 「?」で開く) */
+.helpBtn {
+  all: unset; cursor: pointer; width: 18px; height: 18px; border-radius: 999px;
+  display: grid; place-items: center; flex: none;
+  border: 1px solid rgba(255, 255, 255, 0.2); color: var(--muted); font-size: 10px;
+}
+.helpBtn:hover { border-color: var(--cyan); color: var(--cyan); }
+.help {
+  color: var(--faint); font-size: 0.72rem; line-height: 1.65;
+  background: rgba(0, 0, 0, 0.25); border-radius: 9px; padding: 8px 10px;
+}
