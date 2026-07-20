@@ -67,9 +67,11 @@
      旧: stretch で右カラム(アイテム列で伸長)に合わせて引き伸ばされ、
      アート下に大きな空洞ができていた。top はトップナビ(sticky ≈52px)ぶん。 */
   .hero { position: sticky; top: 64px; }
-  /* 背の低い画面でもカード全体(アート+キャプション)が視界に収まるよう
-     アートの正方形を画面高でクランプ(object-fit: contain が余白を吸収) */
-  .heroCanvas { max-height: calc(100vh - 300px); }
+  /* canvas は絶対配置の .fxWrap 内にあり枠の高さに寄与しない — artBox 自身が
+     実高を持つ(幅基準の正方形・低い画面は画面高でクランプ)。canvas は器に
+     追従させ、余白は object-fit: contain が吸収する(モバイル版と同じ方式) */
+  .artBox { flex: none; min-height: 0; height: auto; aspect-ratio: 1 / 1; max-height: calc(100vh - 340px); }
+  .heroCanvas { height: 100%; aspect-ratio: auto; }
 }
 
 .hero { border-radius: 18px; padding: 1px; box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.7);
