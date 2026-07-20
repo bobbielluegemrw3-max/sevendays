@@ -275,11 +275,10 @@ export function TrainingFormV2({
               onSelect={setItemKey}
               ariaLabel="調教アイテムを使う"
             />
-            {attachedItem?.effect ? (
-              <div style={{ color: 'var(--faint)', fontSize: '0.72rem', margin: '0.2rem 0 0.4rem' }}>
-                {effectSummaryJa(attachedItem.effect)}
-              </div>
-            ) : null}
+            {/* 効果説明行は常時確保 — 選択で「使う」ボタンが動かない */}
+            <div style={{ color: 'var(--faint)', fontSize: '0.72rem', margin: '0.2rem 0 0.4rem', minHeight: '1.1rem' }}>
+              {attachedItem?.effect ? effectSummaryJa(attachedItem.effect) : t.boost_hint_empty}
+            </div>
             {error ? <p className="error">{error}</p> : null}
             <button
               type="button"
@@ -401,20 +400,19 @@ export function TrainingFormV2({
           );
         })}
       </div>
-      {menus.length > 0 ? (
-        <div className={s.tv2Chips}>
-          {menus.map((m, i) => (
-            <button
-              key={`${m}-${i}`}
-              type="button"
-              className={s.tv2Chip}
-              onClick={() => setMenus(menus.filter((_, idx) => idx !== i))}
-            >
-              {menuLabel(m, t)} ✕
-            </button>
-          ))}
-        </div>
-      ) : null}
+      {/* チップ行は常時確保(空でも同じ高さ)— 選ぶたびに確定ボタンが動かない */}
+      <div className={s.tv2Chips}>
+        {menus.map((m, i) => (
+          <button
+            key={`${m}-${i}`}
+            type="button"
+            className={s.tv2Chip}
+            onClick={() => setMenus(menus.filter((_, idx) => idx !== i))}
+          >
+            {menuLabel(m, t)} ✕
+          </button>
+        ))}
+      </div>
       {error ? <p className="error">{error}</p> : null}
       {/* 調教の確定はメニューだけで完結する — アイテムより先に置く(2026-07-20 オーナー指示:
           ボタンがアイテム列の下にあると「アイテム込みの確定」に見える) */}
@@ -441,15 +439,12 @@ export function TrainingFormV2({
             onSelect={setItemKey}
             ariaLabel="調教アイテム"
           />
-          {attachedItem?.effect ? (
-            <div style={{ color: 'var(--faint)', fontSize: '0.72rem', margin: '0.2rem 0 0' }}>
-              {effectSummaryJa(attachedItem.effect)}
-            </div>
-          ) : null}
+          {/* 効果説明行も常時確保 — 選択で枠の高さが跳ねない */}
+          <div style={{ color: 'var(--faint)', fontSize: '0.72rem', margin: '0.2rem 0 0', minHeight: '1.1rem' }}>
+            {attachedItem?.effect ? effectSummaryJa(attachedItem.effect) : t.boost_hint_empty}
+          </div>
           <button type="button" disabled style={{ marginTop: '0.55rem' }}>
-            {itemKey && attachedItem
-              ? `${attachedItem.name_ja}を使う — 先に調教を確定してください`
-              : 'アイテムを使うには先に調教を確定'}
+            使うには先に調教を確定
           </button>
         </div>
       ) : null}

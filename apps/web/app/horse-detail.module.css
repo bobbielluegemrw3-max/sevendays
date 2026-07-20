@@ -429,7 +429,9 @@
 .tv2Hint { font-family: var(--font-jp); font-size: 0.72rem; color: var(--muted); }
 .tv2Grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 @media (max-width: 560px) { .tv2Grid { grid-template-columns: repeat(2, 1fr); } }
-.tv2Chips { display: flex; gap: 6px; flex-wrap: wrap; }
+/* 常時マウント+最低高さ(2026-07-20): 選択のたびに行が出現して
+   確定ボタンの位置が跳ねるのを防ぐ(レースアイテムの boostHint と同方針) */
+.tv2Chips { display: flex; gap: 6px; flex-wrap: wrap; min-height: 24px; }
 .tv2Chip {
   font-family: var(--font-mono); font-size: 0.68rem; color: var(--cyan); cursor: pointer;
   border: 1px solid rgba(0, 234, 255, 0.35); border-radius: 999px; padding: 2px 9px;
