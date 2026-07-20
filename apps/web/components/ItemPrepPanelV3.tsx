@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { refreshAfterFx, refreshSoft } from '@/lib/deferred-refresh';
 import { AppSelect } from '@/components/AppSelect';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import { ItemCardPicker } from '@/components/ItemCardPicker';
@@ -120,7 +121,8 @@ export function ItemPrepPanelV3({
     // 馬アートの吸い込み演出(HeroArtFx)
     window.dispatchEvent(new CustomEvent('sdd:item-applied', { detail: { horseId, itemKey: selected } }));
     await reload();
-    router.refresh();
+    // 吸い込み演出(〜2.1s)後に低優先で台帳同期 — 演出中のかくつき対策
+    refreshAfterFx(router, 2200);
   }
 
   async function useShield(itemKey: string) {
@@ -139,7 +141,7 @@ export function ItemPrepPanelV3({
     setMessage(`減衰シールドを${(r.body as { decay_shield_added: number }).decay_shield_added}レース分まといました。`);
     window.dispatchEvent(new CustomEvent('sdd:item-applied', { detail: { horseId, itemKey } }));
     await reload();
-    router.refresh();
+    refreshAfterFx(router, 2200);
   }
 
   async function cancelPending() {
@@ -153,7 +155,7 @@ export function ItemPrepPanelV3({
     }
     setMessage(t.boost_canceled);
     await reload();
-    router.refresh();
+    refreshSoft(router);
   }
 
   return (

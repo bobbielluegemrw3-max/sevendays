@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { POOL_PACKAGES_V2, POOL_PURCHASE_MIN_USDT } from '@sevendays/domain';
+import { refreshSoft } from '@/lib/deferred-refresh';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import s from '../app/market.module.css';
 
@@ -67,7 +68,7 @@ export function PoolReservePanel({
       return;
     }
     setDone(fmt(parsed));
-    router.refresh();
+    refreshSoft(router);
   };
 
   if (done !== null) {

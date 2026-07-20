@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { refreshSoft } from '@/lib/deferred-refresh';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
@@ -135,7 +136,7 @@ export function MarketPlaceView({
     if (result.status === 200) {
       setDialogOpen(false);
       setNotice(`${pick.name} を出品しました。次のレースから出走しません。`);
-      router.refresh();
+      refreshSoft(router);
     } else {
       setError(errorMessage(result.body) ?? '出品に失敗しました。');
     }
@@ -151,7 +152,7 @@ export function MarketPlaceView({
     setBusy(false);
     if (result.status === 200) {
       setNotice(`${listing.name} の取り下げを受け付けました。次のバッチ後に外れ、その後のレースから戻ります。`);
-      if (!preview) router.refresh();
+      if (!preview) refreshSoft(router);
     } else {
       setNotice(errorMessage(result.body) ?? '取り下げに失敗しました。');
     }

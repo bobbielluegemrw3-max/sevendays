@@ -9,6 +9,7 @@ import {
   type TrainingMenuV2,
 } from '@sevendays/domain';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { refreshAfterFx } from '@/lib/deferred-refresh';
 import { ItemCardPicker } from '@/components/ItemCardPicker';
 import { effectSummaryJa, type CatalogItem, type InventoryData } from '@/lib/items';
 import { projectAfterConfirm, type TrainingFxDetail } from '@/components/HeroArtFx';
@@ -185,7 +186,8 @@ export function TrainingFormV2({
       window.dispatchEvent(new CustomEvent<TrainingFxDetail>('sdd:training-confirmed', { detail }));
     }
     setItemKey('');
-    router.refresh();
+    // fxPopSeq(2.9s)が終わってから低優先で台帳同期 — 演出中のかくつき対策
+    refreshAfterFx(router, 3100);
   }
 
   // 確定済み(props経由 or この場でロール済み)= 変更不可の結果表示(Decision 107)
@@ -330,7 +332,8 @@ export function TrainingFormV2({
       };
       window.dispatchEvent(new CustomEvent<TrainingFxDetail>('sdd:training-confirmed', { detail }));
     }
-    router.refresh();
+    // fxPopSeq(2.9s)が終わってから低優先で台帳同期 — 演出中のかくつき対策
+    refreshAfterFx(router, 3100);
   }
 
   const countOf = (menu: TrainingMenuV2): number => menus.filter((m) => m === menu).length;

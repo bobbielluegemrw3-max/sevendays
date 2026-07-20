@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { refreshSoft } from '@/lib/deferred-refresh';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { AppSelect } from '@/components/AppSelect';
 import {
@@ -149,7 +150,7 @@ export function ItemsView({
       return;
     }
     setMessage(`${item.name_ja} を購入しました。厩舎の馬詳細から使えます。`);
-    router.refresh();
+    refreshSoft(router);
   }
 
   async function sendGift(e: React.FormEvent) {
@@ -172,7 +173,7 @@ export function ItemsView({
     setGiftEmail('');
     setGiftKey('');
     setGiftQty(1);
-    router.refresh();
+    refreshSoft(router);
   }
 
   return (

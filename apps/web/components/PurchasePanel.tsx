@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { refreshSoft } from '@/lib/deferred-refresh';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 
 /** 予約のキャンセル(20:00のバッチロック前のみ)。作成は ReservePanel(Decision 085)。 */
@@ -19,7 +20,7 @@ export function CancelSessionButton({ sessionId }: { sessionId: string }) {
       setError(errorMessage(result.body) ?? 'キャンセルに失敗しました');
       return;
     }
-    router.refresh();
+    refreshSoft(router);
   }
 
   return (
