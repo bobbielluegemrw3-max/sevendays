@@ -93,7 +93,7 @@ export function TrainingFormV2({
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<RollResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // カタログV2(Decision 109): TRAINING系アイテムを確定と同時に1個添付できる
+  // カタログV2(Decision 109→113): TRAINING系アイテムは確定済みロールへ1個使える(調教とは別行為)
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [inventory, setInventory] = useState<InventoryData | null>(null);
   const [itemKey, setItemKey] = useState('');
@@ -246,11 +246,11 @@ export function TrainingFormV2({
           ) : null}
           <div className={s.tv2DoneNote}>{t.tv2_done_note}</div>
         </div>
-        {/* Decision 113 (2026-07-20): 確定後でもレース処理前なら調教アイテムを
-            1個後付けできる(有料の上乗せ手段・総合値へ即反映) */}
+        {/* Decision 113 (2026-07-20): 調教アイテムは調教とは別の行為 — 確定済みロールに
+            レース処理前なら1個使える(有料の上乗せ手段・総合値へ即反映) */}
         {!done.item_key && attachable.length > 0 ? (
           <div>
-            <div className={s.tv2AttachHead}>調教アイテムを後から使う(任意) — 上乗せは総合値へ即反映</div>
+            <div className={s.tv2AttachHead}>調教アイテムを使う(任意) — 上乗せは総合値へ即反映</div>
             <ItemCardPicker
               items={attachable}
               ownedByKey={ownedByKey}
@@ -280,21 +280,11 @@ export function TrainingFormV2({
   async function submit() {
     setBusy(true);
     setError(null);
-    // 未所持のアイテムは Buy & Attach(購入→確定と同時に添付)
-    if (itemKey && (ownedByKey.get(itemKey) ?? 0) === 0) {
-      const buy = await apiFetch('/api/v1/items/purchase', {
-        method: 'POST',
-        body: { item_key: itemKey, quantity: 1 },
-      });
-      if (buy.status !== 200) {
-        setBusy(false);
-        setError(errorMessage(buy.body) ?? t.train_fail);
-        return;
-      }
-    }
+    // 調教アイテムは調教とは別の行為(2026-07-20 オーナー指示)— 確定はメニューのみ。
+    // アイテムは確定後に専用ボタンで使う(Decision 113 の後付け・選択は持ち越す)
     const res = await apiFetch<RollResult>(`/api/v1/horses/${horseId}/training`, {
       method: 'POST',
-      body: itemKey ? { menus, item_key: itemKey } : { menus },
+      body: { menus },
     });
     setBusy(false);
     setConfirming(false);
@@ -336,13 +326,6 @@ export function TrainingFormV2({
             {menus.map((m, i) => (
               <span key={`${m}-${i}`} className={s.tv2Roll}>{menuLabel(m, t)}</span>
             ))}
-            {attachedItem ? (
-              <span className={s.tv2Roll}>
-                <img src={`/items/${attachedItem.key}.webp`} alt="" width={16} height={16} style={{ verticalAlign: '-3px', borderRadius: 3 }} />
-                {' '}{attachedItem.name_ja}
-                {(ownedByKey.get(attachedItem.key) ?? 0) === 0 ? ` (${attachedItem.price} USDT)` : ''}
-              </span>
-            ) : null}
           </div>
           <div className={s.tv2Warn}>{t.tv2_confirm_warn}</div>
           {error ? <p className="error">{error}</p> : null}
@@ -408,24 +391,22 @@ export function TrainingFormV2({
           ))}
         </div>
       ) : null}
-      {/* メニュー未選択でも表示(2026-07-20 オーナー指摘: 存在に気づけない)。
-          メニュー条件付きアイテムは選択に応じて自動で増減する */}
+      {/* 調教アイテムは調教とは別の行為(2026-07-20 オーナー指示)。ここでは一覧と
+          下見(選択)だけ — 「使う」ボタンは調教確定後に出る(Decision 113 後付け)。
+          メニュー未選択でも表示(存在に気づけるように)・条件付きアイテムは選択に応じて増減 */}
       {attachable.length > 0 ? (
         <div>
-          {/* カード式選択(2026-07-19 案2): 分類チップ+効果+価格を見て選ぶ */}
-          <div className={s.tv2AttachHead}>調教アイテムを添付(任意) — 確定ロールに上乗せ</div>
+          <div className={s.tv2AttachHead}>調教アイテム(任意・調教とは別) — 確定後に「使う」で上乗せ</div>
           <ItemCardPicker
             items={attachable}
             ownedByKey={ownedByKey}
             selected={itemKey}
             onSelect={setItemKey}
-            allowNone
-            noneLabel="アイテムなし"
-            ariaLabel="調教アイテムを添付"
+            ariaLabel="調教アイテム"
           />
           {attachedItem?.effect ? (
             <div style={{ color: 'var(--faint)', fontSize: '0.72rem', marginTop: '0.2rem' }}>
-              {effectSummaryJa(attachedItem.effect)}
+              {effectSummaryJa(attachedItem.effect)} — 使うボタンは調教確定後に表示されます
             </div>
           ) : null}
         </div>
