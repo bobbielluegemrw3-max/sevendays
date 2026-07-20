@@ -147,12 +147,17 @@
 .taskItem b { font-family: var(--font-mono); color: var(--magenta-soft); }
 .taskItem + .taskItem { border-left: 1px solid var(--border); padding-left: 12px; }
 .taskSub { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 8px; line-height: 1.5; }
+/* ダッシュボードの主アクション(2026-07-21・0-1)。旧: 11px で、視線最強の
+   48px カウントダウン(非操作)に完全に負けていた。主アクションとして読める
+   大きさへ引き上げる。1画面に主アクションは1つ — 副動線は .taskGhost のまま */
 .taskCta {
   margin-left: auto; text-decoration: none; white-space: nowrap;
-  font-family: var(--font-display); font-weight: 700; font-size: 11px; color: #150410;
+  font-family: var(--font-display); font-weight: 700; font-size: 13.5px; color: #150410;
   background: linear-gradient(100deg, var(--magenta), var(--magenta-soft));
-  padding: 7px 13px; border-radius: 9px;
+  padding: 10px 18px; border-radius: 10px;
+  box-shadow: 0 10px 24px -8px rgba(255, 45, 196, 0.55);
 }
+.taskCta:hover { filter: brightness(1.08); }
 /* 副動線(アイテムを備える等)— 主CTAより一段控えめなゴースト */
 .taskGhost {
   margin-left: auto; text-decoration: none; white-space: nowrap;
@@ -201,6 +206,8 @@
   text-decoration: none; color: inherit; transition: border-color 0.15s ease;
 }
 .srow:hover { border-color: var(--border-strong); }
+/* タップ反応(2026-07-21・0-2) */
+.srow:active { border-color: var(--cyan); background: rgba(0, 234, 255, 0.12); }
 .sart {
   width: 46px; height: 46px; flex: none; border-radius: 9px; overflow: hidden;
   background: radial-gradient(80% 78% at 50% 42%, rgba(0, 234, 255, 0.1), rgba(10, 8, 19, 0.92) 74%);
@@ -227,11 +234,7 @@
   border: 1px dashed var(--border-strong); border-radius: 13px; padding: 26px 16px;
   text-align: center; color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 12px;
 }
-.ctaPrimary {
-  display: inline-block; margin-top: 12px; text-decoration: none;
-  font-family: var(--font-display); font-weight: 700; font-size: 12px; color: #04141a;
-  background: linear-gradient(100deg, var(--cyan), #5ff5ff); padding: 9px 18px; border-radius: 10px;
-}
+
 
 /* ---- Day7 買い戻し --------------------------------------------------------- */
 .buyback {

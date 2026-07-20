@@ -221,6 +221,17 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
           </div>
           <div className={s.taskSub}>{t.tasks_sub}</div>
         </section>
+      ) : active.length === 0 ? (
+        /* 馬が0頭のユーザー(新規)には「本日のタスクは完了」ではなく迎え入れ導線を出す。
+           旧: hasTasks=false に落ちて「完了」と表示され、tasks_adopt へ到達できなかった
+           (2026-07-21・UI_FOUNDATION_PLAN 0-3) */
+        <section className={s.task}>
+          <div className={s.taskRow}>
+            <span className={s.taskLabel}>{t.tasks_label}</span>
+            <span className={s.taskItem}>{t.stable_empty_none}</span>
+            <Link href="/market" className={s.taskCta}>{t.tasks_adopt} →</Link>
+          </div>
+        </section>
       ) : (
         <section className={`${s.task} ${s.taskDone}`}>
           <div className={s.taskRow}>

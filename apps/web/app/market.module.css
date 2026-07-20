@@ -65,6 +65,8 @@
 /* ---- SHOWCASE: クリック可能カード+SOLDカード(Decision 085) ---- */
 .shelfClickable { cursor: pointer; transition: border-color 0.15s ease, transform 0.15s ease; }
 .shelfClickable:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+/* タップ反応(2026-07-21・0-2) */
+.shelfClickable:active { transform: translateY(0); border-color: var(--cyan); background: rgba(0, 234, 255, 0.12); }
 .shelfSold { background: linear-gradient(160deg, rgba(201, 168, 106, 0.05), var(--panel-2)); }
 .soldArt { filter: saturate(0.55) brightness(0.8); }
 .soldTag {

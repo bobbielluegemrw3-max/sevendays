@@ -148,7 +148,7 @@ export function AccountLinking({ userId, wallets, t }: { userId: string; wallets
         </table>
       )}
       {!hasGoogle ? (
-        <button onClick={() => void linkGoogle()} disabled={busy}>
+        <button className="primary" onClick={() => void linkGoogle()} disabled={busy}>
           {t.link_google}
         </button>
       ) : null}

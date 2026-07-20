@@ -96,7 +96,7 @@ export function PoolReservePanel({
         </p>
         {error ? <p className="error">{error}</p> : null}
         <div className={s.poolRow}>
-          <button type="button" disabled={busy} onClick={() => void submit()}>
+          <button className="primary" type="button" disabled={busy} onClick={() => void submit()}>
             {busy ? '処理中…' : pool ? '金額を変更する' : '予算をロックする'}
           </button>
           <button type="button" className="secondary" disabled={busy} onClick={() => setConfirming(false)}>
@@ -142,7 +142,7 @@ export function PoolReservePanel({
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
         />
-        <button type="button" disabled={!valid} onClick={() => setConfirming(true)}>
+        <button className="primary" type="button" disabled={!valid} onClick={() => setConfirming(true)}>
           {pool ? '金額を変更' : '予約する'}
         </button>
       </div>

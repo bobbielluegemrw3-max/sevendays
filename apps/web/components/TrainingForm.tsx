@@ -179,7 +179,7 @@ export function TrainingForm({
       {error ? <p className="error">{error}</p> : null}
       {harvest ? <p className={`ok ${s.harvestMsg}`}>{harvest}</p> : null}
       {message ? <p className="ok">{message}</p> : null}
-      <button type="button" disabled={busy} onClick={() => void submit()}>
+      <button className="primary" type="button" disabled={busy} onClick={() => void submit()}>
         {busy ? t.train_busy : t.train_submit}
       </button>
     </div>

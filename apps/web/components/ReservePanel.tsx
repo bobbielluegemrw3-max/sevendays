@@ -178,7 +178,7 @@ export function ReservePanel({
               <button type="button" className="secondary" onClick={() => setConfirming(false)} disabled={busy}>
                 やめる
               </button>
-              <button type="button" onClick={() => void submit()} disabled={busy}>
+              <button className="primary" type="button" onClick={() => void submit()} disabled={busy}>
                 {busy ? '予約中…' : '予約を確定する'}
               </button>
             </div>

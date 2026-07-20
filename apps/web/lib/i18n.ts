@@ -1801,7 +1801,7 @@ const en: AppDict = {
   },
   stable: {
     default_name: 'My Stable',
-    sub_active_tpl: '{n} racing', sub_champ_tpl: '{n} champions', sub_burned_tpl: '{n} burned',
+    sub_active_tpl: '{n} active', sub_champ_tpl: '{n} champions', sub_burned_tpl: '{n} burned',
     stat_horses_k: 'HORSES OWNED', stat_value_k: 'Total value',
     welcome_title: 'Welcome a new horse',
     welcome_text_tpl: 'Make a pool reservation on the marketplace (set a budget, 102 USDT minimum) and the next race (8:00 / 20:00) fills it with horses — any remainder refunds automatically.',

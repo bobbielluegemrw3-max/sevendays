@@ -65,7 +65,7 @@ export function WithdrawForm() {
       </label>
       {error ? <p className="error">{error}</p> : null}
       <p className="muted">実費ネットワーク手数料が金額から控除されます。1,000 USDT以上は管理者審査があります。</p>
-      <button type="submit" disabled={busy}>
+      <button className="primary" type="submit" disabled={busy}>
         出金する
       </button>
     </form>

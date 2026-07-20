@@ -262,7 +262,9 @@
   transition:border-color .16s,background .16s,box-shadow .16s,transform .16s;
 }
 .pickCard:hover{border-color:rgba(0,234,255,.4);transform:translateY(-2px);filter:none}
-.pickCard:active{transform:translateY(0)}
+/* タップ反応(2026-07-21・0-2): tap-highlight を消しているうえ :hover が効かない
+   タッチ端末では、押しても文字通り何も起きなかった。枠と背景で手応えを返す */
+.pickCard:active{transform:translateY(0);border-color:var(--cyan);background:rgba(0,234,255,.14)}
 
 /* 分類はカード上端の全幅カラー帯に昇格（横スクロールでも種類が一目で分かる） */
 .pickCls{
