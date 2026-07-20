@@ -11,6 +11,7 @@ import {
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { refreshAfterFx } from '@/lib/deferred-refresh';
 import { TrainStep, StepLink, stepStyles as st } from '@/components/TrainStep';
+import { Button } from '@/components/ui/Button';
 import { ItemCardPicker } from '@/components/ItemCardPicker';
 import { effectSummaryJa, type CatalogItem, type InventoryData } from '@/lib/items';
 import { projectAfterConfirm, type TrainingFxDetail } from '@/components/HeroArtFx';
@@ -420,18 +421,18 @@ export function TrainingFormV2({
             </div>
             {error ? <p className="error">{error}</p> : null}
             <div className={st.row}>
-              <button
-                type="button"
-                className={busy ? 'btnRolling' : ''}
-                disabled={busy || !itemKey}
+              {/* 共有 Button(2026-07-21・1-2): busy シマー+文言差し替えを部品側に集約 */}
+              <Button
+                variant="primary"
+                busy={busy}
+                busyLabel="上乗せ中…"
+                disabled={!itemKey}
                 onClick={() => void attachItem()}
               >
-                {busy
-                  ? '上乗せ中…'
-                  : itemKey && attachedItem
-                    ? `${attachedItem.name_ja}を${(ownedByKey.get(itemKey) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}`
-                    : t.boost_pick}
-              </button>
+                {itemKey && attachedItem
+                  ? `${attachedItem.name_ja}を${(ownedByKey.get(itemKey) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}`
+                  : t.boost_pick}
+              </Button>
               {/* 買わない人のための明示的な出口(2026-07-20 オーナー指示) */}
               <StepLink onClick={() => { setItemKey(''); setSkipItem(true); }}>{t.step_skip}</StepLink>
             </div>

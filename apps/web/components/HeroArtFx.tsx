@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { TOTAL_VALUE_V2 } from '@sevendays/domain';
 import { tvTier } from '@/lib/tv-tier';
+import { useCountUp } from '@/lib/use-count-up';
 import s from '../app/horse-detail.module.css';
 
 /**
@@ -180,7 +181,9 @@ export function HeroArtFx({ horseId, children }: { horseId: string; children: Re
             {rest ? 'REST' : fmtSigned(totalGain)}
           </b>
           <span className={s.fxPopNext}>
-            {t.before} → <b>{t.projected}</b>
+            {/* 総合値は静止テキストではなく、実際に登っていく(2026-07-21・1-1)。
+                合計値のポップが着地したあと(0.42s+0.5s で行が出る)から動かす */}
+            {t.before} → <b><ClimbingTotal from={t.before} to={t.projected} /></b>
             <small>{rest ? '(次のレースの減衰を無効化)' : '(総合値に反映済み)'}</small>
           </span>
         </span>
@@ -202,6 +205,16 @@ export function HeroArtFx({ horseId, children }: { horseId: string; children: Re
       ) : null}
     </div>
   );
+}
+
+/**
+ * 演出の中で総合値が before → projected へ登る(2026-07-21・UI基盤 1-1)。
+ * 数字が育つゲームなのに、その中心で数字が静止していた(監査で最重要と指摘)。
+ * .fxPopNext は 0.42s 遅れて 0.5s かけて現れるので、行が出てから登り始める。
+ */
+function ClimbingTotal({ from, to }: { from: number; to: number }) {
+  const shown = useCountUp(to, { from, animateOnMount: true, delayMs: 950, durationMs: 900 });
+  return <>{shown.toFixed(1)}</>;
 }
 
 /**

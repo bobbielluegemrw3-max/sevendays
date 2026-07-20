@@ -1,4 +1,5 @@
 import type { AppDict } from '@/lib/i18n';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import s from './total-assets.module.css';
 
 /* ============================================================================
@@ -37,7 +38,10 @@ export function TotalAssetsCard({
       </div>
       <div className={s.body}>
         <div className={s.total}>
-          <span className={s.totalV}>{money(total)}</span>
+          {/* 総資産は再取得のたびに「前の値から登る」(2026-07-21・1-1)。
+              旧: router.refresh() 後に toLocaleString の結果が差し替わるだけで、
+              増えたことに気づけなかった */}
+          <AnimatedNumber className={s.totalV} value={total} digits={2} group durationMs={700} />
           <span className={s.totalU}>USDT</span>
         </div>
         <div className={s.eq} role="math" aria-label={`${t.total_bal} ${money(bal)} + ${t.total_stable} ${money(stableValue)} + ${t.total_locked} ${money(lock)}${uncollected > 0 ? ` - ${t.total_uncollected_k} ${money(uncollected)}` : ''} = ${money(total)}`}>

@@ -10,6 +10,7 @@ import { ItemPrepPanelV3 } from '@/components/ItemPrepPanelV3';
 import { HeroArtFx } from '@/components/HeroArtFx';
 import { HeroReactionOverlay } from '@/components/HeroReactionOverlay';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { uncollectedGain } from '@/components/stable-shared';
 import { APP_COPY, isLvDisplayMode, type Lang } from '@/lib/i18n';
@@ -418,8 +419,16 @@ export function HorseDetailView({
                   {horse.total_value !== null && horse.total_value !== undefined ? (
                     <div className={s.tvBig}>
                       <div className="l">TOTAL</div>
-                      <div className="v" style={tvMedalStyle(horse.total_value)}>{Number(horse.total_value).toFixed(1)}</div>
-                      {/* Decision 112: 調教確定は総合値へ即反映されるため、ここの数値が常に実値 */}
+                      {/* Decision 112: 調教確定は総合値へ即反映されるため、ここの数値が常に実値。
+                          再取得で値が変わったら登らせる(2026-07-21・1-1)— 調教の手応えは
+                          演出のポップだけでなく、この常設の数字が動くことでも伝わる */}
+                      <AnimatedNumber
+                        className="v"
+                        style={tvMedalStyle(horse.total_value)}
+                        value={Number(horse.total_value)}
+                        digits={1}
+                        durationMs={800}
+                      />
                     </div>
                   ) : null}
                   <div className={s.dayBig}>
