@@ -405,7 +405,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
          select id, name, status::text as status, current_day, horse_type::text as horse_type,
                 rarity::text as rarity, dna_hash, dna_modifier::text as dna_modifier,
                 ability_json, condition::text as condition, fatigue::text as fatigue,
-                total_value::float8 as total_value,
+                total_value::float8 as total_value, decay_shield_v2,
                 mint_seed_hash, horse_generation_version, gifted_at::text as gifted_at,
                 (select l.source::text from market_listings l
                  where l.horse_id = horses.id and l.status = 'LISTED' limit 1) as listing,
@@ -413,7 +413,23 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
                   where t.horse_id = horses.id and t.effective_race_date = (select race_date from eff)
                     and (t.slot is null or t.slot = (select slot from eff))
                   limit 1) as tonight_training,
-                (select race_date from eff)::text as effective_race_date
+                (select race_date from eff)::text as effective_race_date,
+                -- V2の付帯情報も同じ往復で畳み込む(2026-07-20 §D続: Web↔DBは1往復≈60ms。
+                -- 旧: エンジン版1+サイクル探索1〜3+ロール1+装備1+シールド1の直列5〜7往復)
+                (select row_to_json(tv) from (
+                   select t2.menus_v2, t2.delta_v2::text as delta_v2, t2.synergy_v2::text as synergy_v2,
+                          t2.rests_decay_v2, t2.item_bonus_v3::text as item_bonus_v3, t2.item_key_v3,
+                          t2.slot::text as slot
+                   from training_sessions t2
+                   where t2.horse_id = horses.id and t2.effective_race_date = (select race_date from eff)
+                     and t2.slot = (select slot from eff) and t2.menus_v2 is not null
+                   limit 1) tv) as training_v2_row,
+                (select row_to_json(pi) from (
+                   select iu.item_key, iu.effective_race_date::text as effective_race_date,
+                          iu.slot::text as slot
+                   from item_usages iu
+                   where iu.horse_id = horses.id and iu.status = 'PENDING' and iu.usage_kind = 'RACE'
+                   order by iu.created_at desc limit 1) pi) as race_item_v2_row
          from horses where id = $1 and owner_user_id = $2`,
         [ctx.params.id, ctx.userId, today],
       );
@@ -425,6 +441,12 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         condition: string; fatigue: string; tonight_training: string | null;
         effective_race_date: string; status: string; listing: string | null;
         current_day: number; total_value: number | null;
+        decay_shield_v2: number;
+        training_v2_row: {
+          menus_v2: string[]; delta_v2: string; synergy_v2: string; rests_decay_v2: boolean;
+          item_bonus_v3: string | null; item_key_v3: string | null; slot: string;
+        } | null;
+        race_item_v2_row: { item_key: string; effective_race_date: string; slot: string } | null;
       };
       const isActiveHorse = hRow.status === 'ACTIVE';
       // Decision 112: V2は実値(調教確定が即反映された horses.total_value)を表示
@@ -459,82 +481,40 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
          order by br.batch_date asc`,
         [ctx.params.id],
       );
-      // V2(Decision 104/107): V2エンジンがアクティブなら、次サイクル(朝→夜→翌朝)の
-      // 確定済みロールを返す — 詳細ページがメニューUI/確定済み表示へ切り替えるため。
-      let engineV2 = false;
+      // V2(Decision 104/107): V2エンジンがアクティブなら、次サイクルの確定済み
+      // ロール/装備/シールドを返す — すべて本体クエリの eff CTE に畳み込み済み
+      // (2026-07-20 §D続)。engineV2 は60秒キャッシュの v2Season を再利用。
+      const engineV2 = v2Season;
       let trainingV2: {
         menus: string[]; delta: number; synergy: number; rests_decay: boolean; item_bonus: number;
         item_key: string | null; slot: string;
       } | null = null;
-      // V2アイテムの常駐表示(装備バッジ+減衰シールド 2026-07-18)
       let raceItemV2: { item_key: string; effective_race_date: string; slot: string } | null = null;
       let decayShieldV2 = 0;
-      {
-        const active = await ctx.client.query<{ version: string }>(
-          `select version from race_engine_versions
-           where activated_at is not null and deactivated_at is null`,
-        );
-        engineV2 = active.rows.length === 1 && isRaceEngineV2(active.rows[0]!.version);
-        if (engineV2 && isActiveHorse) {
-          const cycles: { date: string; slot: 'MORNING' | 'NIGHT' }[] = [
-            { date: today, slot: 'MORNING' },
-            { date: today, slot: 'NIGHT' },
-            { date: addDays(today, 1), slot: 'MORNING' },
-          ];
-          let cycle = cycles[cycles.length - 1]!;
-          for (const c of cycles) {
-            const done = await ctx.client.query(
-              `select 1 from batch_runs b
-             where b.batch_date = $1 and b.slot = $2::race_slot
-               and (b.status = 'COMPLETED'
-                    or exists (select 1 from races r
-                               where r.batch_run_id = b.id and r.status = 'FINALIZED'))`,
-              [c.date, c.slot],
-            );
-            if (!done.rows[0]) { cycle = c; break; }
-          }
-          const v2row = await ctx.client.query<{
-            menus_v2: string[]; delta_v2: string; synergy_v2: string; rests_decay_v2: boolean;
-            item_bonus_v3: string | null; item_key_v3: string | null;
-          }>(
-            `select menus_v2, delta_v2::text as delta_v2, synergy_v2::text as synergy_v2, rests_decay_v2,
-                    item_bonus_v3::text as item_bonus_v3, item_key_v3
-             from training_sessions
-             where horse_id = $1 and effective_race_date = $2 and slot = $3::race_slot
-               and menus_v2 is not null`,
-            [ctx.params.id, cycle.date, cycle.slot],
-          );
-          if (v2row.rows[0]) {
-            trainingV2 = {
-              menus: v2row.rows[0].menus_v2,
-              delta: Number(v2row.rows[0].delta_v2),
-              synergy: Number(v2row.rows[0].synergy_v2),
-              rests_decay: v2row.rows[0].rests_decay_v2,
-              item_bonus: v2row.rows[0].item_bonus_v3 === null ? 0 : Number(v2row.rows[0].item_bonus_v3),
-              // Decision 113: 後付け添付UIが「添付済みか」を判定するためのキー
-              item_key: v2row.rows[0].item_key_v3,
-              slot: cycle.slot,
-            };
-          }
-          const pendingItem = await ctx.client.query<{
-            item_key: string; effective_race_date: string; slot: string;
-          }>(
-            `select item_key, effective_race_date::text as effective_race_date, slot::text as slot
-             from item_usages
-             where horse_id = $1 and status = 'PENDING' and usage_kind = 'RACE'
-             order by created_at desc limit 1`,
-            [ctx.params.id],
-          );
-          raceItemV2 = pendingItem.rows[0] ?? null;
-          const shield = await ctx.client.query<{ decay_shield_v2: number }>(
-            `select decay_shield_v2 from horses where id = $1`,
-            [ctx.params.id],
-          );
-          decayShieldV2 = shield.rows[0]?.decay_shield_v2 ?? 0;
+      if (engineV2 && isActiveHorse) {
+        const tv = hRow.training_v2_row;
+        if (tv) {
+          trainingV2 = {
+            menus: tv.menus_v2,
+            delta: Number(tv.delta_v2),
+            synergy: Number(tv.synergy_v2),
+            rests_decay: tv.rests_decay_v2,
+            item_bonus: tv.item_bonus_v3 === null ? 0 : Number(tv.item_bonus_v3),
+            // Decision 113: 後付け添付UIが「添付済みか」を判定するためのキー
+            item_key: tv.item_key_v3,
+            slot: tv.slot,
+          };
         }
+        raceItemV2 = hRow.race_item_v2_row;
+        decayShieldV2 = hRow.decay_shield_v2 ?? 0;
       }
-      const { tonight_training: tt, effective_race_date: efd, ...detailRest } = hRow;
-      void efd;
+      // 畳み込み用の生フィールドはレスポンス形状に出さない(decay_shield_v2 は加工値で返す)
+      const {
+        tonight_training: tt, effective_race_date: efd,
+        training_v2_row: tvRaw, race_item_v2_row: riRaw, decay_shield_v2: dsRaw,
+        ...detailRest
+      } = hRow;
+      void efd; void tvRaw; void riRaw; void dsRaw;
       return {
         ...detailRest,
         engine_v2: engineV2,

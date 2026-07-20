@@ -473,7 +473,7 @@ export function ItemsView({
                       </div>
                       {item.sellable ? (
                         <div className={s.cardActions}>
-                          <button type="button" disabled={busyKey === item.key} onClick={() => void buy(item)}>購入する</button>
+                          <button type="button" className={busyKey === item.key ? 'btnRolling' : ''} disabled={busyKey === item.key} onClick={() => void buy(item)}>購入する</button>
                         </div>
                       ) : null}
                     </div>

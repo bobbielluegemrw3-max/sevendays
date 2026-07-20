@@ -346,6 +346,52 @@ describe('post-attach to a confirmed roll (Decision 113)', () => {
     expect(errCode(frozen)).toBe('TRAINING_FROZEN');
   });
 
+  it('GET /horses/:id returns the folded-in V2 extras (roll, race item, shield) correctly', async () => {
+    const user = await newUser();
+    const horse = await newHorse(user, 'POWER');
+    const confirm = await post(user, `/api/v1/horses/${horse.id}/training`, { menus: ['HILL', 'WOOD'] });
+    expect(confirm.status).toBe(200);
+    const c = confirm.body as { slot: string; effective_race_date: string };
+    await buy(user, 'royal_banquet');
+    const attach = await post(user, `/api/v1/horses/${horse.id}/training`, { item_key: 'royal_banquet' });
+    expect(attach.status).toBe(200);
+    await buy(user, 'rain_cape');
+    const prep = await post(user, `/api/v1/horses/${horse.id}/item`, { item_key: 'rain_cape' });
+    expect(prep.status).toBe(200);
+    await client.query(
+      `insert into user_items (user_id, item_key, unit_price, source) values ($1, 'aeon_sand', 0, 'BURN_DROP')`,
+      [user],
+    );
+    const shield = await post(user, `/api/v1/horses/${horse.id}/item`, { item_key: 'aeon_sand' });
+    expect(shield.status).toBe(200);
+
+    const detail = await registry.dispatch(client, {
+      method: 'GET', path: `/api/v1/horses/${horse.id}`, auth: asUser(user), body: null, idempotencyKey: null,
+    });
+    expect(detail.status).toBe(200);
+    const d = detail.body as {
+      engine_v2: boolean;
+      training_v2: { menus: string[]; delta: number; item_bonus: number; item_key: string | null; slot: string } | null;
+      race_item_v2: { item_key: string; slot: string } | null;
+      decay_shield_v2: number;
+      training_v2_row?: unknown;
+      race_item_v2_row?: unknown;
+    };
+    expect(d.engine_v2).toBe(true);
+    expect(d.training_v2).not.toBeNull();
+    expect(d.training_v2!.menus).toEqual(['HILL', 'WOOD']);
+    expect(d.training_v2!.item_key).toBe('royal_banquet');
+    expect(d.training_v2!.item_bonus).toBeGreaterThanOrEqual(3);
+    expect(d.training_v2!.slot).toBe(c.slot);
+    expect(typeof d.training_v2!.delta).toBe('number');
+    expect(d.race_item_v2).not.toBeNull();
+    expect(d.race_item_v2!.item_key).toBe('rain_cape');
+    expect(d.decay_shield_v2).toBe(2);
+    // 畳み込み用の生フィールドはレスポンスに漏れない
+    expect(d.training_v2_row).toBeUndefined();
+    expect(d.race_item_v2_row).toBeUndefined();
+  });
+
   it('refuses attach while the target batch is running', async () => {
     const user = await newUser();
     const horse = await newHorse(user, 'BALANCED');

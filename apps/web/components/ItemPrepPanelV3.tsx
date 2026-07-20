@@ -194,7 +194,7 @@ export function ItemPrepPanelV3({
           />
           {/* カード列(横スクロールバー)と密着しないよう一呼吸(2026-07-20 オーナー指摘) */}
           <div className={s.boostRow} style={{ marginTop: '0.6rem' }}>
-            <button type="button" disabled={busy || !selected} onClick={() => void applySelected()}>
+            <button type="button" className={busy ? 'btnRolling' : ''} disabled={busy || !selected} onClick={() => void applySelected()}>
               {selected
                 ? `${selectedItem?.name_ja ?? ''}を${(ownedByKey.get(selected) ?? 0) > 0 ? t.boost_use : t.boost_buy_use}`
                 : t.boost_pick}

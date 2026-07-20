@@ -264,6 +264,20 @@ button.secondary {
 button.secondary:hover { border-color: var(--magenta); filter: none; }
 button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 
+/* 送信中のボタン: 掃引シマー(2026-07-20 オーナー指摘「クリック→間がある」)。
+   サーバー往復(確定ロール・アイテム適用など)の待ちを「処理中」として見せる。
+   disabledのopacity 0.5とセットで使う想定 — busy時にclassName='btnRolling' を付ける */
+button.btnRolling { position: relative; overflow: hidden; opacity: 0.85; }
+button.btnRolling::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 32%, rgba(255, 255, 255, 0.45) 50%, transparent 68%);
+  transform: translateX(-100%); animation: btnSweep 0.85s linear infinite;
+}
+@keyframes btnSweep { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  button.btnRolling::after { animation: none; }
+}
+
 /* utility */
 .muted { color: var(--muted); }
 .faint { color: var(--faint); }

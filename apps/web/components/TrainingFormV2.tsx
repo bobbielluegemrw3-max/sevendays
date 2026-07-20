@@ -283,6 +283,7 @@ export function TrainingFormV2({
             {error ? <p className="error">{error}</p> : null}
             <button
               type="button"
+              className={busy ? 'btnRolling' : ''}
               disabled={busy || !itemKey}
               style={{ marginTop: '0.55rem' }}
               onClick={() => void attachItem()}
@@ -353,7 +354,7 @@ export function TrainingFormV2({
           <div className={s.tv2Warn}>{t.tv2_confirm_warn}</div>
           {error ? <p className="error">{error}</p> : null}
           <div className={s.tv2ConfirmRow}>
-            <button type="button" disabled={busy} onClick={() => void submit()}>
+            <button type="button" className={busy ? 'btnRolling' : ''} disabled={busy} onClick={() => void submit()}>
               {busy ? t.train_busy : t.tv2_confirm_go}
             </button>
             <button type="button" className={s.redoBtn} disabled={busy} onClick={() => setConfirming(false)}>
