@@ -264,7 +264,12 @@ export function TrainingFormV2({
               </div>
             ) : null}
             {error ? <p className="error">{error}</p> : null}
-            <button type="button" disabled={busy || !itemKey} onClick={() => void attachItem()}>
+            <button
+              type="button"
+              disabled={busy || !itemKey}
+              style={{ marginTop: '0.55rem' }}
+              onClick={() => void attachItem()}
+            >
               {busy
                 ? t.train_busy
                 : itemKey && attachedItem
@@ -391,27 +396,9 @@ export function TrainingFormV2({
           ))}
         </div>
       ) : null}
-      {/* 調教アイテムは調教とは別の行為(2026-07-20 オーナー指示)。ここでは一覧と
-          下見(選択)だけ — 「使う」ボタンは調教確定後に出る(Decision 113 後付け)。
-          メニュー未選択でも表示(存在に気づけるように)・条件付きアイテムは選択に応じて増減 */}
-      {attachable.length > 0 ? (
-        <div>
-          <div className={s.tv2AttachHead}>調教アイテム(任意・調教とは別) — 確定後に「使う」で上乗せ</div>
-          <ItemCardPicker
-            items={attachable}
-            ownedByKey={ownedByKey}
-            selected={itemKey}
-            onSelect={setItemKey}
-            ariaLabel="調教アイテム"
-          />
-          {attachedItem?.effect ? (
-            <div style={{ color: 'var(--faint)', fontSize: '0.72rem', marginTop: '0.2rem' }}>
-              {effectSummaryJa(attachedItem.effect)} — 使うボタンは調教確定後に表示されます
-            </div>
-          ) : null}
-        </div>
-      ) : null}
       {error ? <p className="error">{error}</p> : null}
+      {/* 調教の確定はメニューだけで完結する — アイテムより先に置く(2026-07-20 オーナー指示:
+          ボタンがアイテム列の下にあると「アイテム込みの確定」に見える) */}
       <button
         type="button"
         disabled={busy || menus.length === 0}
@@ -422,6 +409,31 @@ export function TrainingFormV2({
       <div className={s.tv2Cap}>
         {`SOFT CAP ${TOTAL_VALUE_V2.softCap} / DECAY −${TOTAL_VALUE_V2.decayPerRace.toFixed(1)}`}
       </div>
+      {/* 調教アイテムは調教とは別の行為・専用ボタン(2026-07-20 オーナー指示)。
+          使えるのは確定済みロールに対してのみ(Decision 113)なので、確定前は
+          ボタンを無効表示にして案内する。メニュー未選択でも一覧は見せる */}
+      {attachable.length > 0 ? (
+        <div style={{ marginTop: '0.6rem' }}>
+          <div className={s.tv2AttachHead}>調教アイテム(任意・調教とは別) — 確定ロールに上乗せ</div>
+          <ItemCardPicker
+            items={attachable}
+            ownedByKey={ownedByKey}
+            selected={itemKey}
+            onSelect={setItemKey}
+            ariaLabel="調教アイテム"
+          />
+          {attachedItem?.effect ? (
+            <div style={{ color: 'var(--faint)', fontSize: '0.72rem', margin: '0.2rem 0 0' }}>
+              {effectSummaryJa(attachedItem.effect)}
+            </div>
+          ) : null}
+          <button type="button" disabled style={{ marginTop: '0.55rem' }}>
+            {itemKey && attachedItem
+              ? `${attachedItem.name_ja}を使う — 先に調教を確定してください`
+              : 'アイテムを使うには先に調教を確定'}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
