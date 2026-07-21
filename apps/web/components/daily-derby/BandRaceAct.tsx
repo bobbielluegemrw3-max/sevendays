@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { PRICE_TABLE_V1 } from '@sevendays/domain';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import {
   bandRaceFrame,
@@ -21,6 +22,44 @@ import s from '../../app/daily-derby.module.css';
  * したがってここには馬のアニメーションを置かない。順位表が機能することを
  * 確認してから、その上に薄く視覚レイヤーを足す。
  * ========================================================================== */
+
+/** 走破(LV.7到達)の買い戻し額。価格表の外側。 */
+const CHAMPION_VALUE = 200;
+
+/**
+ * 生存で得たもの — 価値が1段上がる / LVが1つ進む / 走破まであと何走。
+ *
+ * `day` は帯のLV(= race_participant_snapshots.current_day)= レース前の値。
+ * 生存すると LV は day+1 になり、価値は価格表の1段上へ動く。
+ * LV.7 に届く夜は価格表の外(チャンピオン買い戻し 200 USDT)。
+ */
+function SurvivalGain({ day }: { day: number }) {
+  const before = Number(PRICE_TABLE_V1[Math.max(0, Math.min(6, day))] ?? PRICE_TABLE_V1[0]);
+  const nextDay = day + 1;
+  const after = nextDay >= 7 ? CHAMPION_VALUE : Number(PRICE_TABLE_V1[Math.min(6, nextDay)] ?? before);
+  const delta = Math.round((after - before) * 100) / 100;
+  const remaining = 7 - nextDay;
+  if (!Number.isFinite(before) || !Number.isFinite(after) || delta <= 0) return null;
+  return (
+    <div className={s.brGain}>
+      <div className={s.brGainRow}>
+        <span className={s.brGainK}>価値</span>
+        <span className={s.brGainFrom}>{before.toFixed(2)}</span>
+        <span className={s.brGainArrow}>→</span>
+        <span className={s.brGainTo}>
+          {/* 0 からではなく「昨日の価値」から登る — 上がった分が体で分かる */}
+          <AnimatedNumber value={after} from={before} digits={2} animateOnMount durationMs={1100} delayMs={420} />
+        </span>
+        <span className={s.brGainUnit}>USDT</span>
+        <span className={s.brGainDelta}>+{delta.toFixed(2)}</span>
+      </div>
+      <div className={s.brGainSub}>
+        LV.{day} → LV.{nextDay}
+        {remaining > 0 ? ` ・ 走破まで あと${remaining}走` : ' ・ 7日走破'}
+      </div>
+    </div>
+  );
+}
 
 export function BandRaceAct({
   input,
@@ -137,6 +176,14 @@ export function BandRaceAct({
           ) : (
             <span className={s.brVerdictT}>{myFate === 'SAFE' ? '生存' : 'BURN'}</span>
           )}
+          {/* 生存で「得たもの」を出す(2026-07-21 オーナー指摘: ドキドキからの
+              喜びが薄い)。それまで生存の瞬間に出るのは「死ななかった」だけで、
+              これは損失回避であって報酬ではない — FUN_V3_PLAN §1.1 が経済に
+              ついて言った診断が、そのままショーの中にも残っていた。
+              生存で確定的に得るもの(価値が1段上がる / LVが1つ進む / 走破まで
+              あと何走)は全て価格表と current_day の確定値なのでフィクションは
+              ゼロ。数字は 0 からではなく **昨日の価値から** 登らせる。 */}
+          {myFate === 'SAFE' && <SurvivalGain day={day} />}
         </div>
       )}
     </div>

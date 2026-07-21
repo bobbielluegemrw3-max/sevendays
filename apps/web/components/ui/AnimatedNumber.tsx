@@ -21,6 +21,7 @@ export function AnimatedNumber({
   durationMs = 600,
   delayMs = 0,
   animateOnMount = false,
+  from,
   className,
   style,
 }: {
@@ -33,10 +34,19 @@ export function AnimatedNumber({
   delayMs?: number;
   /** 初回表示でも 0 から登らせる(演出の中で使うとき)。 */
   animateOnMount?: boolean;
+  /** 補間の開始値。0 からではなく「前の値」から登らせたいとき
+   *  (例: 生存で 146.41 → 161.05)。animateOnMount と併用する。 */
+  from?: number | undefined;
   className?: string | undefined;
   style?: React.CSSProperties | undefined;
 }) {
-  const n = useCountUp(value, { durationMs, delayMs, animateOnMount });
+  const n = useCountUp(value, {
+    durationMs,
+    delayMs,
+    animateOnMount,
+    // exactOptionalPropertyTypes: undefined を渡さず、あるときだけ載せる
+    ...(from === undefined ? {} : { from }),
+  });
   const text = group
     ? n.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })
     : n.toFixed(digits);

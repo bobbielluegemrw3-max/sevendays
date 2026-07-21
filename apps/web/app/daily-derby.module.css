@@ -1340,3 +1340,37 @@
 .poolRow b { font-weight: 700; margin: 0 10px 0 7px; font-size: 17px; }
 .poolAmt { margin: 0 4px 0 7px; font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .poolArrow { margin: 0 8px; color: var(--faint); }
+
+/* 生存で得たもの(2026-07-21 オーナー指摘の修正)。判定の下に静かに続く。
+   MARGIN の巨大数字と競わせない — ここは勝ち名乗りではなく「収穫」。 */
+.brGain {
+  margin-top: 0.7rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.22rem;
+  animation: gainIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.32s both;
+}
+.brGainRow { display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; justify-content: center; }
+.brGainK {
+  font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.28em; color: var(--faint);
+}
+.brGainFrom {
+  font-family: var(--font-mono); font-size: 0.86rem; color: var(--faint);
+  font-variant-numeric: tabular-nums; text-decoration: line-through; text-decoration-thickness: 1px;
+}
+.brGainArrow { color: var(--faint); font-size: 0.8rem; }
+.brGainTo {
+  font-family: var(--font-display); font-weight: 800; font-size: clamp(1.3rem, 5vw, 1.8rem);
+  color: var(--good-soft); font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 18px rgba(53, 208, 127, 0.35);
+}
+.brGainUnit { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); }
+.brGainDelta {
+  font-family: var(--font-mono); font-weight: 700; font-size: 0.78rem; color: var(--good);
+  padding: 1px 8px; border-radius: 999px; background: rgba(53, 208, 127, 0.12);
+}
+.brGainSub {
+  font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.16em; color: var(--muted);
+}
+@keyframes gainIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
