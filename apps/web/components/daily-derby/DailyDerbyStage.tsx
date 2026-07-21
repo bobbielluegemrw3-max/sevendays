@@ -606,24 +606,43 @@ export function DailyDerbyStage({
     }
   }, [elapsed, failed, soundOn, playOneShot]);
 
-  /* ループ音の窓同期: 蹄音=レース実走、群衆の話し声=ログ濁流の間ずっと。 */
+  /* ループ音の窓同期。
+   *
+   * 2026-07-21(施策G): 群衆(crowd)の窓を COMPLETE_AT(78) から 55 へ縮めた。
+   * 旧構成では 30〜97秒がログ濁流の「賑わい」だったので群衆が正しかったが、
+   * いま同じ時間帯にあるのは静かな順位表と、個人の決算である。
+   *   - SETTLEMENT(62〜77) は私的な決算。そこに他人の話し声が乗るのは誤り
+   *   - ライン接近(51〜55)で群衆が引くと、沈黙そのものが緊張になる。
+   *     この幕の緊張は「まだ分からない」という性質で、沈黙と相性がよい
+   * 蹄音も 25秒からフェードし、帯レースの静寂へ受け渡す。
+   *
+   * ★競り合いを煽る音は足さない。中間順位のデータは存在しないので、それは
+   * 視覚で排除したフィクションを聴覚で再導入することになる。 */
+  const BAND_LINE_CLOSING = LOGS_FROM + 21; // 51秒 = ライン接近
+  const BAND_FATE_AT = LOGS_FROM + BAND_ACT_VERDICT_AT; // 55秒 = 生死確定
   useEffect(() => {
-    const windows: ReadonlyArray<{ key: string; from: number; to: number }> = [
-      { key: 'hoofs', from: RACE_RUN.startAt, to: RACE_RUN.endAt },
-      { key: 'crowd', from: LOGS_FROM, to: COMPLETE_AT },
+    const windows: ReadonlyArray<{
+      key: string; from: number; to: number; fadeFrom: number; base: number;
+    }> = [
+      { key: 'hoofs', from: RACE_RUN.startAt, to: RACE_RUN.endAt, fadeFrom: 25, base: 1 },
+      { key: 'crowd', from: LOGS_FROM, to: BAND_FATE_AT, fadeFrom: BAND_LINE_CLOSING, base: 0.45 },
     ];
     for (const w of windows) {
       const inWindow = !failed && soundOn && elapsed >= w.from && elapsed < w.to;
       const audio = inWindow ? getAudio(w.key) : (audioRefs.current.get(w.key) ?? null);
       if (!audio) continue;
-      if (inWindow && audio.paused) {
-        void audio.play().catch(() => {});
-      } else if (!inWindow && !audio.paused) {
+      if (inWindow) {
+        // fadeFrom → to にかけて音量を絞り切る(沈黙への受け渡し)
+        const t = elapsed <= w.fadeFrom ? 0 : (elapsed - w.fadeFrom) / Math.max(0.001, w.to - w.fadeFrom);
+        audio.volume = Math.max(0, w.base * (1 - Math.min(1, t)));
+        if (audio.paused) void audio.play().catch(() => {});
+      } else if (!audio.paused) {
         audio.pause();
         audio.currentTime = 0;
+        audio.volume = w.base;
       }
     }
-  }, [elapsed, failed, soundOn, getAudio]);
+  }, [elapsed, failed, soundOn, getAudio, BAND_LINE_CLOSING, BAND_FATE_AT]);
 
   /* サウンドOFF即時反映+アンマウント時の停止。 */
   useEffect(() => {
