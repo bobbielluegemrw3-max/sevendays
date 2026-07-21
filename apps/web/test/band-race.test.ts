@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ACT_TOTAL,
+  ACT_VERDICT_AT,
   bandRaceFrame,
   buildBandRace,
   fixtureBandRace,
@@ -80,6 +81,16 @@ describe('band race — 決着を最後まで持ち越す', () => {
           expect(f.myFate, `${mineRank}位 / ${f.phase} / 開示${f.revealed}`).toBeNull();
         }
       }
+    }
+  });
+
+  it('ACT_VERDICT_AT より前に生死は明かされない(審判オーバーレイの発火下限)', () => {
+    // ショー側はこの定数を使って審判の発火時刻を決めている。ここが動くと
+    // 馬の画像が答えを先に言う事故(2026-07-21)が再発する。
+    for (const mineRank of [1, 18, 34, 35, 38]) {
+      const m = buildBandRace(fixtureBandRace({ mineRank }));
+      expect(bandRaceFrame(m, ACT_VERDICT_AT - 0.1).showFate).toBe(false);
+      expect(bandRaceFrame(m, ACT_VERDICT_AT).showFate).toBe(true);
     }
   });
 

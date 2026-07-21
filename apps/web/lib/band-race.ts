@@ -41,6 +41,16 @@ export const ACT_VERDICT = 7;
  */
 export const ACT_TOTAL = ACT_INTRO + ACT_YOU + ACT_REVEAL + ACT_LINE + ACT_VERDICT;
 
+/**
+ * 生死が明かされる時刻(act ローカル秒)。
+ *
+ * ★ショー側の審判オーバーレイは、この時刻より前に発火させてはならない。
+ * 既定では BURN の審判は 31.5秒(= LOGS_FROM+1.5)に出るため、素直に重ねると
+ * 馬の画像が幕開け直後に答えを言ってしまい、順位が下がっていく25秒が
+ * まるごと無意味になる(2026-07-21 プレビューで実際に発生)。
+ */
+export const ACT_VERDICT_AT = ACT_TOTAL - ACT_VERDICT;
+
 const T_YOU = ACT_INTRO;
 const T_REVEAL = T_YOU + ACT_YOU;
 const T_LINE = T_REVEAL + ACT_REVEAL;

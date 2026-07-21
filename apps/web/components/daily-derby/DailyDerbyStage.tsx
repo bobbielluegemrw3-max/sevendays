@@ -42,6 +42,7 @@ function nextSlotV2(): { ja: string; time: string } {
 import { BandRaceAct } from '@/components/daily-derby/BandRaceAct';
 import {
   ACT_TOTAL as BAND_ACT_TOTAL,
+  ACT_VERDICT_AT as BAND_ACT_VERDICT_AT,
   buildBandRace,
   selectFeaturedBand,
   type BandRaceInput,
@@ -346,6 +347,8 @@ export function DailyDerbyStage({
     return myHorses.filter((h) => (h.currentDay ?? 1) >= 1);
   }, [myEvents, myHorses]);
   const quiet = counts.horses < QUIET_NIGHT_HORSES && (raceRunners.length > 0 || myHorses.length > 0);
+  /** 施策G: この夜は帯レースを上映するか(審判の発火時刻がこれで変わる)。 */
+  const hasBand = (bandRace?.length ?? 0) > 0;
   const rollSlot = Math.min(9, Math.max(3.5, (MARKET_OPEN.startAt - LOGS_FROM) / Math.max(1, raceRunners.length)));
 
   const verdictSchedule = useMemo<ReadonlyArray<{ fireAt: number; info: VerdictInfo }>>(() => {
@@ -358,8 +361,22 @@ export function DailyDerbyStage({
       ...(day !== null ? { currentDay: day } : {}),
     });
     const sec = (key: string) => LOG_SECTIONS.find((x) => x.key === key)!;
+    /* 施策G: 帯レース中は審判オーバーレイを出さない。
+     *
+     * BURN の審判は既定で 31.5秒(BURNセクション開始+1.5)に発火する。ところが
+     * 帯レースが生死を明かすのは 55秒(VERDICT幕)である。そのまま重ねると
+     * 馬の画像が幕開け直後に答えを言ってしまい、順位が下がっていく25秒間が
+     * まるごと無意味になる — 実際にプレビューで先に結果が見えていた。
+     *
+     * したがって帯がある夜は、レースターンの審判をまとめて VERDICT 幕へ寄せる。
+     * 順位表が「0.56点差で生存」と出し、そのあとに馬が浮かび上がる順序になる。 */
+    const bandVerdictAt = LOGS_FROM + BAND_ACT_VERDICT_AT;
     // レースターン(生存/BURN/DAY7)。点呼の夜はスロット同期、濁流の夜はセクション同期。
     const raceTurnAt = (name: string, sectionKey: string, idxInSection: number): number => {
+      if (hasBand) {
+        // VERDICT幕(55→62秒)に詰める。溢れる分は VERDICT_QUEUE_MAX が面倒を見る。
+        return bandVerdictAt + 1.2 + idxInSection * 1.6;
+      }
       if (quiet) {
         const i = raceRunners.findIndex((h) => h.name === name);
         if (i >= 0) return LOGS_FROM + i * rollSlot + rollSlot * 0.55;
@@ -415,7 +432,7 @@ export function DailyDerbyStage({
       });
     });
     return out.sort((a, b) => a.fireAt - b.fireAt);
-  }, [myEvents, quiet, raceRunners, rollSlot]);
+  }, [myEvents, quiet, raceRunners, rollSlot, hasBand]);
 
   useEffect(() => {
     if (verdictSchedule.length === 0 || elapsed < LOGS_FROM) return;
