@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook } from '@/lib/nft-visual';
 import {
   settlementFrame,
+  type HarvestRow,
   type SettlementInput,
 } from '@/lib/settlement-act';
 import s from '../../app/daily-derby.module.css';
@@ -23,12 +24,27 @@ import s from '../../app/daily-derby.module.css';
 export function SettlementAct({
   input,
   elapsed,
+  onRowRevealed,
 }: {
   input: SettlementInput;
   /** 幕ローカルの経過秒(0 = 幕開け)。 */
   elapsed: number;
+  /** 1頭が開示された瞬間(音の合図に使う。out=出ていった / in=入ってきた)。 */
+  onRowRevealed?: ((row: HarvestRow) => void) | undefined;
 }) {
   const frame = useMemo(() => settlementFrame(input, elapsed), [input, elapsed]);
+
+  /* 行が1つ増えた瞬間だけ呼ぶ。音は「方向」だけを伝える —
+     収支のプラス/マイナスで音を変えてはいけない(R1: 当たり音になる)。 */
+  const lastRow = useRef<string | null>(null);
+  const current = frame.current;
+  useEffect(() => {
+    if (!current) { lastRow.current = null; return; }
+    const key = `${current.kind}:${current.name}`;
+    if (lastRow.current === key) return;
+    lastRow.current = key;
+    onRowRevealed?.(current);
+  }, [current, onRowRevealed]);
   const { pulse, revealed, netTotal, stableBefore, stableAfter, showClosing } = frame;
 
   return (

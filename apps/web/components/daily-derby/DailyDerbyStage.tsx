@@ -267,6 +267,11 @@ export function DailyDerbyStage({
         crowd: { src: '/sounds/crowd.mp3', loop: true, volume: 0.45 },
         ownBurn: { src: '/sounds/own-burn.mp3' },
         ownGood: { src: '/sounds/own-good.mp3' },
+        /* SETTLEMENT の方向音(2026-07-21・発注中)。
+           「出ていった / 入ってきた」だけを伝える中立な音。
+           音源が未配置の間は playOneShot が握りつぶすので従来どおり無音。 */
+        settleOut: { src: '/sounds/settle-out.mp3', volume: 0.7 },
+        settleIn: { src: '/sounds/settle-in.mp3', volume: 0.7 },
         finale: { src: '/sounds/finale.mp3' },
       }) satisfies Record<string, { src: string; loop?: boolean; volume?: number }>,
     [fanfareSrc, hoofbeatsSrc],
@@ -408,6 +413,14 @@ export function DailyDerbyStage({
     return featured ? buildBandRace(featured) : null;
   }, [bandRace]);
 
+
+  /* SETTLEMENT の方向音。出ていった/入ってきた の区別だけを鳴らす。
+     ★収支のプラス/マイナスで音を変えない — それはパチンコの当たり音であり
+     R1レッドライン(射幸性を訴求しない)に触れる。価値は数字が語る。 */
+  const onSettlementRow = useCallback(
+    (row: HarvestRow) => playOneShot(row.kind === 'out' ? 'settleOut' : 'settleIn'),
+    [playOneShot],
+  );
 
   /* 施策G 後半: SETTLEMENT 幕の入力。62秒以降のダミー濁流を置き換える。
      出ていった馬(売却)→入ってきた馬(購入/ミント)。数字はすべて実データ。 */
@@ -740,6 +753,7 @@ export function DailyDerbyStage({
             quiet={quiet}
             bandModel={bandModel}
             settlement={settlement}
+            onSettlementRow={onSettlementRow}
             replay={replay}
           />
         ) : (
@@ -1058,6 +1072,7 @@ function LiveShow({
   quiet,
   bandModel,
   settlement,
+  onSettlementRow,
   replay = false,
 }: {
   elapsed: number;
@@ -1070,6 +1085,7 @@ function LiveShow({
   quiet: boolean;
   bandModel: BandRaceModel | null;
   settlement: SettlementInput;
+  onSettlementRow: (row: HarvestRow) => void;
   replay?: boolean;
 }) {
   if (elapsed >= COMPLETE_AT) {
@@ -1093,6 +1109,7 @@ function LiveShow({
         quiet={quiet}
         bandModel={bandModel}
         settlement={settlement}
+        onSettlementRow={onSettlementRow}
       />
     );
   }
@@ -1315,6 +1332,7 @@ function LogPhase({
   quiet,
   bandModel,
   settlement,
+  onSettlementRow,
 }: {
   elapsed: number;
   counts: DerbyCounts;
@@ -1325,6 +1343,7 @@ function LogPhase({
   quiet: boolean;
   bandModel: BandRaceModel | null;
   settlement: SettlementInput;
+  onSettlementRow: (row: HarvestRow) => void;
 }) {
   // 正典のなめらかなログの流れ: ショー時計(1秒刻み)を60fpsに補間して描画する
   const elapsed = useShowClock(propElapsed);
@@ -1356,7 +1375,11 @@ function LogPhase({
       <div className={s.floodGrid}>
         {settling ? (
           <div className={s.logStreamBand}>
-            <SettlementAct input={settlement} elapsed={elapsed - MARKET_OPEN.startAt} />
+            <SettlementAct
+              input={settlement}
+              elapsed={elapsed - MARKET_OPEN.startAt}
+              onRowRevealed={onSettlementRow}
+            />
           </div>
         ) : bandRacing ? (
           <div className={s.logStreamBand}>
