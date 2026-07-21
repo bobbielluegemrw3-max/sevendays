@@ -1,6 +1,6 @@
 'use client';
 
-import { BAND_LABEL, BAND_ORDER, effectShortJa, type CatalogItem } from '@/lib/items';
+import { BAND_LABEL, BAND_ORDER, effectShort, type CatalogItem, type ItemCopy } from '@/lib/items';
 import s from '../app/items.module.css';
 
 /* ============================================================================
@@ -21,6 +21,7 @@ export function ItemCardPicker({
   allowNone = false,
   noneLabel = 'なし',
   ariaLabel,
+  itemsCopy,
 }: {
   items: CatalogItem[];
   ownedByKey: Map<string, number>;
@@ -29,6 +30,8 @@ export function ItemCardPicker({
   allowNone?: boolean;
   noneLabel?: string;
   ariaLabel: string;
+  /** アイテム語彙の辞書(効果の短縮表記に使う)。 */
+  itemsCopy: ItemCopy;
 }) {
   const sorted = BAND_ORDER.flatMap((band) => items.filter((c) => c.band === band));
   return (
@@ -66,7 +69,7 @@ export function ItemCardPicker({
             <span className={`${s.pickCls} ${cls.chip}`}>{cls.label}</span>
             <img className={s.pickThumb} src={`/items/${c.key}.webp`} alt="" width={46} height={46} loading="lazy" />
             <span className={s.pickName}>{c.name_ja}</span>
-            <span className={s.pickFx}>{c.effect ? effectShortJa(c.effect) : c.description_ja}</span>
+            <span className={s.pickFx}>{c.effect ? effectShort(c.effect, itemsCopy) : c.description_ja}</span>
             <span className={s.pickPrice}>{owned > 0 ? `所持 ${owned}` : `${c.price} USDT`}</span>
             <span className={s.pickBand}>{BAND_LABEL[c.band]}</span>
           </button>

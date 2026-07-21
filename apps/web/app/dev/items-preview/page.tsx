@@ -1,5 +1,6 @@
 import { requireDevPreviewAccess } from '@/lib/dev-preview';
 import { ItemsView } from '@/components/ItemsView';
+import { APP_COPY } from '@/lib/i18n';
 import { AFFINITY_JA, ITEM_CATALOG_V2 } from '@sevendays/domain';
 import type { CatalogItem } from '@/lib/items';
 
@@ -23,6 +24,7 @@ export default async function ItemsPreview() {
   const day = (d: number) => `2026-07-${String(d).padStart(2, '0')}`;
   return (
     <ItemsView
+      itemsCopy={APP_COPY.ja.items}
       preview
       catalog={catalog}
       today={day(8)}

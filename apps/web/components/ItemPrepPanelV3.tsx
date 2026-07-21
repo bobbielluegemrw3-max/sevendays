@@ -6,11 +6,12 @@ import { apiFetch, errorMessage } from '@/lib/client-api';
 import { refreshAfterFx, refreshSoft } from '@/lib/deferred-refresh';
 import { TrainStep, StepLink, stepStyles as st } from '@/components/TrainStep';
 import { Button } from '@/components/ui/Button';
+import type { ItemCopy } from '@/lib/items';
 import { AppSelect } from '@/components/AppSelect';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import { ItemCardPicker } from '@/components/ItemCardPicker';
 import {
-  effectSummaryJa,
+  effectSummary,
   type CatalogItem,
   type InventoryData,
 } from '@/lib/items';
@@ -27,10 +28,13 @@ import { ErrorLine } from '@/components/ui/ErrorLine';
 export function ItemPrepPanelV3({
   horseId,
   t,
+  itemsCopy,
   preview = false,
 }: {
   horseId: string;
   t: AppDict['horse'];
+  /** アイテム語彙の辞書(効果の説明に使う)。 */
+  itemsCopy: ItemCopy;
   preview?: boolean;
 }) {
   const router = useRouter();
@@ -204,6 +208,7 @@ export function ItemPrepPanelV3({
             selected={selected}
             onSelect={setSelected}
             ariaLabel={t.boost_pick_aria}
+            itemsCopy={itemsCopy}
           />
           {/* カード列(横スクロールバー)と密着しないよう一呼吸(2026-07-20 オーナー指摘) */}
           <div className={s.boostRow} style={{ marginTop: '0.6rem' }}>
@@ -249,7 +254,7 @@ export function ItemPrepPanelV3({
           {selectedItem ? (
             <>
               <img className={s.thumb} src={`/items/${selectedItem.key}.webp`} alt="" width={42} height={42} />
-              <span>{selectedItem.effect ? effectSummaryJa(selectedItem.effect) : selectedItem.description_ja}</span>
+              <span>{selectedItem.effect ? effectSummary(selectedItem.effect, itemsCopy) : selectedItem.description_ja}</span>
             </>
           ) : (
             <span style={{ opacity: 0.55 }}>{t.boost_hint_empty}</span>

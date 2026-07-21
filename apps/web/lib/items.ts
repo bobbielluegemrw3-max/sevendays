@@ -1,3 +1,5 @@
+import { fill, type AppDict } from '@/lib/i18n-shared';
+
 /** Item System UI 共有型(Decision 078/079)。APIレスポンス形。 */
 
 export interface CatalogItem {
@@ -29,78 +31,98 @@ export type ItemEffectV3 =
   | { kind: 'DUAL_PREP'; hit: number; miss: number }
   | { kind: 'DUAL_FLOOR' };
 
-export const ITEM_CLASS_LABEL: Record<'TRAINING' | 'RACE', string> = {
-  TRAINING: '調教アイテム',
-  RACE: 'レースアイテム',
+/** アイテム語彙の辞書(walletPage と同じく props で受け取る)。 */
+export type ItemCopy = AppDict['items'];
+
+export const itemClassLabel = (cls: 'TRAINING' | 'RACE', t: ItemCopy): string =>
+  cls === 'TRAINING' ? t.class_training : t.class_race;
+
+const groupLabel = (group: string, t: ItemCopy): string =>
+  group === 'RAIN_GROUP' ? t.grp_rain
+    : group === 'SUN_GROUP' ? t.grp_sun
+      : group === 'MUD_GROUP' ? t.grp_mud
+        : group === 'FIRM_GROUP' ? t.grp_firm
+          : group;
+
+const conditionLabel = (cond: string, t: ItemCopy): string => {
+  switch (cond) {
+    case 'SUNNY': return t.cond_sunny;
+    case 'CLOUDY': return t.cond_cloudy;
+    case 'RAIN': return t.cond_rain;
+    case 'STORM': return t.cond_storm;
+    case 'FAST': return t.cond_fast;
+    case 'GOOD': return t.cond_good;
+    case 'SOFT': return t.cond_soft;
+    case 'HEAVY': return t.cond_heavy;
+    default: return cond;
+  }
 };
 
-const GROUP_JA: Record<string, string> = {
-  RAIN_GROUP: '雨系(雨・嵐)',
-  SUN_GROUP: '晴れ系(晴れ・曇り)',
-  MUD_GROUP: '道悪系(稍重・不良)',
-  FIRM_GROUP: '良系(高速・良)',
-};
-const CONDITION_JA: Record<string, string> = {
-  SUNNY: '晴れ', CLOUDY: '曇り', RAIN: '雨', STORM: '嵐',
-  FAST: '高速馬場', GOOD: '良馬場', SOFT: '稍重', HEAVY: '不良馬場',
-};
+/** アイテム名。DB は name_ja / name_en の2つしか持たないため、
+ *  日本語以外は英語名に寄せる(zh/ko/ms の名称はデータ側の宿題)。 */
+export const itemName = (item: { name_ja: string; name_en: string }, lang: string): string =>
+  lang === 'ja' ? item.name_ja : item.name_en;
 
 const sign = (n: number): string => (n >= 0 ? `+${n}` : String(n));
 
 /** カタログV2の効果を正直な一行に(的中と外れを必ず併記 — R1)。 */
 /** カード式選択(2026-07-19)用の超短縮効果表記。詳細は effectSummaryJa が担う。
     外れで下がる系は必ず外れも併記(R1: 正直表示)。 */
-export function effectShortJa(effect: ItemEffectV3): string {
+export function effectShort(effect: ItemEffectV3, t: ItemCopy): string {
   switch (effect.kind) {
     case 'BONUS': {
       const range = effect.min === effect.max ? sign(effect.min) : `${sign(effect.min)}〜${sign(effect.max)}`;
-      return `ロールに${range}`;
+      return fill(t.short_bonus_tpl, { range });
     }
     case 'FLOOR_ZERO':
-      return '保険: 0未満→0';
+      return t.short_floor;
     case 'SYNERGY_DOUBLE':
-      return 'シナジー2倍';
+      return t.short_synergy;
     case 'DECAY_SHIELD':
-      return `減衰無効 ${effect.races}レース`;
+      return fill(t.short_shield_tpl, { n: effect.races });
     case 'GROUP_PREP':
     case 'PINPOINT_PREP':
-      return `的中${sign(effect.hit)} / 外れ${sign(effect.miss)}`;
+      return fill(t.short_prep_tpl, { hit: sign(effect.hit), miss: sign(effect.miss) });
     case 'DUAL_PREP':
-      return `両軸 的中${sign(effect.hit)} / 外れ${sign(effect.miss)}`;
+      return fill(t.short_dual_tpl, { hit: sign(effect.hit), miss: sign(effect.miss) });
     case 'DUAL_FLOOR':
-      return '適性の下振れ保険';
+      return t.short_dualfloor;
   }
 }
 
-export function effectSummaryJa(effect: ItemEffectV3): string {
+export function effectSummary(effect: ItemEffectV3, t: ItemCopy): string {
   switch (effect.kind) {
     case 'BONUS': {
       const range = effect.min === effect.max ? sign(effect.min) : `${sign(effect.min)}〜${sign(effect.max)}`;
       const cond = effect.requiresMenu
-        ? `${effect.requiresMenu}を含む確定専用`
+        ? fill(t.sum_cond_menu_tpl, { menu: effect.requiresMenu })
         : effect.requiresFavorite
-          ? '大好物メニューを含む確定専用'
+          ? t.sum_cond_favorite
           : effect.lvMin !== undefined
-            ? `LV${effect.lvMin}以上限定`
+            ? fill(t.sum_cond_lvmin_tpl, { n: effect.lvMin })
             : effect.lvMax !== undefined
-              ? `LV${effect.lvMax}以下限定`
-              : null;
-      return `${cond ? `${cond}: ` : ''}確定ロールに${range}`;
+              ? fill(t.sum_cond_lvmax_tpl, { n: effect.lvMax })
+              : '';
+      return fill(t.sum_bonus_tpl, { cond, range });
     }
     case 'FLOOR_ZERO':
-      return '保険: ロール合計が0未満なら0に引き上げ';
+      return t.sum_floor;
     case 'SYNERGY_DOUBLE':
-      return '大好物シナジー発動時にボーナス2倍(不発なら効果なし)';
+      return t.sum_synergy;
     case 'DECAY_SHIELD':
-      return `使った瞬間から減衰を${effect.races}レース分無効`;
+      return fill(t.sum_shield_tpl, { n: effect.races });
     case 'GROUP_PREP':
-      return `${GROUP_JA[effect.group] ?? effect.group}への備え — 的中で軸${sign(effect.hit)}へ / 外れは${sign(effect.miss)}へ`;
+      return fill(t.sum_group_tpl, {
+        group: groupLabel(effect.group, t), hit: sign(effect.hit), miss: sign(effect.miss),
+      });
     case 'PINPOINT_PREP':
-      return `${CONDITION_JA[effect.condition] ?? effect.condition}だけに備える — 的中で軸${sign(effect.hit)}へ / 外れは${sign(effect.miss)}へ`;
+      return fill(t.sum_pinpoint_tpl, {
+        cond: conditionLabel(effect.condition, t), hit: sign(effect.hit), miss: sign(effect.miss),
+      });
     case 'DUAL_PREP':
-      return `天候+馬場の両軸に備える(グループ選択) — 各軸 的中${sign(effect.hit)}へ / 外れ${sign(effect.miss)}へ`;
+      return fill(t.sum_dual_tpl, { hit: sign(effect.hit), miss: sign(effect.miss) });
     case 'DUAL_FLOOR':
-      return '両軸の適性を0未満にしない保険(的中も外れもない)';
+      return t.sum_dualfloor;
   }
 }
 

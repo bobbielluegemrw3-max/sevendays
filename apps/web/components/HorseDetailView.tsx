@@ -360,6 +360,8 @@ export function HorseDetailView({
   const t = APP_COPY[lang].horse;
   const tc = APP_COPY[lang].conds;
   const ts = APP_COPY[lang].stable;
+  // アイテム語彙(2026-07-22 i18n化)— 子のクライアント部品へ props で配る
+  const itemsCopy = APP_COPY[lang].items;
   // 隠し演出(EASTER_EGG_PLAN.md): 真夜中の馬は夜色ルック。
   const look = horse.night_variant ? NIGHT_LOOK : deriveNftLook(horse.dna_hash, horse.name);
   const mode = modeOf(horse);
@@ -504,6 +506,7 @@ export function HorseDetailView({
                     totalValue={horse.total_value ?? null}
                     desc={t.train_desc}
                     t={t}
+                    itemsCopy={itemsCopy}
                   />
                 ) : (
                   <TrainingForm
@@ -517,7 +520,7 @@ export function HorseDetailView({
                   />
                 )}
                 {horse.engine_v2 ? (
-                  <ItemPrepPanelV3 horseId={horse.id} t={t} />
+                  <ItemPrepPanelV3 horseId={horse.id} t={t} itemsCopy={itemsCopy} />
                 ) : (
                   <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} t={t} />
                 )}

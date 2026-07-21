@@ -9,9 +9,10 @@ import { AppSelect } from '@/components/AppSelect';
 import {
   BAND_LABEL,
   BAND_ORDER,
-  ITEM_CLASS_LABEL,
+  itemClassLabel,
+  type ItemCopy,
   TXN_META,
-  effectSummaryJa,
+  effectSummary,
   type CatalogItem,
   type DailyConditions,
   type InventoryData,
@@ -48,10 +49,13 @@ export function ItemsView({
   transactions = [],
   conditionHistory = [],
   today,
+  itemsCopy,
   preview = false,
 }: {
   catalog: CatalogItem[];
   inventory: InventoryData;
+  /** アイテム語彙の辞書(効果・分類の表示に使う)。 */
+  itemsCopy: ItemCopy;
   /** アイテム履歴(新規・任意)。未結線なら履歴セクションは非表示。 */
   transactions?: ItemTransaction[];
   /** 公開済みの日々のレース条件(Decision 082)。空なら結果/カレンダーは非表示。 */
@@ -461,7 +465,7 @@ export function ItemsView({
                             <span className={s.affinityChip}>{item.affinity_ja}</span>
                           )}
                           {item.item_class && (
-                            <span className={s.affinityChip}>{ITEM_CLASS_LABEL[item.item_class]}</span>
+                            <span className={s.affinityChip}>{itemClassLabel(item.item_class, itemsCopy)}</span>
                           )}
                           <div className={s.cardNameEn}>{item.name_en}</div>
                         </div>
@@ -470,7 +474,7 @@ export function ItemsView({
                         ) : null}
                       </div>
                       <div className={s.cardDesc}>
-                        {item.effect ? effectSummaryJa(item.effect) : item.description_ja}
+                        {item.effect ? effectSummary(item.effect, itemsCopy) : item.description_ja}
                       </div>
                       <div className={s.cardMeta}>
                         {owned > 0 ? <span className={s.ownTag}>所持 {owned}</span> : null}

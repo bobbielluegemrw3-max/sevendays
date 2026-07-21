@@ -637,6 +637,20 @@ export interface AppDict {
     og_blurb_transak: string; og_blurb_tria: string; og_blurb_coinrabbit: string; og_blurb_bingx: string;
     og_disclaimer_head: string; og_disclaimer: string;
   };
+  /** アイテムの共有語彙(2026-07-22 i18n化)。効果の要約は「的中」と「外れ」を
+   *  必ず併記する(R1: 正直表示)。アイテム名そのものは DB の name_ja/name_en。 */
+  items: {
+    class_training: string; class_race: string;
+    grp_rain: string; grp_sun: string; grp_mud: string; grp_firm: string;
+    cond_sunny: string; cond_cloudy: string; cond_rain: string; cond_storm: string;
+    cond_fast: string; cond_good: string; cond_soft: string; cond_heavy: string;
+    short_bonus_tpl: string; short_floor: string; short_synergy: string;
+    short_shield_tpl: string; short_prep_tpl: string; short_dual_tpl: string; short_dualfloor: string;
+    sum_bonus_tpl: string; sum_cond_menu_tpl: string; sum_cond_favorite: string;
+    sum_cond_lvmin_tpl: string; sum_cond_lvmax_tpl: string;
+    sum_floor: string; sum_synergy: string; sum_shield_tpl: string;
+    sum_group_tpl: string; sum_pinpoint_tpl: string; sum_dual_tpl: string; sum_dualfloor: string;
+  };
   horse: {
     crumb: string;
     st_active: string; st_listed: string; st_burned: string; st_champion: string; st_memorial: string;
@@ -1320,6 +1334,25 @@ const ja: AppDict = {
     og_blurb_bingx: '大手取引所。カード/銀行振込でUSDTを購入(KYC必要)後、出金でネットワークに「Polygon」を選んで送金。手順が多く選択ミスに注意。',
     og_disclaimer_head: '【広告・紹介リンクを含みます】',
     og_disclaimer: 'これらは運営が運営・保証しない独立した第三者サービスで、一部は運営の紹介(リファラル)リンクです。ご利用に伴い運営が紹介特典を受け取る場合があります。本人確認(KYC)・決済・両替はすべて各サービス側で行われ、ご利用は各サービスの規約に従い自己責任でお願いします。運営が受け取れるのは Polygon の USDT のみで、暗号資産の交換・両替は一切行いません。',
+  },
+  items: {
+    class_training: '調教アイテム', class_race: 'レースアイテム',
+    grp_rain: '雨系(雨・嵐)', grp_sun: '晴れ系(晴れ・曇り)', grp_mud: '道悪系(稍重・不良)', grp_firm: '良系(高速・良)',
+    cond_sunny: '晴れ', cond_cloudy: '曇り', cond_rain: '雨', cond_storm: '嵐',
+    cond_fast: '高速馬場', cond_good: '良馬場', cond_soft: '稍重', cond_heavy: '不良馬場',
+    short_bonus_tpl: 'ロールに{range}', short_floor: '保険: 0未満→0', short_synergy: 'シナジー2倍',
+    short_shield_tpl: '減衰無効 {n}レース', short_prep_tpl: '的中{hit} / 外れ{miss}',
+    short_dual_tpl: '両軸 的中{hit} / 外れ{miss}', short_dualfloor: '適性の下振れ保険',
+    sum_bonus_tpl: '{cond}確定ロールに{range}',
+    sum_cond_menu_tpl: '{menu}を含む確定専用: ', sum_cond_favorite: '大好物メニューを含む確定専用: ',
+    sum_cond_lvmin_tpl: 'LV{n}以上限定: ', sum_cond_lvmax_tpl: 'LV{n}以下限定: ',
+    sum_floor: '保険: ロール合計が0未満なら0に引き上げ',
+    sum_synergy: '大好物シナジー発動時にボーナス2倍(不発なら効果なし)',
+    sum_shield_tpl: '使った瞬間から減衰を{n}レース分無効',
+    sum_group_tpl: '{group}への備え — 的中で軸{hit}へ / 外れは{miss}へ',
+    sum_pinpoint_tpl: '{cond}だけに備える — 的中で軸{hit}へ / 外れは{miss}へ',
+    sum_dual_tpl: '天候+馬場の両軸に備える(グループ選択) — 各軸 的中{hit}へ / 外れ{miss}へ',
+    sum_dualfloor: '両軸の適性を0未満にしない保険(的中も外れもない)',
   },
   horse: {
     crumb: '← マイ厩舎',
@@ -2049,6 +2082,25 @@ const en: AppDict = {
     og_disclaimer_head: '[Contains advertising and referral links]',
     og_disclaimer: 'These are independent third-party services that we neither operate nor guarantee, and some links are our referral links, from which we may receive a referral benefit. Identity verification (KYC), payment and exchange all take place on those services; use them at your own risk under their terms. We can only receive USDT on Polygon and never exchange or convert crypto assets.',
   },
+  items: {
+    class_training: 'Training item', class_race: 'Race item',
+    grp_rain: 'Wet skies (rain, storm)', grp_sun: 'Clear skies (sunny, cloudy)', grp_mud: 'Soft going (soft, heavy)', grp_firm: 'Firm going (fast, good)',
+    cond_sunny: 'Sunny', cond_cloudy: 'Cloudy', cond_rain: 'Rain', cond_storm: 'Storm',
+    cond_fast: 'Fast track', cond_good: 'Good track', cond_soft: 'Soft', cond_heavy: 'Heavy track',
+    short_bonus_tpl: '{range} to the roll', short_floor: 'Safety net: below 0 → 0', short_synergy: 'Double synergy',
+    short_shield_tpl: 'Decay off for {n} races', short_prep_tpl: 'Hit {hit} / miss {miss}',
+    short_dual_tpl: 'Both axes · hit {hit} / miss {miss}', short_dualfloor: 'Aptitude downside cover',
+    sum_bonus_tpl: '{cond}{range} to the confirmed roll',
+    sum_cond_menu_tpl: 'Only on a roll that includes {menu}: ', sum_cond_favorite: 'Only on a roll that includes the favourite menu: ',
+    sum_cond_lvmin_tpl: 'LV{n} and above only: ', sum_cond_lvmax_tpl: 'LV{n} and below only: ',
+    sum_floor: 'Safety net: if the roll total is below 0, it is raised to 0',
+    sum_synergy: 'Doubles the bonus when the favourite synergy triggers (no effect if it does not)',
+    sum_shield_tpl: 'Cancels decay for {n} races from the moment it is used',
+    sum_group_tpl: 'Prepares for {group} — a hit moves the axis to {hit} / a miss to {miss}',
+    sum_pinpoint_tpl: 'Prepares for {cond} only — a hit moves the axis to {hit} / a miss to {miss}',
+    sum_dual_tpl: 'Prepares both weather and going (pick a group) — each axis: hit {hit} / miss {miss}',
+    sum_dualfloor: 'Keeps both aptitudes from going below 0 (no hit, no miss)',
+  },
   horse: {
     crumb: '← My Stable',
     st_active: 'Racing', st_listed: 'Listed', st_burned: 'BURNED', st_champion: 'Champion', st_memorial: 'Memorial · NFT',
@@ -2776,6 +2828,25 @@ const zh: AppDict = {
     og_blurb_bingx: '大型交易所。以卡片/银行转账购买 USDT(需KYC)后，在提现时选择「Polygon」网络。步骤较多，注意不要选错。',
     og_disclaimer_head: '【含广告与推荐链接】',
     og_disclaimer: '这些是运营方既不运营也不担保的独立第三方服务，其中部分为运营方的推荐(referral)链接，运营方可能因此获得推荐奖励。身份验证(KYC)、支付与兑换均在各服务方进行，请依各服务条款自行承担风险使用。运营方仅能接收 Polygon 的 USDT，绝不进行加密资产的兑换或换汇。',
+  },
+  items: {
+    class_training: '训练道具', class_race: '比赛道具',
+    grp_rain: '雨系(雨·暴风雨)', grp_sun: '晴系(晴·阴)', grp_mud: '泥泞系(稍重·不良)', grp_firm: '良系(高速·良)',
+    cond_sunny: '晴', cond_cloudy: '阴', cond_rain: '雨', cond_storm: '暴风雨',
+    cond_fast: '高速赛道', cond_good: '良好赛道', cond_soft: '稍重', cond_heavy: '不良赛道',
+    short_bonus_tpl: '掷值{range}', short_floor: '保险: 低于0→0', short_synergy: '协同翻倍',
+    short_shield_tpl: '衰减无效 {n}场', short_prep_tpl: '命中{hit} / 落空{miss}',
+    short_dual_tpl: '双轴 命中{hit} / 落空{miss}', short_dualfloor: '适性下滑保险',
+    sum_bonus_tpl: '{cond}确定掷值{range}',
+    sum_cond_menu_tpl: '仅限包含{menu}的确定: ', sum_cond_favorite: '仅限包含最爱菜单的确定: ',
+    sum_cond_lvmin_tpl: '仅限LV{n}以上: ', sum_cond_lvmax_tpl: '仅限LV{n}以下: ',
+    sum_floor: '保险: 掷值合计低于0时提升至0',
+    sum_synergy: '触发最爱协同时奖励翻倍(未触发则无效果)',
+    sum_shield_tpl: '从使用瞬间起，{n}场比赛内衰减无效',
+    sum_group_tpl: '针对{group}的准备 — 命中则该轴至{hit} / 落空则至{miss}',
+    sum_pinpoint_tpl: '仅针对{cond}的准备 — 命中则该轴至{hit} / 落空则至{miss}',
+    sum_dual_tpl: '同时准备天气与赛道(选择分组) — 各轴 命中{hit} / 落空{miss}',
+    sum_dualfloor: '使双轴适性不低于0的保险(无命中也无落空)',
   },
   horse: {
     crumb: '← 我的马厩',
@@ -3505,6 +3576,25 @@ const ko: AppDict = {
     og_disclaimer_head: '[광고·추천 링크를 포함합니다]',
     og_disclaimer: '이들은 운영자가 운영하거나 보증하지 않는 독립적인 제3자 서비스이며, 일부는 운영자의 추천(리퍼럴) 링크로 이용에 따라 운영자가 추천 혜택을 받을 수 있습니다. 본인확인(KYC)·결제·환전은 모두 각 서비스에서 이루어지며, 각 서비스의 약관에 따라 본인 책임으로 이용해 주세요. 운영자가 받을 수 있는 것은 Polygon의 USDT뿐이며, 암호자산의 교환·환전은 일절 하지 않습니다.',
   },
+  items: {
+    class_training: '조교 아이템', class_race: '레이스 아이템',
+    grp_rain: '비 계열(비·폭풍)', grp_sun: '맑음 계열(맑음·흐림)', grp_mud: '나쁜 마장(약간 무거움·불량)', grp_firm: '좋은 마장(고속·양호)',
+    cond_sunny: '맑음', cond_cloudy: '흐림', cond_rain: '비', cond_storm: '폭풍',
+    cond_fast: '고속 마장', cond_good: '양호한 마장', cond_soft: '약간 무거움', cond_heavy: '불량 마장',
+    short_bonus_tpl: '롤에 {range}', short_floor: '보험: 0 미만→0', short_synergy: '시너지 2배',
+    short_shield_tpl: '감쇠 무효 {n}레이스', short_prep_tpl: '적중 {hit} / 빗나감 {miss}',
+    short_dual_tpl: '양축 적중 {hit} / 빗나감 {miss}', short_dualfloor: '적성 하락 보험',
+    sum_bonus_tpl: '{cond}확정 롤에 {range}',
+    sum_cond_menu_tpl: '{menu}을(를) 포함한 확정 전용: ', sum_cond_favorite: '최애 메뉴를 포함한 확정 전용: ',
+    sum_cond_lvmin_tpl: 'LV{n} 이상 한정: ', sum_cond_lvmax_tpl: 'LV{n} 이하 한정: ',
+    sum_floor: '보험: 롤 합계가 0 미만이면 0으로 끌어올림',
+    sum_synergy: '최애 시너지가 발동할 때 보너스 2배(불발이면 효과 없음)',
+    sum_shield_tpl: '사용한 순간부터 감쇠를 {n}레이스분 무효화',
+    sum_group_tpl: '{group}에 대한 대비 — 적중하면 축이 {hit}으로 / 빗나가면 {miss}으로',
+    sum_pinpoint_tpl: '{cond}에만 대비 — 적중하면 축이 {hit}으로 / 빗나가면 {miss}으로',
+    sum_dual_tpl: '날씨+마장 양축에 대비(그룹 선택) — 각 축 적중 {hit} / 빗나감 {miss}',
+    sum_dualfloor: '양축 적성을 0 미만으로 만들지 않는 보험(적중도 빗나감도 없음)',
+  },
   horse: {
     crumb: '← 내 마구간',
     st_active: '출주 중', st_listed: '판매 중', st_burned: 'BURNED · 소멸', st_champion: '챔피언', st_memorial: '기념마 · NFT',
@@ -4232,6 +4322,25 @@ const ms: AppDict = {
     og_blurb_bingx: 'Bursa utama. Beli USDT dengan kad/pindahan bank (KYC diperlukan), kemudian keluarkan dengan memilih rangkaian "Polygon". Banyak langkah, jadi berhati-hati.',
     og_disclaimer_head: '[Mengandungi iklan dan pautan rujukan]',
     og_disclaimer: 'Ini adalah perkhidmatan pihak ketiga bebas yang tidak kami kendalikan mahupun jamin, dan sebahagian pautan ialah pautan rujukan kami yang mungkin memberi kami manfaat rujukan. Pengesahan identiti (KYC), pembayaran dan pertukaran semuanya berlaku di perkhidmatan tersebut; gunakannya atas risiko anda sendiri mengikut terma mereka. Kami hanya boleh menerima USDT di Polygon dan tidak sekali-kali menukar atau menukarkan aset kripto.',
+  },
+  items: {
+    class_training: 'Item latihan', class_race: 'Item perlumbaan',
+    grp_rain: 'Cuaca hujan (hujan, ribut)', grp_sun: 'Cuaca cerah (cerah, mendung)', grp_mud: 'Padang lembut (lembut, berat)', grp_firm: 'Padang keras (laju, baik)',
+    cond_sunny: 'Cerah', cond_cloudy: 'Mendung', cond_rain: 'Hujan', cond_storm: 'Ribut',
+    cond_fast: 'Padang laju', cond_good: 'Padang baik', cond_soft: 'Lembut', cond_heavy: 'Padang berat',
+    short_bonus_tpl: '{range} pada lontaran', short_floor: 'Perlindungan: bawah 0 → 0', short_synergy: 'Sinergi dua kali',
+    short_shield_tpl: 'Susut dimatikan {n} perlumbaan', short_prep_tpl: 'Tepat {hit} / tersasar {miss}',
+    short_dual_tpl: 'Dua paksi · tepat {hit} / tersasar {miss}', short_dualfloor: 'Perlindungan kejatuhan aptitud',
+    sum_bonus_tpl: '{cond}{range} pada lontaran yang disahkan',
+    sum_cond_menu_tpl: 'Hanya untuk lontaran yang mengandungi {menu}: ', sum_cond_favorite: 'Hanya untuk lontaran yang mengandungi menu kegemaran: ',
+    sum_cond_lvmin_tpl: 'LV{n} ke atas sahaja: ', sum_cond_lvmax_tpl: 'LV{n} ke bawah sahaja: ',
+    sum_floor: 'Perlindungan: jika jumlah lontaran bawah 0, ia dinaikkan kepada 0',
+    sum_synergy: 'Menggandakan bonus apabila sinergi kegemaran tercetus (tiada kesan jika tidak)',
+    sum_shield_tpl: 'Membatalkan susut selama {n} perlumbaan dari saat digunakan',
+    sum_group_tpl: 'Bersedia untuk {group} — tepat menggerakkan paksi ke {hit} / tersasar ke {miss}',
+    sum_pinpoint_tpl: 'Bersedia untuk {cond} sahaja — tepat menggerakkan paksi ke {hit} / tersasar ke {miss}',
+    sum_dual_tpl: 'Bersedia untuk cuaca dan padang (pilih kumpulan) — setiap paksi: tepat {hit} / tersasar {miss}',
+    sum_dualfloor: 'Menghalang kedua-dua aptitud daripada jatuh bawah 0 (tiada tepat, tiada tersasar)',
   },
   horse: {
     crumb: '← Kandang Saya',

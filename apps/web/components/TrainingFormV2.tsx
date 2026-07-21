@@ -12,7 +12,7 @@ import { refreshAfterFx } from '@/lib/deferred-refresh';
 import { TrainStep, StepLink, stepStyles as st } from '@/components/TrainStep';
 import { Button } from '@/components/ui/Button';
 import { ItemCardPicker } from '@/components/ItemCardPicker';
-import { effectSummaryJa, type CatalogItem, type InventoryData } from '@/lib/items';
+import { effectSummary, type CatalogItem, type InventoryData, type ItemCopy } from '@/lib/items';
 import { projectAfterConfirm, type TrainingFxDetail } from '@/components/HeroArtFx';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
@@ -75,6 +75,7 @@ function slotLabel(slot: string, t: AppDict['horse']): string {
 export function TrainingFormV2({
   horseId,
   t,
+  itemsCopy,
   confirmed = null,
   lv = 0,
   totalValue = null,
@@ -83,6 +84,8 @@ export function TrainingFormV2({
 }: {
   horseId: string;
   t: AppDict['horse'];
+  /** アイテム語彙の辞書(効果の説明に使う)。 */
+  itemsCopy: ItemCopy;
   /** このサイクルの確定済みロール(あれば変更不可の完了表示)。 */
   confirmed?: TrainingV2Confirmed | null;
   /** 馬のLV(current_day)— アイテムのLV制限判定に使用。 */
@@ -418,6 +421,7 @@ export function TrainingFormV2({
         ) : (
           <>
             <ItemCardPicker
+              itemsCopy={itemsCopy}
               items={attachable}
               ownedByKey={ownedByKey}
               selected={itemKey}
@@ -426,7 +430,7 @@ export function TrainingFormV2({
             />
             {/* 効果説明行は常時確保 — 選択でボタンが動かない */}
             <div className={st.sum} style={{ minHeight: '1.1rem' }}>
-              {attachedItem?.effect ? effectSummaryJa(attachedItem.effect) : t.boost_hint_empty}
+              {attachedItem?.effect ? effectSummary(attachedItem.effect, itemsCopy) : t.boost_hint_empty}
             </div>
             {error ? <ErrorLine>{error}</ErrorLine> : null}
             <div className={st.row}>

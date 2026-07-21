@@ -1,5 +1,7 @@
 import { serverApi, serverApiOrLogin } from '@/lib/server-api';
 import { ItemsView } from '@/components/ItemsView';
+import { APP_COPY } from '@/lib/i18n';
+import { getLang } from '@/lib/i18n-server';
 import type { CatalogItem, DailyConditions, InventoryData, ItemTransaction } from '@/lib/items';
 
 /** /items — アイテムショップ+インベントリ+ギフト+履歴+設定結果(Decision 078/079)。 */
@@ -12,6 +14,7 @@ export default async function ItemsPage() {
   ]);
   return (
     <ItemsView
+      itemsCopy={APP_COPY[await getLang()].items}
       catalog={catalog.items}
       inventory={inventory}
       transactions={txns.status === 200 ? txns.body.transactions : []}
