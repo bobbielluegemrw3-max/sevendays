@@ -610,6 +610,8 @@ export interface AppDict {
     lad_burn_now_tpl: string; lad_burn_note: string;
     lad_cleared_tpl: string; lad_memorial_tpl: string;
     pin_now: string; pin_next: string; pin_burn: string; pin_clear: string; lad_champ_day: string; lad_note: string;
+    /** Tier 2-1: 価格表と過去戦績は既定で畳む(消さない)。 */
+    lad_more: string; hist_more_tpl: string;
     vit_sec: string; cond_k: string; ftg_k: string; ftg_tip: string;
     ab_speed: string; ab_power: string; ab_stamina: string; ab_guts: string; ab_luck: string;
     hist_sec: string; race_n_tpl: string; heads_tpl: string; surv_tag: string; hist_note: string; hist_empty: string;
@@ -1247,6 +1249,7 @@ const ja: AppDict = {
     lad_memorial_tpl: '7日完走 · 記念NFT · 報酬 {v} USDT 受取済',
     pin_now: '現在', pin_next: '次レース', pin_burn: '消滅', pin_clear: '走破', lad_champ_day: '走破',
     lad_note: '価値は価格表(PRICE TABLE)で決まる公開値。レースを生き残るほど上がり、7レース走り切ると 200 USDT で買い戻されチャンピオンNFTになります。',
+    lad_more: '7日間の価格表を見る', hist_more_tpl: '過去の{n}戦を見る',
     vit_sec: '状態と能力 · VITALS & ABILITY', cond_k: 'CONDITION コンディション', ftg_k: 'FATIGUE 疲労',
     ftg_tip: 'レースの疲労+5は毎晩の自然回復−5と相殺します。疲労が増えるのは攻めの調教(+8)を選んだ夜だけで、回復調教(−4)で癒せます。',
     ab_speed: 'スピード', ab_power: 'パワー', ab_stamina: 'スタミナ', ab_guts: '根性', ab_luck: '運',
@@ -1921,6 +1924,7 @@ const en: AppDict = {
     lad_memorial_tpl: '7 days completed · memorial NFT · {v} USDT reward received',
     pin_now: 'Now', pin_next: 'Next race', pin_burn: 'Burn', pin_clear: 'Clear', lad_champ_day: 'Clear',
     lad_note: 'Value follows the public PRICE TABLE. It rises with every race survived; finish all 7 and the horse is bought back for 200 USDT as a Champion NFT.',
+    lad_more: 'Show the 7-day price table', hist_more_tpl: 'Show {n} earlier races',
     vit_sec: 'VITALS & ABILITY', cond_k: 'CONDITION', ftg_k: 'FATIGUE',
     ftg_tip: 'Race fatigue +5 cancels out with the nightly natural recovery −5. Fatigue only grows on nights you pick the aggressive training (+8), and recovery training (−4) heals it.',
     ab_speed: 'Speed', ab_power: 'Power', ab_stamina: 'Stamina', ab_guts: 'Guts', ab_luck: 'Luck',
@@ -2595,6 +2599,7 @@ const zh: AppDict = {
     lad_memorial_tpl: '跑完7天 · 纪念NFT · 已领取 {v} USDT 奖励',
     pin_now: '当前', pin_next: '下一场', pin_burn: '消失', pin_clear: '跑完', lad_champ_day: '跑完',
     lad_note: '价值由公开价格表(PRICE TABLE)决定。每挺过一场比赛上涨，跑完7场即以200 USDT回购并成为冠军NFT。',
+    lad_more: '查看7天价格表', hist_more_tpl: '查看此前的{n}战',
     vit_sec: '状态与能力 · VITALS & ABILITY', cond_k: 'CONDITION 状态', ftg_k: 'FATIGUE 疲劳',
     ftg_tip: '比赛疲劳+5与每晚自然恢复−5相抵。只有选择进攻型训练(+8)的晚上疲劳才会增加,恢复训练(−4)可以治愈。',
     ab_speed: '速度', ab_power: '力量', ab_stamina: '耐力', ab_guts: '毅力', ab_luck: '运气',
@@ -3269,6 +3274,7 @@ const ko: AppDict = {
     lad_memorial_tpl: '7일 완주 · 기념 NFT · 보상 {v} USDT 수령 완료',
     pin_now: '현재', pin_next: '다음 레이스', pin_burn: '소멸', pin_clear: '완주', lad_champ_day: '완주',
     lad_note: '가치는 공개 가격표(PRICE TABLE)로 정해집니다. 레이스를 살아남을수록 오르고, 7레이스를 완주하면 200 USDT로 환매되어 챔피언 NFT가 됩니다.',
+    lad_more: '7일간 가격표 보기', hist_more_tpl: '이전 {n}전 보기',
     vit_sec: '상태와 능력 · VITALS & ABILITY', cond_k: 'CONDITION 컨디션', ftg_k: 'FATIGUE 피로',
     ftg_tip: '레이스 피로 +5는 매일 밤 자연 회복 −5와 상쇄됩니다. 피로가 늘어나는 것은 공격적 조교(+8)를 고른 밤뿐이며, 회복 조교(−4)로 치유할 수 있습니다.',
     ab_speed: '스피드', ab_power: '파워', ab_stamina: '스태미나', ab_guts: '근성', ab_luck: '운',
@@ -3943,6 +3949,7 @@ const ms: AppDict = {
     lad_memorial_tpl: '7 hari lengkap · NFT kenangan · ganjaran {v} USDT diterima',
     pin_now: 'Kini', pin_next: 'Seterusnya', pin_burn: 'Bakar', pin_clear: 'Tamat', lad_champ_day: 'Tamat',
     lad_note: 'Nilai mengikut JADUAL HARGA awam. Ia naik dengan setiap perlumbaan yang diselamati; tamatkan kesemua 7 dan kuda dibeli semula pada 200 USDT sebagai NFT Juara.',
+    lad_more: 'Tunjuk jadual harga 7 hari', hist_more_tpl: 'Tunjuk {n} perlumbaan terdahulu',
     vit_sec: 'KEADAAN & KEBOLEHAN', cond_k: 'CONDITION Keadaan', ftg_k: 'FATIGUE Keletihan',
     ftg_tip: 'Keletihan perlumbaan +5 saling batal dengan pemulihan semula jadi −5 setiap malam. Keletihan hanya bertambah pada malam anda memilih latihan agresif (+8), dan latihan pemulihan (−4) memulihkannya.',
     ab_speed: 'Kelajuan', ab_power: 'Kuasa', ab_stamina: 'Stamina', ab_guts: 'Semangat', ab_luck: 'Tuah',

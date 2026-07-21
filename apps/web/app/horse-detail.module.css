@@ -174,7 +174,6 @@
   letter-spacing: 0.1em; color: var(--muted); margin: 4px 0 6px; }
 .heroFoot { padding: 13px 16px 15px; min-height: 88px; box-sizing: border-box; }
 @media (max-width: 480px) { .heroFoot { min-height: 102px; } }
-.dayNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 9px; line-height: 1.55; }
 
 /* 7日レール */
 .rail { display: flex; gap: 4px; }
@@ -271,9 +270,20 @@
 .ladDayChamp { color: var(--gold); font-weight: 700; }
 .ladNote { font-family: var(--font-mono); font-size: 9px; color: #4a4668; margin-top: 12px; line-height: 1.55; }
 
+/* Tier 2-1: 7本の棒(16個の数字)は既定で畳む。開けば従来どおり全部見える。 */
+.ladSummary { cursor: pointer; list-style: none; user-select: none;
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; color: var(--faint); }
+.ladSummary::-webkit-details-marker { display: none; }
+.ladSummary::after { content: ' ▸'; font-size: 9px; }
+.ladDetails[open] .ladSummary::after { content: ' ▾'; }
+.ladSummary:hover { color: var(--muted); }
+.ladDetails[open] .ladBars { margin-top: 14px; }
+
 /* ---- LOWER ROW: 状態と能力 | 戦績 ---------------------------------------- */
 .lowRow { display: grid; grid-template-columns: 1fr; gap: 18px; }
 @media (min-width: 980px) { .lowRow { grid-template-columns: 1fr 1fr; align-items: start; } }
+/* Tier 2-1: V2は左列(状態と能力)が無いので、戦績を1列で使い切る。 */
+@media (min-width: 980px) { .lowRowSingle { grid-template-columns: 1fr; } }
 
 /* 状態(COND/FATIGUE) */
 .vitals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
@@ -320,6 +330,16 @@
 .survTag { font-family: var(--font-display); font-size: 8.5px; font-weight: 700; letter-spacing: 0.08em; color: #9dffc4;
   border: 1px solid var(--good); border-radius: 5px; padding: 2px 7px; background: rgba(53, 208, 127, 0.1); white-space: nowrap; }
 .histNote { font-family: var(--font-mono); font-size: 9px; color: #4a4668; margin-top: 8px; line-height: 1.5; }
+
+/* Tier 2-1: 既定は直近1戦。過去は畳む。 */
+.histDetails { margin-top: 8px; }
+.histSummary { cursor: pointer; list-style: none; user-select: none;
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; color: var(--faint); }
+.histSummary::-webkit-details-marker { display: none; }
+.histSummary::after { content: ' ▸'; font-size: 9px; }
+.histDetails[open] .histSummary::after { content: ' ▾'; }
+.histSummary:hover { color: var(--muted); }
+.histDetails[open] .histBox { margin-top: 8px; }
 .histEmpty { border: 1px dashed var(--border); border-radius: 13px; padding: 22px 16px; text-align: center;
   font-family: var(--font-mono); font-size: 11px; color: var(--faint); line-height: 1.6; }
 
@@ -426,9 +446,8 @@
   font-size: 10px; letter-spacing: 0.14em; color: #1a1405; background: linear-gradient(135deg,#ffd977,#b0892f);
   border-radius: 999px; padding: 3px 10px; font-weight: 800; }
 
-/* ---------- 総合値バッジ+安全圏(FUN_V2_PLAN.md §3 A1) ---------- */
-.tvBadge { background: rgba(10, 8, 19, 0.72); }
-.tvBadge b { font-family: var(--font-display); font-size: 1.02em; font-weight: 800; }
+/* ---------- 安全圏(FUN_V2_PLAN.md §3 A1) ----------
+   総合値バッジ(.tvBadge)は Tier 2-1 で撤去(TOTALメダルと二重だった)。 */
 .bandSafe { color: #35d07f; border-color: rgba(53, 208, 127, 0.5); }
 .bandMid { color: #aab4c8; border-color: rgba(170, 180, 200, 0.4); }
 .bandRisk { color: #ff5c8a; border-color: rgba(255, 92, 138, 0.55); }

@@ -15,7 +15,7 @@ import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { uncollectedGain } from '@/components/stable-shared';
 import { APP_COPY, isLvDisplayMode, type Lang } from '@/lib/i18n';
-import { tvArtGlowStyle, tvChipStyle, tvNumStyle, tvMedalStyle } from '@/lib/tv-tier';
+import { tvArtGlowStyle, tvMedalStyle } from '@/lib/tv-tier';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
 
@@ -197,19 +197,9 @@ function mastValue(horse: HorseDetail, mode: Mode, t: TH): MastValue {
   }
 }
 
-function dayNote(horse: HorseDetail, mode: Mode, t: TH): string {
-  const d = horse.current_day;
-  switch (mode) {
-    case 'ACTIVE':
-      if (d >= 6) return fill(t.note_active_d6_tpl, { d });
-      return fill(t.note_active_tpl, { d, next: Math.min(7, d + 1) })
-        + (horse.listing === 'SMART' ? t.note_smart_suffix : '');
-    case 'LISTED': return fill(t.note_listed_tpl, { d });
-    case 'BURNED': return fill(t.note_burned_tpl, { d });
-    case 'DAY7_CLEARED': return t.note_cleared;
-    case 'MEMORIALIZED': return t.note_memorial;
-  }
-}
+/* Tier 2-1: dayNote(「Day4 · 今夜生き残ればDay5」)は撤去した。
+   同じことを VALUE LADDER の見出しが USDT で言っており、Day の数字は
+   アートの DAY メダル1箇所に集約する(4重表示 → 1つ)。 */
 
 /* ---- 7日レール ------------------------------------------------------------ */
 function DayRail({ horse, mode }: { horse: HorseDetail; mode: Mode }) {
@@ -229,6 +219,37 @@ function DayRail({ horse, mode }: { horse: HorseDetail; mode: Mode }) {
         }
         return <span key={dd} className={cls} />;
       })}
+    </div>
+  );
+}
+
+/* ---- 戦績の1行(直近1件と折りたたみ側で同じ見た目を使う) ------------------- */
+function HistRow({
+  r, n, horseType, t, tc,
+}: { r: HorseRaceResult; n: number; horseType: string; t: TH; tc: TC }) {
+  return (
+    <div className={`${s.histRow} ${r.is_burned ? s.histBurned : ''}`}>
+      <span className={s.histDay}>{fill(t.race_n_tpl, { n })}</span>
+      <span className={s.histDate}>{r.batch_date.slice(5).replace('-', '/')}</span>
+      <span className={s.histRank}>
+        <b>{r.final_rank.toLocaleString('en-US')}</b>
+        <small>{fill(t.heads_tpl, { n: r.participant_count.toLocaleString('en-US') })}</small>
+      </span>
+      <span className={s.histScore}>SCORE {score2(r.final_score)}</span>
+      {r.training_type ? (
+        <span className={s.histTrain}>
+          {fill(t.attr_tpl, {
+            n: trainingModifierV1(
+              (r.snapshot_horse_type ?? horseType) as DomainHorseType,
+              r.training_type as DomainTrainingType,
+            ),
+          })}
+        </span>
+      ) : null}
+      <span className={s.histCond}>{conditionsText(r, tc)}</span>
+      <span className={s.histRes}>
+        {r.is_burned ? <span className={s.burnTag}>BURN</span> : <span className={s.survTag}>{t.surv_tag}</span>}
+      </span>
     </div>
   );
 }
@@ -313,9 +334,14 @@ function ValueLadder({ horse, mode, t }: { horse: HorseDetail; mode: Mode; t: TH
     <div>
       <div className={s.secLabel}>{t.lad_sec}</div>
       <div className={s.ladWrap}>
+        {/* 見出し(現在 → 次)だけを常時出す。7本の棒 = 16個の数字は既定で畳む
+            (Tier 2-1)。価格表そのものは消さない — 開けば従来どおり全部見える。 */}
         <div className={s.ladHead}>{headline}</div>
-        <div className={s.ladBars}>{cols}</div>
-        <div className={s.ladNote}>{t.lad_note}</div>
+        <details className={s.ladDetails}>
+          <summary className={s.ladSummary}>{t.lad_more}</summary>
+          <div className={s.ladBars}>{cols}</div>
+          <div className={s.ladNote}>{t.lad_note}</div>
+        </details>
       </div>
     </div>
   );
@@ -360,11 +386,8 @@ export function HorseDetailView({
         <div className={s.mastL}>
           <div className={s.titleRow}>
             <span className={s.title}>{horse.name}</span>
-            {horse.total_value !== null && horse.total_value !== undefined ? (
-              <span className={`${s.badge} ${s.tvBadge}`} style={tvChipStyle(horse.total_value)}>
-                {ts.tv_chip} <b style={tvNumStyle(horse.total_value)}>{Number(horse.total_value).toFixed(1)}</b>
-              </span>
-            ) : null}
+            {/* Tier 2-1: 総合値は馬アートの TOTAL メダル1箇所だけにする。
+                同じ数字を9pxのピルでもう一度出していたのを落とした。 */}
             <span className={`${s.badge} ${s.typeBadge}`}>{horse.horse_type}</span>
             <span className={`${s.badge} ${badge.cls}`}>{badge.label}</span>
             {horse.listing === 'SMART' ? <span className={`${s.badge} ${s.stSmart}`}>{t.st_smart}</span> : null}
@@ -459,7 +482,6 @@ export function HorseDetailView({
                   <span className={s.rankNote}> — {ts.rank_note}</span>
                 </div>
               ) : null}
-              <div className={s.dayNote}>{dayNote(horse, mode, t)}</div>
             </div>
           </div>
         </div>
@@ -536,26 +558,13 @@ export function HorseDetailView({
       {/* VALUE LADDER */}
       <ValueLadder horse={horse} mode={mode} t={t} />
 
-      {/* LOWER ROW: 状態と能力 | 戦績 */}
-      {/* V2(Decision 101): 調子・疲労・能力値は総合値に内包 — 凍結された旧数値を
-          見せると誤解を生むため、V2では正直な説明カードに置き換える */}
-      <div className={s.lowRow}>
-        {horse.engine_v2 ? (
-          <div>
-            <div className={s.secLabel}>TOTAL VALUE</div>
-            <div className={s.vitals}>
-              <div className={`${s.mini} ${s.miniCond}`} style={{ gridColumn: '1 / -1' }}>
-                <div className={s.miniK}>強さは総合値ひとつ</div>
-                <div style={{ fontSize: '11px', color: 'var(--muted)', lineHeight: 1.7, marginTop: '4px' }}>
-                  この馬の強さは総合値(0〜100)に集約されています。調子・疲労・能力値という
-                  個別ステータスはありません。総合値は調教で伸び、レースごとに−2.0減衰します
-                  (RESTで1回無効)。「大好物」「苦手」の隠れた好みは公開されません —
-                  調教の結果から探り当てるのがこのゲームの攻略です。
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
+      {/* LOWER ROW: (V1のみ)状態と能力 | 戦績 */}
+      {/* V2(Decision 101): 調子・疲労・能力値は総合値に内包されている。
+          Tier 2-1: V2では「存在しないステータスの説明」カードを撤去した。
+          無いものを説明するために画面の半分を使っていた。調教の仕組みは
+          調教パネル①の「?」に既に畳んである。 */}
+      <div className={`${s.lowRow} ${horse.engine_v2 ? s.lowRowSingle : ''}`}>
+        {horse.engine_v2 ? null : (
         <div>
           <div className={s.secLabel}>{t.vit_sec}</div>
           <div className={s.vitals}>
@@ -594,33 +603,21 @@ export function HorseDetailView({
         {history.length > 0 ? (
           <div>
             <div className={s.secLabel}>{t.hist_sec}</div>
+            {/* Tier 2-1: 既定は直近1戦だけ。過去は畳む(18個の数字 → 6個)。
+                読まれていたのは常に最後の1行で、その上に何戦分も積んでいた。 */}
             <div className={s.histBox}>
-              {history.map((r, i) => (
-                <div key={r.batch_date} className={`${s.histRow} ${r.is_burned ? s.histBurned : ''}`}>
-                  <span className={s.histDay}>{fill(t.race_n_tpl, { n: i + 1 })}</span>
-                  <span className={s.histDate}>{r.batch_date.slice(5).replace('-', '/')}</span>
-                  <span className={s.histRank}>
-                    <b>{r.final_rank.toLocaleString('en-US')}</b>
-                    <small>{fill(t.heads_tpl, { n: r.participant_count.toLocaleString('en-US') })}</small>
-                  </span>
-                  <span className={s.histScore}>SCORE {score2(r.final_score)}</span>
-                  {r.training_type ? (
-                    <span className={s.histTrain}>
-                      {fill(t.attr_tpl, {
-                        n: trainingModifierV1(
-                          (r.snapshot_horse_type ?? horse.horse_type) as DomainHorseType,
-                          r.training_type as DomainTrainingType,
-                        ),
-                      })}
-                    </span>
-                  ) : null}
-                  <span className={s.histCond}>{conditionsText(r, tc)}</span>
-                  <span className={s.histRes}>
-                    {r.is_burned ? <span className={s.burnTag}>BURN</span> : <span className={s.survTag}>{t.surv_tag}</span>}
-                  </span>
-                </div>
-              ))}
+              <HistRow r={history[history.length - 1]!} n={history.length} horseType={horse.horse_type} t={t} tc={tc} />
             </div>
+            {history.length > 1 ? (
+              <details className={s.histDetails}>
+                <summary className={s.histSummary}>{fill(t.hist_more_tpl, { n: history.length - 1 })}</summary>
+                <div className={s.histBox}>
+                  {history.slice(0, -1).map((r, i) => (
+                    <HistRow key={r.batch_date} r={r} n={i + 1} horseType={horse.horse_type} t={t} tc={tc} />
+                  ))}
+                </div>
+              </details>
+            ) : null}
             <div className={s.histNote}>{t.hist_note}</div>
           </div>
         ) : (
