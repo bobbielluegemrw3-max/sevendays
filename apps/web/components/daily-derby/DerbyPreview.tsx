@@ -22,6 +22,9 @@ import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
  * 全結果サマリー → 完了/失敗 の全状態を再生する。本番では 404。
  */
 
+/** 通し再生の開始位置(ファンファーレの少し前)。ここから82秒で全幕が流れる。 */
+const RUN_FROM = 6;
+
 const JUMPS: ReadonlyArray<{ label: string; seconds: number }> = [
   { label: '通常待機', seconds: PRE_SHOW_SECONDS + 40 },
   { label: '3分前', seconds: PRE_SHOW_SECONDS },
@@ -103,8 +106,10 @@ export function DerbyPreview() {
       if (pausedRef.current) return;
       setSecondsToStart((prev) => {
         const next = prev - (TICK_MS / 1000) * speedRef.current;
-        // 個人結果表示から10秒後に自動で翌日待機へ戻る(ループ視聴用)
-        return next < -(SHOW_TOTAL + 10) ? PRE_SHOW_SECONDS + 12 : next;
+        /* 個人結果を見せたあと頭に戻す。戻り先は「3分前」ではなく
+           ファンファーレ直前 — ×1の通し視聴で毎回3分待たされないため
+           (2026-07-21 オーナー要望)。待機画面はジャンプボタンで見る。 */
+        return next < -(SHOW_TOTAL + 14) ? RUN_FROM : next;
       });
     }, TICK_MS);
     return () => clearInterval(id);
@@ -113,6 +118,23 @@ export function DerbyPreview() {
   return (
     <div>
       <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', alignItems: 'center' }}>
+        {/* 通し視聴の入口。ファンファーレ直前から82秒で全幕(帯レース→決算→結果)。 */}
+        <button
+          type="button"
+          className="primary"
+          style={{ padding: '0.45rem 1rem', fontSize: '0.74rem' }}
+          onClick={() => {
+            setFailed(false);
+            setDebugVerdict(undefined);
+            setMyHorsesOverride(null);
+            setSpeed(1);
+            setPaused(false);
+            setSecondsToStart(RUN_FROM);
+          }}
+        >
+          ▶ 頭から通し再生（82秒）
+        </button>
+        <span style={{ flexBasis: '100%' }} />
         {JUMPS.map((jump) => (
           <button
             key={jump.label}
