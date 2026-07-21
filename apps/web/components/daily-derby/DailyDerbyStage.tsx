@@ -143,18 +143,17 @@ const QUIET_NIGHT_HORSES = 500;
  *   DAY7   = 祝祭    7日完走はゲーム経済の頂点。通常生存と同じ音は安売り
  *   ドロップ = 慰め   馬を失った1.6秒後に鳴る。祝福の音を鳴らしてはいけない
  *
- * champion / memorial の専用音源は未支給のため、いまは own-good を
- * fallback に置いてある(無音にはしない)。WAVが届いたら soundCatalog に
- * 追加して、この表の右辺を差し替えるだけでよい。
- * 発注仕様は public/sounds/README.md。
+ * 専用音源は 2026-07-21 にオーナーから支給され、結線済み。
+ * 差し替えるときはこの表の右辺と soundCatalog を見ればよい。
+ * 音源の由来と発注仕様は public/sounds/README.md。
  *
  * ★R1: champion は「達成を祝う儀式的な音」であって「換金の音」ではない。
  *   金の当たり音に寄せると射幸性の訴求になる(施策Eと同じ線引き)。 */
 const VERDICT_SOUND = {
   burn: 'ownBurn',
   survive: 'ownGood',
-  day7: 'ownGood', // TODO: champion sting 発注中
-  drop: 'ownGood', // TODO: memorial drop 発注中
+  day7: 'champion', // 7日完走の達成を祝う(換金の音ではない)
+  drop: 'memorial', // BURNの1.6秒後。祝福ではなく慰め
 } as const;
 
 /* 大量所有(100頭等)対策: 審判オーバーレイの待ち行列上限。超過分はオーバーレイを
@@ -267,11 +266,14 @@ export function DailyDerbyStage({
         crowd: { src: '/sounds/crowd.mp3', loop: true, volume: 0.45 },
         ownBurn: { src: '/sounds/own-burn.mp3' },
         ownGood: { src: '/sounds/own-good.mp3' },
-        /* SETTLEMENT の方向音(2026-07-21・発注中)。
-           「出ていった / 入ってきた」だけを伝える中立な音。
-           音源が未配置の間は playOneShot が握りつぶすので従来どおり無音。 */
-        settleOut: { src: '/sounds/settle-out.mp3', volume: 0.7 },
-        settleIn: { src: '/sounds/settle-in.mp3', volume: 0.7 },
+        /* 2026-07-21 オーナー支給。ラウドネスを実測して階層を作ってある:
+           審判(own-burn -6.2 / own-good -9.3 / champion -9.8) が前景、
+           memorial -13.5 が一段下、SETTLEMENT の方向音 -19 が最も下。
+           静かな決算の下で鳴るので、方向が分かる以上には主張させない。 */
+        champion: { src: '/sounds/champion.mp3' },
+        memorial: { src: '/sounds/memorial.mp3' },
+        settleOut: { src: '/sounds/settle-out.mp3' },
+        settleIn: { src: '/sounds/settle-in.mp3' },
         finale: { src: '/sounds/finale.mp3' },
       }) satisfies Record<string, { src: string; loop?: boolean; volume?: number }>,
     [fanfareSrc, hoofbeatsSrc],
