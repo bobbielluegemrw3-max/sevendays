@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { money, horseValue, uncollectedGain } from '@/components/stable-shared';
+import { horseValue, uncollectedGain } from '@/components/stable-shared';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { BulkTrainButton } from '@/components/BulkTrainButton';
 import { ChampionCard, ListedCard, StableBrowser } from '@/components/StableBrowser';
 import { HiddenBadges, type HiddenBadge } from '@/components/HiddenBadges';
@@ -91,11 +92,12 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
           </div>
           <div className={`${s.stat} ${s.statValue}`}>
             <div className="k">{t.stat_value_k}</div>
-            <div className="v">{money(stableValue)}<small>USDT</small></div>
+            {/* 評価額は馬の育成・売買で変わる — 変化時に登る(2026-07-21・1-1) */}
+            <div className="v"><AnimatedNumber value={stableValue} digits={2} group /><small>USDT</small></div>
           </div>
           <div className={`${s.stat} ${s.statTickets}`}>
             <div className="k">{t.tickets_k}</div>
-            <div className="v">{data.trainingTickets ?? 0}</div>
+            <div className="v"><AnimatedNumber value={data.trainingTickets ?? 0} /></div>
           </div>
         </div>
         <div className={s.ticketsNote}>{t.tickets_note}</div>
