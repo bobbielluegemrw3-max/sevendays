@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import type { AppDict } from '@/lib/i18n-shared';
+import { Button } from '@/components/ui/Button';
 import s from '@/app/account.module.css';
 
 /**
@@ -64,14 +65,16 @@ export function StableNameForm({ current, t }: { current: string | null; t: AppD
         maxLength={20}
         disabled={busy}
       />
-      <button type="button" className={s.stableNameSave} onClick={() => void submit()} disabled={busy || name.trim().length < 2}>
-        {busy ? t.saving : t.save}
-      </button>
-      <button type="button" className={s.stableNameCancel} onClick={() => setEditing(false)} disabled={busy}>
+      {/* UI基盤 1-2: 見た目は既存クラスのまま、busy のシマーを共有Buttonから借りる */}
+      <Button className={s.stableNameSave} onClick={() => void submit()} busy={busy} busyLabel={t.saving}
+        disabled={name.trim().length < 2}>
+        {t.save}
+      </Button>
+      <Button className={s.stableNameCancel} onClick={() => setEditing(false)} disabled={busy}>
         {t.cancel}
-      </button>
+      </Button>
       <span className={s.stableNameHint}>{t.hint}</span>
-      {error ? <span className={s.stableNameErr}>{error}</span> : null}
+      {error ? <span className={s.stableNameErr} role="alert">{error}</span> : null}
     </div>
   );
 }

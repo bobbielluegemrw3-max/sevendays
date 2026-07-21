@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { type AppDict } from '@/lib/i18n-shared';
+import { Button } from '@/components/ui/Button';
 import s from '@/app/horse-detail.module.css';
 
 /**
@@ -43,11 +44,12 @@ export function HorseReserveControl({
       {reserved ? (
         <div className={s.reserveOn}>🛡 {t.reserve_on}</div>
       ) : (
-        <button type="button" className={s.reserveBtn} onClick={() => void reserve()} disabled={busy}>
-          {busy ? t.reserve_busy : t.reserve_cta}
-        </button>
+        /* UI基盤 1-2: 見た目は既存クラスのまま、busy のシマーだけ共有Buttonから借りる */
+        <Button className={s.reserveBtn} onClick={() => void reserve()} busy={busy} busyLabel={t.reserve_busy}>
+          {t.reserve_cta}
+        </Button>
       )}
-      {error ? <div className={s.giftError}>{error}</div> : null}
+      {error ? <div className={s.giftError} role="alert">{error}</div> : null}
     </div>
   );
 }
