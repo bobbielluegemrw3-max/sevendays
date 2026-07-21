@@ -106,7 +106,7 @@ export function WalletView({
       </section>
 
       {/* USDT入手ガイド(上の入金アドレスへ送る USDT の入手先)。入金アドレスがある時に表示 */}
-      {deposit ? <OnrampGuide address={deposit.address} /> : null}
+      {deposit ? <OnrampGuide address={deposit.address} t={t} /> : null}
 
       {/* 出金(既存 WithdrawForm を内包) */}
       <section className={s.withdraw}>
@@ -120,7 +120,7 @@ export function WalletView({
           <span className={s.cardLabel}>{t.hist_label}</span>
           <span className={s.histCount}>{history.length}</span>
         </div>
-        <WalletHistory entries={history} />
+        <WalletHistory entries={history} t={t} />
       </div>
     </div>
   );

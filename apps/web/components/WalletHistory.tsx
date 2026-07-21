@@ -3,7 +3,12 @@
 import { useMemo, useState } from 'react';
 import { AppSelect } from '@/components/AppSelect';
 import { localDateTime } from '@/lib/format-time';
+import type { AppDict } from '@/lib/i18n-shared';
+import { fill } from '@/lib/i18n-shared';
 import s from '../app/wallet.module.css';
+
+/** /wallet の文言(サーバー親から受け取る — クライアントからAPP_COPYは読まない)。 */
+type WalletCopy = AppDict['walletPage'];
 
 /* ============================================================================
  * WalletHistory — 取引履歴。
@@ -39,7 +44,7 @@ const fmt = (v: string): string =>
  * 台帳エントリ→人間の1行。null は「鏡側なので表示しない」。
  * 判定は (種別, 勘定, 方向) の組 — 不明な組は生のまま出して誤訳を避ける。
  */
-function humanize(e: HistoryEntry): HumanRow | null {
+function humanize(e: HistoryEntry, copy: WalletCopy): HumanRow | null {
   const t = e.type;
   const acct = e.account;
   const dir = e.direction;
@@ -49,39 +54,39 @@ function humanize(e: HistoryEntry): HumanRow | null {
     case 'PURCHASE_FUND_LOCK':
       if (acct === 'USER_LOCKED') return null; // 鏡側
       return {
-        title: '購入予約 — 資金をロック',
-        sub: `予約1件ぶん(${a})を利用可能残高からロック枠へ確保しました。資産は減っていません`,
+        title: copy.tx_lock_t,
+        sub: fill(copy.tx_lock_s_tpl, { a }),
         tone: 'move',
         signed: `−${a}`,
       };
     case 'PURCHASE_REFUND':
       if (acct === 'USER_LOCKED') return null;
       return {
-        title: 'ロックの余りが戻りました',
-        sub: '割当確定後、使わなかったロック分が利用可能残高に戻りました',
+        title: copy.tx_refund_t,
+        sub: copy.tx_refund_s,
         tone: 'move',
         signed: `+${a}`,
       };
     case 'DAY0_MINT_SETTLEMENT':
       return {
-        title: '馬の購入(新規発行)',
-        sub: '価格100+発行手数料2=102をロック枠から支払いました',
+        title: copy.tx_mint_t,
+        sub: copy.tx_mint_s,
         tone: 'out',
         signed: `−${a}`,
       };
     case 'ASSIGNMENT_SETTLEMENT':
       if (acct === 'USER_LOCKED' && dir === 'DEBIT') {
         return {
-          title: '馬の購入(マーケット)',
-          sub: '成立価格をロック枠から支払いました',
+          title: copy.tx_buy_t,
+          sub: copy.tx_buy_s,
           tone: 'out',
           signed: `−${a}`,
         };
       }
       if (acct === 'USER_AVAILABLE' && dir === 'CREDIT') {
         return {
-          title: '馬の売却代金',
-          sub: '成立価格から手数料2%を差し引いた受取額です',
+          title: copy.tx_sell_t,
+          sub: copy.tx_sell_s,
           tone: 'in',
           signed: `+${a}`,
         };
@@ -89,52 +94,52 @@ function humanize(e: HistoryEntry): HumanRow | null {
       break;
     case 'BUYBACK_PAYMENT':
       return {
-        title: 'チャンピオン報酬',
-        sub: 'DAY7走破報酬(合計200)の分割受取です',
+        title: copy.tx_buyback_t,
+        sub: copy.tx_buyback_s,
         tone: 'in',
         signed: `+${a}`,
       };
     case 'MLM_REWARD_PAYMENT':
       return {
-        title: 'サポートボーナス(お祝い金)',
-        sub: 'あなたの組織からチャンピオンが誕生しました',
+        title: copy.tx_mlm_t,
+        sub: copy.tx_mlm_s,
         tone: 'in',
         signed: `+${a}`,
       };
     case 'BLOCKCHAIN_DEPOSIT_CONFIRMATION':
       return {
-        title: '入金',
-        sub: 'ブロックチェーン入金が確認されました(128確認)',
+        title: copy.tx_deposit_t,
+        sub: copy.tx_deposit_s,
         tone: 'in',
         signed: `+${a}`,
       };
     case 'ITEM_PURCHASE':
       return {
-        title: 'アイテム購入',
-        sub: 'ショップでアイテムを購入しました',
+        title: copy.tx_item_t,
+        sub: copy.tx_item_s,
         tone: 'out',
         signed: `−${a}`,
       };
     case 'WITHDRAWAL_FUND_LOCK':
       if (acct === 'USER_LOCKED') return null;
       return {
-        title: '出金手続き中',
-        sub: '出金額をロックしました。送金完了までロック枠に表示されます',
+        title: copy.tx_wdlock_t,
+        sub: copy.tx_wdlock_s,
         tone: 'move',
         signed: `−${a}`,
       };
     case 'WITHDRAWAL_REJECTION_REFUND':
       if (acct === 'USER_LOCKED') return null;
       return {
-        title: '出金の返金',
-        sub: '出金が承認されなかったため、全額が利用可能残高に戻りました',
+        title: copy.tx_wdrefund_t,
+        sub: copy.tx_wdrefund_s,
         tone: 'move',
         signed: `+${a}`,
       };
     case 'ADMIN_ADJUSTMENT':
       return dir === 'CREDIT'
-        ? { title: '運営からの付与', sub: '運営によるUSDT付与です', tone: 'in', signed: `+${a}` }
-        : { title: '運営による調整', sub: '運営による残高調整です', tone: 'out', signed: `−${a}` };
+        ? { title: copy.tx_admin_in_t, sub: copy.tx_admin_in_s, tone: 'in', signed: `+${a}` }
+        : { title: copy.tx_admin_out_t, sub: copy.tx_admin_out_s, tone: 'out', signed: `−${a}` };
     default:
       break;
   }
@@ -147,9 +152,11 @@ function humanize(e: HistoryEntry): HumanRow | null {
   };
 }
 
-const TONE_LABEL: Record<Tone, string> = { in: '収入', out: '支出', move: 'ロック' };
+const toneLabel = (t: WalletCopy): Record<Tone, string> =>
+  ({ in: t.tone_in, out: t.tone_out, move: t.tone_move });
 
-export function WalletHistory({ entries }: { entries: HistoryEntry[] }) {
+export function WalletHistory({ entries, t }: { entries: HistoryEntry[]; t: WalletCopy }) {
+  const TONE_LABEL = toneLabel(t);
   const [q, setQ] = useState('');
   const [filt, setFilt] = useState('ALL'); // ALL | in | out | move
   const [page, setPage] = useState(0);
@@ -159,9 +166,9 @@ export function WalletHistory({ entries }: { entries: HistoryEntry[] }) {
   const humanRows = useMemo(
     () =>
       entries
-        .map((e) => ({ e, h: humanize(e) }))
+        .map((e) => ({ e, h: humanize(e, t) }))
         .filter((x): x is { e: HistoryEntry; h: HumanRow } => x.h !== null),
-    [entries],
+    [entries, t],
   );
 
   const total = rawView ? entries.length : humanRows.length;
@@ -186,34 +193,36 @@ export function WalletHistory({ entries }: { entries: HistoryEntry[] }) {
   const reset = () => setPage(0);
 
   if (entries.length === 0) {
-    return <div className={s.empty}>取引履歴はまだありません。上の入金アドレスに USDT を送るとここに表示されます。</div>;
+    return <div className={s.empty}>{t.hist_empty}</div>;
   }
 
   return (
     <div>
       <div className={s.controls}>
-        <input className={s.search} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder="履歴を検索…" aria-label="履歴を検索" />
+        <input className={s.search} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder={t.hist_search_ph} aria-label={t.hist_search_ph} />
         {!rawView && (
           <AppSelect
             className={s.select}
             value={filt}
             onChange={(v) => { setFilt(v); reset(); }}
-            ariaLabel="絞り込み"
+            ariaLabel={t.hist_filter_aria}
             options={[
-              { value: 'ALL', label: 'すべて' },
-              { value: 'in', label: '収入(+)' },
-              { value: 'out', label: '支出(−)' },
-              { value: 'move', label: 'ロックの移動' },
+              { value: 'ALL', label: t.filt_all },
+              { value: 'in', label: t.filt_in },
+              { value: 'out', label: t.filt_out },
+              { value: 'move', label: t.filt_move },
             ]}
           />
         )}
-        <span className={s.count}>{shown === total ? `全${total}件` : `${total}件中 ${shown}件`}</span>
+        <span className={s.count}>
+          {shown === total ? fill(t.count_all_tpl, { n: total }) : fill(t.count_part_tpl, { shown, total })}
+        </span>
         <button
           type="button"
           className={s.rawToggle}
           onClick={() => { setRawView((v) => !v); reset(); }}
         >
-          {rawView ? 'かんたん表示へ' : '台帳表示(全記録)'}
+          {rawView ? t.to_simple : t.to_ledger}
         </button>
       </div>
 
@@ -256,14 +265,14 @@ export function WalletHistory({ entries }: { entries: HistoryEntry[] }) {
           })}
         </div>
       ) : (
-        <div className={s.empty}>条件に一致する履歴がありません。</div>
+        <div className={s.empty}>{t.no_match}</div>
       )}
 
       {pageCount > 1 ? (
         <div className={s.pager}>
-          <button type="button" className={s.pagerBtn} disabled={safePage === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← 前へ</button>
+          <button type="button" className={s.pagerBtn} disabled={safePage === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>{t.pager_prev}</button>
           <span className={s.pageLabel}>{safePage + 1} / {pageCount}</span>
-          <button type="button" className={s.pagerBtn} disabled={safePage >= pageCount - 1} onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}>次へ →</button>
+          <button type="button" className={s.pagerBtn} disabled={safePage >= pageCount - 1} onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}>{t.pager_next}</button>
         </div>
       ) : null}
     </div>

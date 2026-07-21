@@ -1,4 +1,8 @@
+import type { AppDict } from '@/lib/i18n-shared';
 import s from '../app/wallet.module.css';
+
+/** /wallet の文言(サーバー親から受け取る)。 */
+type WalletCopy = AppDict['walletPage'];
 
 /* ============================================================================
  * OnrampGuide — USDTの入手方法(参考リンク集)。メインネット移行時に有効化する。
@@ -27,7 +31,8 @@ type OnrampKind = 'direct' | 'swap' | 'advanced';
 export interface OnrampLink {
   name: string;
   /** 誰向け・何ができるかの一言。 */
-  blurb: string;
+  /** 説明文の辞書キー(文言は walletPage セクション)。 */
+  blurbKey: 'og_blurb_transak' | 'og_blurb_tria' | 'og_blurb_coinrabbit' | 'og_blurb_bingx';
   href: string;
   kind: OnrampKind;
   /** false = プレースホルダー(未確定・非表示)。オーナーが確定したら true。 */
@@ -41,7 +46,7 @@ export interface OnrampLink {
 export const DEFAULT_ONRAMP_LINKS: OnrampLink[] = [
   {
     name: 'Transak',
-    blurb: 'クレジットカード・銀行振込などで、Polygon の USDT を直接購入(64か国以上)。',
+    blurbKey: 'og_blurb_transak',
     href: 'https://global.transak.com',
     kind: 'direct',
     ready: true,
@@ -49,79 +54,80 @@ export const DEFAULT_ONRAMP_LINKS: OnrampLink[] = [
   // ▼ オーナー推奨(2026-07-15確定)。いずれも紹介(リファラル)リンク=下の免責で広告関係を明示。
   {
     name: 'tria',
-    blurb: '200以上のチェーンに対応する自己管理型ウォレット。アプリ内でUSDTを用意し Polygon で送金。チェーン抽象化により送信ネットワークの選択ミスが起きにくい。',
+    blurbKey: 'og_blurb_tria',
     href: 'https://app.tria.so/?accessCode=1PB4UF5945',
     kind: 'direct',
     ready: true,
   },
   {
     name: 'CoinRabbit',
-    blurb: '手持ちの暗号資産をUSDTに交換できる管理プラットフォーム(KYCは原則不要)。出金時に必ず「Polygon」ネットワークを選ぶこと。',
+    blurbKey: 'og_blurb_coinrabbit',
     href: 'https://coinrabbit.io/?referral=AZL4X8RN4v',
     kind: 'swap',
     ready: true,
   },
   {
     name: 'BingX',
-    blurb: '大手取引所。カード/銀行振込でUSDTを購入(KYC必要)後、出金でネットワークに「Polygon」を選んで送金。手順が多く選択ミスに注意。',
+    blurbKey: 'og_blurb_bingx',
     href: 'https://bingxdao.com/invite/GWWGLE/',
     kind: 'advanced',
     ready: true,
   },
 ];
 
-const KIND_META: Record<OnrampKind, { label: string; cls: string }> = {
-  direct: { label: 'そのまま Polygon USDT', cls: 'ogDirect' },
-  swap: { label: '暗号資産→USDTに交換', cls: 'ogSwap' },
-  advanced: { label: '上級・手順が多い', cls: 'ogAdvanced' },
+const KIND_CLASS: Record<OnrampKind, string> = {
+  direct: 'ogDirect',
+  swap: 'ogSwap',
+  advanced: 'ogAdvanced',
 };
+const kindLabel = (kind: OnrampKind, t: WalletCopy): string =>
+  kind === 'direct' ? t.og_kind_direct : kind === 'swap' ? t.og_kind_swap : t.og_kind_advanced;
 
 export function OnrampGuide({
   links = DEFAULT_ONRAMP_LINKS,
   address,
+  t,
 }: {
   links?: OnrampLink[];
   /** 入金アドレス(コピー導線用・任意)。 */
   address?: string;
+  /** /wallet の文言。 */
+  t: WalletCopy;
 }) {
   const shown = links.filter((l) => l.ready);
   return (
     <section className={s.card}>
       <div className={s.cardHead}>
-        <span className={s.cardLabel}>USDTの入手方法(参考)</span>
+        <span className={s.cardLabel}>{t.og_label}</span>
       </div>
 
       {/* 最重要の注意 */}
       <div className={s.ogWarn}>
         <span className={s.warnIcon}>⚠</span>
         <span className={s.warnText}>
-          送金は必ず <b>Polygon ネットワークの USDT</b> のみ。ほかのネットワークや通貨で送ると
-          <b className={s.bad ?? ''}>資産を失います</b>。購入画面では必ず「Polygon」「USDT」を選び、
-          {address ? '上のあなたの入金アドレス' : 'あなたの入金アドレス'}を貼り付けてください。
+          {t.og_warn_a}<b>{t.og_warn_network}</b>{t.og_warn_b}
+          <b className={s.bad ?? ''}>{t.og_warn_lost}</b>{t.og_warn_c}
+          {address ? t.og_warn_addr_here : t.og_warn_addr}{t.og_warn_d}
         </span>
       </div>
 
       <div className={s.ogGrid}>
         {shown.map((l) => {
-          const m = KIND_META[l.kind];
           return (
             <a key={l.name} href={l.href} target="_blank" rel="noreferrer noopener" className={s.ogCard}>
               <div className={s.ogTop}>
                 <span className={s.ogName}>{l.name}</span>
-                <span className={`${s.ogTag} ${s[m.cls] ?? ''}`}>{m.label}</span>
+                <span className={`${s.ogTag} ${s[KIND_CLASS[l.kind]] ?? ''}`}>{kindLabel(l.kind, t)}</span>
               </div>
-              <div className={s.ogBlurb}>{l.blurb}</div>
-              <span className={s.ogGo}>ひらく ↗</span>
+              <div className={s.ogBlurb}>{t[l.blurbKey]}</div>
+              <span className={s.ogGo}>{t.og_open}</span>
             </a>
           );
         })}
       </div>
 
       <p className={s.ogDisclaimer}>
-        <b>【広告・紹介リンクを含みます】</b>これらは運営が運営・保証しない独立した第三者サービスで、
-        一部は運営の紹介(リファラル)リンクです。ご利用に伴い運営が紹介特典を受け取る場合があります。
-        本人確認(KYC)・決済・両替はすべて各サービス側で行われ、ご利用は各サービスの規約に従い自己責任でお願いします。
-        運営が受け取れるのは Polygon の USDT のみで、暗号資産の交換・両替は一切行いません。
+        <b>{t.og_disclaimer_head}</b>{t.og_disclaimer}
       </p>
     </section>
   );

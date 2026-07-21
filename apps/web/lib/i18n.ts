@@ -607,6 +607,35 @@ export interface AppDict {
     wd_label: string; wd_amount_label: string; wd_address_label: string;
     wd_note: string; wd_submit: string; wd_busy: string; wd_done: string; wd_fail: string;
     hist_label: string;
+    /** 取引履歴(WalletHistory)。台帳の複式エントリを人間の1行に翻訳する。 */
+    tx_lock_t: string; tx_lock_s_tpl: string;
+    tx_refund_t: string; tx_refund_s: string;
+    tx_mint_t: string; tx_mint_s: string;
+    tx_buy_t: string; tx_buy_s: string;
+    tx_sell_t: string; tx_sell_s: string;
+    tx_buyback_t: string; tx_buyback_s: string;
+    tx_mlm_t: string; tx_mlm_s: string;
+    tx_deposit_t: string; tx_deposit_s: string;
+    tx_item_t: string; tx_item_s: string;
+    tx_wdlock_t: string; tx_wdlock_s: string;
+    tx_wdrefund_t: string; tx_wdrefund_s: string;
+    tx_admin_in_t: string; tx_admin_in_s: string;
+    tx_admin_out_t: string; tx_admin_out_s: string;
+    tone_in: string; tone_out: string; tone_move: string;
+    hist_empty: string; hist_search_ph: string; hist_filter_aria: string;
+    filt_all: string; filt_in: string; filt_out: string; filt_move: string;
+    count_all_tpl: string; count_part_tpl: string;
+    to_simple: string; to_ledger: string; no_match: string;
+    pager_prev: string; pager_next: string;
+    /** USDT入手ガイド(OnrampGuide)。★広告表示と誤送金警告は法的に効く文なので
+     *  公開前に各言語の人間校正が必須(景表法・R1)。 */
+    og_label: string;
+    og_warn_a: string; og_warn_network: string; og_warn_b: string; og_warn_lost: string;
+    og_warn_c: string; og_warn_addr_here: string; og_warn_addr: string; og_warn_d: string;
+    og_kind_direct: string; og_kind_swap: string; og_kind_advanced: string;
+    og_open: string;
+    og_blurb_transak: string; og_blurb_tria: string; og_blurb_coinrabbit: string; og_blurb_bingx: string;
+    og_disclaimer_head: string; og_disclaimer: string;
   };
   horse: {
     crumb: string;
@@ -1259,6 +1288,38 @@ const ja: AppDict = {
     wd_done: '出金リクエストを受け付けました。ネットワーク手数料控除後の金額が送金されます。',
     wd_fail: '出金リクエストに失敗しました',
     hist_label: '履歴 · HISTORY',
+    tx_lock_t: '購入予約 — 資金をロック', tx_lock_s_tpl: '予約1件ぶん({a})を利用可能残高からロック枠へ確保しました。資産は減っていません',
+    tx_refund_t: 'ロックの余りが戻りました', tx_refund_s: '割当確定後、使わなかったロック分が利用可能残高に戻りました',
+    tx_mint_t: '馬の購入(新規発行)', tx_mint_s: '価格100+発行手数料2=102をロック枠から支払いました',
+    tx_buy_t: '馬の購入(マーケット)', tx_buy_s: '成立価格をロック枠から支払いました',
+    tx_sell_t: '馬の売却代金', tx_sell_s: '成立価格から手数料2%を差し引いた受取額です',
+    tx_buyback_t: 'チャンピオン報酬', tx_buyback_s: 'DAY7走破報酬(合計200)の分割受取です',
+    tx_mlm_t: 'サポートボーナス(お祝い金)', tx_mlm_s: 'あなたの組織からチャンピオンが誕生しました',
+    tx_deposit_t: '入金', tx_deposit_s: 'ブロックチェーン入金が確認されました',
+    tx_item_t: 'アイテム購入', tx_item_s: 'ショップでアイテムを購入しました',
+    tx_wdlock_t: '出金手続き中', tx_wdlock_s: '出金額をロックしました。送金完了までロック枠に表示されます',
+    tx_wdrefund_t: '出金の返金', tx_wdrefund_s: '出金が承認されなかったため、全額が利用可能残高に戻りました',
+    tx_admin_in_t: '運営からの付与', tx_admin_in_s: '運営によるUSDT付与です',
+    tx_admin_out_t: '運営による調整', tx_admin_out_s: '運営による残高調整です',
+    tone_in: '収入', tone_out: '支出', tone_move: 'ロック',
+    hist_empty: '取引履歴はまだありません。上の入金アドレスに USDT を送るとここに表示されます。',
+    hist_search_ph: '履歴を検索…', hist_filter_aria: '絞り込み',
+    filt_all: 'すべて', filt_in: '収入(+)', filt_out: '支出(−)', filt_move: 'ロックの移動',
+    count_all_tpl: '全{n}件', count_part_tpl: '{total}件中 {shown}件',
+    to_simple: 'かんたん表示へ', to_ledger: '台帳表示(全記録)', no_match: '条件に一致する履歴がありません。',
+    pager_prev: '← 前へ', pager_next: '次へ →',
+    og_label: 'USDTの入手方法(参考)',
+    og_warn_a: '送金は必ず ', og_warn_network: 'Polygon ネットワークの USDT', og_warn_b: ' のみ。ほかのネットワークや通貨で送ると',
+    og_warn_lost: '資産を失います', og_warn_c: '。購入画面では必ず「Polygon」「USDT」を選び、',
+    og_warn_addr_here: '上のあなたの入金アドレス', og_warn_addr: 'あなたの入金アドレス', og_warn_d: 'を貼り付けてください。',
+    og_kind_direct: 'そのまま Polygon USDT', og_kind_swap: '暗号資産→USDTに交換', og_kind_advanced: '上級・手順が多い',
+    og_open: 'ひらく ↗',
+    og_blurb_transak: 'クレジットカード・銀行振込などで、Polygon の USDT を直接購入(64か国以上)。',
+    og_blurb_tria: '200以上のチェーンに対応する自己管理型ウォレット。アプリ内でUSDTを用意し Polygon で送金。チェーン抽象化により送信ネットワークの選択ミスが起きにくい。',
+    og_blurb_coinrabbit: '手持ちの暗号資産をUSDTに交換できる管理プラットフォーム(KYCは原則不要)。出金時に必ず「Polygon」ネットワークを選ぶこと。',
+    og_blurb_bingx: '大手取引所。カード/銀行振込でUSDTを購入(KYC必要)後、出金でネットワークに「Polygon」を選んで送金。手順が多く選択ミスに注意。',
+    og_disclaimer_head: '【広告・紹介リンクを含みます】',
+    og_disclaimer: 'これらは運営が運営・保証しない独立した第三者サービスで、一部は運営の紹介(リファラル)リンクです。ご利用に伴い運営が紹介特典を受け取る場合があります。本人確認(KYC)・決済・両替はすべて各サービス側で行われ、ご利用は各サービスの規約に従い自己責任でお願いします。運営が受け取れるのは Polygon の USDT のみで、暗号資産の交換・両替は一切行いません。',
   },
   horse: {
     crumb: '← マイ厩舎',
@@ -1955,6 +2016,38 @@ const en: AppDict = {
     wd_done: 'Withdrawal request received. The amount after network fees will be sent.',
     wd_fail: 'The withdrawal request failed',
     hist_label: 'HISTORY',
+    tx_lock_t: 'Purchase reservation — funds locked', tx_lock_s_tpl: '{a} moved from your available balance into the locked pool for one reservation. Nothing was spent',
+    tx_refund_t: 'Unused lock returned', tx_refund_s: 'After allocation, the unused part of the lock returned to your available balance',
+    tx_mint_t: 'Horse purchased (newly minted)', tx_mint_s: 'Paid from the locked pool: price 100 + mint fee 2 = 102',
+    tx_buy_t: 'Horse purchased (marketplace)', tx_buy_s: 'The matched price was paid from the locked pool',
+    tx_sell_t: 'Horse sale proceeds', tx_sell_s: 'The matched price minus the 2% fee',
+    tx_buyback_t: 'Champion reward', tx_buyback_s: 'An instalment of the Day 7 completion reward (200 in total)',
+    tx_mlm_t: 'Support bonus', tx_mlm_s: 'A champion emerged from your organisation',
+    tx_deposit_t: 'Deposit', tx_deposit_s: 'The on-chain deposit was confirmed',
+    tx_item_t: 'Item purchase', tx_item_s: 'You bought an item in the shop',
+    tx_wdlock_t: 'Withdrawal in progress', tx_wdlock_s: 'The amount is locked and stays in the locked pool until the transfer completes',
+    tx_wdrefund_t: 'Withdrawal refunded', tx_wdrefund_s: 'The withdrawal was not approved, so the full amount returned to your available balance',
+    tx_admin_in_t: 'Credited by the operator', tx_admin_in_s: 'USDT granted by the operator',
+    tx_admin_out_t: 'Adjusted by the operator', tx_admin_out_s: 'Balance adjustment by the operator',
+    tone_in: 'In', tone_out: 'Out', tone_move: 'Lock',
+    hist_empty: 'No transactions yet. Send USDT to the deposit address above and it will appear here.',
+    hist_search_ph: 'Search history…', hist_filter_aria: 'Filter',
+    filt_all: 'All', filt_in: 'In (+)', filt_out: 'Out (−)', filt_move: 'Lock movement',
+    count_all_tpl: '{n} total', count_part_tpl: '{shown} of {total}',
+    to_simple: 'Simple view', to_ledger: 'Ledger view (all records)', no_match: 'No history matches your filter.',
+    pager_prev: '← Prev', pager_next: 'Next →',
+    og_label: 'How to obtain USDT (reference)',
+    og_warn_a: 'Send only ', og_warn_network: 'USDT on the Polygon network', og_warn_b: '. Sending any other network or currency means your ',
+    og_warn_lost: 'funds will be lost', og_warn_c: '. On the purchase screen always choose "Polygon" and "USDT", then paste ',
+    og_warn_addr_here: 'your deposit address shown above', og_warn_addr: 'your deposit address', og_warn_d: '.',
+    og_kind_direct: 'Polygon USDT directly', og_kind_swap: 'Swap crypto to USDT', og_kind_advanced: 'Advanced · more steps',
+    og_open: 'Open ↗',
+    og_blurb_transak: 'Buy Polygon USDT directly with a card or bank transfer (60+ countries).',
+    og_blurb_tria: 'Self-custody wallet supporting 200+ chains. Get USDT in the app and send it on Polygon. Chain abstraction makes picking the wrong network less likely.',
+    og_blurb_coinrabbit: 'A custodial platform that swaps crypto you already hold into USDT (KYC generally not required). Always choose the "Polygon" network when withdrawing.',
+    og_blurb_bingx: 'A major exchange. Buy USDT by card or bank transfer (KYC required), then withdraw choosing the "Polygon" network. More steps, so take care not to mis-select.',
+    og_disclaimer_head: '[Contains advertising and referral links]',
+    og_disclaimer: 'These are independent third-party services that we neither operate nor guarantee, and some links are our referral links, from which we may receive a referral benefit. Identity verification (KYC), payment and exchange all take place on those services; use them at your own risk under their terms. We can only receive USDT on Polygon and never exchange or convert crypto assets.',
   },
   horse: {
     crumb: '← My Stable',
@@ -2651,6 +2744,38 @@ const zh: AppDict = {
     wd_done: '已受理提现申请。将发送扣除网络手续费后的金额。',
     wd_fail: '提现申请失败',
     hist_label: '记录 · HISTORY',
+    tx_lock_t: '购买预约 — 资金锁定', tx_lock_s_tpl: '已将 {a} 从可用余额移入锁定额度(1笔预约)。资产并未减少',
+    tx_refund_t: '锁定余额已返还', tx_refund_s: '分配确定后，未使用的锁定部分已返回可用余额',
+    tx_mint_t: '购买马匹(新发行)', tx_mint_s: '已从锁定额度支付: 价格100+发行手续费2=102',
+    tx_buy_t: '购买马匹(市场)', tx_buy_s: '已从锁定额度支付成交价',
+    tx_sell_t: '马匹出售所得', tx_sell_s: '为成交价扣除2%手续费后的到账金额',
+    tx_buyback_t: '冠军奖励', tx_buyback_s: 'DAY7完赛奖励(合计200)的分期到账',
+    tx_mlm_t: '支持奖金', tx_mlm_s: '您的团队中诞生了冠军',
+    tx_deposit_t: '充值', tx_deposit_s: '链上充值已确认',
+    tx_item_t: '购买道具', tx_item_s: '您在商店购买了道具',
+    tx_wdlock_t: '提现处理中', tx_wdlock_s: '已锁定提现金额。在转账完成前会显示在锁定额度中',
+    tx_wdrefund_t: '提现退款', tx_wdrefund_s: '提现未获批准，全额已返回可用余额',
+    tx_admin_in_t: '运营方发放', tx_admin_in_s: '由运营方发放的 USDT',
+    tx_admin_out_t: '运营方调整', tx_admin_out_s: '由运营方进行的余额调整',
+    tone_in: '收入', tone_out: '支出', tone_move: '锁定',
+    hist_empty: '尚无交易记录。向上方的充值地址发送 USDT 后将显示在此处。',
+    hist_search_ph: '搜索记录…', hist_filter_aria: '筛选',
+    filt_all: '全部', filt_in: '收入(+)', filt_out: '支出(−)', filt_move: '锁定变动',
+    count_all_tpl: '共{n}条', count_part_tpl: '{total}条中 {shown}条',
+    to_simple: '切换到简易视图', to_ledger: '账本视图(全部记录)', no_match: '没有符合条件的记录。',
+    pager_prev: '← 上一页', pager_next: '下一页 →',
+    og_label: 'USDT 获取方式(参考)',
+    og_warn_a: '转账请务必只使用 ', og_warn_network: 'Polygon 网络的 USDT', og_warn_b: '。使用其他网络或币种转账将',
+    og_warn_lost: '导致资产丢失', og_warn_c: '。在购买页面务必选择「Polygon」与「USDT」，并粘贴',
+    og_warn_addr_here: '上方您的充值地址', og_warn_addr: '您的充值地址', og_warn_d: '。',
+    og_kind_direct: '直接获得 Polygon USDT', og_kind_swap: '加密资产→兑换USDT', og_kind_advanced: '进阶·步骤较多',
+    og_open: '打开 ↗',
+    og_blurb_transak: '可用信用卡、银行转账等直接购买 Polygon 的 USDT(逾60个国家)。',
+    og_blurb_tria: '支持200多条链的自托管钱包。在应用内准备 USDT 并通过 Polygon 转出。链抽象化可降低选错网络的风险。',
+    og_blurb_coinrabbit: '可将手上的加密资产兑换为 USDT 的托管平台(原则上无需KYC)。提现时务必选择「Polygon」网络。',
+    og_blurb_bingx: '大型交易所。以卡片/银行转账购买 USDT(需KYC)后，在提现时选择「Polygon」网络。步骤较多，注意不要选错。',
+    og_disclaimer_head: '【含广告与推荐链接】',
+    og_disclaimer: '这些是运营方既不运营也不担保的独立第三方服务，其中部分为运营方的推荐(referral)链接，运营方可能因此获得推荐奖励。身份验证(KYC)、支付与兑换均在各服务方进行，请依各服务条款自行承担风险使用。运营方仅能接收 Polygon 的 USDT，绝不进行加密资产的兑换或换汇。',
   },
   horse: {
     crumb: '← 我的马厩',
@@ -3347,6 +3472,38 @@ const ko: AppDict = {
     wd_done: '출금 요청을 접수했습니다. 네트워크 수수료를 뺀 금액이 송금됩니다.',
     wd_fail: '출금 요청에 실패했습니다',
     hist_label: '내역 · HISTORY',
+    tx_lock_t: '구매 예약 — 자금 잠금', tx_lock_s_tpl: '예약 1건분({a})을 사용 가능 잔액에서 잠금 한도로 확보했습니다. 자산이 줄어든 것은 아닙니다',
+    tx_refund_t: '잠금 잔여분이 돌아왔습니다', tx_refund_s: '배정 확정 후 사용하지 않은 잠금분이 사용 가능 잔액으로 돌아왔습니다',
+    tx_mint_t: '말 구매(신규 발행)', tx_mint_s: '가격 100 + 발행 수수료 2 = 102를 잠금 한도에서 지불했습니다',
+    tx_buy_t: '말 구매(마켓)', tx_buy_s: '체결 가격을 잠금 한도에서 지불했습니다',
+    tx_sell_t: '말 매각 대금', tx_sell_s: '체결 가격에서 수수료 2%를 뺀 수령액입니다',
+    tx_buyback_t: '챔피언 보상', tx_buyback_s: 'DAY7 완주 보상(합계 200)의 분할 수령입니다',
+    tx_mlm_t: '서포트 보너스', tx_mlm_s: '회원님의 조직에서 챔피언이 탄생했습니다',
+    tx_deposit_t: '입금', tx_deposit_s: '블록체인 입금이 확인되었습니다',
+    tx_item_t: '아이템 구매', tx_item_s: '상점에서 아이템을 구매했습니다',
+    tx_wdlock_t: '출금 처리 중', tx_wdlock_s: '출금액을 잠갔습니다. 송금이 끝날 때까지 잠금 한도에 표시됩니다',
+    tx_wdrefund_t: '출금 환불', tx_wdrefund_s: '출금이 승인되지 않아 전액이 사용 가능 잔액으로 돌아왔습니다',
+    tx_admin_in_t: '운영자 지급', tx_admin_in_s: '운영자에 의한 USDT 지급입니다',
+    tx_admin_out_t: '운영자 조정', tx_admin_out_s: '운영자에 의한 잔액 조정입니다',
+    tone_in: '수입', tone_out: '지출', tone_move: '잠금',
+    hist_empty: '거래 내역이 아직 없습니다. 위의 입금 주소로 USDT를 보내면 여기에 표시됩니다.',
+    hist_search_ph: '내역 검색…', hist_filter_aria: '필터',
+    filt_all: '전체', filt_in: '수입(+)', filt_out: '지출(−)', filt_move: '잠금 이동',
+    count_all_tpl: '전체 {n}건', count_part_tpl: '{total}건 중 {shown}건',
+    to_simple: '간단히 보기', to_ledger: '장부 보기(전체 기록)', no_match: '조건에 맞는 내역이 없습니다.',
+    pager_prev: '← 이전', pager_next: '다음 →',
+    og_label: 'USDT 입수 방법(참고)',
+    og_warn_a: '송금은 반드시 ', og_warn_network: 'Polygon 네트워크의 USDT', og_warn_b: '만. 다른 네트워크나 통화로 보내면 ',
+    og_warn_lost: '자산을 잃게 됩니다', og_warn_c: '. 구매 화면에서는 반드시 "Polygon"과 "USDT"를 선택하고 ',
+    og_warn_addr_here: '위의 회원님 입금 주소', og_warn_addr: '회원님의 입금 주소', og_warn_d: '를 붙여넣어 주세요.',
+    og_kind_direct: '바로 Polygon USDT', og_kind_swap: '암호자산→USDT 교환', og_kind_advanced: '고급·단계가 많음',
+    og_open: '열기 ↗',
+    og_blurb_transak: '신용카드·계좌이체 등으로 Polygon USDT를 직접 구매(60개국 이상).',
+    og_blurb_tria: '200개 이상 체인을 지원하는 자기수탁 지갑. 앱에서 USDT를 마련해 Polygon으로 전송합니다. 체인 추상화 덕분에 네트워크 선택 실수가 줄어듭니다.',
+    og_blurb_coinrabbit: '보유 중인 암호자산을 USDT로 교환할 수 있는 수탁형 플랫폼(원칙적으로 KYC 불필요). 출금 시 반드시 "Polygon" 네트워크를 선택하세요.',
+    og_blurb_bingx: '대형 거래소. 카드/계좌이체로 USDT를 구매(KYC 필요)한 뒤, 출금에서 네트워크를 "Polygon"으로 선택합니다. 단계가 많아 선택 실수에 주의하세요.',
+    og_disclaimer_head: '[광고·추천 링크를 포함합니다]',
+    og_disclaimer: '이들은 운영자가 운영하거나 보증하지 않는 독립적인 제3자 서비스이며, 일부는 운영자의 추천(리퍼럴) 링크로 이용에 따라 운영자가 추천 혜택을 받을 수 있습니다. 본인확인(KYC)·결제·환전은 모두 각 서비스에서 이루어지며, 각 서비스의 약관에 따라 본인 책임으로 이용해 주세요. 운영자가 받을 수 있는 것은 Polygon의 USDT뿐이며, 암호자산의 교환·환전은 일절 하지 않습니다.',
   },
   horse: {
     crumb: '← 내 마구간',
@@ -4043,6 +4200,38 @@ const ms: AppDict = {
     wd_done: 'Permintaan pengeluaran diterima. Jumlah selepas yuran rangkaian akan dihantar.',
     wd_fail: 'Permintaan pengeluaran gagal',
     hist_label: 'SEJARAH',
+    tx_lock_t: 'Tempahan pembelian — dana dikunci', tx_lock_s_tpl: '{a} dipindahkan daripada baki tersedia ke kolam terkunci untuk satu tempahan. Tiada yang dibelanjakan',
+    tx_refund_t: 'Baki kunci dikembalikan', tx_refund_s: 'Selepas pengagihan, bahagian kunci yang tidak digunakan kembali ke baki tersedia',
+    tx_mint_t: 'Kuda dibeli (terbitan baharu)', tx_mint_s: 'Dibayar daripada kolam terkunci: harga 100 + yuran terbitan 2 = 102',
+    tx_buy_t: 'Kuda dibeli (pasaran)', tx_buy_s: 'Harga padanan dibayar daripada kolam terkunci',
+    tx_sell_t: 'Hasil jualan kuda', tx_sell_s: 'Harga padanan tolak yuran 2%',
+    tx_buyback_t: 'Ganjaran juara', tx_buyback_s: 'Ansuran ganjaran tamat Hari 7 (200 kesemuanya)',
+    tx_mlm_t: 'Bonus sokongan', tx_mlm_s: 'Seorang juara muncul daripada organisasi anda',
+    tx_deposit_t: 'Deposit', tx_deposit_s: 'Deposit atas rantaian telah disahkan',
+    tx_item_t: 'Pembelian item', tx_item_s: 'Anda membeli item di kedai',
+    tx_wdlock_t: 'Pengeluaran sedang diproses', tx_wdlock_s: 'Jumlah dikunci dan kekal dalam kolam terkunci sehingga pemindahan selesai',
+    tx_wdrefund_t: 'Pengeluaran dikembalikan', tx_wdrefund_s: 'Pengeluaran tidak diluluskan, jadi jumlah penuh kembali ke baki tersedia',
+    tx_admin_in_t: 'Dikreditkan oleh pengendali', tx_admin_in_s: 'USDT diberikan oleh pengendali',
+    tx_admin_out_t: 'Diselaraskan oleh pengendali', tx_admin_out_s: 'Penyelarasan baki oleh pengendali',
+    tone_in: 'Masuk', tone_out: 'Keluar', tone_move: 'Kunci',
+    hist_empty: 'Belum ada transaksi. Hantar USDT ke alamat deposit di atas dan ia akan muncul di sini.',
+    hist_search_ph: 'Cari sejarah…', hist_filter_aria: 'Tapis',
+    filt_all: 'Semua', filt_in: 'Masuk (+)', filt_out: 'Keluar (−)', filt_move: 'Pergerakan kunci',
+    count_all_tpl: '{n} kesemuanya', count_part_tpl: '{shown} daripada {total}',
+    to_simple: 'Paparan ringkas', to_ledger: 'Paparan lejar (semua rekod)', no_match: 'Tiada sejarah sepadan dengan tapisan anda.',
+    pager_prev: '← Sebelum', pager_next: 'Seterusnya →',
+    og_label: 'Cara memperoleh USDT (rujukan)',
+    og_warn_a: 'Hantar hanya ', og_warn_network: 'USDT pada rangkaian Polygon', og_warn_b: '. Menghantar rangkaian atau mata wang lain bermakna ',
+    og_warn_lost: 'dana anda akan hilang', og_warn_c: '. Pada skrin pembelian, sentiasa pilih "Polygon" dan "USDT", kemudian tampal ',
+    og_warn_addr_here: 'alamat deposit anda di atas', og_warn_addr: 'alamat deposit anda', og_warn_d: '.',
+    og_kind_direct: 'Terus Polygon USDT', og_kind_swap: 'Tukar kripto kepada USDT', og_kind_advanced: 'Lanjutan · lebih banyak langkah',
+    og_open: 'Buka ↗',
+    og_blurb_transak: 'Beli USDT Polygon terus dengan kad atau pindahan bank (60+ negara).',
+    og_blurb_tria: 'Dompet jagaan sendiri yang menyokong 200+ rantaian. Sediakan USDT dalam aplikasi dan hantar melalui Polygon. Abstraksi rantaian mengurangkan risiko tersalah pilih rangkaian.',
+    og_blurb_coinrabbit: 'Platform berjagaan yang menukar kripto sedia ada anda kepada USDT (KYC umumnya tidak diperlukan). Sentiasa pilih rangkaian "Polygon" semasa pengeluaran.',
+    og_blurb_bingx: 'Bursa utama. Beli USDT dengan kad/pindahan bank (KYC diperlukan), kemudian keluarkan dengan memilih rangkaian "Polygon". Banyak langkah, jadi berhati-hati.',
+    og_disclaimer_head: '[Mengandungi iklan dan pautan rujukan]',
+    og_disclaimer: 'Ini adalah perkhidmatan pihak ketiga bebas yang tidak kami kendalikan mahupun jamin, dan sebahagian pautan ialah pautan rujukan kami yang mungkin memberi kami manfaat rujukan. Pengesahan identiti (KYC), pembayaran dan pertukaran semuanya berlaku di perkhidmatan tersebut; gunakannya atas risiko anda sendiri mengikut terma mereka. Kami hanya boleh menerima USDT di Polygon dan tidak sekali-kali menukar atau menukarkan aset kripto.',
   },
   horse: {
     crumb: '← Kandang Saya',
