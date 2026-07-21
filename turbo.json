@@ -18,6 +18,8 @@
       "dependsOn": ["^build"],
       "env": ["TEST_DATABASE_URL"]
     },
-    "lint": {}
+    "lint": {
+      "dependsOn": ["^build"]
+    }
   }
 }
