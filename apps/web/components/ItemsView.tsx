@@ -27,6 +27,7 @@ import {
 } from '@sevendays/domain';
 import { localDateTime } from '@/lib/format-time';
 import s from '../app/items.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * /items — アイテムショップ+インベントリ+ギフト+履歴(Decision 078/079) リデザイン。
@@ -421,7 +422,7 @@ export function ItemsView({
             </div>
           </>
         ) : null}
-        {error ? <p className="error">{error}</p> : null}
+        {error ? <ErrorLine>{error}</ErrorLine> : null}
         {message ? <p className="ok">{message}</p> : null}
       </section>
 

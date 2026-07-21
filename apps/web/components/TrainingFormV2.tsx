@@ -15,8 +15,8 @@ import { ItemCardPicker } from '@/components/ItemCardPicker';
 import { effectSummaryJa, type CatalogItem, type InventoryData } from '@/lib/items';
 import { projectAfterConfirm, type TrainingFxDetail } from '@/components/HeroArtFx';
 import { fill, type AppDict } from '@/lib/i18n-shared';
-import { playUiSound } from '@/lib/ui-sound';
 import s from '../app/horse-detail.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * V2調教フォーム(Decision 104/107)— 手順UI ①② を担当(2026-07-20 案B)。
@@ -219,9 +219,8 @@ export function TrainingFormV2({
     setBusy(false);
     setConfirming(false);
     if (res.status !== 200) {
-      // 失敗にだけ音を返す。成功は HeroArtFx の生体反応が引き受けるので、
-      // その上にUI音を重ねない(演出と返事が二重になる)
-      playUiSound('error');
+      // 失敗の音は ErrorLine が鳴らす(3-3)。成功は HeroArtFx の生体反応が
+      // 返事を引き受けるので、その上にUI音を重ねない
       setError(errorMessage(res.body) ?? t.train_fail);
       return;
     }
@@ -312,7 +311,7 @@ export function TrainingFormV2({
               ))}
             </div>
             <div className={s.tv2Warn}>{t.tv2_confirm_warn}</div>
-            {error ? <p className="error" role="alert">{error}</p> : null}
+            {error ? <ErrorLine>{error}</ErrorLine> : null}
             <div className={s.tv2ConfirmRow}>
               {/* 1-2/3-4: このゲームで最も取り返しがつかない操作。押した瞬間に
                   返事(confirm音)を返す。ロールの結果音ではないので、出目の
@@ -382,7 +381,7 @@ export function TrainingFormV2({
                 </button>
               ))}
             </div>
-            {error ? <p className="error" role="alert">{error}</p> : null}
+            {error ? <ErrorLine>{error}</ErrorLine> : null}
             {/* ここはまだ確認画面へ進むだけ(取り返しがつく)ので音は鳴らさない。
                 無効の理由をラベルに出す方針は 1-2 の good practice */}
             <Button
@@ -429,7 +428,7 @@ export function TrainingFormV2({
             <div className={st.sum} style={{ minHeight: '1.1rem' }}>
               {attachedItem?.effect ? effectSummaryJa(attachedItem.effect) : t.boost_hint_empty}
             </div>
-            {error ? <p className="error">{error}</p> : null}
+            {error ? <ErrorLine>{error}</ErrorLine> : null}
             <div className={st.row}>
               {/* 共有 Button(2026-07-21・1-2): busy シマー+文言差し替えを部品側に集約 */}
               <Button

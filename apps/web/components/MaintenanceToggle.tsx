@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import s from '../app/admin.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /* メンテナンスモードの切替(Decision 098・/adminコックピット)。
  * ONは強い操作なので確認ダイアログを挟む。反映は最大10秒
@@ -65,7 +66,7 @@ export function MaintenanceToggle({
           placeholder="ユーザーに表示するメッセージ(任意・例: 2026-07-15 02:00頃まで)"
           maxLength={500}
         />
-        {error ? <span className={s.error}>{error}</span> : null}
+        {error ? <ErrorLine className={s.error} inline>{error}</ErrorLine> : null}
       </div>
       <button
         type="button"

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { refreshSoft } from '@/lib/deferred-refresh';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /** 予約のキャンセル(20:00のバッチロック前のみ)。作成は ReservePanel(Decision 085)。 */
 export function CancelSessionButton({ sessionId }: { sessionId: string }) {
@@ -28,7 +29,7 @@ export function CancelSessionButton({ sessionId }: { sessionId: string }) {
       <button className="secondary" onClick={() => void cancel()} disabled={busy}>
         キャンセル
       </button>
-      {error ? <span className="error"> {error}</span> : null}
+      {error ? <ErrorLine inline> {error}</ErrorLine> : null}
     </span>
   );
 }

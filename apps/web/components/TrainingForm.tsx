@@ -13,6 +13,7 @@ import {
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * Daily training selection (Decision 066 / UX redesign 088).
@@ -176,7 +177,7 @@ export function TrainingForm({
       {type === 'LUCK' ? (
         <div className={s.tLuckNote}>{t.luck_note}</div>
       ) : null}
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
       {harvest ? <p className={`ok ${s.harvestMsg}`}>{harvest}</p> : null}
       {message ? <p className="ok">{message}</p> : null}
       <button className="primary" type="button" disabled={busy} onClick={() => void submit()}>

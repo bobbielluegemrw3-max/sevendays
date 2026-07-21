@@ -15,6 +15,7 @@ import {
   type InventoryData,
 } from '@/lib/items';
 import s from '../app/items.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * 馬詳細のレースアイテム(カタログV2・Decision 109)。
@@ -266,7 +267,7 @@ export function ItemPrepPanelV3({
         </div>
       ) : null}
 
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
       {message ? <p className="ok">{message}</p> : null}
     </TrainStep>
   );

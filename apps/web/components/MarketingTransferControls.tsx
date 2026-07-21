@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import s from '../app/admin.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /* 広告費口座の移動フォーム+二重承認ボタン(FUN改修 B層・FUN_V2_PLAN §4)。
  * ≤閾値は1名で即時(台帳レイヤーがロール・上限を再強制)/超はPENDING→別の管理者が承認。 */
@@ -84,7 +85,7 @@ export function MarketingTransferControls({ singleApprovalLimit }: { singleAppro
           {busy ? '処理中…' : '移動する'}
         </button>
       </div>
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
       {message ? <p className="ok">{message}</p> : null}
     </div>
   );
@@ -114,7 +115,7 @@ export function MarketingApproveButton({ transferId }: { transferId: string }) {
       <button type="button" className="secondary" disabled={busy} onClick={() => void approve()}>
         {busy ? '承認中…' : '承認する'}
       </button>
-      {error ? <span className="error" style={{ marginLeft: 8, fontSize: '0.75rem' }}>{error}</span> : null}
+      {error ? <ErrorLine inline style={{ marginLeft: 8, fontSize: '0.75rem' }}>{error}</ErrorLine> : null}
     </span>
   );
 }

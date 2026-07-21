@@ -12,6 +12,7 @@ import {
   type InventoryData,
 } from '@/lib/items';
 import s from '../app/items.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * 馬詳細の Boost Item(Decision 078): 今夜のレースに1つだけアイテムを使う。
@@ -169,7 +170,7 @@ export function ItemBoostPanel({
           <span>{byKey.get(selected)?.description_ja}</span>
         </div>
       ) : null}
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
       {message ? <p className="ok">{message}</p> : null}
     </div>
   );

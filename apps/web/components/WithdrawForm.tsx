@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { Button } from '@/components/ui/Button';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * Withdrawal request form. Amount rules come from the server (min 10 USDT,
@@ -64,7 +65,7 @@ export function WithdrawForm() {
           required
         />
       </label>
-      {error ? <p className="error" role="alert">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
       <p className="muted">実費ネットワーク手数料が金額から控除されます。1,000 USDT以上は管理者審査があります。</p>
       {/* UI基盤 1-2: 共有Buttonへ。送信中はシマー(btnRolling)が出て、
           二度押しの不安が消える。金が動く操作なので最優先で配線した。 */}

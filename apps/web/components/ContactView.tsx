@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import type { AppDict } from '@/lib/i18n-shared';
 import s from '../app/contact.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /* /contact — サポート窓口(2026-07-12 リデザイン)。
  * ①よくある質問(使い方ページの該当節へ) ②カテゴリチップ(件名にプレフィックス)
@@ -117,7 +118,7 @@ export function ContactView({ t }: { t: AppDict['contact'] }) {
             placeholder={t.body_ph}
             onChange={(e) => setBody(e.target.value)}
           />
-          {error ? <p className={s.error}>{error}</p> : null}
+          {error ? <ErrorLine className={s.error}>{error}</ErrorLine> : null}
           <button
             type="button"
             className={s.submit}

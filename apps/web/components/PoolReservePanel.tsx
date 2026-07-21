@@ -9,6 +9,7 @@ import { apiFetch, errorMessage } from '@/lib/client-api';
 import { Button } from '@/components/ui/Button';
 import { playUiSound } from '@/lib/ui-sound';
 import s from '../app/market.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * プール購入パネル(Decision 103・V2)— 「◯◯$厩舎」。
@@ -66,7 +67,7 @@ export function PoolReservePanel({
     setBusy(false);
     setConfirming(false);
     if (result.status !== 200) {
-      playUiSound('error');
+      // 失敗の音は ErrorLine が鳴らす(3-3)
       setError(errorMessage(result.body) ?? '予約に失敗しました。');
       return;
     }
@@ -98,7 +99,7 @@ export function PoolReservePanel({
           {' '}次のレースで出品馬(P2P)→新規発行(102 USDT)の順に予算いっぱい割当・
           余り({MIN} USDT未満)は自動返金。締切前ならいつでも変更・キャンセルできます。
         </p>
-        {error ? <p className="error" role="alert">{error}</p> : null}
+        {error ? <ErrorLine>{error}</ErrorLine> : null}
         <div className={s.poolRow}>
           {/* 1-2/3-4: 金がロックされる確定。押した瞬間に返事を返す */}
           <Button variant="primary" busy={busy} busyLabel="処理中…" sound="confirm" onClick={() => void submit()}>
@@ -159,7 +160,7 @@ export function PoolReservePanel({
           {parsed > maxAmount ? <> <Link href="/wallet">入金する →</Link></> : null}
         </p>
       ) : null}
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
     </div>
   );
 }

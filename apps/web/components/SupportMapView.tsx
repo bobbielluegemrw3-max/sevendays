@@ -13,6 +13,7 @@ import type { PoolMember } from '@/components/SupportView';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/support-map.module.css';
 import d from '../app/support.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * /support/map — 組織マップ(ジェネアロジーツリー)。
@@ -593,7 +594,7 @@ export function SupportMapView({ data, preview = false, t }: { data: SupportMapD
               <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
               {t.confirm_check}
             </label>
-            {error && <p className="error">{error}</p>}
+            {error && <ErrorLine>{error}</ErrorLine>}
             <div className={d.dialogActions}>
               <button type="button" className="secondary" onClick={() => setTargetId(null)}>{t.reselect}</button>
               <button type="button" disabled={!confirmed || busy} onClick={() => void submitPlacement()}>

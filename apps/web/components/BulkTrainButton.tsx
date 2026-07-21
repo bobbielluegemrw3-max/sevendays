@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * 一括調教(Decision 088)。未調教の全馬に recommendedTrainingV1(タイプ相性+
@@ -74,7 +75,7 @@ export function BulkTrainButton({
         </button>
       ) : null}
       <span className={s.bulkTrainNote}>{t.bulk_note}</span>
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
       {message ? <p className="ok">{message}</p> : null}
     </div>
   );

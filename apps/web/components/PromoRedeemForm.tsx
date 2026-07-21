@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import type { AppDict } from '@/lib/i18n-shared';
 import s from '@/app/dashboard.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * 引換コード(Decision 095)。セミナー参加者がコードを入力すると、
@@ -74,7 +75,7 @@ export function PromoRedeemForm({ t }: { t: AppDict['promo'] }) {
       <button type="button" className={s.promoCancel} onClick={() => setOpen(false)} disabled={busy}>
         {t.close}
       </button>
-      {error ? <span className={s.promoErr}>{error}</span> : null}
+      {error ? <ErrorLine className={s.promoErr} inline>{error}</ErrorLine> : null}
     </section>
   );
 }

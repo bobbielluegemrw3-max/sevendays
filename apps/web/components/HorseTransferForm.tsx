@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '@/app/horse-detail.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * 馬の転送(Decision 094)。メール宛先指定・即時・取消不可。
@@ -71,7 +72,7 @@ export function HorseTransferForm({ horseId, horseName, t }: { horseId: string; 
         <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
         <span>{fill(t.gift_confirm_tpl, { name: horseName })}</span>
       </label>
-      {error ? <div className={s.giftError}>{error}</div> : null}
+      {error ? <ErrorLine className={s.giftError}>{error}</ErrorLine> : null}
       <div className={s.giftActions}>
         <button type="button" className={s.giftCancel} onClick={() => setOpen(false)} disabled={busy}>
           {t.gift_cancel}

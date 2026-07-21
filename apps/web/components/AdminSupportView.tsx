@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { localDateTime, localDateTimeSec } from '@/lib/format-time';
 import s from '../app/admin.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /* /admin/support — Ops Consoleリデザイン(2026-07-13ハンドオフ)。
  * AIカスタマーサービスの承認キュー。受信メール + AI下書き(編集可)→
@@ -198,7 +199,7 @@ export function AdminSupportView() {
         ))}
       </div>
 
-      {error ? <p className={s.error}>{error}</p> : null}
+      {error ? <ErrorLine className={s.error}>{error}</ErrorLine> : null}
 
       {tab === 'queue' && (<>
       <div className={s.sec}>承認待ち({pending.length})</div>

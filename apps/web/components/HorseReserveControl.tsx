@@ -7,6 +7,7 @@ import { type AppDict } from '@/lib/i18n-shared';
 import { Button } from '@/components/ui/Button';
 import { playUiSound } from '@/lib/ui-sound';
 import s from '@/app/horse-detail.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * 施策C(FUN_V3): 1頭非売指定。
@@ -36,8 +37,7 @@ export function HorseReserveControl({
       playUiSound('success');
       router.refresh();
     } else {
-      // 失敗にも返事をする(3-4)。無反応が一番不安にさせる
-      playUiSound('error');
+      // 失敗の音は ErrorLine が鳴らす(表示に持たせて配り漏れを無くす・3-3)
       setError(errorMessage(result.body) ?? t.reserve_fail);
     }
   };
@@ -53,7 +53,7 @@ export function HorseReserveControl({
           {t.reserve_cta}
         </Button>
       )}
-      {error ? <div className={s.giftError} role="alert">{error}</div> : null}
+      {error ? <ErrorLine className={s.giftError}>{error}</ErrorLine> : null}
     </div>
   );
 }

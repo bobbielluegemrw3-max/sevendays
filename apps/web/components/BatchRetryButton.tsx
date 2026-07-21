@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 export function BatchRetryButton({ batchId }: { batchId: string }) {
   const router = useRouter();
@@ -29,7 +30,7 @@ export function BatchRetryButton({ batchId }: { batchId: string }) {
       <button onClick={() => void retry()} disabled={busy}>
         リトライ
       </button>
-      {error ? <span className="error"> {error}</span> : null}
+      {error ? <ErrorLine inline> {error}</ErrorLine> : null}
     </span>
   );
 }

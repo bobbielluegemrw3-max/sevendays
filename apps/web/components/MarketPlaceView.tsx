@@ -10,6 +10,7 @@ import { localDate, localDateTime } from '@/lib/format-time';
 import s from '../app/market.module.css';
 import { tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
 import d from '../app/support.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * /market — 見えるマーケットプレイス(Decision 076) リデザイン。
@@ -371,7 +372,7 @@ export function MarketPlaceView({
               <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
               出品中はレースに出走しないことを理解しました
             </label>
-            {error && <p className="error">{error}</p>}
+            {error && <ErrorLine>{error}</ErrorLine>}
             <div className={d.dialogActions}>
               <button type="button" className="secondary" onClick={() => setDialogOpen(false)}>キャンセル</button>
               <button type="button" disabled={!pick || !confirmed || busy} onClick={() => void submitList()}>

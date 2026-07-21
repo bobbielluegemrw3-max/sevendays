@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { localDate } from '@/lib/format-time';
 import s from '../app/admin.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /* /admin/promo — セミナー特典馬(Decision 095)。
  * 在庫(運営厩舎)・引換コード生成/一覧・直接配布。Ops Console意匠準拠。 */
@@ -102,7 +103,7 @@ export function AdminPromoView({ data }: { data: AdminPromo }) {
       </div>
 
       {notice ? <p className="ok">{notice}</p> : null}
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
 
       <div className={s.sec}>在庫の仕込み方(運用メモ)</div>
       <div className={s.empty}>

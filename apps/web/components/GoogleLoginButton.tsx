@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { siteOrigin, supabaseBrowser } from '@/lib/client-api';
 import s from './google-login.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * Googleログイン開始ボタン(Decision 083: ログインはGoogle一本化・/login廃止)。
@@ -48,7 +49,7 @@ export function GoogleLoginButton({
         <button type="button" className={className} onClick={() => void start()} disabled={busy}>
           {children ?? label}
         </button>
-        {error ? <span className={s.gerr} role="alert">{error}</span> : null}
+        {error ? <ErrorLine className={s.gerr} inline>{error}</ErrorLine> : null}
       </>
     );
   }
@@ -68,7 +69,7 @@ export function GoogleLoginButton({
       </svg>
       <span className={s.glabel}>{label}</span>
     </button>
-    {error ? <span className={s.gerr} role="alert">{error}</span> : null}
+    {error ? <ErrorLine className={s.gerr} inline>{error}</ErrorLine> : null}
     </>
   );
 }

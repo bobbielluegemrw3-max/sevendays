@@ -7,6 +7,7 @@ import { AppSelect } from '@/components/AppSelect';
 import type { AppDict } from '@/lib/i18n-shared';
 import s from '../app/dashboard.module.css';
 import d from '../app/support.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * 売買自動化の設定UI(Decision 086)。
@@ -102,7 +103,7 @@ export function TradeModeModal({ settings, preview = false, t }: { settings: Tra
             </button>
           </div>
         </div>
-        {error ? <p className="error">{error}</p> : null}
+        {error ? <ErrorLine>{error}</ErrorLine> : null}
         <p className={s.tmNote}>{t.modal_note}</p>
       </div>
     </div>
@@ -237,7 +238,7 @@ export function TradeAutoTile({ settings, preview = false, engineV2 = false, t }
           </label>
         ) : null}
       </div>
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
     </section>
   );
 }

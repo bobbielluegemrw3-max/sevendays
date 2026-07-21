@@ -5,6 +5,7 @@ import { apiFetch, errorMessage } from '@/lib/client-api';
 import { AppSelect } from '@/components/AppSelect';
 import { localDate, localDateTimeSec } from '@/lib/format-time';
 import s from '../app/admin.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /* /admin/users — Ops Consoleリデザイン(2026-07-13ハンドオフ)。
  * 検索 → 表で走査 → 行クリックで台帳(dossier)を展開(最も作業が多い画面)。
@@ -577,7 +578,7 @@ export function AdminUsersView() {
         <span className={s.cnt}>{rows.length}件(最新順・最大50件)</span>
       </div>
 
-      {error ? <p className={s.error}>{error}</p> : null}
+      {error ? <ErrorLine className={s.error}>{error}</ErrorLine> : null}
 
       {rows.length > 0 ? (
         <>

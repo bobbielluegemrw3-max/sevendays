@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { UserIdentity } from '@supabase/supabase-js';
 import { apiFetch, errorMessage, siteOrigin, supabaseBrowser } from '@/lib/client-api';
 import { fill, type AppDict } from '@/lib/i18n-shared';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 interface Eip1193Provider {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;
@@ -179,7 +180,7 @@ export function AccountLinking({ userId, wallets, t }: { userId: string; wallets
       </button>
 
       {message ? <p className="ok">{message}</p> : null}
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
     </div>
   );
 }

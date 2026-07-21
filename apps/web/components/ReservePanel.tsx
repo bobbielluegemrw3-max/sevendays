@@ -12,6 +12,7 @@ import {
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import s from '../app/market.module.css';
 import d from '../app/support.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * 購入予約パネル(Decision 085)— /market の第2幕。
@@ -158,7 +159,7 @@ export function ReservePanel({
           {pendingCount > 0 ? (
             <div className={s.reservePendingNote}>現在 {pendingCount} 件が割当待ちです(今夜20:00に処理)。</div>
           ) : null}
-          {error ? <p className="error">{error}</p> : null}
+          {error ? <ErrorLine>{error}</ErrorLine> : null}
         </>
       )}
 

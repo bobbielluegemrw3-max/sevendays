@@ -6,6 +6,7 @@ import { apiFetch, errorMessage } from '@/lib/client-api';
 import type { AppDict } from '@/lib/i18n-shared';
 import { Button } from '@/components/ui/Button';
 import s from '@/app/account.module.css';
+import { ErrorLine } from '@/components/ui/ErrorLine';
 
 /**
  * 厩舎名の設定(Decision 097)。公開名 — マイ厩舎タイトル・成約相手・
@@ -74,7 +75,7 @@ export function StableNameForm({ current, t }: { current: string | null; t: AppD
         {t.cancel}
       </Button>
       <span className={s.stableNameHint}>{t.hint}</span>
-      {error ? <span className={s.stableNameErr} role="alert">{error}</span> : null}
+      {error ? <ErrorLine className={s.stableNameErr} inline>{error}</ErrorLine> : null}
     </div>
   );
 }
