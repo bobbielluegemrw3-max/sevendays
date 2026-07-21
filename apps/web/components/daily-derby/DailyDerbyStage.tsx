@@ -215,6 +215,8 @@ export function DailyDerbyStage({
   /* 審判キュー: 複数馬・複数P2P成立でも1件ずつ順番に見せる(オーナー承認の方式)。 */
   const verdictQueue = useRef<VerdictInfo[]>([]);
   const verdictShowing = useRef(false);
+  /** 打ち切り判定から最新の審判を読むための参照。 */
+  const verdictRef = useRef<VerdictInfo | null>(null);
   const verdictTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seenVerdicts = useRef<Set<string>>(new Set());
   const debugActive = useRef(false);
@@ -312,6 +314,7 @@ export function DailyDerbyStage({
      表示の瞬間に ②ヒットストップ+①MY LANEへの記帳も行う。 */
   const showNextVerdict = useCallback(() => {
     const next = verdictQueue.current.shift() ?? null;
+    verdictRef.current = next;
     setVerdict(next);
     setVerdictQueued(verdictQueue.current.length);
     if (!next) {
@@ -342,6 +345,11 @@ export function DailyDerbyStage({
       setMyLane((prev) => [...prev, ...rest]);
       setVerdictQueued(0);
     }
+    /* チャンピオンだけは切らない。BURN(ドロップあり=5.0秒)が前に居ると
+       チャンピオンの表示開始が61秒までずれ込み、ここで切ると実測1.0秒しか
+       映らなかった — その夜いちばんの祝祭を1秒で消していた。
+       決算幕の冒頭(実カウントのカウントアップ)に少し被るのは許容する。 */
+    if (verdictRef.current?.kind === 'day7') return;
     if (verdictShowing.current) {
       if (verdictTimer.current) clearTimeout(verdictTimer.current);
       verdictTimer.current = null;
