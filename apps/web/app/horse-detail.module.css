@@ -324,6 +324,13 @@
   font-family: var(--font-mono); font-size: 11px; color: var(--faint); line-height: 1.6; }
 
 /* ---- PROVENANCE ----------------------------------------------------------- */
+/* Tier 2-1: 既定は閉じる。開けば従来どおり全部見える(検証情報は消さない)。 */
+.provDetails { }
+.provSummary { cursor: pointer; list-style: none; user-select: none; }
+.provSummary::-webkit-details-marker { display: none; }
+.provSummary::after { content: ' ▸'; color: var(--faint); font-size: 9px; }
+.provDetails[open] .provSummary::after { content: ' ▾'; }
+.provSummary:hover { color: var(--muted); }
 .prov { border: 1px solid var(--border); border-radius: 13px; padding: 14px 16px;
   background: linear-gradient(180deg, rgba(20, 18, 34, 0), #0f0d1a); display: flex; flex-direction: column; gap: 9px; }
 .provRow { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }

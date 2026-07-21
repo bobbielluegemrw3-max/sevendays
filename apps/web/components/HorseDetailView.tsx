@@ -651,9 +651,13 @@ export function HorseDetailView({
         </div>
       ) : null}
 
-      {/* PROVENANCE */}
-      <div>
-        <div className={`${s.secLabel} ${s.secLabelDim}`}>{t.prov_sec}</div>
+      {/* PROVENANCE
+          UI_FOUNDATION_PLAN Tier 2-1 は「ブロック全体を切る」としているが、
+          DNA/シード/世代は公正性の検証情報であり、透明性台帳(/ledger)と同じく
+          弁護士レビューの前提でもある。消さずに畳む — 既定では閉じているので
+          画面の数字は減り、検証したい人はいつでも開ける。 */}
+      <details className={s.provDetails}>
+        <summary className={`${s.secLabel} ${s.secLabelDim} ${s.provSummary}`}>{t.prov_sec}</summary>
         <div className={s.prov}>
           <div className={s.provRow}>
             <span className={s.provK}>DNA HASH</span>
@@ -669,7 +673,7 @@ export function HorseDetailView({
           </div>
           <div className={s.provNote}>{t.prov_note}</div>
         </div>
-      </div>
+      </details>
     </div>
   );
 }

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  TOTAL_VALUE_V2,
   TRAINING_COMBO_SIZE_V2,
   TRAINING_MENUS_V2,
   type TrainingMenuV2,
@@ -380,9 +379,6 @@ export function TrainingFormV2({
             <button className="primary" type="button" disabled={busy || menus.length === 0} onClick={() => setConfirming(true)}>
               {t.train_submit}
             </button>
-            <div className={s.tv2Cap}>
-              {`SOFT CAP ${TOTAL_VALUE_V2.softCap} / DECAY −${TOTAL_VALUE_V2.decayPerRace.toFixed(1)}`}
-            </div>
           </>
         )}
       </TrainStep>
