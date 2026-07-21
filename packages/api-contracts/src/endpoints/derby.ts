@@ -1,6 +1,7 @@
-import { burnSlotRangeV1, raceNightNameV2 } from '@sevendays/domain';
-import { addDays, batchDateFor } from '@sevendays/shared';
+import { DAY0_MINT_TOTAL_CHARGE, burnSlotRangeV1, raceNightNameV2 } from '@sevendays/domain';
+import { Money, addDays, batchDateFor } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
+import { netProceeds } from '@sevendays/settlement-engine';
 import { ApiError } from '../errors.js';
 import { maskHandle } from '../mask.js';
 import type { ApiRegistry } from '../router.js';
@@ -558,6 +559,49 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
                 [ctx.userId, today, sharedSlot],
               )
             : null;
+          /* 施策E/G: 売却行に「取得実支出」と「手取り」を添える。
+           * SETTLEMENT 幕が「177.16 USDT で利確 +30.75」と出せるようになる。
+           * 手取り = 出品価格 − 手数料2%(netProceeds は売却成立時と同一式)。
+           * 取得実支出 = ミントなら 102.00(手数料込みの総支払)、
+           *              P2P なら買い手が満額を払うので assigned_price そのもの。
+           * 取得記録が無い馬(プロモ配布・移管等)は null にして損益を出さない
+           * — 推定値を断定的に出すのは R1(虚偽の数字を出さない)に触れる。 */
+          const acqQ = await ctx.client.query<{
+            dna_hash: string; acq_price: string | null; acq_is_mint: boolean | null;
+          }>(
+            `with race as (
+               select r.batch_run_id
+               from races r join batch_runs b on b.id = r.batch_run_id
+               where b.batch_date = $2 and r.status = 'FINALIZED'
+                 ${sharedV2 ? `and b.slot = '${sharedSlot}'::race_slot` : ''}
+               order by r.created_at desc
+               limit 1
+             )
+             select h.dna_hash,
+                    prev.assigned_price::text as acq_price,
+                    (prev.seller_user_id is null) as acq_is_mint
+             from ownership_assignments a
+             join race on race.batch_run_id = a.batch_run_id
+             join horses h on h.id = a.horse_id
+             left join lateral (
+               select p.assigned_price, p.seller_user_id
+               from ownership_assignments p
+               where p.horse_id = a.horse_id and p.buyer_user_id = $1
+                 and p.status = 'SETTLED' and p.created_at < a.created_at
+               order by p.created_at desc
+               limit 1
+             ) prev on true
+             where a.seller_user_id = $1 and a.status = 'SETTLED'`,
+            [ctx.userId, today],
+          );
+          const acqByDna = new Map(acqQ.rows.map((r) => [r.dna_hash, r]));
+          const acquiredOf = (dna: string): string | null => {
+            const row = acqByDna.get(dna);
+            if (!row) return null;
+            if (row.acq_is_mint === true) return DAY0_MINT_TOTAL_CHARGE;
+            return row.acq_price;
+          };
+
           myEvents = {
             pool: poolQ?.rows[0] ?? null,
             burned: ev.rows
@@ -589,6 +633,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
                 day: r.day,
                 counterpart: cp(r),
                 total_value: r.tv,
+                acquired_price: acquiredOf(r.dna_hash ?? ''),
+                net_proceeds: r.price ? netProceeds(Money.of(r.price)).toString() : null,
               })),
             bought: ev.rows
               .filter((r) => r.kind === 'BOUGHT')
