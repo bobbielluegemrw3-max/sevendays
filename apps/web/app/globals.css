@@ -27,10 +27,32 @@
   --bad: #ff5c5c;
   --warn: #e6b24a;
 
+  /* 角丸は3段だけ(UI基盤 3-1)。既存2段の値は動かさず、小さい器用に xs を足した。
+     カード=--radius / 内側の箱=--radius-sm / チップ・行=--radius-xs */
   --radius: 16px;
   --radius-sm: 11px;
+  --radius-xs: 8px;
   --shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.8);
   --maxw: 1040px;
+
+  /* 余白(UI基盤 3-1)。監査時点で gap は57種・1px刻みの目分量だった。
+     以後の新規/改修コードはこの6段から選ぶ。 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* 文字サイズ(UI基盤 3-1)。監査時点で119種。Stat の3段(17/24/34px)と
+     揃えてあるので、値の表示は Stat 部品、それ以外はこの7段から選ぶ。 */
+  --fs-1: 9px;      /* データラベル・注記(mono) */
+  --fs-2: 10.5px;   /* 補助情報 */
+  --fs-3: 12px;     /* 本文小 */
+  --fs-4: 13.5px;   /* 本文・ボタン */
+  --fs-5: 17px;     /* 小見出し・値(sm) */
+  --fs-6: 24px;     /* 値(md) */
+  --fs-7: 34px;     /* 値(lg)・画面の主役 */
 
   --font-display: 'Orbitron', system-ui, sans-serif;
   --font-sans: 'Space Grotesk', 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', system-ui, sans-serif;

@@ -1,0 +1,52 @@
+/* 共通エラー表示(UI基盤 3-3)。余白・文字サイズ・角丸は 3-1 のトークンだけを使う
+   — この部品自体が「以後はここから選ぶ」の見本になる。 */
+
+.box {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(20, 18, 34, 0), var(--panel));
+}
+.error { border-color: rgba(255, 92, 92, 0.42); }
+.notice { border-color: var(--border); }
+
+.icon { flex: none; width: 22px; height: 22px; margin-top: 1px; }
+.icon svg { width: 100%; height: 100%; display: block; }
+.error .icon { color: var(--bad); }
+.notice .icon { color: var(--muted); }
+
+.main { min-width: 0; flex: 1; }
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-5);
+  line-height: 1.25;
+  color: var(--text);
+}
+
+.body {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-3);
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+/* 次の一手。原因だけ出して終わらせない。 */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+
+/* 参照ID(digest)。読み飛ばしてよいが、問い合わせでは必要になる。 */
+.detail {
+  margin-top: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--faint);
+  word-break: break-all;
+}

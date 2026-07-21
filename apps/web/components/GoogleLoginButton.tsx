@@ -24,28 +24,36 @@ export function GoogleLoginButton({
   children?: ReactNode;
 }) {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function start() {
     setBusy(true);
-    const { error } = await supabaseBrowser().auth.signInWithOAuth({
+    setError(null);
+    const { error: authError } = await supabaseBrowser().auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${siteOrigin()}/auth/callback` },
     });
     // 成功時はここに戻らない(Googleへ遷移)。失敗だけ通知して復帰。
-    if (error) {
+    if (authError) {
       setBusy(false);
-      window.alert(`Googleログインを開始できませんでした: ${error.message}`);
+      // UI基盤 3-3: 旧 window.alert()。OSダイアログはページの文脈から切り離され、
+      // 読み上げにも履歴にも残らない。ボタンの直下に出して再試行できるようにする。
+      setError(authError.message);
     }
   }
 
   if (unstyled) {
     return (
-      <button type="button" className={className} onClick={() => void start()} disabled={busy}>
-        {children ?? label}
-      </button>
+      <>
+        <button type="button" className={className} onClick={() => void start()} disabled={busy}>
+          {children ?? label}
+        </button>
+        {error ? <span className={s.gerr} role="alert">{error}</span> : null}
+      </>
     );
   }
   return (
+    <>
     <button
       type="button"
       className={`${s.gbtn} ${size === 'sm' ? s.sm : size === 'lg' ? s.lg : ''} ${className ?? ''}`}
@@ -60,5 +68,7 @@ export function GoogleLoginButton({
       </svg>
       <span className={s.glabel}>{label}</span>
     </button>
+    {error ? <span className={s.gerr} role="alert">{error}</span> : null}
+    </>
   );
 }

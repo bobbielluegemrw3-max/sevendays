@@ -22,3 +22,10 @@
 .lg { padding: 18px 40px; font-size: 16px; border-radius: 14px; min-width: 280px;
   box-shadow: 0 18px 44px -14px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.06) inset; }
 .lg .glogo { width: 20px; height: 20px; }
+
+/* ログイン開始の失敗(UI基盤 3-3)。旧 window.alert() の置き換え —
+   ボタンの直下に出し、role="alert" で読み上げにも届ける。 */
+.gerr {
+  display: block; margin-top: var(--sp-2);
+  font-size: var(--fs-3); line-height: 1.6; color: var(--bad);
+}
