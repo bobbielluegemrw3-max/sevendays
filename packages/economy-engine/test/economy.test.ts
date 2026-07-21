@@ -291,6 +291,41 @@ describe('profit taking selection (Decisions 015-017)', () => {
     expect(result.targetCount).toBe(2);
     expect(result.selected).toHaveLength(2);
   });
+
+  it('施策C: the reserved horse (users.reserved_horse_id) is excluded from selection', async () => {
+    await client.query(`update horses set status = 'BURNED' where status = 'ACTIVE'`);
+    const owner = await newUser();
+    await seedHorses([owner], 5); // 5 eligible, 1 owner
+    // pointer null のあいだは誰も除外されない(既定の挙動)
+    const before = await selectProfitTakingListings(client, {
+      batchRunId: (await client.query<{ id: string }>(
+        `insert into batch_runs (batch_date, batch_algorithm_version) values ('2036-02-06', 'batch_v1.0') returning id`,
+      )).rows[0]!.id,
+      economyStatus: 'NORMAL',
+      liquidityPolicyVersion: 'liquidity_policy_v1.0',
+      assignmentAlgorithmVersion: 'assignment_algorithm_v1.0',
+    });
+    expect(before.eligibleCount).toBe(5);
+
+    // この owner の1頭を非売指定 → その馬だけ母集団から外れる
+    const one = await client.query<{ id: string }>(
+      `select id from horses where owner_user_id = $1 and status = 'ACTIVE' order by id limit 1`,
+      [owner],
+    );
+    const reservedId = one.rows[0]!.id;
+    await client.query(`update users set reserved_horse_id = $1 where id = $2`, [reservedId, owner]);
+
+    const after = await selectProfitTakingListings(client, {
+      batchRunId: (await client.query<{ id: string }>(
+        `insert into batch_runs (batch_date, batch_algorithm_version) values ('2036-02-07', 'batch_v1.0') returning id`,
+      )).rows[0]!.id,
+      economyStatus: 'NORMAL',
+      liquidityPolicyVersion: 'liquidity_policy_v1.0',
+      assignmentAlgorithmVersion: 'assignment_algorithm_v1.0',
+    });
+    expect(after.eligibleCount).toBe(4);
+    expect(after.selected.some((s) => s.horseId === reservedId)).toBe(false);
+  });
 });
 
 describe('economy metrics (Decision 058)', () => {

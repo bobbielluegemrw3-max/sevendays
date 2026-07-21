@@ -10,6 +10,7 @@ import { ItemPrepPanelV3 } from '@/components/ItemPrepPanelV3';
 import { HeroArtFx } from '@/components/HeroArtFx';
 import { HeroReactionOverlay } from '@/components/HeroReactionOverlay';
 import { HorseTransferForm } from '@/components/HorseTransferForm';
+import { HorseReserveControl } from '@/components/HorseReserveControl';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { uncollectedGain } from '@/components/stable-shared';
@@ -66,6 +67,8 @@ export interface HorseDetail {
   gifted_at?: string | null;
   /** 'SMART' | 'MANUAL' | null(087監査)。 */
   listing: string | null;
+  /** 施策C(FUN_V3): 非売指定(自動出品から保護する1頭)か。 */
+  reserved?: boolean;
   /** 次のレース向けの調教済みか(2026-07-14: 調教フォームの完了表示用)。 */
   trained_for_next_race?: boolean;
   /** 確定済みの調教タイプ(A2: やり直しUIの初期値)。 */
@@ -359,6 +362,7 @@ export function HorseDetailView({
             <span className={`${s.badge} ${s.typeBadge}`}>{horse.horse_type}</span>
             <span className={`${s.badge} ${badge.cls}`}>{badge.label}</span>
             {horse.listing === 'SMART' ? <span className={`${s.badge} ${s.stSmart}`}>{t.st_smart}</span> : null}
+            {horse.reserved ? <span className={`${s.badge} ${s.stReserved}`}>{t.st_reserved}</span> : null}
             {horse.gifted_at ? <span className={`${s.badge} ${s.stGifted}`}>{t.st_gifted}</span> : null}
             {uncollected > 0 ? (
               <span className={`${s.badge} ${s.uncollectedBadge}`}>{fill(ts.uncollected_tpl, { v: uncollected.toFixed(2) })}</span>
@@ -491,6 +495,8 @@ export function HorseDetailView({
                 )}
               </div>
               <div className={s.trainNote}>{t.train_note}</div>
+              {/* 施策C(FUN_V3): 1頭非売指定。ACTIVE馬に表示(出品状態に依らない)。 */}
+              <HorseReserveControl horseId={horse.id} reserved={horse.reserved ?? false} t={t} />
               {/* 馬の転送(Decision 094): ACTIVEかつ出品中でない馬のみ */}
               {horse.listing === null ? (
                 <HorseTransferForm horseId={horse.id} horseName={horse.name} t={t} />

@@ -304,7 +304,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         rarity: string; condition: string; fatigue: string; dna_hash: string;
         gifted_at: string | null; ability_json: Record<string, number>; dna_modifier: string;
         tonight_training: string | null; effective_race_date: string; listing: string | null;
-        total_value: number | null;
+        total_value: number | null; reserved: boolean;
       }>(
         `with eff as (
            select c.race_date, c.slot from (
@@ -330,7 +330,9 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
                   limit 1) as tonight_training,
                 (select race_date from eff)::text as effective_race_date,
                 (select l.source::text from market_listings l
-                 where l.horse_id = h.id and l.status = 'LISTED' limit 1) as listing
+                 where l.horse_id = h.id and l.status = 'LISTED' limit 1) as listing,
+                -- 施策C: この馬が非売指定(保護)中か
+                (h.id = (select ru.reserved_horse_id from users ru where ru.id = $1)) as reserved
          from horses h where h.owner_user_id = $1 order by h.created_at desc limit 500`,
         [ctx.userId, today],
       );
@@ -409,6 +411,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
                 mint_seed_hash, horse_generation_version, gifted_at::text as gifted_at,
                 (select l.source::text from market_listings l
                  where l.horse_id = horses.id and l.status = 'LISTED' limit 1) as listing,
+                -- 施策C: この馬が非売指定(保護)中か
+                (id = (select ru.reserved_horse_id from users ru where ru.id = $2)) as reserved,
                 (select coalesce(t.training_type::text, 'V2') from training_sessions t
                   where t.horse_id = horses.id and t.effective_race_date = (select race_date from eff)
                     and (t.slot is null or t.slot = (select slot from eff))
@@ -440,7 +444,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         horse_type: string; rarity: string; dna_modifier: string;
         condition: string; fatigue: string; tonight_training: string | null;
         effective_race_date: string; status: string; listing: string | null;
-        current_day: number; total_value: number | null;
+        current_day: number; total_value: number | null; reserved: boolean;
         decay_shield_v2: number;
         training_v2_row: {
           menus_v2: string[]; delta_v2: string; synergy_v2: string; rests_decay_v2: boolean;

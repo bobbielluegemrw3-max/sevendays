@@ -21,6 +21,7 @@ import {
 } from '@sevendays/race-engine';
 import { itemSettlement } from '@sevendays/ledger';
 import { acquisitionCost, burnLossPnl } from '../economy/pnl.js';
+import { slideReservedHorsesAfterBurn } from '../economy/reserve.js';
 
 /**
  * Batch Steps 11-16 — Finalize rankings, calculate burn target count,
@@ -249,6 +250,10 @@ export async function finalizeAndBurn(
     ]);
     itemSettlements += 1;
   }
+
+  // 施策C (FUN_V3): 非売指定の馬がBURNされたら、そのオーナーの最古のアクティブ馬へ
+  // 保護をスライドする(決定論・冪等。実装は economy/reserve.ts)。
+  await slideReservedHorsesAfterBurn(client, burnedHorseIds);
 
   // In-App notifications (Decision 065): results per participant, burn +
   // buff per burned owner. Deterministic dedupe keys — retries converge.

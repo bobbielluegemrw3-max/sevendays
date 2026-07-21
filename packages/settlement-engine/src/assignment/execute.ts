@@ -292,6 +292,12 @@ async function settleOneAssignment(
     assignment.horse_id,
     buyerUserId,
   ]);
+  // 施策C (FUN_V3): 保護馬を持たないユーザー(=最初の1頭)は、取得した馬を
+  // 既定で非売指定にする(冪等: 既に指定があれば触らない)。
+  await client.query(
+    `update users set reserved_horse_id = $1 where id = $2 and reserved_horse_id is null`,
+    [assignment.horse_id, buyerUserId],
+  );
   if (assignment.market_listing_id !== null) {
     await client.query(`update market_listings set status = 'ASSIGNED' where id = $1`, [
       assignment.market_listing_id,
@@ -481,6 +487,12 @@ async function mintHorseAtomically(
       `update randomness_commits set reveal_seed = $2
        where reference_type = 'MINT' and reference_id = $1 and reveal_seed is null`,
       [horseId, mintSeed],
+    );
+    // 施策C (FUN_V3): ミント取得でも、保護馬を持たないユーザーの最初の1頭を
+    // 既定で非売指定にする(冪等)。
+    await client.query(
+      `update users set reserved_horse_id = $1 where id = $2 and reserved_horse_id is null`,
+      [horseId, buyerUserId],
     );
     await client.query('commit');
   } catch (error) {

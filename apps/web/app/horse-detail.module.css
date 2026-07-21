@@ -377,6 +377,19 @@
   color: var(--good); font-size: 0.8rem;
 }
 .stGifted { color: var(--gold-bright); border-color: rgba(201, 168, 106, 0.5); background: rgba(201, 168, 106, 0.08); }
+/* 施策C(FUN_V3): 非売指定 */
+.stReserved { color: #35d07f; border-color: rgba(53, 208, 127, 0.5); background: rgba(53, 208, 127, 0.08); letter-spacing: 0.06em; }
+.reserveBox { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
+.reserveNote { font-size: 0.74rem; color: var(--muted); line-height: 1.7; }
+.reserveOn { font-size: 0.8rem; font-weight: 600; color: #35d07f; }
+.reserveBtn {
+  padding: 8px 12px; width: 100%; text-align: left; cursor: pointer;
+  border: 1px dashed rgba(53, 208, 127, 0.4); border-radius: 10px;
+  background: rgba(53, 208, 127, 0.05); color: #35d07f;
+  font-family: var(--font-jp); font-size: 0.78rem;
+}
+.reserveBtn:hover { background: rgba(53, 208, 127, 0.1); }
+.reserveBtn:disabled { opacity: 0.5; cursor: default; }
 
 /* 隠し演出(EASTER_EGG_PLAN.md) */
 .heroGoldenStar { position: absolute; top: 12px; right: 14px; z-index: 4; color: #ffd977;

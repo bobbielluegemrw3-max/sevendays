@@ -589,6 +589,9 @@ export interface AppDict {
     crumb: string;
     st_active: string; st_listed: string; st_burned: string; st_champion: string; st_memorial: string;
     st_smart: string; st_gifted: string;
+    /** 施策C(FUN_V3): 1頭非売指定。 */
+    st_reserved: string; reserve_note: string; reserve_cta: string; reserve_on: string;
+    reserve_busy: string; reserve_fail: string;
     k_value: string; k_listed: string; k_outcome: string; k_reward: string;
     v_burned: string; v_memorial: string;
     note_active_d6_tpl: string; note_active_tpl: string; note_smart_suffix: string;
@@ -1205,6 +1208,9 @@ const ja: AppDict = {
     crumb: '← マイ厩舎',
     st_active: '出走中', st_listed: '出品中', st_burned: 'BURNED · 消滅', st_champion: 'チャンピオン', st_memorial: '記念馬 · NFT',
     st_smart: '出品中 · スマート', st_gifted: '贈られた馬',
+    st_reserved: '非売', reserve_note: '自動出品から守る1頭。レース・BURN・価格には影響しません(変更は1日1回)。',
+    reserve_cta: 'この馬を非売指定にする', reserve_on: '非売指定中 — 自動出品から保護',
+    reserve_busy: '設定中…', reserve_fail: '設定に失敗しました。時間をおいてお試しください。',
     k_value: '現在価値 · CURRENT VALUE', k_listed: '出品価格 · LISTED', k_outcome: '結末 · OUTCOME', k_reward: '報酬 · REWARD',
     v_burned: '消滅', v_memorial: '記念NFT',
     note_active_d6_tpl: 'Day {d} を走行中。次のレースを走破すればLV.7走破 — チャンピオン報酬 200 USDT ＋記念NFT。',
@@ -1866,6 +1872,9 @@ const en: AppDict = {
     crumb: '← My Stable',
     st_active: 'Racing', st_listed: 'Listed', st_burned: 'BURNED', st_champion: 'Champion', st_memorial: 'Memorial · NFT',
     st_smart: 'Listed · smart', st_gifted: 'Gifted horse',
+    st_reserved: 'Reserved', reserve_note: 'One horse kept safe from auto-listing. No effect on races, burns, or price (change once per day).',
+    reserve_cta: 'Reserve this horse (no auto-sale)', reserve_on: 'Reserved — protected from auto-listing',
+    reserve_busy: 'Saving…', reserve_fail: 'Could not save. Please try again later.',
     k_value: 'CURRENT VALUE', k_listed: 'ASK · LISTED', k_outcome: 'OUTCOME', k_reward: 'REWARD',
     v_burned: 'Burned', v_memorial: 'Memorial NFT',
     note_active_d6_tpl: 'Running Day {d}. Clear the next race for LV.7 — 200 USDT Champion Reward + Memorial NFT.',
@@ -2527,6 +2536,9 @@ const zh: AppDict = {
     crumb: '← 我的马厩',
     st_active: '出赛中', st_listed: '出售中', st_burned: 'BURNED · 消失', st_champion: '冠军', st_memorial: '纪念马 · NFT',
     st_smart: '出售中 · 智能', st_gifted: '受赠的马',
+    st_reserved: '非卖', reserve_note: '保护1匹马不被自动出品。不影响比赛、淘汰或价格(每日可更改一次)。',
+    reserve_cta: '将这匹马设为非卖', reserve_on: '非卖中 — 已保护，不会被自动出品',
+    reserve_busy: '设置中…', reserve_fail: '设置失败，请稍后再试。',
     k_value: '当前价值 · CURRENT VALUE', k_listed: '出售价格 · LISTED', k_outcome: '结局 · OUTCOME', k_reward: '奖励 · REWARD',
     v_burned: '消失', v_memorial: '纪念NFT',
     note_active_d6_tpl: '正在跑 Day {d}。跑完下一场即达LV.7 — 200 USDT冠军奖励+纪念NFT。',
@@ -3188,6 +3200,9 @@ const ko: AppDict = {
     crumb: '← 내 마구간',
     st_active: '출주 중', st_listed: '판매 중', st_burned: 'BURNED · 소멸', st_champion: '챔피언', st_memorial: '기념마 · NFT',
     st_smart: '판매 중 · 스마트', st_gifted: '선물받은 말',
+    st_reserved: '비매', reserve_note: '자동 출품에서 보호할 1마리. 레이스·소각·가격에는 영향 없음(변경은 하루 1회).',
+    reserve_cta: '이 말을 비매로 지정', reserve_on: '비매 지정 중 — 자동 출품에서 보호',
+    reserve_busy: '설정 중…', reserve_fail: '설정에 실패했습니다. 잠시 후 다시 시도해 주세요.',
     k_value: '현재 가치 · CURRENT VALUE', k_listed: '판매 가격 · LISTED', k_outcome: '결말 · OUTCOME', k_reward: '보상 · REWARD',
     v_burned: '소멸', v_memorial: '기념 NFT',
     note_active_d6_tpl: 'Day {d} 주행 중. 다음 레이스를 완주하면 LV.7 — 200 USDT 챔피언 보상+기념 NFT.',
@@ -3849,6 +3864,9 @@ const ms: AppDict = {
     crumb: '← Kandang Saya',
     st_active: 'Berlumba', st_listed: 'Disenarai', st_burned: 'TERBAKAR', st_champion: 'Juara', st_memorial: 'Kenangan · NFT',
     st_smart: 'Disenarai · pintar', st_gifted: 'Kuda hadiah',
+    st_reserved: 'Simpan', reserve_note: 'Satu kuda dilindungi daripada penyenaraian auto. Tiada kesan pada perlumbaan, burn, atau harga (ubah sekali sehari).',
+    reserve_cta: 'Simpan kuda ini (tanpa jualan auto)', reserve_on: 'Disimpan — dilindungi daripada penyenaraian auto',
+    reserve_busy: 'Menyimpan…', reserve_fail: 'Gagal menyimpan. Cuba lagi kemudian.',
     k_value: 'NILAI SEMASA', k_listed: 'HARGA JUAL', k_outcome: 'KESUDAHAN', k_reward: 'GANJARAN',
     v_burned: 'Terbakar', v_memorial: 'NFT kenangan',
     note_active_d6_tpl: 'Sedang berlari Day {d}. Tamatkan perlumbaan seterusnya untuk LV.7 — Champion Reward 200 USDT + NFT peringatan.',

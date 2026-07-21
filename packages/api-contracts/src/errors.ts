@@ -73,6 +73,8 @@ export const API_ERROR_STATUS: Record<string, number> = {
   PROMO_ALREADY_REDEEMED: 409,
   PROMO_OUT_OF_STOCK: 409,
   MARKET_ACTION_LIMIT: 409,
+  // 1頭非売指定 (施策C / FUN_V3, Decision 114)
+  RESERVE_DAILY_LIMIT: 429,
   // admin user ops (2026-07-09)
   GRANT_NOT_PENDING: 409,
   // AIカスタマーサービス (2026-07-09)

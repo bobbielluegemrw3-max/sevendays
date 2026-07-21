@@ -62,11 +62,16 @@ export async function selectProfitTakingListings(
     current_day: number;
     last_listed_at: string | null;
   }>(
+    // 施策C (FUN_V3): users.reserved_horse_id が指す「非売指定の1頭」は選定から
+    // 除外する(is distinct from = ポインタ null なら除外しない)。除外はここだけ
+    // に閉じ、レース・BURN・価格には影響しない。
     `select h.id, h.owner_user_id, h.current_day, h.last_listed_at::text as last_listed_at
      from horses h
      join user_trade_settings uts on uts.user_id = h.owner_user_id and uts.auto_list = true
+     join users u on u.id = h.owner_user_id
      where h.status = 'ACTIVE'
        and h.current_day between $1 and $2
+       and h.id is distinct from u.reserved_horse_id
        and not exists (select 1 from market_listings l
                        where l.horse_id = h.id and l.status = 'LISTED')`,
     [dayMin, dayMax],

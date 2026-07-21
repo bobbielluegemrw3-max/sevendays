@@ -152,6 +152,48 @@ export function registerMarketEndpoints(registry: ApiRegistry): void {
     },
   });
 
+  // 施策C (FUN_V3): 1頭非売指定。自動出品(Smart)の選定から保護する1頭を指す
+  // ポインタ(users.reserved_horse_id)を、この馬へ移す。保護は出品選定の除外
+  // だけに作用し、レース・BURN・価格には影響しない。変更は1日1回。
+  registry.register({
+    method: 'POST',
+    path: '/api/v1/horses/:id/reserve',
+    auth: 'user',
+    input: z.object({}).passthrough(),
+    handler: async (ctx) => {
+      const horseId = ctx.params.id;
+      const horse = await ctx.client.query<{ owner_user_id: string; status: string }>(
+        `select owner_user_id, status::text as status from horses where id = $1`,
+        [horseId],
+      );
+      if (!horse.rows[0]) throw new ApiError('HORSE_NOT_FOUND', 'Horse not found');
+      if (horse.rows[0].owner_user_id !== ctx.userId) {
+        throw new ApiError('NOT_HORSE_OWNER', 'Only the owner can reserve this horse');
+      }
+      if (horse.rows[0].status !== 'ACTIVE') {
+        throw new ApiError('HORSE_NOT_ACTIVE', `Horse is ${horse.rows[0].status}`);
+      }
+      const cur = await ctx.client.query<{ reserved: string | null; changed_on: string | null }>(
+        `select reserved_horse_id::text as reserved, reserved_horse_changed_on::text as changed_on
+         from users where id = $1`,
+        [ctx.userId],
+      );
+      // 既に同じ馬が保護中なら何もしない(1日1回の枠を消費しない)。
+      if (cur.rows[0]?.reserved === horseId) {
+        return { horse_id: horseId, reserved: true, replay: true };
+      }
+      const today = batchDateFor(new Date());
+      if (cur.rows[0]?.changed_on === today) {
+        throw new ApiError('RESERVE_DAILY_LIMIT', 'You can change your reserved horse once per day');
+      }
+      await ctx.client.query(
+        `update users set reserved_horse_id = $1, reserved_horse_changed_on = $2::date where id = $3`,
+        [horseId, today, ctx.userId],
+      );
+      return { horse_id: horseId, reserved: true };
+    },
+  });
+
   registry.register({
     method: 'GET',
     path: '/api/v1/market/place',
