@@ -54,7 +54,10 @@
 ### 変換パラメータ(原本 = `新音源/` の 48kHz/24bit WAV)
 
 ```
-champion   ← チャンピオン馬.wav     volume=+2.92dB, alimiter=0.89
+champion   ← チャンピオン馬の音源差し替え.wav
+             -t 2.1, +1.25dB, afade(out,1.85,0.25), alimiter=0.89
+             ※原本は5.26秒だが実音は1.89秒で、末尾3.37秒は無音。切っても中身は無傷。
+               審判オーバーレイの表示は3.2秒なので、2.1秒に収める必要がある
 memorial   ← メモリアル.wav         volume=+1.59dB, alimiter=0.89
 settle-out ← 厩舎から出ていく.wav   -t 2.4, +7.18dB, afade(out,1.8,0.6), alimiter=0.85
 settle-in  ← 厩舎に入っていく.wav   -t 2.4, +2.88dB, afade(out,1.8,0.6), alimiter=0.85
