@@ -11,6 +11,7 @@ import s from '../app/market.module.css';
 import { tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
 import d from '../app/support.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { Button } from '@/components/ui/Button';
 
 /**
  * /market — 見えるマーケットプレイス(Decision 076) リデザイン。
@@ -287,9 +288,9 @@ export function MarketPlaceView({
               ) : l.source === 'SMART' ? (
                 <span className={s.myMeta}>取り下げはAUTO設定のスマート出品OFFで(翌バッチ反映)</span>
               ) : (
-                <button type="button" className="secondary" disabled={busy} onClick={() => void submitUnlist(l)}>
+                <Button variant="secondary" busy={busy} onClick={() => void submitUnlist(l)}>
                   取り下げる
-                </button>
+                </Button>
               )}
             </div>
           ))
@@ -374,10 +375,17 @@ export function MarketPlaceView({
             </label>
             {error && <ErrorLine>{error}</ErrorLine>}
             <div className={d.dialogActions}>
-              <button type="button" className="secondary" onClick={() => setDialogOpen(false)}>キャンセル</button>
-              <button type="button" disabled={!pick || !confirmed || busy} onClick={() => void submitList()}>
-                {busy ? '出品中…' : 'この馬を出品する'}
-              </button>
+              <Button variant="secondary" onClick={() => setDialogOpen(false)}>キャンセル</Button>
+              {/* 1-2/3-4: 出品は今夜の精算に乗る確定操作 */}
+              <Button
+                busy={busy}
+                busyLabel="出品中…"
+                disabled={!pick || !confirmed}
+                sound="confirm"
+                onClick={() => void submitList()}
+              >
+                この馬を出品する
+              </Button>
             </div>
           </div>
         </div>

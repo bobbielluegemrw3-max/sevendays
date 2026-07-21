@@ -6,6 +6,7 @@ import { apiFetch, errorMessage } from '@/lib/client-api';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '@/app/horse-detail.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { Button } from '@/components/ui/Button';
 
 /**
  * 馬の転送(Decision 094)。メール宛先指定・即時・取消不可。
@@ -74,17 +75,20 @@ export function HorseTransferForm({ horseId, horseName, t }: { horseId: string; 
       </label>
       {error ? <ErrorLine className={s.giftError}>{error}</ErrorLine> : null}
       <div className={s.giftActions}>
-        <button type="button" className={s.giftCancel} onClick={() => setOpen(false)} disabled={busy}>
+        <Button className={s.giftCancel} onClick={() => setOpen(false)} disabled={busy}>
           {t.gift_cancel}
-        </button>
-        <button
-          type="button"
+        </Button>
+        {/* 1-2/3-4: 譲渡は取り消せない。押した瞬間に返事を返す */}
+        <Button
           className={s.giftSubmit}
           onClick={() => void submit()}
-          disabled={busy || !confirmed || !email.includes('@')}
+          busy={busy}
+          busyLabel={t.gift_busy}
+          disabled={!confirmed || !email.includes('@')}
+          sound="confirm"
         >
-          {busy ? t.gift_busy : t.gift_submit}
-        </button>
+          {t.gift_submit}
+        </Button>
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ import { apiFetch, errorMessage } from '@/lib/client-api';
 import s from '../app/market.module.css';
 import d from '../app/support.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { Button } from '@/components/ui/Button';
 
 /**
  * 購入予約パネル(Decision 085)— /market の第2幕。
@@ -176,12 +177,12 @@ export function ReservePanel({
               今夜20:00の精算前であればキャンセル(全額返金)できます。
             </p>
             <div className={d.dialogActions}>
-              <button type="button" className="secondary" onClick={() => setConfirming(false)} disabled={busy}>
+              <Button variant="secondary" onClick={() => setConfirming(false)} disabled={busy}>
                 やめる
-              </button>
-              <button className="primary" type="button" onClick={() => void submit()} disabled={busy}>
-                {busy ? '予約中…' : '予約を確定する'}
-              </button>
+              </Button>
+              <Button variant="primary" onClick={() => void submit()} busy={busy} busyLabel="予約中…" sound="confirm">
+                予約を確定する
+              </Button>
             </div>
           </div>
         </div>

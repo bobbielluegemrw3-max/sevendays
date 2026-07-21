@@ -7,6 +7,7 @@ import { apiFetch, errorMessage } from '@/lib/client-api';
 import type { AppDict } from '@/lib/i18n-shared';
 import s from '@/app/dashboard.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { Button } from '@/components/ui/Button';
 
 /**
  * 引換コード(Decision 095)。セミナー参加者がコードを入力すると、
@@ -69,12 +70,12 @@ export function PromoRedeemForm({ t }: { t: AppDict['promo'] }) {
         disabled={busy}
         maxLength={20}
       />
-      <button type="button" className={s.promoBtn} onClick={() => void submit()} disabled={busy || code.trim().length < 4}>
-        {busy ? t.submitting : t.submit}
-      </button>
-      <button type="button" className={s.promoCancel} onClick={() => setOpen(false)} disabled={busy}>
+      <Button className={s.promoBtn} onClick={() => void submit()} busy={busy} busyLabel={t.submitting} disabled={code.trim().length < 4} sound="confirm">
+        {t.submit}
+      </Button>
+      <Button className={s.promoCancel} onClick={() => setOpen(false)} disabled={busy}>
         {t.close}
-      </button>
+      </Button>
       {error ? <ErrorLine className={s.promoErr} inline>{error}</ErrorLine> : null}
     </section>
   );
