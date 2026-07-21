@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { type AppDict } from '@/lib/i18n-shared';
 import { Button } from '@/components/ui/Button';
+import { playUiSound } from '@/lib/ui-sound';
 import s from '@/app/horse-detail.module.css';
 
 /**
@@ -32,8 +33,11 @@ export function HorseReserveControl({
     const result = await apiFetch(`/api/v1/horses/${horseId}/reserve`, { method: 'POST', body: {} });
     setBusy(false);
     if (result.status === 200) {
+      playUiSound('success');
       router.refresh();
     } else {
+      // 失敗にも返事をする(3-4)。無反応が一番不安にさせる
+      playUiSound('error');
       setError(errorMessage(result.body) ?? t.reserve_fail);
     }
   };
@@ -45,7 +49,7 @@ export function HorseReserveControl({
         <div className={s.reserveOn}>🛡 {t.reserve_on}</div>
       ) : (
         /* UI基盤 1-2: 見た目は既存クラスのまま、busy のシマーだけ共有Buttonから借りる */
-        <Button className={s.reserveBtn} onClick={() => void reserve()} busy={busy} busyLabel={t.reserve_busy}>
+        <Button className={s.reserveBtn} onClick={() => void reserve()} busy={busy} busyLabel={t.reserve_busy} sound="confirm">
           {t.reserve_cta}
         </Button>
       )}

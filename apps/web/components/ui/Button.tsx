@@ -1,6 +1,7 @@
 'use client';
 
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { playUiSound, type UiSoundKind } from '@/lib/ui-sound';
 
 /* ============================================================================
  * Button — 共有ボタン(2026-07-21・UI_FOUNDATION_PLAN 1-2)
@@ -32,6 +33,9 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   disabledReason?: ReactNode;
   /** 追加クラス(module-classed ボタンを流用するとき)。 */
   className?: string | undefined;
+  /** 押したときのUI音(3-4)。既定は無音 — 鳴らすのは「取り返しがつかない確定」
+   *  など、返事が欲しい操作だけにする。全部のクリックで鳴らすと雑音になる。 */
+  sound?: UiSoundKind | undefined;
   children: ReactNode;
 }
 
@@ -42,6 +46,8 @@ export function Button({
   disabledReason,
   disabled,
   className,
+  sound,
+  onClick,
   children,
   type = 'button',
   ...rest
@@ -65,6 +71,12 @@ export function Button({
       className={classes || undefined}
       disabled={disabled || busy}
       aria-busy={busy || undefined}
+      onClick={(e) => {
+        // 音はクリックハンドラの中で鳴らす — iOS は最初のユーザー操作の中でしか
+        // AudioContext を起こせない。鳴らせなくても操作は必ず続行する
+        if (sound) playUiSound(sound);
+        onClick?.(e);
+      }}
       {...rest}
     >
       {label}

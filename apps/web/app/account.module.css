@@ -157,3 +157,30 @@
 }
 .stableNameHint { flex-basis: 100%; font-size: 0.7rem; color: var(--faint); }
 .stableNameErr { flex-basis: 100%; font-size: 0.74rem; color: var(--bad); }
+
+/* UI音の設定(UI_FOUNDATION_PLAN 3-4)。余白・文字は 3-1 のトークンから。 */
+.soundTile {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: var(--sp-3) var(--sp-4);
+  background: linear-gradient(180deg, rgba(20, 18, 34, 0), var(--panel));
+}
+.soundRow { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.soundLabel {
+  font-family: var(--font-display); font-size: var(--fs-2); letter-spacing: 0.16em; color: var(--text);
+}
+.soundOn, .soundOff {
+  font-family: var(--font-mono); font-size: var(--fs-1); letter-spacing: 0.14em;
+  padding: 4px 12px; border-radius: 999px; cursor: pointer;
+}
+.soundOn { color: var(--cyan); border: 1px solid rgba(0, 234, 255, 0.45); background: rgba(0, 234, 255, 0.08); }
+.soundOff { color: var(--faint); border: 1px solid var(--border); background: none; }
+.soundLead { font-size: var(--fs-3); line-height: 1.7; color: var(--muted); margin-top: var(--sp-2); }
+.soundVolRow { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-3); }
+.soundVolRow input[type='range'] { flex: 1; min-width: 0; accent-color: var(--cyan); }
+.soundVolRow input[type='range']:disabled { opacity: 0.4; }
+.soundVolK { font-family: var(--font-mono); font-size: var(--fs-1); letter-spacing: 0.14em; color: var(--faint); }
+.soundVolV {
+  font-family: var(--font-mono); font-size: var(--fs-2); color: var(--muted);
+  min-width: 2.2em; text-align: right; font-variant-numeric: tabular-nums;
+}
+.soundNote { font-family: var(--font-mono); font-size: var(--fs-1); line-height: 1.6; color: var(--faint); margin-top: var(--sp-2); }

@@ -3,6 +3,7 @@ import { AccountLinking } from '@/components/AccountLinking';
 import { PwaSetupTile } from '@/components/PwaSetupTile';
 import { StableNameForm } from '@/components/StableNameForm';
 import { TradeAutoTile, type TradeSettings } from '@/components/TradeAutoControls';
+import { UiSoundTile } from '@/components/UiSoundTile';
 import { avatarHue } from '@/lib/support-tree';
 import { localDate } from '@/lib/format-time';
 import { APP_COPY, fill, type Lang } from '@/lib/i18n';
@@ -105,6 +106,13 @@ export function AccountView({
           <div className={s.settingsStack}>
             {trade ? <TradeAutoTile settings={trade} t={APP_COPY[lang].trade} /> : null}
             <PwaSetupTile t={APP_COPY[lang].pwa} />
+            {/* UI音(3-4)。音を足す改修で最初に用意すべきものは、音を止める手段 */}
+            <UiSoundTile
+              t={{
+                label: t.sound_label, lead: t.sound_lead, on: t.sound_on, off: t.sound_off,
+                volume: t.sound_volume, note: t.sound_note,
+              }}
+            />
           </div>
         </section>
       </div>
