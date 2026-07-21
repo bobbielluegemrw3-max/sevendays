@@ -594,6 +594,20 @@ export interface AppDict {
     legend_title: string; legend_note: string; legend_chip_tpl: string;
   };
   /** /horses/[id](馬詳細)+ 調教フォーム + ページャ + ブースト + 転送。 */
+  /** /wallet ページ(2026-07-22 i18n化)。金が動く面なので、
+   *  誤送金につながる警告文は**人間の校正が必須**(R1)。 */
+  walletPage: {
+    h1: string;
+    bal_avail_k: string; bal_avail_note: string;
+    bal_locked_k: string; bal_locked_on: string; bal_locked_off: string;
+    dep_label: string; dep_lead: string; dep_check: string;
+    dep_confirm_tpl: string; dep_confirm_blocks_tpl: string;
+    dep_lost_tpl: string; dep_lost_word: string;
+    dep_preparing: string;
+    wd_label: string; wd_amount_label: string; wd_address_label: string;
+    wd_note: string; wd_submit: string; wd_busy: string; wd_done: string; wd_fail: string;
+    hist_label: string;
+  };
   horse: {
     crumb: string;
     st_active: string; st_listed: string; st_burned: string; st_champion: string; st_memorial: string;
@@ -1228,6 +1242,23 @@ const ja: AppDict = {
     uncollected_tpl: '未回収 +{v}$', tickets_k: '調教チケット(今週)', tickets_note: '調教確定1回=週次ジャックポット応募1口。毎週日曜夜のショーで自動抽選・当選金は自動支払い(操作は不要です)。', bulk_harvest_tpl: '+{v}$ をまとめて回収!',
     legend_title: 'レアリティ', legend_note: '加点は毎晩のレーススコアに常時反映(公開ルール)',
     legend_chip_tpl: '{pct} · スコア+{n}',
+  },
+  walletPage: {
+    h1: 'ウォレット',
+    bal_avail_k: '利用可能 · AVAILABLE', bal_avail_note: '出金・馬の購入に使えます',
+    bal_locked_k: 'ロック中 · LOCKED',
+    bal_locked_on: '購入・チャンピオン報酬で一時的に確保中', bal_locked_off: 'ロック中の資金はありません',
+    dep_label: '入金 · DEPOSIT', dep_lead: 'あなた専用の入金アドレス:', dep_check: '確認',
+    dep_confirm_tpl: '{v}に残高へ反映されます。', dep_confirm_blocks_tpl: '{n}ブロック確認後', dep_lost_tpl: 'USDT以外・他チェーンからの送金は{v}。',
+    dep_lost_word: '失われます',
+    dep_preparing: '入金アドレスを準備中です。しばらくしてから再度お試しください。',
+    wd_label: '出金 · WITHDRAW', wd_amount_label: '金額(USDT・最低10・小数6桁まで)',
+    wd_address_label: '送金先アドレス(Polygon PoS)',
+    wd_note: '実費ネットワーク手数料が金額から控除されます。1,000 USDT以上は管理者審査があります。',
+    wd_submit: '出金する', wd_busy: '送信中…',
+    wd_done: '出金リクエストを受け付けました。ネットワーク手数料控除後の金額が送金されます。',
+    wd_fail: '出金リクエストに失敗しました',
+    hist_label: '履歴 · HISTORY',
   },
   horse: {
     crumb: '← マイ厩舎',
@@ -1908,6 +1939,23 @@ const en: AppDict = {
     legend_title: 'Rarity', legend_note: 'Bonuses apply to every night’s race score (public rule)',
     legend_chip_tpl: '{pct} · score +{n}',
   },
+  walletPage: {
+    h1: 'Wallet',
+    bal_avail_k: 'AVAILABLE', bal_avail_note: 'Usable for withdrawals and buying horses',
+    bal_locked_k: 'LOCKED',
+    bal_locked_on: 'Temporarily held for purchases and champion payouts', bal_locked_off: 'No funds are locked',
+    dep_label: 'DEPOSIT', dep_lead: 'Your personal deposit address:', dep_check: 'View',
+    dep_confirm_tpl: 'Credited to your balance {v}.', dep_confirm_blocks_tpl: 'after {n} block confirmations', dep_lost_tpl: 'Anything other than USDT, or sent on another chain, {v}.',
+    dep_lost_word: 'will be lost',
+    dep_preparing: 'Your deposit address is being prepared. Please try again shortly.',
+    wd_label: 'WITHDRAW', wd_amount_label: 'Amount (USDT · min 10 · up to 6 decimals)',
+    wd_address_label: 'Destination address (Polygon PoS)',
+    wd_note: 'The actual network fee is deducted from the amount. Withdrawals of 1,000 USDT or more require admin review.',
+    wd_submit: 'Withdraw', wd_busy: 'Sending…',
+    wd_done: 'Withdrawal request received. The amount after network fees will be sent.',
+    wd_fail: 'The withdrawal request failed',
+    hist_label: 'HISTORY',
+  },
   horse: {
     crumb: '← My Stable',
     st_active: 'Racing', st_listed: 'Listed', st_burned: 'BURNED', st_champion: 'Champion', st_memorial: 'Memorial · NFT',
@@ -2586,6 +2634,23 @@ const zh: AppDict = {
     uncollected_tpl: '未领取 +{v}$', tickets_k: '训练券(本周)', tickets_note: '每确定1次训练=每周大奖1口报名。周日晚演出自动开奖、奖金自动支付(无需操作)。', bulk_harvest_tpl: '一次性领取 +{v}$!',
     legend_title: '稀有度', legend_note: '加分每晚都计入比赛得分(公开规则)',
     legend_chip_tpl: '{pct} · 得分+{n}',
+  },
+  walletPage: {
+    h1: '钱包',
+    bal_avail_k: '可用 · AVAILABLE', bal_avail_note: '可用于提现与购买马匹',
+    bal_locked_k: '锁定中 · LOCKED',
+    bal_locked_on: '因购买与冠军奖励而暂时锁定', bal_locked_off: '目前没有锁定的资金',
+    dep_label: '充值 · DEPOSIT', dep_lead: '您的专属充值地址:', dep_check: '查看',
+    dep_confirm_tpl: '{v}后计入余额。', dep_confirm_blocks_tpl: '经过 {n} 个区块确认', dep_lost_tpl: '非 USDT 或经由其他链的转账{v}。',
+    dep_lost_word: '将会丢失',
+    dep_preparing: '正在准备充值地址，请稍后再试。',
+    wd_label: '提现 · WITHDRAW', wd_amount_label: '金额(USDT·最低10·最多6位小数)',
+    wd_address_label: '收款地址(Polygon PoS)',
+    wd_note: '实际网络手续费将从金额中扣除。1,000 USDT 以上需要管理员审核。',
+    wd_submit: '提现', wd_busy: '发送中…',
+    wd_done: '已受理提现申请。将发送扣除网络手续费后的金额。',
+    wd_fail: '提现申请失败',
+    hist_label: '记录 · HISTORY',
   },
   horse: {
     crumb: '← 我的马厩',
@@ -3266,6 +3331,23 @@ const ko: AppDict = {
     legend_title: '레어리티', legend_note: '가산점은 매일 밤 레이스 점수에 상시 반영(공개 규칙)',
     legend_chip_tpl: '{pct} · 점수+{n}',
   },
+  walletPage: {
+    h1: '지갑',
+    bal_avail_k: '사용 가능 · AVAILABLE', bal_avail_note: '출금·말 구매에 사용할 수 있습니다',
+    bal_locked_k: '잠금 중 · LOCKED',
+    bal_locked_on: '구매·챔피언 보상으로 일시적으로 확보 중', bal_locked_off: '잠긴 자금이 없습니다',
+    dep_label: '입금 · DEPOSIT', dep_lead: '회원님 전용 입금 주소:', dep_check: '확인',
+    dep_confirm_tpl: '{v} 잔액에 반영됩니다.', dep_confirm_blocks_tpl: '{n}블록 확인 후', dep_lost_tpl: 'USDT 이외·다른 체인에서의 송금은 {v}.',
+    dep_lost_word: '사라집니다',
+    dep_preparing: '입금 주소를 준비 중입니다. 잠시 후 다시 시도해 주세요.',
+    wd_label: '출금 · WITHDRAW', wd_amount_label: '금액(USDT·최소 10·소수점 6자리까지)',
+    wd_address_label: '받는 주소(Polygon PoS)',
+    wd_note: '실비 네트워크 수수료가 금액에서 차감됩니다. 1,000 USDT 이상은 관리자 심사가 있습니다.',
+    wd_submit: '출금하기', wd_busy: '전송 중…',
+    wd_done: '출금 요청을 접수했습니다. 네트워크 수수료를 뺀 금액이 송금됩니다.',
+    wd_fail: '출금 요청에 실패했습니다',
+    hist_label: '내역 · HISTORY',
+  },
   horse: {
     crumb: '← 내 마구간',
     st_active: '출주 중', st_listed: '판매 중', st_burned: 'BURNED · 소멸', st_champion: '챔피언', st_memorial: '기념마 · NFT',
@@ -3944,6 +4026,23 @@ const ms: AppDict = {
     uncollected_tpl: 'Belum dituntut +{v}$', tickets_k: 'Tiket latihan (minggu ini)', tickets_note: 'Setiap pengesahan latihan = satu penyertaan jackpot mingguan. Dicabut secara automatik dalam persembahan malam Ahad; kemenangan dibayar ke dompet anda.', bulk_harvest_tpl: '+{v}$ dituntut sekali gus!',
     legend_title: 'Kejarangan', legend_note: 'Bonus sentiasa dikira dalam skor perlumbaan setiap malam (peraturan umum)',
     legend_chip_tpl: '{pct} · skor +{n}',
+  },
+  walletPage: {
+    h1: 'Dompet',
+    bal_avail_k: 'TERSEDIA', bal_avail_note: 'Boleh digunakan untuk pengeluaran dan membeli kuda',
+    bal_locked_k: 'DIKUNCI',
+    bal_locked_on: 'Dikunci sementara untuk pembelian dan ganjaran juara', bal_locked_off: 'Tiada dana yang dikunci',
+    dep_label: 'DEPOSIT', dep_lead: 'Alamat deposit peribadi anda:', dep_check: 'Lihat',
+    dep_confirm_tpl: 'Dikreditkan ke baki anda {v}.', dep_confirm_blocks_tpl: 'selepas {n} pengesahan blok', dep_lost_tpl: 'Selain USDT, atau dihantar melalui rangkaian lain, {v}.',
+    dep_lost_word: 'akan hilang',
+    dep_preparing: 'Alamat deposit sedang disediakan. Sila cuba sebentar lagi.',
+    wd_label: 'PENGELUARAN', wd_amount_label: 'Jumlah (USDT · minimum 10 · sehingga 6 perpuluhan)',
+    wd_address_label: 'Alamat penerima (Polygon PoS)',
+    wd_note: 'Yuran rangkaian sebenar ditolak daripada jumlah. Pengeluaran 1,000 USDT ke atas memerlukan semakan pentadbir.',
+    wd_submit: 'Keluarkan', wd_busy: 'Menghantar…',
+    wd_done: 'Permintaan pengeluaran diterima. Jumlah selepas yuran rangkaian akan dihantar.',
+    wd_fail: 'Permintaan pengeluaran gagal',
+    hist_label: 'SEJARAH',
   },
   horse: {
     crumb: '← Kandang Saya',

@@ -31,6 +31,7 @@ export default async function WalletPage() {
       stableValue={stableValue}
       uncollected={uncollected}
       assetsCopy={APP_COPY[lang].dash}
+      t={APP_COPY[lang].walletPage}
     />
   );
 }

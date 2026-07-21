@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { Button } from '@/components/ui/Button';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import type { AppDict } from '@/lib/i18n-shared';
+
+/** /wallet の文言(サーバー親から受け取る — クライアントからAPP_COPYは読まない)。 */
+type WalletCopy = AppDict['walletPage'];
 
 /**
  * Withdrawal request form. Amount rules come from the server (min 10 USDT,
@@ -12,7 +16,7 @@ import { ErrorLine } from '@/components/ui/ErrorLine';
  * The Idempotency-Key is generated once per form session so a double-click
  * can never create two withdrawals.
  */
-export function WithdrawForm() {
+export function WithdrawForm({ t }: { t: WalletCopy }) {
   const router = useRouter();
   const [amount, setAmount] = useState('');
   const [toAddress, setToAddress] = useState('');
@@ -32,7 +36,7 @@ export function WithdrawForm() {
     });
     setBusy(false);
     if (result.status !== 200) {
-      setError(errorMessage(result.body) ?? '出金リクエストに失敗しました');
+      setError(errorMessage(result.body) ?? t.wd_fail);
       return;
     }
     setDone(true);
@@ -40,13 +44,13 @@ export function WithdrawForm() {
   }
 
   if (done) {
-    return <p className="ok">出金リクエストを受け付けました。ネットワーク手数料控除後の金額が送金されます。</p>;
+    return <p className="ok">{t.wd_done}</p>;
   }
 
   return (
     <form className="stack" onSubmit={(e) => void submit(e)}>
       <label>
-        金額(USDT・最低10・小数6桁まで)
+        {t.wd_amount_label}
         <input
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
@@ -57,7 +61,7 @@ export function WithdrawForm() {
         />
       </label>
       <label>
-        送金先アドレス(Polygon PoS)
+        {t.wd_address_label}
         <input
           value={toAddress}
           onChange={(e) => setToAddress(e.target.value)}
@@ -66,11 +70,11 @@ export function WithdrawForm() {
         />
       </label>
       {error ? <ErrorLine>{error}</ErrorLine> : null}
-      <p className="muted">実費ネットワーク手数料が金額から控除されます。1,000 USDT以上は管理者審査があります。</p>
+      <p className="muted">{t.wd_note}</p>
       {/* UI基盤 1-2: 共有Buttonへ。送信中はシマー(btnRolling)が出て、
           二度押しの不安が消える。金が動く操作なので最優先で配線した。 */}
-      <Button variant="primary" type="submit" busy={busy} busyLabel="送信中…" sound="confirm">
-        出金する
+      <Button variant="primary" type="submit" busy={busy} busyLabel={t.wd_busy} sound="confirm">
+        {t.wd_submit}
       </Button>
     </form>
   );

@@ -197,6 +197,7 @@ export default async function PagesPreview() {
       <WalletView
         stableValue={708.64}
         assetsCopy={APP_COPY.ja.dash}
+        t={APP_COPY.ja.walletPage}
         wallet={{ available: '312.55', locked: '177.16' }}
         deposit={{ address: '0x1234abcd5678ef901234abcd5678ef9012345678', chain_id: 'polygon-pos', asset: 'USDT', confirmations_required: 128 }}
         history={[
