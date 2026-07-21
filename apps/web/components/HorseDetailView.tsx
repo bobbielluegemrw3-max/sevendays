@@ -91,6 +91,12 @@ export interface HorseDetail {
   color_variant?: 'black' | 'red' | 'blue' | 'yellow' | 'green' | null;
   /** この馬の全戦績(日付昇順)。 */
   history: HorseRaceResult[];
+  /** 施策D(FUN_V3): 育成者クレジット。この馬を育てた人ごとの貢献(delta_v2合計)。
+   *  所有権移転でも残る恒久記録。breeder=null は「あなた」(is_you)。 */
+  breeder_credits?: Array<{
+    breeder: string | null; is_you: boolean; delta: number;
+    item_bonus: number; sessions: number; pct: number;
+  }>;
 }
 
 type TH = AppDict['horse'];
@@ -624,6 +630,26 @@ export function HorseDetailView({
           </div>
         )}
       </div>
+
+      {/* 施策D(FUN_V3): 育成者クレジット — 誰が育てたか(名誉)。売った後も残る。 */}
+      {horse.breeder_credits && horse.breeder_credits.length > 0 ? (
+        <div className={s.breeders}>
+          <div className={s.secLabel}>{t.breeders_sec}</div>
+          <div className={s.histBox}>
+            {horse.breeder_credits.map((b, i) => (
+              <div key={i} className={`${s.breederRow} ${b.is_you ? s.breederYou : ''}`}>
+                <span className={s.breederName}>{b.is_you ? t.breeders_you : (b.breeder ?? '—')}</span>
+                <span className={s.breederPct}>{fill(t.breeders_pct_tpl, { p: b.pct })}</span>
+                <span className={s.breederDelta}>+{b.delta.toFixed(1)}</span>
+                {b.item_bonus > 0 ? (
+                  <span className={s.breederItem}>{fill(t.breeders_item_tpl, { v: b.item_bonus.toFixed(1) })}</span>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          <div className={s.histNote}>{t.breeders_note}</div>
+        </div>
+      ) : null}
 
       {/* PROVENANCE */}
       <div>

@@ -36,6 +36,7 @@ import {
 } from '@sevendays/race-engine';
 import type { HorseType, Rarity } from '@sevendays/domain';
 import { ApiError } from '../errors.js';
+import { maskHandle } from '../mask.js';
 import { sendCsEmail } from '../cs/mail.js';
 import type { ApiRegistry } from '../router.js';
 
@@ -485,6 +486,34 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
          order by br.batch_date asc`,
         [ctx.params.id],
       );
+      // 施策D (FUN_V3): 育成者クレジット — この馬を育てた人ごとの貢献(delta_v2合計)。
+      // 所有権移転でも training_sessions.user_id は不変・V2行は削除不可なので恒久記録。
+      // スキル指標は delta_v2 のみ(アイテム上乗せ item_bonus_v3 は別掲・除外)。
+      const breederRows = await ctx.client.query<{
+        user_id: string; stable_name: string | null; email: string | null;
+        delta_sum: number; item_sum: number; sessions: number;
+      }>(
+        `select ts.user_id, u.stable_name, u.email,
+                coalesce(sum(ts.delta_v2), 0)::float8 as delta_sum,
+                coalesce(sum(ts.item_bonus_v3), 0)::float8 as item_sum,
+                count(*)::int as sessions
+         from training_sessions ts
+         join users u on u.id = ts.user_id
+         where ts.horse_id = $1 and ts.menus_v2 is not null
+         group by ts.user_id, u.stable_name, u.email
+         order by delta_sum desc`,
+        [ctx.params.id],
+      );
+      const breederTotal = breederRows.rows.reduce((a, r) => a + Math.max(0, r.delta_sum), 0);
+      const breeder_credits = breederRows.rows.map((r) => ({
+        // 現在の閲覧者(=現所有者)自身は「あなた」表示にするため is_you を付ける。
+        breeder: r.user_id === ctx.userId ? null : maskHandle(r.email, r.stable_name),
+        is_you: r.user_id === ctx.userId,
+        delta: Number(r.delta_sum.toFixed(2)),
+        item_bonus: Number(r.item_sum.toFixed(2)),
+        sessions: r.sessions,
+        pct: breederTotal > 0 ? Math.round((Math.max(0, r.delta_sum) / breederTotal) * 100) : 0,
+      }));
       // V2(Decision 104/107): V2エンジンがアクティブなら、次サイクルの確定済み
       // ロール/装備/シールドを返す — すべて本体クエリの eff CTE に畳み込み済み
       // (2026-07-20 §D続)。engineV2 は60秒キャッシュの v2Season を再利用。
@@ -540,6 +569,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         milestone: lk?.milestone ?? false,
         color_variant: lk?.colorVariant ?? null,
         history: history.rows,
+        breeder_credits,
       };
     },
   });

@@ -36,6 +36,7 @@ const TYPE_META: Record<string, TypeMeta> = {
   MEMORIAL_NFT_MINTED:    { cls: 'tBuyback', glyph: '❖', cat: 'reward', lane: 'rgba(201,168,106,0.7)' },
   SUPPORT_BONUS_PAID:     { cls: 'tBuyback', glyph: '♥', cat: 'reward', lane: 'rgba(201,168,106,0.55)' },
   SUPPORT_CELEBRATION_PAID: { cls: 'tBuyback', glyph: '♥', cat: 'reward', lane: 'rgba(201,168,106,0.55)' },
+  BREEDER_CHAMPION:         { cls: 'tBuyback', glyph: '🏆', cat: 'reward', lane: 'rgba(201,168,106,0.6)' },
   ASSIGNMENT_COMPLETED:   { cls: 'tAssignment', glyph: '✦', cat: 'trade', lane: 'rgba(0,234,255,0.5)' },
   HORSE_SOLD:             { cls: 'tAssignment', glyph: '↗', cat: 'trade', lane: 'rgba(0,234,255,0.5)' },
   AUTO_LISTED:            { cls: 'tAssignment', glyph: '⇱', cat: 'trade', lane: 'rgba(0,234,255,0.4)' },
@@ -106,6 +107,8 @@ function hrefOf(n: Notification): string {
     case 'BUYBACK_COMPLETED': return '/champion';
     case 'SUPPORT_BONUS_PAID':
     case 'SUPPORT_CELEBRATION_PAID': return '/support';
+    // 育てた馬はもう自分の所有ではない(詳細は開けない)ので名伯楽ランキングへ。
+    case 'BREEDER_CHAMPION': return '/breeders';
     case 'MEMORIAL_NFT_MINTED':
     case 'ASSIGNMENT_COMPLETED':
     case 'TRAINING_COMPLETED': return horseId ? `/horses/${horseId}` : '/horses';

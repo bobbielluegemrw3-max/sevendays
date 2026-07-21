@@ -1,0 +1,20 @@
+/* /breeders — 名伯楽ランキング(施策D / FUN_V3)。ダッシュボード Option 1c と同系。 */
+.wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+.head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 18px; }
+.h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; color: var(--text); letter-spacing: 0.02em; }
+.sub { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+.list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.row { display: grid; grid-template-columns: 2.2rem 1fr 4.5rem 3.8rem 3.8rem; align-items: baseline; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.row:last-child { border-bottom: none; }
+.headRow { background: rgba(255,255,255,0.03); font-size: 0.7rem; color: var(--faint); text-transform: uppercase; letter-spacing: 0.06em; }
+.you { background: rgba(53,208,127,0.07); }
+
+.rank { font-family: var(--font-mono); color: var(--muted); text-align: right; }
+.name { font-family: var(--font-jp); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.you .name { color: #35d07f; font-weight: 700; }
+.skill { font-family: var(--font-mono); font-weight: 700; color: var(--gold-bright); text-align: right; }
+.meta { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); text-align: right; }
+
+.empty { padding: 40px 16px; text-align: center; color: var(--muted); font-size: 0.9rem; }
+.note { margin-top: 14px; font-size: 0.74rem; color: var(--faint); line-height: 1.7; }

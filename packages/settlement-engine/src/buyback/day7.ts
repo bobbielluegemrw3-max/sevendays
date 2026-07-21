@@ -10,6 +10,7 @@ import {
   enqueueChampionCelebrations,
   payPendingCelebrations,
 } from '../champion/celebration.js';
+import { notifyBreedersOfChampion } from '../champion/breeder-credit.js';
 
 /**
  * Batch Steps 17-19 (05_SETTLEMENT_ENGINE.md, Decisions 014/022/042):
@@ -82,6 +83,15 @@ export async function processSurvivorsAndDay7(
         [scheduleRow.id, n, addDays(input.batchDate, n), amount],
       );
     }
+  }
+
+  // 施策D (FUN_V3): 育成者クレジット — この馬を育てた過去の育成者(現所有者を除く)に
+  // チャンピオン到達を名誉として通知(貢献%込み・冪等)。金銭は動かさない。
+  for (const horse of cleared.rows) {
+    await notifyBreedersOfChampion(client, {
+      horseId: horse.id,
+      currentOwnerId: horse.owner_user_id,
+    });
   }
 
   // Decision 092: champion celebrations — enqueue tonight's champions and

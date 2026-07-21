@@ -285,6 +285,12 @@ export interface AppDict {
       burn_tpl: string; // BURN 全損「損失 −{v} USDT」
     };
   };
+  /** 名伯楽ランキング(施策D / FUN_V3 · BreedersView)。 */
+  breeders: {
+    title: string; sub: string; empty: string; note: string;
+    col_breeder: string; col_skill: string; col_horses: string; col_champs: string;
+    you: string; horses_tpl: string; champs_tpl: string;
+  };
   /** チャンピオン(ChampionView + ChampionHero + BuybacksView + BuybackDetailView)。 */
   champion: {
     // ヒーロー
@@ -592,6 +598,9 @@ export interface AppDict {
     /** 施策C(FUN_V3): 1頭非売指定。 */
     st_reserved: string; reserve_note: string; reserve_cta: string; reserve_on: string;
     reserve_busy: string; reserve_fail: string;
+    /** 施策D(FUN_V3): 育成者クレジット(育成履歴)。 */
+    breeders_sec: string; breeders_you: string; breeders_pct_tpl: string;
+    breeders_item_tpl: string; breeders_note: string;
     k_value: string; k_listed: string; k_outcome: string; k_reward: string;
     v_burned: string; v_memorial: string;
     note_active_d6_tpl: string; note_active_tpl: string; note_smart_suffix: string;
@@ -853,7 +862,7 @@ const ja: AppDict = {
     types: {
       RACE_RESULT_READY: 'レース結果', HORSE_BURNED: 'Burn', REVENGE_BUFF_GENERATED: 'Revenge Buff',
       BUYBACK_PAYMENT_PAID: 'チャンピオン報酬', BUYBACK_COMPLETED: 'チャンピオン報酬', MEMORIAL_NFT_MINTED: '記念NFT',
-      SUPPORT_BONUS_PAID: 'サポートボーナス', SUPPORT_CELEBRATION_PAID: 'お祝い金', ASSIGNMENT_COMPLETED: '馬の割当',
+      SUPPORT_BONUS_PAID: 'サポートボーナス', SUPPORT_CELEBRATION_PAID: 'お祝い金', BREEDER_CHAMPION: '名伯楽', ASSIGNMENT_COMPLETED: '馬の割当',
       HORSE_SOLD: '売却成立', AUTO_LISTED: '自動出品', AUTO_RESERVED: '自動購入予約',
       MARKETPLACE_LOCKED: '精算中', MARKETPLACE_REOPENED: '再開', DEPOSIT_CONFIRMED: '入金',
       WITHDRAWAL_COMPLETED: '出金', WITHDRAWAL_FAILED: '出金エラー', TRAINING_COMPLETED: '調教',
@@ -885,6 +894,13 @@ const ja: AppDict = {
       proj_loss_tpl: '見込み −{v} USDT (−{p}%)',
       burn_tpl: '損失 −{v} USDT',
     },
+  },
+  breeders: {
+    title: '名伯楽ランキング', sub: '調教の実力(delta)の総和。総合値や資産とは別の「腕」の指標です。',
+    empty: 'まだ記録がありません。馬を調教すると、ここに実力が積み上がります。',
+    note: '育成者の記録は所有権が移っても残ります。アイテムによる上乗せは含みません(純粋な腕のみ)。',
+    col_breeder: '育成者', col_skill: '腕(Σdelta)', col_horses: '育成', col_champs: '優勝',
+    you: 'あなた', horses_tpl: '{n}頭', champs_tpl: '{n}冠',
   },
   champion: {
     hero_note: 'アクティブユーザー 10,000人 到達で開幕',
@@ -1211,6 +1227,9 @@ const ja: AppDict = {
     st_reserved: '非売', reserve_note: '自動出品から守る1頭。レース・BURN・価格には影響しません(変更は1日1回)。',
     reserve_cta: 'この馬を非売指定にする', reserve_on: '非売指定中 — 自動出品から保護',
     reserve_busy: '設定中…', reserve_fail: '設定に失敗しました。時間をおいてお試しください。',
+    breeders_sec: '育成履歴', breeders_you: 'あなた', breeders_pct_tpl: '貢献 {p}%',
+    breeders_item_tpl: 'アイテム +{v}',
+    breeders_note: '調教の実力ぶん(delta)の合計。所有者が変わっても、育てた功績は残ります。アイテム上乗せは別掲(腕の指標には含めません)。',
     k_value: '現在価値 · CURRENT VALUE', k_listed: '出品価格 · LISTED', k_outcome: '結末 · OUTCOME', k_reward: '報酬 · REWARD',
     v_burned: '消滅', v_memorial: '記念NFT',
     note_active_d6_tpl: 'Day {d} を走行中。次のレースを走破すればLV.7走破 — チャンピオン報酬 200 USDT ＋記念NFT。',
@@ -1517,7 +1536,7 @@ const en: AppDict = {
     types: {
       RACE_RESULT_READY: 'Race result', HORSE_BURNED: 'Burn', REVENGE_BUFF_GENERATED: 'Revenge Buff',
       BUYBACK_PAYMENT_PAID: 'Champion Reward', BUYBACK_COMPLETED: 'Champion Reward', MEMORIAL_NFT_MINTED: 'Memorial NFT',
-      SUPPORT_BONUS_PAID: 'Support Bonus', SUPPORT_CELEBRATION_PAID: 'Celebration', ASSIGNMENT_COMPLETED: 'Horse assigned',
+      SUPPORT_BONUS_PAID: 'Support Bonus', SUPPORT_CELEBRATION_PAID: 'Celebration', BREEDER_CHAMPION: 'Breeder', ASSIGNMENT_COMPLETED: 'Horse assigned',
       HORSE_SOLD: 'Sold', AUTO_LISTED: 'Auto-listed', AUTO_RESERVED: 'Auto reservation',
       MARKETPLACE_LOCKED: 'Settling', MARKETPLACE_REOPENED: 'Reopened', DEPOSIT_CONFIRMED: 'Deposit',
       WITHDRAWAL_COMPLETED: 'Withdrawal', WITHDRAWAL_FAILED: 'Withdrawal error', TRAINING_COMPLETED: 'Training',
@@ -1549,6 +1568,13 @@ const en: AppDict = {
       proj_loss_tpl: 'Est. −{v} USDT (−{p}%)',
       burn_tpl: 'Loss −{v} USDT',
     },
+  },
+  breeders: {
+    title: 'Master Breeders', sub: 'Total training skill (delta). A measure of craft, separate from total value or wealth.',
+    empty: 'No records yet. Train a horse and your skill starts to add up here.',
+    note: "A breeder's credit stays even after the horse changes hands. Item add-ons are not counted (pure skill only).",
+    col_breeder: 'Breeder', col_skill: 'Skill (Σdelta)', col_horses: 'Bred', col_champs: 'Champs',
+    you: 'You', horses_tpl: '{n}', champs_tpl: '{n}',
   },
   champion: {
     hero_note: 'Opens when active users reach 10,000',
@@ -1875,6 +1901,9 @@ const en: AppDict = {
     st_reserved: 'Reserved', reserve_note: 'One horse kept safe from auto-listing. No effect on races, burns, or price (change once per day).',
     reserve_cta: 'Reserve this horse (no auto-sale)', reserve_on: 'Reserved — protected from auto-listing',
     reserve_busy: 'Saving…', reserve_fail: 'Could not save. Please try again later.',
+    breeders_sec: 'Breeding credits', breeders_you: 'You', breeders_pct_tpl: '{p}% of gains',
+    breeders_item_tpl: 'items +{v}',
+    breeders_note: 'Total of the training skill (delta) each person added. Credit stays with the breeder even after the horse changes hands. Item add-ons are shown separately (not counted as skill).',
     k_value: 'CURRENT VALUE', k_listed: 'ASK · LISTED', k_outcome: 'OUTCOME', k_reward: 'REWARD',
     v_burned: 'Burned', v_memorial: 'Memorial NFT',
     note_active_d6_tpl: 'Running Day {d}. Clear the next race for LV.7 — 200 USDT Champion Reward + Memorial NFT.',
@@ -2181,7 +2210,7 @@ const zh: AppDict = {
     types: {
       RACE_RESULT_READY: '比赛结果', HORSE_BURNED: 'Burn', REVENGE_BUFF_GENERATED: 'Revenge Buff',
       BUYBACK_PAYMENT_PAID: '冠军奖励', BUYBACK_COMPLETED: '冠军奖励', MEMORIAL_NFT_MINTED: '纪念NFT',
-      SUPPORT_BONUS_PAID: '支持奖励', SUPPORT_CELEBRATION_PAID: '祝贺金', ASSIGNMENT_COMPLETED: '马匹分配',
+      SUPPORT_BONUS_PAID: '支持奖励', SUPPORT_CELEBRATION_PAID: '祝贺金', BREEDER_CHAMPION: '育成者', ASSIGNMENT_COMPLETED: '马匹分配',
       HORSE_SOLD: '出售成交', AUTO_LISTED: '自动出品', AUTO_RESERVED: '自动购买预约',
       MARKETPLACE_LOCKED: '结算中', MARKETPLACE_REOPENED: '重新开放', DEPOSIT_CONFIRMED: '入金',
       WITHDRAWAL_COMPLETED: '出金', WITHDRAWAL_FAILED: '出金错误', TRAINING_COMPLETED: '训练',
@@ -2213,6 +2242,13 @@ const zh: AppDict = {
       proj_loss_tpl: '预计 −{v} USDT (−{p}%)',
       burn_tpl: '亏损 −{v} USDT',
     },
+  },
+  breeders: {
+    title: '名家培育榜', sub: '训练实力(delta)的总和。有别于总合值或资产的「手艺」指标。',
+    empty: '暂无记录。训练马匹后，你的实力会在这里累积。',
+    note: '培育者的功绩即使马匹易主也会保留。不含道具加成(仅纯粹实力)。',
+    col_breeder: '培育者', col_skill: '实力(Σdelta)', col_horses: '培育', col_champs: '夺冠',
+    you: '你', horses_tpl: '{n}匹', champs_tpl: '{n}冠',
   },
   champion: {
     hero_note: '活跃用户达到 10,000 人时开赛',
@@ -2539,6 +2575,9 @@ const zh: AppDict = {
     st_reserved: '非卖', reserve_note: '保护1匹马不被自动出品。不影响比赛、淘汰或价格(每日可更改一次)。',
     reserve_cta: '将这匹马设为非卖', reserve_on: '非卖中 — 已保护，不会被自动出品',
     reserve_busy: '设置中…', reserve_fail: '设置失败，请稍后再试。',
+    breeders_sec: '培育记录', breeders_you: '你', breeders_pct_tpl: '贡献 {p}%',
+    breeders_item_tpl: '道具 +{v}',
+    breeders_note: '训练实力(delta)的合计。即使马匹易主，培育的功绩仍归培育者。道具加成另计(不计入实力指标)。',
     k_value: '当前价值 · CURRENT VALUE', k_listed: '出售价格 · LISTED', k_outcome: '结局 · OUTCOME', k_reward: '奖励 · REWARD',
     v_burned: '消失', v_memorial: '纪念NFT',
     note_active_d6_tpl: '正在跑 Day {d}。跑完下一场即达LV.7 — 200 USDT冠军奖励+纪念NFT。',
@@ -2845,7 +2884,7 @@ const ko: AppDict = {
     types: {
       RACE_RESULT_READY: '레이스 결과', HORSE_BURNED: 'Burn', REVENGE_BUFF_GENERATED: 'Revenge Buff',
       BUYBACK_PAYMENT_PAID: '챔피언 보상', BUYBACK_COMPLETED: '챔피언 보상', MEMORIAL_NFT_MINTED: '기념 NFT',
-      SUPPORT_BONUS_PAID: '서포트 보너스', SUPPORT_CELEBRATION_PAID: '축하금', ASSIGNMENT_COMPLETED: '말 배정',
+      SUPPORT_BONUS_PAID: '서포트 보너스', SUPPORT_CELEBRATION_PAID: '축하금', BREEDER_CHAMPION: '명조련사', ASSIGNMENT_COMPLETED: '말 배정',
       HORSE_SOLD: '판매 성사', AUTO_LISTED: '자동 출품', AUTO_RESERVED: '자동 구매 예약',
       MARKETPLACE_LOCKED: '정산 중', MARKETPLACE_REOPENED: '재개', DEPOSIT_CONFIRMED: '입금',
       WITHDRAWAL_COMPLETED: '출금', WITHDRAWAL_FAILED: '출금 오류', TRAINING_COMPLETED: '조련',
@@ -2877,6 +2916,13 @@ const ko: AppDict = {
       proj_loss_tpl: '예상 −{v} USDT (−{p}%)',
       burn_tpl: '손실 −{v} USDT',
     },
+  },
+  breeders: {
+    title: '명조련사 랭킹', sub: '조련 실력(delta)의 총합. 종합값·자산과는 다른 「실력」 지표.',
+    empty: '아직 기록이 없습니다. 말을 조련하면 실력이 여기에 쌓입니다.',
+    note: '육성자의 공적은 말의 소유자가 바뀌어도 남습니다. 아이템 보너스는 포함하지 않습니다(순수 실력만).',
+    col_breeder: '육성자', col_skill: '실력(Σdelta)', col_horses: '육성', col_champs: '우승',
+    you: '나', horses_tpl: '{n}두', champs_tpl: '{n}관',
   },
   champion: {
     hero_note: '활성 사용자 10,000명 도달 시 개막',
@@ -3203,6 +3249,9 @@ const ko: AppDict = {
     st_reserved: '비매', reserve_note: '자동 출품에서 보호할 1마리. 레이스·소각·가격에는 영향 없음(변경은 하루 1회).',
     reserve_cta: '이 말을 비매로 지정', reserve_on: '비매 지정 중 — 자동 출품에서 보호',
     reserve_busy: '설정 중…', reserve_fail: '설정에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+    breeders_sec: '육성 기록', breeders_you: '나', breeders_pct_tpl: '기여 {p}%',
+    breeders_item_tpl: '아이템 +{v}',
+    breeders_note: '조련 실력(delta)의 합계. 말의 소유자가 바뀌어도 육성한 공적은 남습니다. 아이템 보너스는 별도 표기(실력 지표에는 포함하지 않음).',
     k_value: '현재 가치 · CURRENT VALUE', k_listed: '판매 가격 · LISTED', k_outcome: '결말 · OUTCOME', k_reward: '보상 · REWARD',
     v_burned: '소멸', v_memorial: '기념 NFT',
     note_active_d6_tpl: 'Day {d} 주행 중. 다음 레이스를 완주하면 LV.7 — 200 USDT 챔피언 보상+기념 NFT.',
@@ -3509,7 +3558,7 @@ const ms: AppDict = {
     types: {
       RACE_RESULT_READY: 'Keputusan perlumbaan', HORSE_BURNED: 'Burn', REVENGE_BUFF_GENERATED: 'Revenge Buff',
       BUYBACK_PAYMENT_PAID: 'Champion Reward', BUYBACK_COMPLETED: 'Champion Reward', MEMORIAL_NFT_MINTED: 'NFT peringatan',
-      SUPPORT_BONUS_PAID: 'Support Bonus', SUPPORT_CELEBRATION_PAID: 'Wang Raikan', ASSIGNMENT_COMPLETED: 'Kuda ditetapkan',
+      SUPPORT_BONUS_PAID: 'Support Bonus', SUPPORT_CELEBRATION_PAID: 'Wang Raikan', BREEDER_CHAMPION: 'Pembiak', ASSIGNMENT_COMPLETED: 'Kuda ditetapkan',
       HORSE_SOLD: 'Terjual', AUTO_LISTED: 'Auto-senarai', AUTO_RESERVED: 'Tempahan automatik',
       MARKETPLACE_LOCKED: 'Menyelesaikan', MARKETPLACE_REOPENED: 'Dibuka semula', DEPOSIT_CONFIRMED: 'Deposit',
       WITHDRAWAL_COMPLETED: 'Pengeluaran', WITHDRAWAL_FAILED: 'Ralat pengeluaran', TRAINING_COMPLETED: 'Latihan',
@@ -3541,6 +3590,13 @@ const ms: AppDict = {
       proj_loss_tpl: 'Anggaran −{v} USDT (−{p}%)',
       burn_tpl: 'Rugi −{v} USDT',
     },
+  },
+  breeders: {
+    title: 'Pembiak Terulung', sub: 'Jumlah kemahiran latihan (delta). Ukuran kemahiran, berasingan daripada nilai atau kekayaan.',
+    empty: 'Belum ada rekod. Latih kuda dan kemahiran anda mula terkumpul di sini.',
+    note: 'Kredit pembiak kekal walaupun kuda bertukar tangan. Bonus item tidak dikira (kemahiran tulen sahaja).',
+    col_breeder: 'Pembiak', col_skill: 'Kemahiran (Σdelta)', col_horses: 'Dibiak', col_champs: 'Juara',
+    you: 'Anda', horses_tpl: '{n}', champs_tpl: '{n}',
   },
   champion: {
     hero_note: 'Dibuka apabila pengguna aktif mencapai 10,000',
@@ -3867,6 +3923,9 @@ const ms: AppDict = {
     st_reserved: 'Simpan', reserve_note: 'Satu kuda dilindungi daripada penyenaraian auto. Tiada kesan pada perlumbaan, burn, atau harga (ubah sekali sehari).',
     reserve_cta: 'Simpan kuda ini (tanpa jualan auto)', reserve_on: 'Disimpan — dilindungi daripada penyenaraian auto',
     reserve_busy: 'Menyimpan…', reserve_fail: 'Gagal menyimpan. Cuba lagi kemudian.',
+    breeders_sec: 'Rekod pembiakan', breeders_you: 'Anda', breeders_pct_tpl: '{p}% sumbangan',
+    breeders_item_tpl: 'item +{v}',
+    breeders_note: 'Jumlah kemahiran latihan (delta) yang ditambah setiap orang. Kredit kekal dengan pembiak walaupun kuda bertukar tangan. Bonus item dipaparkan berasingan (tidak dikira sebagai kemahiran).',
     k_value: 'NILAI SEMASA', k_listed: 'HARGA JUAL', k_outcome: 'KESUDAHAN', k_reward: 'GANJARAN',
     v_burned: 'Terbakar', v_memorial: 'NFT kenangan',
     note_active_d6_tpl: 'Sedang berlari Day {d}. Tamatkan perlumbaan seterusnya untuk LV.7 — Champion Reward 200 USDT + NFT peringatan.',

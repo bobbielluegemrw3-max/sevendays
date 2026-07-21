@@ -36,6 +36,8 @@ export const NOTIFICATION_TYPES_V1 = [
   'JACKPOT_WON',
   // Decision 110: V2の金額指定・自動プール予約
   'AUTO_POOL_RESERVED',
+  // 施策D (FUN_V3, Decision 114): 育成者クレジット — 育てた馬がチャンピオンに
+  'BREEDER_CHAMPION',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES_V1)[number];
@@ -137,6 +139,11 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   AUTO_POOL_RESERVED: {
     title: '自動プール予約を作成しました。',
     body: '{total} USDT のプール予約。次のレースで予算いっぱい割り当てられます(余りは自動返金)。精算前ならマーケットページから変更・キャンセルできます。',
+  },
+  // 施策D: 現所有者は一切参照しない(馬名のみ公開・貢献度は育成者本人の記録)。
+  BREEDER_CHAMPION: {
+    title: 'あなたが育てた {horse_name} がチャンピオンになりました。',
+    body: 'Day7を走破しました。この馬へのあなたの育成貢献は {pct}% でした。',
   },
 };
 

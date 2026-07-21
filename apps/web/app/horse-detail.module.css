@@ -390,6 +390,16 @@
 }
 .reserveBtn:hover { background: rgba(53, 208, 127, 0.1); }
 .reserveBtn:disabled { opacity: 0.5; cursor: default; }
+/* 施策D(FUN_V3): 育成者クレジット */
+.breeders { margin-top: 18px; }
+.breederRow { display: flex; align-items: baseline; gap: 10px; padding: 7px 2px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.82rem; }
+.breederRow:last-child { border-bottom: none; }
+.breederYou { background: rgba(53,208,127,0.06); border-radius: 6px; }
+.breederName { flex: 1; color: var(--text); font-family: var(--font-jp); }
+.breederYou .breederName { color: #35d07f; font-weight: 700; }
+.breederPct { font-family: var(--font-mono); color: var(--gold-bright); font-weight: 700; }
+.breederDelta { font-family: var(--font-mono); color: var(--muted); }
+.breederItem { font-family: var(--font-mono); font-size: 0.72rem; color: var(--faint); }
 
 /* 隠し演出(EASTER_EGG_PLAN.md) */
 .heroGoldenStar { position: absolute; top: 12px; right: 14px; z-index: 4; color: #ffd977;

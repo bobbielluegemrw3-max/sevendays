@@ -20,7 +20,8 @@ describe('recommended training (Decision 088)', () => {
 
 describe('notification templates (Decision 065)', () => {
   it('defines the owner-adopted types + support bonus + item types (074/078/079) + trade automation (086) + celebration (092) + horse gift (094) + jackpot (106/108)', () => {
-    expect(NOTIFICATION_TYPES_V1).toHaveLength(23);
+    expect(NOTIFICATION_TYPES_V1).toHaveLength(24);
+    expect(NOTIFICATION_TYPES_V1).toContain('BREEDER_CHAMPION');
     expect(NOTIFICATION_TYPES_V1).toContain('JACKPOT_WON');
     expect(NOTIFICATION_TYPES_V1).toContain('AUTO_POOL_RESERVED');
     expect(NOTIFICATION_TYPES_V1).toContain('SUPPORT_BONUS_PAID');
@@ -85,6 +86,7 @@ describe('notification templates (Decision 065)', () => {
       proceeds: '1',
       count: 1,
       total: '1',
+      pct: 1,
     };
     for (const type of NOTIFICATION_TYPES_V1) {
       const rendered = renderNotification(type, generic);

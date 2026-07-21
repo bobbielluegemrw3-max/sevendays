@@ -2,6 +2,7 @@ import { burnSlotRangeV1, raceNightNameV2 } from '@sevendays/domain';
 import { addDays, batchDateFor } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
 import { ApiError } from '../errors.js';
+import { maskHandle } from '../mask.js';
 import type { ApiRegistry } from '../router.js';
 
 /**
@@ -85,6 +86,47 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
               ? 'ウォレットユーザー'
               : `${r.email.slice(0, 2)}***`),
           cleared_at: r.day7_clear_date,
+        })),
+      };
+    },
+  });
+
+  // 施策D (FUN_V3): 名伯楽ランキング — 総合値とは別の「純粋な腕」の指標。
+  // delta_v2(調教ロールの実力ぶんのみ)の総和で並べる。アイテム上乗せ
+  // (item_bonus_v3)は含めない(課金額ランキングに寄せない)。育成者の帰属は
+  // 所有権移転でも不変・V2行は削除不可なので、売った後も功績が残る。
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/breeders',
+    auth: 'user',
+    handler: async (ctx) => {
+      const rows = await ctx.client.query<{
+        user_id: string; stable_name: string | null; email: string | null;
+        skill_sum: number; horses: number; champions: number;
+      }>(
+        `select ts.user_id, u.stable_name, u.email,
+                sum(ts.delta_v2)::float8 as skill_sum,
+                count(distinct ts.horse_id)::int as horses,
+                count(distinct ts.horse_id) filter
+                  (where h.status in ('DAY7_CLEARED', 'MEMORIALIZED'))::int as champions
+         from training_sessions ts
+         join users u on u.id = ts.user_id
+         join horses h on h.id = ts.horse_id
+         where ts.menus_v2 is not null
+         group by ts.user_id, u.stable_name, u.email
+         having sum(ts.delta_v2) > 0
+         order by skill_sum desc, horses desc, ts.user_id
+         limit 60`,
+        [],
+      );
+      return {
+        breeders: rows.rows.map((r, i) => ({
+          rank: i + 1,
+          name: r.user_id === ctx.userId ? null : maskHandle(r.email, r.stable_name),
+          is_you: r.user_id === ctx.userId,
+          skill: Number(r.skill_sum.toFixed(1)),
+          horses: r.horses,
+          champions: r.champions,
         })),
       };
     },

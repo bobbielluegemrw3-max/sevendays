@@ -30,6 +30,7 @@ export function TopNav({ isAdmin = false, unread = 0, lang = 'ja', engineV2 = fa
         <Link href="/market">MARKET</Link>
         <Link href="/items">ITEMS</Link>
         <Link href="/champion">CHAMPION</Link>
+        <Link href="/breeders">BREEDERS</Link>
         <Link href="/ledger">LEDGER</Link>
         <Link href="/wallet">WALLET</Link>
         <Link href="/support">TEAM</Link>
