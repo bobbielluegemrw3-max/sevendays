@@ -158,7 +158,7 @@ nav.topnav .topnav-badge {
   font-family: var(--font-mono); font-size: 9px; line-height: 1; vertical-align: 1px;
 }
 
-/* 「その他」ドロワー(UI_FOUNDATION_PLAN 2-2)。稀にしか使わない8項目を畳む。
+/* 「その他」ドロワー(UI_FOUNDATION_PLAN 2-2)。稀にしか使わない実用リンクを畳む。
    .topnav-links の外(右クラスタ)に置く — モバイルのリンク行は overflow-x する
    ため、その中だと絶対配置のパネルが切り落とされる。 */
 nav.topnav .topnav-more { position: relative; display: inline-flex; align-items: center; flex: none; }
@@ -184,8 +184,9 @@ nav.topnav .topnav-drawer a:active { background: rgba(255, 255, 255, 0.11); }
 nav.topnav .topnav-drawer-sep { height: 1px; margin: 5px 4px; background: var(--border); }
 
 /* Narrow screens: brand + logout on the first row, links drop to a second
-   full-width row. 主要6になったので横スクロールの必要が無くなった
-   (旧: 13項目が入りきらず、後半は気づかれないまま隠れていた)。 */
+   full-width row. 実用リンクをドロワーへ移したので横スクロールをやめ、
+   折り返しで全部見えるようにする(旧: 13項目が入りきらず、後半は
+   スクロールの向こうに隠れて気づかれなかった)。 */
 @media (max-width: 700px) {
   nav.topnav { gap: 0.55rem 0.9rem; padding: 0.7rem 0.95rem; }
   nav.topnav .topnav-links {

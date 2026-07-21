@@ -10,9 +10,13 @@ import { useEffect, useRef, useState } from 'react';
  * 問合せが同じ音量で置かれていた。さらに 700px 以下では横スクロール行に
  * なるため、後半の項目に気づけなかった。
  *
- * 主要6(DASHBOARD/STABLE/RACE/MARKET/ITEMS/WALLET)だけを常時出し、残りは
- * ここへ畳む。ドロワーは .topnav-links(モバイルでは overflow-x する行)の
- * 外側 = ナビ右クラスタに置く — スクロール領域の中だと絶対配置が切れる。
+ * 畳むのは「稀にしか使わない実用リンク」だけ(オーナー判断・2026-07-21)。
+ * ゲーム導線 — とくに LEDGER(透明性台帳)と CHAMPION、そして常時表示に
+ * 値するものは topnav に残す。公開したばかりの導線を畳むと「見せたいものを
+ * 隠す」ことになるため、ここへ入れる基準は用途の頻度だけで決める。
+ *
+ * ドロワーは .topnav-links(モバイルでは折り返す行)の外側 = ナビ右クラスタに
+ * 置く — スクロールする領域の中だと絶対配置のパネルが切り落とされる。
  *
  * 通知の未読はドロワーの中に隠れてしまうため、ボタン側にも数を出す
  * (畳んだせいで気づけなくなる情報を作らない)。
@@ -30,9 +34,7 @@ export interface NavMoreCopy {
 }
 
 const GAME_LINKS: Array<{ href: string; label: string }> = [
-  { href: '/champion', label: 'CHAMPION' },
   { href: '/breeders', label: 'BREEDERS' },
-  { href: '/ledger', label: 'LEDGER' },
   { href: '/support', label: 'TEAM' },
 ];
 

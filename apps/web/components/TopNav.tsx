@@ -24,10 +24,11 @@ export function TopNav({ isAdmin = false, unread = 0, lang = 'ja', engineV2 = fa
           <span className="brand-l2">DERBY</span>
         </span>
       </Link>
-      {/* 主要6だけを常時出す(UI_FOUNDATION_PLAN 2-2)。毎日使うのは
-          DASHBOARD/STABLE/RACE、週数回が MARKET/ITEMS、週1が WALLET。
-          残り(CHAMPION/BREEDERS/LEDGER/TEAM/通知/アカウント/ガイド/問合せ)は
-          右の MORE ドロワーへ。ADMIN は管理者だけに出る別系統なので残す。 */}
+      {/* ゲーム導線は常時出す(UI_FOUNDATION_PLAN 2-2 をオーナー判断で調整・
+          2026-07-21)。計画書は「主要6+その他」だったが、LEDGER(透明性台帳=
+          信頼の看板)と CHAMPION を畳むのは「見せたいものを隠す」方向に働く。
+          畳むのは稀にしか使わない実用リンクだけにする。
+          ADMIN は管理者だけに出る別系統なので残す。 */}
       <div className="topnav-links">
         <Link href="/dashboard">DASHBOARD</Link>
         <Link href="/horses">STABLE</Link>
@@ -35,6 +36,8 @@ export function TopNav({ isAdmin = false, unread = 0, lang = 'ja', engineV2 = fa
         <Link href="/market">MARKET</Link>
         <Link href="/items">ITEMS</Link>
         <Link href="/wallet">WALLET</Link>
+        <Link href="/champion">CHAMPION</Link>
+        <Link href="/ledger">LEDGER</Link>
         {isAdmin && (
           <Link href="/admin" className="topnav-admin">ADMIN</Link>
         )}
