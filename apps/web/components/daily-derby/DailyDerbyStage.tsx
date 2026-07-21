@@ -417,9 +417,11 @@ export function DailyDerbyStage({
   }, [myEvents, counts]);
   const rollSlot = Math.min(9, Math.max(3.5, (MARKET_OPEN.startAt - LOGS_FROM) / Math.max(1, raceRunners.length)));
 
-  const verdictSchedule = useMemo<ReadonlyArray<{ fireAt: number; info: VerdictInfo }>>(() => {
+  const verdictSchedule = useMemo<
+    ReadonlyArray<{ fireAt: number; info: VerdictInfo; overlay: boolean }>
+  >(() => {
     if (!myEvents) return [];
-    const out: { fireAt: number; info: VerdictInfo }[] = [];
+    const out: { fireAt: number; info: VerdictInfo; overlay: boolean }[] = [];
     // exactOptionalPropertyTypes: undefinedの明示代入は不可 — 条件付きspreadで回避
     const horseOf = (name: string, dna: string, day: number | null): MyDerbyHorse => ({
       name,
@@ -453,6 +455,7 @@ export function DailyDerbyStage({
     };
     myEvents.survived.filter((r) => !r.day7).forEach((r, i) => {
       out.push({
+        overlay: true,
         fireAt: raceTurnAt(r.name, 'SURVIVE', i),
         info: {
           name: r.name, kind: 'survive', horse: horseOf(r.name, r.dna_hash, r.from_day),
@@ -462,6 +465,7 @@ export function DailyDerbyStage({
     });
     myEvents.burned.forEach((r, i) => {
       out.push({
+        overlay: true,
         fireAt: raceTurnAt(r.name, 'BURN', i),
         info: {
           name: r.name, kind: 'burn', horse: horseOf(r.name, r.dna_hash, r.day),
@@ -471,6 +475,7 @@ export function DailyDerbyStage({
     });
     myEvents.survived.filter((r) => r.day7).forEach((r, i) => {
       out.push({
+        overlay: true,
         fireAt: raceTurnAt(r.name, 'DAY7', i),
         info: {
           name: r.name, kind: 'day7', horse: horseOf(r.name, r.dna_hash, r.from_day),
@@ -497,9 +502,31 @@ export function DailyDerbyStage({
         // (主役が生存し別の馬がBURNした夜は、無関係な馬のBURNが先に出ていた)。
         (sv.info.name === protagonist ? -1 : kindRank(sv.info.kind));
       out.sort((a, b) => rank(a) - rank(b));
-      out.forEach((sv, i) => {
-        sv.fireAt = bandVerdictAt + 1.0 + i * 3.6;
-      });
+
+      /* ★全画面の審判オーバーレイは「主役」と「DAY7チャンピオン」だけ(B+)。
+       *
+       * 主役は構造上いつでも *その夜いちばん危なかった馬* である
+       * (帯内は最下位スコア=ラインに最も近い馬、帯は自分が最も危なかった帯)。
+       * したがって2頭目以降は定義上、主役より劇性が低い。にもかかわらず
+       * 従来は「主役以外を kind 順で最上位の1頭」を同じ全画面の音量で出し、
+       * 3頭目からは文字に落としていた — プレイヤーに説明できない基準であり、
+       * 打ち切り自体が画像を「入り切らなかったリスト」に見せていた。
+       *
+       * DAY7 だけは例外。主役が「最も危なかった馬」なのに対し DAY7 は
+       * 「成功し切った馬」で軸が違う。主役がギリギリ生存した夜に別の馬が
+       * チャンピオンになったら、後者を文字に落とすのは誤り(200 USDT買戻し=
+       * ゲーム経済の頂点であり、その夜の祝祭)。
+       *
+       * 基準はプレイヤーが説明できる:「全画面になるのは、25秒ハラハラした馬と、
+       * チャンピオンだけ」。溢れた馬は MY LANE と全結果サマリーに必ず残る。 */
+      for (const sv of out) {
+        sv.overlay = sv.info.name === protagonist || sv.info.kind === 'day7';
+      }
+      let shown = 0;
+      for (const sv of out) {
+        // オーバーレイ組だけ VERDICT 幕に並べる。文字組は幕開けと同時に記帳。
+        sv.fireAt = sv.overlay ? bandVerdictAt + 1.0 + shown++ * 3.6 : bandVerdictAt + 0.4;
+      }
     }
     return out.sort((a, b) => a.fireAt - b.fireAt);
   }, [myEvents, quiet, raceRunners, rollSlot, hasBand, bandModel]);
@@ -522,7 +549,9 @@ export function DailyDerbyStage({
     for (const sv of verdictSchedule) {
       if (sv.fireAt <= elapsed && !seenVerdicts.current.has(keyOf(sv))) {
         seenVerdicts.current.add(keyOf(sv));
-        enqueueVerdict(sv.info);
+        // overlay=false は全画面に出さず MY LANE へ直接記帳する(B+ の cap)
+        if (sv.overlay) enqueueVerdict(sv.info);
+        else setMyLane((prev) => [...prev, sv.info]);
       }
     }
   }, [elapsed, verdictSchedule, enqueueVerdict]);
