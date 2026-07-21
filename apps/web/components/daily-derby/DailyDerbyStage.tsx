@@ -432,6 +432,33 @@ export function DailyDerbyStage({
     [playOneShot],
   );
 
+  /* 施策G(2026-07-21 オーナー判断・案B): チャンピオンは審判の列から出す。
+   *
+   * チャンピオンは「1頭ぶんの審判」ではなく *その夜の headline* である。
+   * 他の馬の生死と同じ列に置く限り、順番をどう入れ替えても「もう1頭の結果」に
+   * 見えてしまう。実際 55〜62秒の7秒に「喪失5.0秒 → 慰め → 祝祭3.2秒」が
+   * 同居しており、感情の切り替えが効かなかった(オーナー指摘)。
+   *
+   * → 主役以外のチャンピオンは RACE END の直前へ動かす。決算幕15秒を挟むので
+   *   喪失から十分に離れ、「1頭失った … しかし別の1頭は7日を走り切った」の弧になる。
+   *   直後に finale が鳴るのも噛み合う(祝祭を受けて締めのファンファーレ)。
+   *
+   * ★主役自身がチャンピオンの夜は動かさない。7走目のギリギリ生存=チャンピオンは
+   *   起こり得るが、そのときは帯レースが既に緊張を作り切っており、55秒側で
+   *   「生存 = DAY7到達」として決済済みである。末尾にも出すと同じ馬の二重表示になる。 */
+  const tailChampions = useMemo<readonly string[]>(() => {
+    if (!myEvents) return [];
+    const protagonist =
+      bandModel && bandModel.myIndex !== null ? bandModel.entries[bandModel.myIndex]!.name : null;
+    return myEvents.survived.filter((r) => r.day7 && r.name !== protagonist).map((r) => r.name);
+  }, [myEvents, bandModel]);
+  /** 末尾枠1件あたりの尺(審判の表示3.2秒 + 間 0.2秒)。 */
+  const CHAMP_SLOT = 3.4;
+  /* 尺が伸びるのは「伸ばす価値のある夜」だけ。チャンピオンは稀なので
+     ほとんどの夜は 82秒のまま(末尾枠なし)。 */
+  const completeAt = COMPLETE_AT + tailChampions.length * CHAMP_SLOT;
+  const showTotal = SHOW_TOTAL + tailChampions.length * CHAMP_SLOT;
+
   /* 施策G 後半: SETTLEMENT 幕の入力。62秒以降のダミー濁流を置き換える。
      出ていった馬(売却)→入ってきた馬(購入/ミント)。数字はすべて実データ。 */
   const settlement = useMemo<SettlementInput>(() => {
@@ -565,13 +592,20 @@ export function DailyDerbyStage({
        *
        * 基準はプレイヤーが説明できる:「全画面になるのは、25秒ハラハラした馬と、
        * チャンピオンだけ」。溢れた馬は MY LANE と全結果サマリーに必ず残る。 */
-      for (const sv of out) {
-        sv.overlay = sv.info.name === protagonist || sv.info.kind === 'day7';
-      }
+      /* 全画面に出すのは「主役」と「チャンピオン」だけ(B+)。ただしチャンピオンは
+         審判窓ではなく RACE END 直前の専用枠へ動かす(案B)。
+         結果として審判窓は主役ひとつの単一焦点になり、喪失の幕として綺麗に閉じる。 */
+      let tail = 0;
       let shown = 0;
       for (const sv of out) {
-        // オーバーレイ組だけ VERDICT 幕に並べる。文字組は幕開けと同時に記帳。
-        sv.fireAt = sv.overlay ? bandVerdictAt + 1.0 + shown++ * 3.6 : bandVerdictAt + 0.4;
+        const isProtagonist = sv.info.name === protagonist;
+        const isTailChampion = sv.info.kind === 'day7' && !isProtagonist;
+        sv.overlay = isProtagonist || isTailChampion;
+        sv.fireAt = isTailChampion
+          ? COMPLETE_AT + tail++ * 3.4 // 決算幕のあと・finale の直前
+          : sv.overlay
+            ? bandVerdictAt + 1.0 + shown++ * 3.6
+            : bandVerdictAt + 0.4; // 文字組は幕開けと同時に MY LANE へ記帳
       }
     }
     return out.sort((a, b) => a.fireAt - b.fireAt);
@@ -591,7 +625,7 @@ export function DailyDerbyStage({
         setMyLane((prev) => [...prev, ...stale.map((sv) => sv.info)]);
       }
     }
-    if (elapsed >= COMPLETE_AT) return; // ショー後は全結果サマリーが担う
+    if (elapsed >= completeAt) return; // ショー後は全結果サマリーが担う
     for (const sv of verdictSchedule) {
       if (sv.fireAt <= elapsed && !seenVerdicts.current.has(keyOf(sv))) {
         seenVerdicts.current.add(keyOf(sv));
@@ -600,7 +634,7 @@ export function DailyDerbyStage({
         else setMyLane((prev) => [...prev, sv.info]);
       }
     }
-  }, [elapsed, verdictSchedule, enqueueVerdict]);
+  }, [elapsed, verdictSchedule, enqueueVerdict, completeAt]);
 
   /* iOS/Safariはユーザー操作の文脈外の音声再生をブロックし、許可は音声要素
      ごとに別。最初のタップで全音源を無音再生→即停止してロック解除(priming)。 */
@@ -643,14 +677,14 @@ export function DailyDerbyStage({
       { at: 0, key: 'fanfare', fresh: 6 },
       { at: RACE_RUN.startAt, key: 'gate', fresh: 3 },
       { at: RACE_RUN.startAt + 1.6, key: 'whinny', fresh: 3 },
-      { at: COMPLETE_AT, key: 'finale', fresh: 4 },
+      { at: completeAt, key: 'finale', fresh: 4 },
     ];
     for (const cue of cues) {
       if (prev < cue.at && elapsed >= cue.at && elapsed < cue.at + cue.fresh) {
         playOneShot(cue.key);
       }
     }
-  }, [elapsed, failed, soundOn, playOneShot]);
+  }, [elapsed, failed, soundOn, playOneShot, completeAt]);
 
   /* ループ音の窓同期。
    *
@@ -702,8 +736,8 @@ export function DailyDerbyStage({
     [refsForUnmount],
   );
 
-  const showTicker = !failed && elapsed >= LOGS_FROM && elapsed < SHOW_TOTAL + 30;
-  const chapter = !failed && elapsed < SHOW_TOTAL
+  const showTicker = !failed && elapsed >= LOGS_FROM && elapsed < showTotal + 30;
+  const chapter = !failed && elapsed < showTotal
     ? CHAPTERS.find((c) => elapsed >= c.at && elapsed < c.at + CHAPTER_SECONDS)
     : undefined;
 
@@ -751,7 +785,7 @@ export function DailyDerbyStage({
           />
         ) : secondsToStart > 0 ? (
           <PreShowCountdown secondsToStart={secondsToStart} myHorses={myHorses} variant={tonightVariant} engineV2={engineV2} />
-        ) : elapsed < SHOW_TOTAL ? (
+        ) : elapsed < showTotal ? (
           <LiveShow
             elapsed={elapsed}
             counts={counts}
@@ -764,6 +798,7 @@ export function DailyDerbyStage({
             bandModel={bandModel}
             settlement={settlement}
             onSettlementRow={onSettlementRow}
+            completeAt={completeAt}
             replay={replay}
           />
         ) : (
@@ -1083,6 +1118,7 @@ function LiveShow({
   bandModel,
   settlement,
   onSettlementRow,
+  completeAt,
   replay = false,
 }: {
   elapsed: number;
@@ -1096,9 +1132,10 @@ function LiveShow({
   bandModel: BandRaceModel | null;
   settlement: SettlementInput;
   onSettlementRow: (row: HarvestRow) => void;
+  completeAt: number;
   replay?: boolean;
 }) {
-  if (elapsed >= COMPLETE_AT) {
+  if (elapsed >= completeAt) {
     return (
       <div className={s.doneBanner}>
         <div className={s.liveRule} />

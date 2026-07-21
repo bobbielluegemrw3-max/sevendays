@@ -40,7 +40,9 @@ const JUMPS: ReadonlyArray<{ label: string; seconds: number }> = [
   { label: 'SETTLEMENT', seconds: -62.5 },
   { label: 'YOUR LEDGER', seconds: -66.5 },
   { label: '決算 締め', seconds: -75.5 },
-  { label: 'RACE END', seconds: -78.5 },
+  // 案B: 主役以外のチャンピオンは RACE END の直前へ(この夜は1体=+3.4秒)
+  { label: 'チャンピオン', seconds: -78.5 },
+  { label: 'RACE END', seconds: -81.8 },
   { label: '全結果サマリー', seconds: -(SHOW_TOTAL + 1) },
 ];
 
