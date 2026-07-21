@@ -37,7 +37,9 @@ const CASES: ReadonlyArray<{ label: string; rank: number | null; extra?: number[
   { label: '★ぎりぎり生存', rank: 34 },
   { label: '★ぎりぎりBURN', rank: 35 },
   { label: '最下位', rank: 38 },
-  // 同じ帯に複数所有: 主役は最もラインに近い1頭、他は金色の行として出る
+  /* 同じ帯に複数所有: 主役は最もラインに近い1頭(35位)。
+     4位・20位は「上位3頭」にも「自分±5」にも「ライン±3」にも入らない位置 —
+     自分の馬が窓から漏れないことを目で確認するためのケース。 */
   { label: '同じ帯に3頭', rank: 35, extra: [4, 20] },
   { label: '出走なし(観戦)', rank: null },
 ];

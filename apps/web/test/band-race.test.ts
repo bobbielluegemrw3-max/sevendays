@@ -158,13 +158,25 @@ describe('band race — 同じ帯に自分の馬が複数いる夜', () => {
     expect(mineRows.some((r) => r.rank === 34)).toBe(true);
   });
 
-  it('主役以外の持ち馬も、開示されれば金色の行として出る', () => {
+  it('主役以外の持ち馬も必ずカメラ窓に入る(どの窓にも入らず消えない)', () => {
+    // 12位は 上位3頭 にも 自分(34位)±5 にも ライン±3 にも入らない位置。
+    // それでも自分の馬である以上、画面から漏れてはいけない。
     const m = twoOfMine();
     const last = bandRaceFrame(m, ACT_TOTAL);
-    // 12位は上位3頭にも自分±5にも入らないので、行として現れるとは限らない。
-    // ただし entries 上では mine が2頭立っていること(取りこぼしていない)。
     expect(m.entries.filter((e) => e.mine)).toHaveLength(2);
-    expect(last.rows.filter((r) => r.mine).length).toBeGreaterThanOrEqual(1);
+    const mineRows = last.rows.filter((r) => r.mine);
+    expect(mineRows.map((r) => r.rank).sort((a, b) => a - b)).toEqual([12, 34]);
+  });
+
+  it('帯が大きくても持ち馬は全頭出る', () => {
+    const input = fixtureBandRace({ total: 190, burns: 20, mineRank: 170 });
+    const marked = new Set([3, 60, 120, 170]);
+    const m = buildBandRace({
+      ...input,
+      entries: input.entries.map((e, i) => (marked.has(i + 1) ? { ...e, mine: true } : e)),
+    });
+    const rows = bandRaceFrame(m, ACT_TOTAL).rows.filter((r) => r.mine);
+    expect(rows.map((r) => r.rank).sort((a, b) => a - b)).toEqual([3, 60, 120, 170]);
   });
 });
 

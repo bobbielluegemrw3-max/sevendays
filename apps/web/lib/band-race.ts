@@ -355,6 +355,13 @@ function cameraRows(
   if (myPos >= 0) {
     for (let p = myPos - AROUND_ME; p <= myPos + AROUND_ME; p++) if (p >= 0 && p < n) want.add(p);
   }
+  /* 自分の馬は主役以外も必ず窓に入れる。
+     窓が「上位3 + 自分±5 + ライン±3」だけだと、同じ帯の4位や20位の持ち馬が
+     どの窓にも入らず消える(2026-07-21 プレビューで発覚)。
+     自分が持っている馬が画面から漏れるのは、この幕の趣旨に反する。 */
+  if (myShown) {
+    for (let p = 0; p < n; p++) if (entries[board[p]!]!.mine) want.add(p);
+  }
   // ラインは「暫定順位 lineRank」の位置。まだそこまで開示されていなければ出ない。
   for (let p = lineRank - AROUND_LINE; p < lineRank + AROUND_LINE; p++) {
     if (p >= 0 && p < n) want.add(p);

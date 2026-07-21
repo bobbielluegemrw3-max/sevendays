@@ -46,13 +46,25 @@ export function BandRaceAct({
     <div className={s.brWrap}>
       {/* 帯の提示 — 7日間の物語の弧はこの数字だけで出る(LVが上がるほど母数が減る) */}
       <div className={s.brHead}>
-        <span className={s.brLv}>LV.{day}</span>
-        <span className={s.brField}>
-          <AnimatedNumber value={total} animateOnMount durationMs={900} />頭が出走
-        </span>
-        <span className={s.brBurn}>
-          <AnimatedNumber value={burns} animateOnMount durationMs={900} delayMs={400} />頭が消える
-        </span>
+        <div className={s.brHeadL}>
+          <span className={s.brEyebrow}>BRACKET</span>
+          <span className={s.brLv}>LV.{day}</span>
+        </div>
+        <div className={s.brHeadR}>
+          <span className={s.brStat}>
+            <b className={s.brStatN}>
+              <AnimatedNumber value={total} animateOnMount durationMs={900} />
+            </b>
+            <span className={s.brStatK}>出走</span>
+          </span>
+          <span className={s.brSep} />
+          <span className={`${s.brStat} ${s.brStatBurn}`}>
+            <b className={s.brStatN}>
+              <AnimatedNumber value={burns} animateOnMount durationMs={900} delayMs={400} />
+            </b>
+            <span className={s.brStatK}>が消える</span>
+          </span>
+        </div>
       </div>
 
       {/* 自分のスコアを先に固定する — もう動かない。動くのは他馬の開示だけ */}
@@ -108,11 +120,16 @@ export function BandRaceAct({
         <div className={`${s.brVerdict} ${myFate === 'SAFE' ? s.brSafe : s.brDead}`}>
           {margin !== null ? (
             <>
-              <b><AnimatedNumber value={margin} digits={2} animateOnMount durationMs={700} /></b>
-              点差で{myFate === 'SAFE' ? '生存' : '及ばず'}
+              <span className={s.brVerdictK}>MARGIN</span>
+              <span className={s.brVerdictN}>
+                <AnimatedNumber value={margin} digits={2} animateOnMount durationMs={900} />
+              </span>
+              <span className={s.brVerdictT}>
+                点差で{myFate === 'SAFE' ? '生存' : '及ばず'}
+              </span>
             </>
           ) : (
-            <>{myFate === 'SAFE' ? '生存' : 'BURN'}</>
+            <span className={s.brVerdictT}>{myFate === 'SAFE' ? '生存' : 'BURN'}</span>
           )}
         </div>
       )}
