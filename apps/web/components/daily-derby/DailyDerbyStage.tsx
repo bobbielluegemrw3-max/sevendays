@@ -40,6 +40,8 @@ function nextSlotV2(): { ja: string; time: string } {
     : { ja: 'ナイターレース', time: '夜20:00' };
 }
 import { BandRaceAct } from '@/components/daily-derby/BandRaceAct';
+import { SettlementAct } from '@/components/daily-derby/SettlementAct';
+import { type HarvestRow, type SettlementInput } from '@/lib/settlement-act';
 import {
   ACT_TOTAL as BAND_ACT_TOTAL,
   ACT_VERDICT_AT as BAND_ACT_VERDICT_AT,
@@ -120,11 +122,13 @@ const CONDITION_COLORS: Record<string, string> = {
   TURF: '#58d68d', DIRT: '#d8a05a',
 };
 
-/* ③チャプター(ターン境界の全画面章タイトル・1.4秒)。 */
+/* ③チャプター(ターン境界の全画面章タイトル・1.4秒)。
+   2026-07-21(施策G): CHAPTER 03(REWARDS)を廃止。MLM/ITEM のダミー濁流を
+   削ったため章そのものが無くなった(自分の形見ドロップはBURN審判が、
+   サポートボーナスは通知が担う)。 */
 const CHAPTERS = [
   { at: LOGS_FROM, no: 'CHAPTER 01', name: 'RACE RESULTS', cls: 'chapCyan' },
-  { at: MARKET_OPEN.startAt, no: 'CHAPTER 02', name: 'P2P MARKETPLACE', cls: 'chapMag' },
-  { at: LOG_SECTIONS.find((sec) => sec.key === 'MLM')!.startAt, no: 'CHAPTER 03', name: 'REWARDS', cls: 'chapGold' },
+  { at: MARKET_OPEN.startAt, no: 'CHAPTER 02', name: 'SETTLEMENT', cls: 'chapMag' },
 ] as const;
 const CHAPTER_SECONDS = 1.4;
 
@@ -349,6 +353,36 @@ export function DailyDerbyStage({
   const quiet = counts.horses < QUIET_NIGHT_HORSES && (raceRunners.length > 0 || myHorses.length > 0);
   /** 施策G: この夜は帯レースを上映するか(審判の発火時刻がこれで変わる)。 */
   const hasBand = (bandRace?.length ?? 0) > 0;
+
+  /* 施策G 後半: SETTLEMENT 幕の入力。62秒以降のダミー濁流を置き換える。
+     出ていった馬(売却)→入ってきた馬(購入/ミント)。数字はすべて実データ。 */
+  const settlement = useMemo<SettlementInput>(() => {
+    const rows: HarvestRow[] = [];
+    for (const r of myEvents?.sold ?? []) {
+      rows.push({
+        kind: 'out', name: r.name, dnaHash: r.dna_hash, price: r.price, day: r.day,
+        totalValue: r.total_value != null ? Number(r.total_value) : null,
+        acquired: r.acquired_price ?? null,
+        net: r.net_proceeds ?? null,
+      });
+    }
+    for (const r of myEvents?.bought ?? []) {
+      rows.push({
+        kind: 'in', name: r.name, dnaHash: r.dna_hash, price: r.price, day: r.day,
+        totalValue: r.total_value != null ? Number(r.total_value) : null,
+        isMint: r.is_mint,
+      });
+    }
+    return {
+      pulse: {
+        trades: p2pMatchTotal(counts),
+        mints: counts.mints,
+        listed: counts.listed,
+      },
+      rows,
+      stableBefore: null,
+    };
+  }, [myEvents, counts]);
   const rollSlot = Math.min(9, Math.max(3.5, (MARKET_OPEN.startAt - LOGS_FROM) / Math.max(1, raceRunners.length)));
 
   const verdictSchedule = useMemo<ReadonlyArray<{ fireAt: number; info: VerdictInfo }>>(() => {
@@ -411,26 +445,11 @@ export function DailyDerbyStage({
         },
       });
     });
-    const match = sec('MATCH');
-    myEvents.sold.forEach((r, i) => {
-      out.push({
-        fireAt: match.startAt + 1.5 + i * 3.4,
-        info: {
-          name: r.name, kind: 'match', horse: horseOf(r.name, r.dna_hash, r.day),
-          dropKey: null, usedItemKey: null, matchSide: 'sell', counterpart: r.counterpart,
-        },
-      });
-    });
-    myEvents.bought.forEach((r, i) => {
-      out.push({
-        fireAt: sec('MINT').startAt + 1.5 + i * 3.4,
-        info: {
-          name: r.name, kind: 'match', horse: horseOf(r.name, r.dna_hash, r.day),
-          dropKey: null, usedItemKey: null, matchSide: 'buy', counterpart: r.counterpart ?? undefined,
-          isMint: r.is_mint === true,
-        },
-      });
-    });
+    /* 施策G 後半(2026-07-21): 売買成立の審判は廃止。
+       SETTLEMENT 幕が「出ていった馬 → 入ってきた馬」を実データで正面から
+       見せるようになったため、同じ情報を2回出すことになる。加えて従来の
+       発火時刻(MATCH 78秒 / MINT 85秒)は短縮後のショー終端 78秒より後で、
+       そのままでは出番自体が無い。 */
     return out.sort((a, b) => a.fireAt - b.fireAt);
   }, [myEvents, quiet, raceRunners, rollSlot, hasBand]);
 
@@ -608,6 +627,7 @@ export function DailyDerbyStage({
             myLane={myLane}
             quiet={quiet}
             bandModel={bandModel}
+            settlement={settlement}
             replay={replay}
           />
         ) : (
@@ -925,6 +945,7 @@ function LiveShow({
   myLane,
   quiet,
   bandModel,
+  settlement,
   replay = false,
 }: {
   elapsed: number;
@@ -936,6 +957,7 @@ function LiveShow({
   myLane: readonly VerdictInfo[];
   quiet: boolean;
   bandModel: BandRaceModel | null;
+  settlement: SettlementInput;
   replay?: boolean;
 }) {
   if (elapsed >= COMPLETE_AT) {
@@ -958,6 +980,7 @@ function LiveShow({
         myLane={myLane}
         quiet={quiet}
         bandModel={bandModel}
+        settlement={settlement}
       />
     );
   }
@@ -1179,6 +1202,7 @@ function LogPhase({
   myLane,
   quiet,
   bandModel,
+  settlement,
 }: {
   elapsed: number;
   counts: DerbyCounts;
@@ -1188,6 +1212,7 @@ function LogPhase({
   myLane: readonly VerdictInfo[];
   quiet: boolean;
   bandModel: BandRaceModel | null;
+  settlement: SettlementInput;
 }) {
   // 正典のなめらかなログの流れ: ショー時計(1秒刻み)を60fpsに補間して描画する
   const elapsed = useShowClock(propElapsed);
@@ -1202,6 +1227,10 @@ function LogPhase({
      act の尺(32秒)は LOGS_FROM(30) → MARKET_OPEN(62) にちょうど収まる。 */
   const bandElapsed = elapsed - LOGS_FROM;
   const bandRacing = bandModel !== null && bandElapsed < BAND_ACT_TOTAL;
+  /* 施策G 後半: 62秒以降は SETTLEMENT 幕。
+     LIST/BID/MATCH/MINT/MLM/ITEM のダミー行はここで完全に描画されなくなる
+     (LOG_SECTIONS 自体はレガシー経路とテストのために残す)。 */
+  const settling = elapsed >= MARKET_OPEN.startAt;
   return (
     <div className={s.logPhase}>
       <div className={s.logHead}>
@@ -1213,7 +1242,11 @@ function LogPhase({
       </div>
 
       <div className={s.floodGrid}>
-        {bandRacing ? (
+        {settling ? (
+          <div className={s.logStreamBand}>
+            <SettlementAct input={settlement} elapsed={elapsed - MARKET_OPEN.startAt} />
+          </div>
+        ) : bandRacing ? (
           <div className={s.logStreamBand}>
             <BandRaceAct model={bandModel} elapsed={bandElapsed} />
           </div>

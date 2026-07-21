@@ -167,9 +167,18 @@ export function sectionsForCounts(counts?: DerbyCounts): readonly LogSection[] {
 export const LOGS_FROM = 30;
 /** P2Pターンの開幕演出(62-66s、GLOBAL MARKETPLACE OPENING)。 */
 export const MARKET_OPEN = { startAt: 62, endAt: 66 } as const;
-export const COMPLETE_AT = 97;
+/**
+ * TODAY RACE END。
+ *
+ * 2026-07-21(施策G): 97 → 78 に短縮。62秒以降のダミー濁流(LIST/BID/MATCH/
+ * MINT/MLM/ITEM = 他人の作り物の取引)を SETTLEMENT 幕(15秒)に置き換えたため。
+ * 削ったのは「賑わっているように見せる背景」だけで、自分の実データは
+ * 1件も失われていない(売買は myEvents、プールは PoolStableAct が持っている)。
+ * 音のキュー(ファンファーレ T0 / 蹄音 17〜30秒)はどちらもこの帯より前で不変。
+ */
+export const COMPLETE_AT = 78;
 /** ここを過ぎたら個人結果カードへ。 */
-export const SHOW_TOTAL = 101;
+export const SHOW_TOTAL = 82;
 
 /** その時点のターン表示(ログ画面のヘッダー)。 */
 export function turnLabel(elapsed: number): string {
@@ -393,7 +402,9 @@ export function fixtureMyHorseNames(): string[] {
 export interface DerbyNightResults {
   burned: { name: string; dna_hash: string; day: number | null; used_item_key: string | null; drop_item_key: string | null; total_value?: string | null }[];
   survived: { name: string; dna_hash: string; from_day: number; to_day: number; day7: boolean; total_value?: string | null }[];
-  sold: { name: string; dna_hash: string; price: string; day: number | null; counterpart: string; total_value?: string | null }[];
+  /** 施策E/G: acquired_price(取得実支出)と net_proceeds(手取り=手数料2%控除後)は
+   *  SETTLEMENT 幕の損益表示に使う。取得記録が無い馬では null。 */
+  sold: { name: string; dna_hash: string; price: string; day: number | null; counterpart: string; total_value?: string | null; acquired_price?: string | null; net_proceeds?: string | null }[];
   bought: { name: string; dna_hash: string; price: string; day: number | null; is_mint: boolean; counterpart: string | null; total_value?: string | null }[];
   /** V2実装-7c: このレースで精算された自分のプール(YOUR NEW STABLE幕)。 */
   pool?: PoolActView | null;
@@ -539,7 +550,12 @@ export function fixtureNightResults(): DerbyNightResults {
       { name: svH!.name, dna_hash: svH!.dnaHash!, from_day: svH!.currentDay!, to_day: svH!.currentDay! + 1, day7: false },
     ],
     sold: [
-      { name: matchH!.name, dna_hash: matchH!.dnaHash!, price: '133.10', day: matchH!.currentDay!, counterpart: 'k*****i@gmail.com' },
+      {
+        name: matchH!.name, dna_hash: matchH!.dnaHash!, price: '133.10',
+        day: matchH!.currentDay!, counterpart: 'k*****i@gmail.com',
+        // 施策E: 取得実支出(ミント102.00)と手取り(2%控除後)。SETTLEMENT幕の損益表示。
+        acquired_price: '102.00', net_proceeds: '130.44',
+      },
     ],
     bought: [
       { name: 'Golden Storm', dna_hash: dna('4c'), price: '100.00', day: 0, is_mint: true, counterpart: null },
