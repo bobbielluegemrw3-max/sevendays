@@ -1,14 +1,26 @@
 /**
- * NFTルック導出 — 3アーキタイプ方式 (2026-07-06 オーナー決定)。
+ * NFTルック導出 — 6アーキタイプ方式 (2026-07-06 に3体で開始 → 2026-07-22 に6体へ拡張)。
  *
- * 馬の見た目 = アーキタイプ(3) × ボディ配色(12) × たてがみ(16)。
- * 全バリエーションはオーナーがシートA/Bで承認済み(全576ルック)。エンジンは
- * 色を「作らず」、承認済みリストから dnaHash で決定論的に「選ぶ」だけ。
+ * 馬の見た目 = アーキタイプ(6) × ボディ配色(12) × たてがみ(16) = 1152ルック。
+ * 全バリエーションはオーナーがシートA/Bで承認済み。エンジンは色を「作らず」、
+ * 承認済みリストから dnaHash で決定論的に「選ぶ」だけ。
  * 描画は NftHorseArt (Manusフルカラーレイヤー + 真HSVの色相変換)。
- * ポーズ量産(旧18素体)方式はこの方式に置き換えられた。
+ *
+ * アーキタイプ: v2 金×黒 / v3 虹色クローム / v4 黒メカ /
+ *               v5 氷晶 / v6 溶岩 / v7 幻影(星雲)
+ * 新3体は 2026-07-22 納品(`nft_v5v6v7_layers.zip`)。既存3体に体高・重心を
+ * 正規化して768px化してある(検収記録は NFT_ART_HANDOVER.md)。
+ * ※ v5/v7 は accents が空(結晶/ワイヤーフレーム一体型) — 読み込んでも無害。
  */
 
-export type Arch = 'v2' | 'v3' | 'v4';
+export type Arch = 'v2' | 'v3' | 'v4' | 'v5' | 'v6' | 'v7';
+
+/** 実在するアーキタイプの一覧(抽選の母集団)。 */
+export const ARCHES: readonly Arch[] = ['v2', 'v3', 'v4', 'v5', 'v6', 'v7'] as const;
+
+/** 暗い車体色の型(カード枠の tone 判定)。黒メカ・溶岩・幻影。 */
+const DARK_ARCHES = new Set<Arch>(['v4', 'v6', 'v7']);
+
 export type ManeVariant =
   | { kind: 'rot'; deg: number } // 原画の2色構造を保った回転 (M01-M12)
   | { kind: 'mono'; hue: number } // 単色圧縮 (M13 金 / M15 緋 / M16 緑)
@@ -53,10 +65,15 @@ const PREFIX_TARGET: Record<string, number> = {
   Black: 260, Shadow: 280, Dark: 240, Night: 250, Silent: 210, Iron: 210,
 };
 
-/** 金系/寒色系/闇系の Prefix はアーキタイプにも緩く効かせる (bias のみ)。 */
+/** 名前の Prefix はアーキタイプにも緩く効かせる (bias のみ・6割で採用)。
+ *  2026-07-22: 新3体を追加 — 氷/寒色→v5、炎/熱→v6、幻/宇宙→v7。
+ *  名前と見た目が一致すると「この馬だ」と分かるようになる。 */
 const ARCH_BIAS: Record<string, Arch> = {
   Golden: 'v2', Solar: 'v2', Grand: 'v2', Sacred: 'v2', Lucky: 'v2', Desert: 'v2', Dawn: 'v2',
   Black: 'v4', Shadow: 'v4', Dark: 'v4', Night: 'v4', Iron: 'v4', Storm: 'v4', Silent: 'v4',
+  Frozen: 'v5', Crystal: 'v5', Ice: 'v5', Winter: 'v5', Glacier: 'v5', White: 'v5', Silver: 'v5',
+  Burning: 'v6', Crimson: 'v6', Scarlet: 'v6', Blaze: 'v6', Ember: 'v6', Volcano: 'v6', Rising: 'v6',
+  Phantom: 'v7', Cosmic: 'v7', Mystic: 'v7', Lunar: 'v7', Spirit: 'v7', Nebula: 'v7', Falling: 'v7',
 };
 
 function mulberry32(seed: number): () => number {
@@ -105,7 +122,7 @@ export function deriveNftLook(dnaHash: string, name: string): NftLook {
 
   const biased = ARCH_BIAS[prefix];
   const archRoll = rng();
-  const arch: Arch = biased && archRoll < 0.6 ? biased : (['v2', 'v3', 'v4'] as const)[Math.floor(rng() * 3)]!;
+  const arch: Arch = biased && archRoll < 0.6 ? biased : ARCHES[Math.floor(rng() * ARCHES.length)]!;
 
   const bodyDeg = BODY_DEGS[Math.floor(rng() * BODY_DEGS.length)]!;
 
@@ -122,7 +139,7 @@ export function deriveNftLook(dnaHash: string, name: string): NftLook {
   }
 
   const hue = maneHueOf(mane);
-  return { arch, bodyDeg, mane, hue, tone: arch === 'v4' ? 'dark' : 'vivid', ...frameOf(hue) };
+  return { arch, bodyDeg, mane, hue, tone: DARK_ARCHES.has(arch) ? 'dark' : 'vivid', ...frameOf(hue) };
 }
 
 /**
@@ -141,7 +158,7 @@ export const NIGHT_LOOK: NftLook = {
 };
 
 /**
- * ショーケース: アーキタイプを揃えず(3種すべて登場・同種を隣接させない)、
+ * ショーケース: アーキタイプを揃えず(6種から登場・同種を隣接させない)、
  * たてがみ色相を互いに離す。プレローンチは Math.random、実DB結線後は実馬。
  */
 export function pickNftShowcase(count: number, nextSeed: () => number): NftLook[] {
@@ -150,7 +167,7 @@ export function pickNftShowcase(count: number, nextSeed: () => number): NftLook[
   for (let guard = 0; guard < 2000 && chosen.length < count; guard++) {
     const seed = nextSeed();
     const rng = mulberry32(seed >>> 0);
-    const arch = (['v2', 'v3', 'v4'] as const)[Math.floor(rng() * 3)]!;
+    const arch = ARCHES[Math.floor(rng() * ARCHES.length)]!;
     const bodyDeg = BODY_DEGS[Math.floor(rng() * BODY_DEGS.length)]!;
     const mane = MANE_VARIANTS[Math.floor(rng() * MANE_VARIANTS.length)]!;
     const hue = maneHueOf(mane);
@@ -160,11 +177,11 @@ export function pickNftShowcase(count: number, nextSeed: () => number): NftLook[
     if (prev && prev.arch === arch) continue; // 同アーキタイプの隣接を禁止
     if (chosen.some((c) => hueDist(c.hue, hue) < 34 && c.mane.kind === mane.kind)) continue;
     usedCombo.add(combo);
-    chosen.push({ arch, bodyDeg, mane, hue, tone: arch === 'v4' ? 'dark' : 'vivid', ...frameOf(hue) });
+    chosen.push({ arch, bodyDeg, mane, hue, tone: DARK_ARCHES.has(arch) ? 'dark' : 'vivid', ...frameOf(hue) });
   }
   while (chosen.length < count) {
-    const arch = (['v2', 'v3', 'v4'] as const)[chosen.length % 3]!;
-    chosen.push({ arch, bodyDeg: 0, mane: { kind: 'rot', deg: 0 }, hue: MANE_BASE_HUE, tone: arch === 'v4' ? 'dark' : 'vivid', ...frameOf(MANE_BASE_HUE) });
+    const arch = ARCHES[chosen.length % ARCHES.length]!;
+    chosen.push({ arch, bodyDeg: 0, mane: { kind: 'rot', deg: 0 }, hue: MANE_BASE_HUE, tone: DARK_ARCHES.has(arch) ? 'dark' : 'vivid', ...frameOf(MANE_BASE_HUE) });
   }
   return chosen;
 }
