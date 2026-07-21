@@ -135,6 +135,28 @@ const CHAPTER_SECONDS = 1.4;
 /* ⑦点呼モード: 出走がこの頭数未満の「静かな夜」は濁流を1頭ずつの点呼に切替。 */
 const QUIET_NIGHT_HORSES = 500;
 
+/* 審判の音は出来事ごとに分ける(2026-07-21)。
+ *
+ * それまで 生存 / DAY7チャンピオン / BURN後の形見ドロップ の3つが、
+ * すべて own-good.mp3 の同一音だった(オーナー指摘)。感情が違う:
+ *   生存   = 安堵    「今夜も生き延びた」
+ *   DAY7   = 祝祭    7日完走はゲーム経済の頂点。通常生存と同じ音は安売り
+ *   ドロップ = 慰め   馬を失った1.6秒後に鳴る。祝福の音を鳴らしてはいけない
+ *
+ * champion / memorial の専用音源は未支給のため、いまは own-good を
+ * fallback に置いてある(無音にはしない)。WAVが届いたら soundCatalog に
+ * 追加して、この表の右辺を差し替えるだけでよい。
+ * 発注仕様は public/sounds/README.md。
+ *
+ * ★R1: champion は「達成を祝う儀式的な音」であって「換金の音」ではない。
+ *   金の当たり音に寄せると射幸性の訴求になる(施策Eと同じ線引き)。 */
+const VERDICT_SOUND = {
+  burn: 'ownBurn',
+  survive: 'ownGood',
+  day7: 'ownGood', // TODO: champion sting 発注中
+  drop: 'ownGood', // TODO: memorial drop 発注中
+} as const;
+
 /* 大量所有(100頭等)対策: 審判オーバーレイの待ち行列上限。超過分はオーバーレイを
    省略してMY LANEと最後の全結果サマリーにだけ記録する(ショー尺101秒に収める)。 */
 const VERDICT_QUEUE_MAX = 6;
@@ -293,8 +315,9 @@ export function DailyDerbyStage({
     verdictShowing.current = true;
     hit();
     setMyLane((prev) => [...prev, next]);
-    playOneShot(next.kind === 'burn' ? 'ownBurn' : 'ownGood');
-    if (next.kind === 'burn' && next.dropKey) setTimeout(() => playOneShot('ownGood'), 1600);
+    playOneShot(VERDICT_SOUND[next.kind === 'day7' ? 'day7' : next.kind === 'burn' ? 'burn' : 'survive']);
+    // 形見ドロップは BURN の1.6秒後。ここは祝福ではなく慰めの瞬間である
+    if (next.kind === 'burn' && next.dropKey) setTimeout(() => playOneShot(VERDICT_SOUND.drop), 1600);
     const duration = next.kind === 'burn' ? (next.dropKey ? 5000 : 3600) : 3200;
     verdictTimer.current = setTimeout(showNextVerdict, duration);
   }, [playOneShot, hit]);
