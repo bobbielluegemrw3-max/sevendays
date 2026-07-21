@@ -1332,3 +1332,11 @@
 @media (prefers-reduced-motion: reduce) {
   .stWrap, .stRow, .stClose { animation: none; }
 }
+
+/* YOUR NEW STABLE(プール購入の披露)— 2026-07-21 オーナー指摘の修正。
+   金額に報酬の装飾(金色+グロー)を使わない。支出は支出として、
+   変換の向き(予約 → 迎えた馬)だけを見せる。 */
+.poolRow { margin-top: 10px; font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.14em; }
+.poolRow b { font-weight: 700; margin: 0 10px 0 7px; font-size: 17px; }
+.poolAmt { margin: 0 4px 0 7px; font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.poolArrow { margin: 0 8px; color: var(--faint); }

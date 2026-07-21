@@ -1557,17 +1557,30 @@ const fmtUsdt = (v: string | null): string => (v === null ? '—' : String(Numbe
 
 function PoolStableAct({ pool }: { pool: PoolActView }) {
   if (pool.horses <= 0) return null;
+  // 2026-07-21 オーナー指摘(本番初上映): 「259 USDT が1頭になりました」が、
+  // 直前の決算幕(収支 +X USDT)の流れで **自分が259稼いだ** ように読めていた。
+  // これは購入予約に預けた額 = 支出であって利益ではない。
+  //   誤読の原因: (1)主語が金額で始まる (2)金色+グローの数字が報酬の語彙
+  //   (3)「〜になりました」が変換ではなく獲得に聞こえる
+  // 方向(預けた → 使った → 迎えた)を明示し、金額から報酬の装飾を外す。
+  const refund =
+    pool.amount !== null && pool.spent !== null
+      ? Math.round((Number(pool.amount) - Number(pool.spent)) * 100) / 100
+      : null;
   return (
     <div className={s.fcWrap}>
       <div className={s.fcK}>— YOUR NEW STABLE —</div>
-      <div className={s.fcRow}>
-        <b>{fmtUsdt(pool.amount)} USDT</b>
-        <span className={s.condK}>が</span>
+      <div className={s.poolRow}>
+        <span className={s.condK}>購入予約</span>
+        <span className={s.poolAmt}>{fmtUsdt(pool.amount)} USDT</span>
+        <span className={s.poolArrow}>→</span>
+        <span className={s.condK}>迎えた馬</span>
         <b>{pool.horses}頭</b>
-        <span className={s.condK}>になりました</span>
       </div>
       <div className={s.fcNote}>
-        使用 {fmtUsdt(pool.spent)} USDT — 余りは自動返金済み。新しい仲間は下の結果一覧に登場します。
+        支払い {fmtUsdt(pool.spent)} USDT
+        {refund !== null && refund > 0 ? ` ／ 返金 ${refund} USDT(自動)` : ''}
+        {' '}— これは購入であって収益ではありません。新しい仲間は下の結果一覧に登場します。
       </div>
     </div>
   );
