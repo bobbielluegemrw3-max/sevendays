@@ -33,7 +33,7 @@
       "assets   assets"
       "stable   stable"
       "buyback  buyback"
-      "pwa      pwa";
+      "extras   extras";
     gap: 16px;
     align-items: start;
   }
@@ -43,7 +43,14 @@
   .assets  { grid-area: assets; }
   .stable  { grid-area: stable; }
   .buyback { grid-area: buyback; }
-  .pwa     { grid-area: pwa; }
+  .extras  { grid-area: extras; }
+}
+
+/* ---- 主動線の外(設定・特典コード・アプリ化) — Tier 2-2 -------------------- */
+.extras {
+  display: flex; flex-direction: column; gap: 12px;
+  margin-top: 4px; padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* 共通タイル外観 */
@@ -113,6 +120,12 @@
   line-height: 1; color: var(--cyan); font-variant-numeric: tabular-nums; margin: 12px 0 6px;
   text-shadow: 0 0 24px rgba(0, 234, 255, 0.55);
 }
+/* Tier 2-2: カウントダウンは押せる(当夜のレースへ)。装飾は足さず、
+   触れたときだけ反応を返す — 押下感が無い要素をこれ以上増やさない。 */
+.timerLink { display: block; text-decoration: none; color: inherit; border-radius: 12px; }
+.timerLink:hover .timer { filter: brightness(1.1); }
+.timerLink:active { transform: translateY(1px); }
+.timerLink:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
 .countMeta { display: flex; gap: 16px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
 .countMeta b { color: var(--text); }
 .countMeta b:global(.hot) { color: var(--magenta-soft); }

@@ -184,7 +184,12 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
           <span className={s.tileLabel}>{t.tonight_label}</span>
           <span className={s.live}><span className={s.dot}>●</span> LIVE 8:00 / 20:00 MYT</span>
         </div>
-        <Countdown className={s.timer} />
+        {/* Tier 2-2: 画面で最も強い48pxの数字が非操作だった。押せば当夜のレースへ
+            飛ぶようにして、視線の到達点と動線を一致させる(主アクションの階層は
+            変えない — ここは .primary ではない)。 */}
+        <Link href="/races" className={s.timerLink} aria-label={t.watch_show}>
+          <Countdown className={s.timer} />
+        </Link>
         <div className={s.countMeta}>
           <span>{t.countdown_to}</span>
           <span>RUNNERS <b>{active.length}</b></span>
@@ -241,9 +246,6 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
           </div>
         </section>
       )}
-
-      {/* ===== ③.5 引換コード(Decision 095: セミナー特典馬) ===== */}
-      <PromoRedeemForm t={APP_COPY[lang].promo} />
 
       {/* ===== ④ 資産(総資産 / 残高 / 評価額 / Revenge Buff) ===== */}
       <section className={s.assets}>
@@ -310,11 +312,20 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
         </section>
       ) : null}
 
-      {/* ===== 売買の自動化(Decision 086: トグルはここと/marketの2箇所) ===== */}
-      {data.trade ? <TradeAutoTile settings={data.trade} t={APP_COPY[lang].trade} /> : null}
-
-      {/* ===== アプリ化&通知ON の導線(通知一覧はメニューのバッジ+通知ページへ集約) ===== */}
-      <PwaSetupTile t={APP_COPY[lang].pwa} />
+      {/* ===== 主動線の外(Tier 2-2) =====
+          設定・特典コード・アプリ化は「毎日やること」ではない。1箇所に集めて
+          最下段へ落とし、①結果 → ②今夜 → ③やること → ④資産 → 厩舎 の
+          流れを分断しないようにする(旧: 引換コードが③と④の間に挟まっていた)。
+          grid-area を持たせるのは、買い戻しタイルが無い夜に自動配置で
+          空いた行へ迫り上がってくるのを防ぐため。 */}
+      <section className={s.extras}>
+        {/* 売買の自動化(Decision 086: トグルはここと/marketの2箇所) */}
+        {data.trade ? <TradeAutoTile settings={data.trade} t={APP_COPY[lang].trade} /> : null}
+        {/* アプリ化&通知ON の導線(通知一覧はメニューのバッジ+通知ページへ集約) */}
+        <PwaSetupTile t={APP_COPY[lang].pwa} />
+        {/* 引換コード(Decision 095: セミナー特典馬)— 既定は小さなトグル1個 */}
+        <PromoRedeemForm t={APP_COPY[lang].promo} />
+      </section>
 
       {/* ===== 出品方式の必須選択(未選択ユーザーにブロッキング表示) ===== */}
       {data.trade ? <TradeModeModal settings={data.trade} t={APP_COPY[lang].trade} /> : null}
