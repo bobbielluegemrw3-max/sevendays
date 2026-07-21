@@ -276,6 +276,11 @@ export function DailyDerbyStage({
         memorial: { src: '/sounds/memorial.mp3' },
         settleOut: { src: '/sounds/settle-out.mp3' },
         settleIn: { src: '/sounds/settle-in.mp3' },
+        /* 決算幕のいななき(2026-07-21 オーナー要望)。2頭に1回だけ重ねる。
+           音源は実走ブリッジの horse-whinny と同じだが、別の audio 要素にして
+           音量を落としてある(原本 -13.2 LUFS は方向音 -19 より6dB大きく、
+           そのまま鳴らすと静かな決算で浮く)。毎回鳴らすと馬房が騒がしくなる。 */
+        whinnySoft: { src: '/sounds/horse-whinny.mp3', volume: 0.6 },
         finale: { src: '/sounds/finale.mp3' },
       }) satisfies Record<string, { src: string; loop?: boolean; volume?: number }>,
     [fanfareSrc, hoofbeatsSrc],
@@ -365,6 +370,7 @@ export function DailyDerbyStage({
     const isPreShow = secondsToStart > 0;
     if (isPreShow && !wasPreShow.current) {
       setMyLane([]);
+      settlementRowNo.current = 0;
       seenVerdicts.current.clear();
       verdictQueue.current = [];
       scheduleJoined.current = false;
@@ -427,8 +433,14 @@ export function DailyDerbyStage({
   /* SETTLEMENT の方向音。出ていった/入ってきた の区別だけを鳴らす。
      ★収支のプラス/マイナスで音を変えない — それはパチンコの当たり音であり
      R1レッドライン(射幸性を訴求しない)に触れる。価値は数字が語る。 */
+  const settlementRowNo = useRef(0);
   const onSettlementRow = useCallback(
-    (row: HarvestRow) => playOneShot(row.kind === 'out' ? 'settleOut' : 'settleIn'),
+    (row: HarvestRow) => {
+      playOneShot(row.kind === 'out' ? 'settleOut' : 'settleIn');
+      // 2頭に1回、いななきを重ねる(厩舎の気配。毎回だと騒がしい)
+      settlementRowNo.current += 1;
+      if (settlementRowNo.current % 2 === 0) setTimeout(() => playOneShot('whinnySoft'), 420);
+    },
     [playOneShot],
   );
 

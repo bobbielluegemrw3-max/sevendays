@@ -79,7 +79,13 @@ export function BandRaceAct({
               <span className={s.brPending}>順位確定前</span>
             ) : (
               <>
-                暫定 <b><AnimatedNumber value={myRank} durationMs={420} /></b> 位
+                {/* ラインに到達したら暫定順位を赤へ。シアンのままだと
+                    「もう死んでいる」ことが色で伝わらない(オーナー指摘) */}
+                暫定{' '}
+                <b className={myRank >= lineRank ? s.brRankDoomed : ''}>
+                  <AnimatedNumber value={myRank} durationMs={420} />
+                </b>{' '}
+                位
                 <span className={s.brOf}> / 生存ライン {lineRank}位</span>
               </>
             )}
