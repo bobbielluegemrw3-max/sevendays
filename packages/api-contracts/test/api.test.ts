@@ -542,6 +542,44 @@ describe('race transparency and admin surface after a real production day', () =
     expect((dayResults.body as { total: number }).total).toBe(3);
     expect((dayResults.body as { results: { horse_name: string }[] }).results.length).toBe(3);
 
+    /* FUN_V3 施策G: 帯の順位表(ショーの帯レースの供給元)。
+       自分の馬は horse_id で特定する — 馬名一致は 2026-07-16 に廃止された方式。 */
+    const bands = await call('GET', '/api/v1/daily-derby/bands/latest', asUser(horseOwners[0]!));
+    expect(bands.status).toBe(200);
+    const bandsBody = bands.body as {
+      race_id: string | null;
+      bands: {
+        day: number; total: number; burns: number; truncated: boolean;
+        entries: { horse_id: string; name: string; score: number; burned: boolean }[];
+      }[];
+      my_horse_ids: string[];
+    };
+    expect(bandsBody.race_id).not.toBeNull();
+    expect(bandsBody.bands.length).toBeGreaterThanOrEqual(1);
+    const band = bandsBody.bands[0]!;
+    expect(band.truncated).toBe(false);
+    expect(band.entries.length).toBe(band.total);
+    // スコア降順 = final_rank 昇順で返る(暫定順位の計算がこの順序に依存する)
+    for (let i = 1; i < band.entries.length; i++) {
+      expect(band.entries[i - 1]!.score).toBeGreaterThanOrEqual(band.entries[i]!.score);
+    }
+    expect(band.burns).toBe(band.entries.filter((e) => e.burned).length);
+    // 自分の馬が帯の中に居ること(horse_id で突合できる)
+    expect(bandsBody.my_horse_ids.length).toBeGreaterThanOrEqual(1);
+    const ids = new Set(band.entries.map((e) => e.horse_id));
+    expect(bandsBody.my_horse_ids.some((id) => ids.has(id))).toBe(true);
+    // 所有者は一切返さない(ADR-007)
+    expect(Object.keys(band.entries[0]!).sort()).toEqual(['burned', 'horse_id', 'name', 'score']);
+    /* 出走馬を持たない観戦者(この日の買い手はミント馬なのでまだ走っていない)にも
+       帯は1つ出る — 見るものが無い夜を作らない。ただし自分の馬はゼロ。 */
+    const spectator = await call('GET', '/api/v1/daily-derby/bands/latest', asUser(buyer));
+    const spectatorBody = spectator.body as {
+      bands: { entries: unknown[] }[]; my_horse_ids: string[];
+    };
+    expect(spectatorBody.my_horse_ids).toHaveLength(0);
+    expect(spectatorBody.bands.length).toBe(1);
+    expect(spectatorBody.bands[0]!.entries.length).toBeGreaterThanOrEqual(1);
+
     // admin surface
     const admin = await newUser();
     await client.query(

@@ -39,6 +39,14 @@ function nextSlotV2(): { ja: string; time: string } {
     ? { ja: 'モーニングレース', time: '朝8:00' }
     : { ja: 'ナイターレース', time: '夜20:00' };
 }
+import { BandRaceAct } from '@/components/daily-derby/BandRaceAct';
+import {
+  ACT_TOTAL as BAND_ACT_TOTAL,
+  buildBandRace,
+  selectFeaturedBand,
+  type BandRaceInput,
+  type BandRaceModel,
+} from '@/lib/band-race';
 import { deriveNftLook } from '@/lib/nft-visual';
 import { DailyDerbyFailureState } from '@/components/daily-derby/DailyDerbyFailureState';
 import s from '../../app/daily-derby.module.css';
@@ -81,6 +89,15 @@ export interface DailyDerbyStageProps {
   tomorrowForecast?: DerbyConditionsView | null;
   /** V2実装-7c: このバッチで解決したジャックポット(日曜夜のみ非null・当選者マスク済)。 */
   jackpot?: DerbyJackpotView | null;
+  /**
+   * FUN_V3 施策G: 当夜のLV帯ごとの確定結果(実データ)。
+   *
+   * 渡すと RACE TURN(30〜62秒)のログ濁流が「帯レース」に置き換わる。
+   * BURN は帯内スコア下位N頭切り = 既に競走なので、演出は確定済みデータの
+   * 開示順序だけで作る(中間順位のデータは存在しない・作ってはならない)。
+   * null/未指定なら従来の濁流のまま — 段階移行できるようにしてある。
+   */
+  bandRace?: readonly BandRaceInput[] | null;
   /** V2シーズン(表示のLV化・パドックのティア表示用)。 */
   engineV2?: boolean;
   /** 見逃しリプレイ再生中(2026-07-16): REPLAYバー表示+タイトルのLIVEバッジをREPLAYに。 */
@@ -147,6 +164,7 @@ export function DailyDerbyStage({
   tonightField = null,
   tomorrowForecast = null,
   jackpot = null,
+  bandRace = null,
   engineV2 = false,
   replay = false,
   onReplaySkip,
@@ -503,6 +521,16 @@ export function DailyDerbyStage({
     [refsForUnmount],
   );
 
+  /* 施策G: 主役の帯を1つ選んでフル演出する(オーナー判断 2026-07-21)。
+     101秒に全帯は入らないし、頭数比で機械的に割ると尺の大半が自分と無関係な
+     帯に流れる — それは計画書が削ろうとしている「他人の話」を温存することになる。
+     他の帯にいる自分の馬は従来どおり審判オーバーレイ + MY LANE が拾う。 */
+  const bandModel = useMemo<BandRaceModel | null>(() => {
+    if (!bandRace || bandRace.length === 0) return null;
+    const featured = selectFeaturedBand(bandRace);
+    return featured ? buildBandRace(featured) : null;
+  }, [bandRace]);
+
   const showTicker = !failed && elapsed >= LOGS_FROM && elapsed < SHOW_TOTAL + 30;
   const chapter = !failed && elapsed < SHOW_TOTAL
     ? CHAPTERS.find((c) => elapsed >= c.at && elapsed < c.at + CHAPTER_SECONDS)
@@ -562,6 +590,7 @@ export function DailyDerbyStage({
             conditions={conditions}
             myLane={myLane}
             quiet={quiet}
+            bandModel={bandModel}
             replay={replay}
           />
         ) : (
@@ -878,6 +907,7 @@ function LiveShow({
   conditions,
   myLane,
   quiet,
+  bandModel,
   replay = false,
 }: {
   elapsed: number;
@@ -888,6 +918,7 @@ function LiveShow({
   conditions: DerbyConditionsView | null;
   myLane: readonly VerdictInfo[];
   quiet: boolean;
+  bandModel: BandRaceModel | null;
   replay?: boolean;
 }) {
   if (elapsed >= COMPLETE_AT) {
@@ -909,6 +940,7 @@ function LiveShow({
         debutCount={debutCount}
         myLane={myLane}
         quiet={quiet}
+        bandModel={bandModel}
       />
     );
   }
@@ -1129,6 +1161,7 @@ function LogPhase({
   debutCount,
   myLane,
   quiet,
+  bandModel,
 }: {
   elapsed: number;
   counts: DerbyCounts;
@@ -1137,6 +1170,7 @@ function LogPhase({
   debutCount: number;
   myLane: readonly VerdictInfo[];
   quiet: boolean;
+  bandModel: BandRaceModel | null;
 }) {
   // 正典のなめらかなログの流れ: ショー時計(1秒刻み)を60fpsに補間して描画する
   const elapsed = useShowClock(propElapsed);
@@ -1147,6 +1181,10 @@ function LogPhase({
   // ⑦静かな夜は結果ターン(TURN1)を点呼モードに切り替える。
   // 走った馬ゼロ(全馬明晩デビュー)の夜は点呼の代わりに空状態カードを出す。
   const rollcall = quiet && elapsed < MARKET_OPEN.startAt;
+  /* 施策G: 実データの帯があるなら RACE TURN は濁流ではなく帯レース。
+     act の尺(32秒)は LOGS_FROM(30) → MARKET_OPEN(62) にちょうど収まる。 */
+  const bandElapsed = elapsed - LOGS_FROM;
+  const bandRacing = bandModel !== null && bandElapsed < BAND_ACT_TOTAL;
   return (
     <div className={s.logPhase}>
       <div className={s.logHead}>
@@ -1158,7 +1196,11 @@ function LogPhase({
       </div>
 
       <div className={s.floodGrid}>
-        {rollcall ? (
+        {bandRacing ? (
+          <div className={s.logStreamBand}>
+            <BandRaceAct model={bandModel} elapsed={bandElapsed} />
+          </div>
+        ) : rollcall ? (
           runners.length > 0 ? (
             <Rollcall elapsed={elapsed} runners={runners} slot={rollSlot} />
           ) : (

@@ -950,4 +950,113 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       return { date: ctx.params.date, results: rows.rows, total: total.rows[0]!.n };
     },
   });
+
+  /* FUN_V3 施策G「帯の可視化」— 当夜のLV帯の確定順位表。
+   *
+   * ショーの RACE TURN(30〜62秒)を、ダミー行の濁流から実データの帯レースに
+   * 置き換えるための供給。BURN は帯内スコア下位N頭切り = 既に競走であり、
+   * 必要なデータは race_results に全部ある(スキーマ変更なし)。
+   *
+   * ★ステータスAPI(5秒ポーリング)には載せないこと。
+   * レース確定後の順位表は不変なので、ショー中に1回だけ取れば足りる。
+   * 5秒ごとに帯全頭を引くと、頭数×同時視聴者数でそのまま負荷になる。 */
+  const BAND_CACHE_MAX = 800;
+  let bandCache: { raceId: string; bands: Map<number, BandEntryRow[]> } | null = null;
+
+  registry.register({
+    method: 'GET',
+    path: '/api/v1/daily-derby/bands/:date',
+    auth: 'user',
+    handler: async (ctx) => {
+      const race = await ctx.client.query<{ id: string }>(
+        ctx.params.date === 'latest'
+          ? `select r.id from races r join batch_runs b on b.id = r.batch_run_id
+             where r.status = 'FINALIZED' order by r.created_at desc limit 1`
+          : `select r.id from races r join batch_runs b on b.id = r.batch_run_id
+             where b.batch_date = $1 and r.status = 'FINALIZED'
+             order by r.created_at desc limit 1`,
+        ctx.params.date === 'latest' ? [] : [ctx.params.date],
+      );
+      if (ctx.params.date !== 'latest' && !/^\d{4}-\d{2}-\d{2}$/.test(ctx.params.date ?? '')) {
+        throw new ApiError('VALIDATION_FAILED', 'date must be YYYY-MM-DD or latest');
+      }
+      const raceRow = race.rows[0] ?? null;
+      if (!raceRow) return { race_id: null, bands: [], my_horse_ids: [] };
+
+      // 確定済みレースの順位表は二度と変わらない — 全視聴者で1回だけ引く。
+      if (!bandCache || bandCache.raceId !== raceRow.id) {
+        const all = await ctx.client.query<BandEntryRow & { day: number }>(
+          `select s.current_day as day, rr.horse_id, h.name,
+                  rr.final_score::float8 as score, rr.is_burned as burned
+           from race_results rr
+           join race_participant_snapshots s
+             on s.race_id = rr.race_id and s.horse_id = rr.horse_id
+           join horses h on h.id = rr.horse_id
+           where rr.race_id = $1
+           order by s.current_day, rr.final_rank`,
+          [raceRow.id],
+        );
+        const bands = new Map<number, BandEntryRow[]>();
+        for (const row of all.rows) {
+          const list = bands.get(row.day) ?? [];
+          list.push({ horse_id: row.horse_id, name: row.name, score: row.score, burned: row.burned });
+          bands.set(row.day, list);
+        }
+        bandCache = { raceId: raceRow.id, bands };
+      }
+
+      // 自分の出走馬(所有者は他人のぶんを一切参照しない — ADR-007)。
+      const mine = await ctx.client.query<{ horse_id: string; day: number }>(
+        `select s.horse_id, s.current_day as day
+         from race_participant_snapshots s
+         where s.race_id = $1 and s.owner_user_id = $2`,
+        [raceRow.id, ctx.userId],
+      );
+      const myHorseIds = mine.rows.map((r) => r.horse_id);
+      const myDays = new Set(mine.rows.map((r) => r.day));
+
+      /* 送るのは自分がいる帯だけ。出走していない夜(観戦・全馬デビュー前)は
+         最も競った帯 = ライン際の点差が最小の帯を1つだけ代役に立てる。 */
+      let days = [...myDays];
+      if (days.length === 0) {
+        let pick: number | null = null;
+        let best = Number.POSITIVE_INFINITY;
+        for (const [day, list] of bandCache.bands) {
+          const burns = list.reduce((n, e) => n + (e.burned ? 1 : 0), 0);
+          const above = burns > 0 ? list[list.length - burns - 1] : undefined;
+          const below = burns > 0 ? list[list.length - burns] : undefined;
+          /* 1頭も消えなかった帯には「線」が無い。それでも見せる価値はある
+             (全員生存の夜が存在する)ので、線のある帯を優先しつつ候補には残す。 */
+          const key = above && below ? above.score - below.score : 1_000_000 - list.length;
+          if (key < best) { best = key; pick = day; }
+        }
+        days = pick === null ? [] : [pick];
+      }
+
+      const bands = days.map((day) => {
+        const list = bandCache!.bands.get(day) ?? [];
+        const burns = list.reduce((n, e) => n + (e.burned ? 1 : 0), 0);
+        /* 上限超えは順位表を出さない(切り詰めた盤面では暫定順位が正しく出せず、
+           結果として嘘の順位を見せることになる)。呼び出し側は従来の濁流へ退避。 */
+        const truncated = list.length > BAND_CACHE_MAX;
+        return {
+          day,
+          total: list.length,
+          burns,
+          truncated,
+          entries: truncated ? [] : list,
+        };
+      });
+
+      return { race_id: raceRow.id, bands, my_horse_ids: myHorseIds };
+    },
+  });
+}
+
+/** 帯レース(施策G)の1行。所有者は返さない — 馬名の公開は既存方針の範囲内。 */
+interface BandEntryRow {
+  horse_id: string;
+  name: string;
+  score: number;
+  burned: boolean;
 }

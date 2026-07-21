@@ -959,3 +959,156 @@
   cursor: pointer;
 }
 .replayBtn:hover { color: var(--cyan); border-color: var(--border-strong); filter: none; }
+
+/* ── BRACKET RACE(FUN_V3 施策G 帯の可視化)────────────────────────────────
+   ダミー行の濁流に代わる、実データの暫定リーダーボード。
+   装飾は最小限に留める — この幕の品質は情報設計から出るのであって、
+   絵から出るのではない(7/10 ドット走行撤去の教訓)。 */
+.brWrap {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  text-align: left;
+  animation: fadeIn 0.5s ease both;
+}
+/* 濁流(.logStream)と同じ高さを占有して、幕が替わってもステージが跳ねないように
+   する(4a6ebcb の「予約高でガタつきを防ぐ」規律をこの幕にも適用)。 */
+.logStreamBand {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: hidden;
+  height: min(56vh, 480px);
+  padding: 0.5rem 0.2rem 0.3rem;
+}
+.brHead {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0 0.2rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: clamp(0.72rem, 2.2vw, 0.86rem);
+}
+.brLv {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.1rem, 4vw, 1.6rem);
+  letter-spacing: 0.14em;
+  color: var(--gold-bright);
+  text-shadow: 0 0 20px rgba(201, 168, 106, 0.4);
+}
+.brField { color: var(--text); font-variant-numeric: tabular-nums; }
+.brBurn { color: #ff5c5c; font-variant-numeric: tabular-nums; }
+
+/* 自分のスコア — 先に確定して固定される。以後この数字は動かない */
+.brYou {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  margin: 0.6rem 0 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--gold-bright);
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(242, 228, 191, 0.14), transparent 70%);
+}
+.brYouIn { animation: mineIn 0.6s ease both; }
+.brYouLabel {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
+  color: var(--gold-bright);
+}
+.brYouScore {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: clamp(1.3rem, 5vw, 1.9rem);
+  color: var(--gold-bright);
+  text-shadow: 0 0 18px rgba(242, 228, 191, 0.45);
+  font-variant-numeric: tabular-nums;
+}
+.brYouRank {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: clamp(0.72rem, 2.4vw, 0.9rem);
+  color: var(--text);
+}
+.brYouRank b { color: var(--cyan); font-size: 1.25em; }
+.brOf { color: var(--muted); }
+.brPending { color: var(--muted); letter-spacing: 0.1em; }
+
+.brBoard {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(0.62rem, 1.9vw, 0.78rem);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.brRow {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.14rem 0.4rem;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  /* 開示のたびに行が挿し込まれる — 1行だけ静かに立ち上げる */
+  animation: fadeIn 0.28s ease both;
+}
+.brRank { color: var(--faint); text-align: right; }
+.brName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brScore { color: var(--text); }
+.brTag {
+  font-size: 0.86em;
+  letter-spacing: 0.1em;
+  color: #ff5c5c;
+}
+.brGap { color: var(--faint); text-align: center; padding: 0.1rem 0; letter-spacing: 0.3em; }
+
+.brMine {
+  background: linear-gradient(90deg, rgba(242, 228, 191, 0.22), rgba(242, 228, 191, 0.06) 70%, transparent);
+  border-left-color: var(--gold-bright);
+  color: var(--gold-bright);
+  font-weight: 700;
+  border-radius: 0 6px 6px 0;
+}
+.brMine .brRank, .brMine .brScore { color: var(--gold-bright); }
+.brBurned { color: #ff5c5c; }
+.brBurned .brScore { color: #ff5c5c; }
+/* 生存ライン直上の馬 — 線はここに引かれる */
+.brAtLine { border-bottom: 1px dashed rgba(255, 92, 92, 0.55); }
+
+.brLine {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.brLineLabel { letter-spacing: 0.2em; color: #ff5c5c; }
+.brLineRank { font-variant-numeric: tabular-nums; }
+
+.brVerdict {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.1rem, 4.5vw, 1.7rem);
+  letter-spacing: 0.08em;
+  animation: fadeIn 0.5s ease both;
+}
+.brVerdict b { font-family: var(--font-mono); font-size: 1.15em; }
+.brSafe { color: #35d07f; text-shadow: 0 0 22px rgba(53, 208, 127, 0.4); }
+.brDead { color: #ff5c5c; text-shadow: 0 0 22px rgba(255, 92, 92, 0.4); }
+
+@media (prefers-reduced-motion: reduce) {
+  .brWrap, .brRow, .brVerdict, .brYouIn { animation: none; }
+}

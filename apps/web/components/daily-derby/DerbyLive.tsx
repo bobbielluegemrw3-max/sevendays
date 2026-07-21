@@ -11,6 +11,7 @@ import {
   type DerbyJackpotView,
   type DerbyNightResults,
 } from '@/lib/daily-derby';
+import type { BandRaceInput } from '@/lib/band-race';
 import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
 import { PageSkeleton } from '@/components/PageSkeleton';
 
@@ -44,6 +45,20 @@ interface DerbyStatus {
   tonight_field?: { entrants: number; burn_slots_min: number; burn_slots_max: number } | null;
   /** V2実装-7c: このバッチで解決したジャックポット(当選者マスク済)。 */
   jackpot?: DerbyJackpotView | null;
+}
+
+/** 施策G: 帯の確定順位表(GET /daily-derby/bands/:date)。 */
+interface BandsResponse {
+  race_id: string | null;
+  bands: {
+    day: number;
+    total: number;
+    burns: number;
+    /** 上限超過の帯は順位表を出さない — 呼び出し側は従来の濁流へ退避する。 */
+    truncated: boolean;
+    entries: { horse_id: string; name: string; score: number; burned: boolean }[];
+  }[];
+  my_horse_ids: string[];
 }
 
 /* ---- 見逃しリプレイ(オーナー要望 2026-07-16) ------------------------------
@@ -87,6 +102,8 @@ export function DerbyLive() {
   const [, forceTick] = useState(0);
   // 見逃しリプレイ: 開始時刻(ms)。null=リプレイしていない。
   const [replayStart, setReplayStart] = useState<number | null>(null);
+  /** 施策G: 当夜の帯の順位表(1回だけ取得・以後不変)。 */
+  const [bandRace, setBandRace] = useState<BandRaceInput[] | null>(null);
   const replayChecked = useRef(false);
   const liveElapsedRef = useRef(-1);
 
@@ -119,6 +136,38 @@ export function DerbyLive() {
       cancelled = true;
     };
   }, [status?.phase, nightResults]);
+
+  /* 施策G: 帯の順位表は「レース確定後は不変」なので1回だけ取る。
+     5秒ポーリングに載せると帯の頭数×同時視聴者数がそのまま負荷になる。
+     自分の馬の特定は horse_id で行う — 馬名一致は 2026-07-16 に廃止された
+     方式で、同名馬や生成名との偶然一致で壊れる。 */
+  useEffect(() => {
+    if (bandRace !== null) return;
+    if (status?.phase !== 'LIVE' && status?.phase !== 'COMPLETED') return;
+    let cancelled = false;
+    void apiFetch<BandsResponse>('/api/v1/daily-derby/bands/latest').then((r) => {
+      if (cancelled || r.status !== 200) return;
+      const body = r.body as BandsResponse;
+      const mine = new Set(body.my_horse_ids);
+      setBandRace(
+        body.bands
+          .filter((b) => !b.truncated && b.entries.length > 0)
+          .map((b) => ({
+            day: b.day,
+            seed: `${body.race_id ?? ''}:${b.day}`,
+            entries: b.entries.map((e) => ({
+              name: e.name,
+              score: e.score,
+              burned: e.burned,
+              mine: mine.has(e.horse_id),
+            })),
+          })),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [status?.phase, bandRace]);
 
   // 見逃しリプレイ①: ライブ中に開いていた人は視聴済み扱い(後でリプレイしない)。
   useEffect(() => {
@@ -248,6 +297,7 @@ export function DerbyLive() {
       nightResults={nightResults}
       failed={status.phase === 'FAILED_SAFE_MODE'}
       myEvents={status.my_events ?? null}
+      bandRace={bandRace}
       myHorses={(status.my_horses ?? []).map((h) => ({
         name: h.name,
         dnaHash: h.dna_hash,

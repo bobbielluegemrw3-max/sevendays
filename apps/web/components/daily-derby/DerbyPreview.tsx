@@ -12,6 +12,7 @@ import {
   fixtureMyHorses,
   fixtureNightResults,
 } from '@/lib/daily-derby';
+import { fixtureBandRace } from '@/lib/band-race';
 import { DailyDerbyStage } from '@/components/daily-derby/DailyDerbyStage';
 
 /**
@@ -47,6 +48,8 @@ export function DerbyPreview() {
   const [paused, setPaused] = useState(false);
   const [failed, setFailed] = useState(false);
   const [quiet, setQuiet] = useState(false);
+  /* 施策G: RACE TURN を帯レースにする(?band=0 で従来の濁流と見比べられる)。 */
+  const [bandOn, setBandOn] = useState(true);
   const [replaySim, setReplaySim] = useState(false);
   // V2実装-7c: ?jp=0 でジャックポット幕を消せる(既定は表示 — 視覚QA用)
   const [jackpotSim, setJackpotSim] = useState(true);
@@ -69,6 +72,7 @@ export function DerbyPreview() {
     if (q.get('paused') === '1') setPaused(true);
     if (q.get('failed') === '1') setFailed(true);
     if (q.get('quiet') === '1') setQuiet(true);
+    if (q.get('band') === '0') setBandOn(false);
     if (q.get('replay') === '1') setReplaySim(true);
     if (q.get('jp') === '0') setJackpotSim(false);
     const tn = q.get('tonight');
@@ -186,6 +190,18 @@ export function DerbyPreview() {
           style={{
             padding: '0.35rem 0.7rem',
             fontSize: '0.68rem',
+            borderColor: bandOn ? 'var(--gold, #c9a86a)' : undefined,
+          }}
+          onClick={() => setBandOn((v) => !v)}
+        >
+          {bandOn ? '帯レース(施策G) ✕' : '帯レース(施策G)'}
+        </button>
+        <button
+          type="button"
+          className="secondary"
+          style={{
+            padding: '0.35rem 0.7rem',
+            fontSize: '0.68rem',
             borderColor: replaySim ? 'var(--gold, #c9a86a)' : undefined,
           }}
           onClick={() => setReplaySim((v) => !v)}
@@ -247,6 +263,17 @@ export function DerbyPreview() {
         tomorrowForecast={fixtureForecast(new Date().toISOString().slice(0, 10))}
         tonightField={{ entrants: 14, burnSlotsMin: 1, burnSlotsMax: 1 }}
         jackpot={jackpotSim ? fixtureJackpot() : null}
+        /* 施策G: 3帯に馬がいる夜。主役は「ラインに最も近かった1頭」の帯 =
+           LV.4(35位 = 最上位のBURN)が選ばれるはず。 */
+        bandRace={
+          bandOn
+            ? [
+                fixtureBandRace({ day: 2, total: 62, burns: 7, mineRank: 41 }),
+                fixtureBandRace({ day: 4, total: 38, burns: 4, mineRank: 35 }),
+                fixtureBandRace({ day: 6, total: 12, burns: 1, mineRank: 3 }),
+              ]
+            : null
+        }
       />
 
       <p className="faint" style={{ fontSize: '0.78rem', marginTop: '0.8rem' }}>
