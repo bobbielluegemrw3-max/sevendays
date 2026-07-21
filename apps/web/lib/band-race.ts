@@ -337,13 +337,18 @@ function cameraRows(
   myShown: boolean,
   settled: boolean,
 ): BandRow[] {
-  const { entries, lineRank } = model;
+  const { entries, lineRank, myIndex } = model;
   // 開示済みをスコア降順のまま取り出す(entries が既に降順なので index 昇順で足りる)
   const board: number[] = [];
   for (let i = 0; i < entries.length; i++) if (shown.has(i)) board.push(i);
 
   const n = board.length;
-  const myPos = myShown ? board.findIndex((i) => entries[i]!.mine) : -1;
+  /* カメラは主役(= 最もラインに近い自分の馬 = myIndex)を追う。
+     同じ帯に自分の馬が複数いる夜に findIndex(mine) を使うと、見出しの
+     YOUR SCORE/暫定順位が主役の数字なのに、カメラだけスコア最上位の別の
+     持ち馬に張り付く(複数保有時のみ発現する不整合)。
+     主役以外の持ち馬は、開示された時点で金色の行として表に出る。 */
+  const myPos = myShown && myIndex !== null ? board.indexOf(myIndex) : -1;
 
   const want = new Set<number>();
   for (let p = 0; p < Math.min(TOP_ROWS, n); p++) want.add(p);

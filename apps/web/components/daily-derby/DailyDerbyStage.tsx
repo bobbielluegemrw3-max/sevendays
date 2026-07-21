@@ -299,6 +299,27 @@ export function DailyDerbyStage({
     verdictTimer.current = setTimeout(showNextVerdict, duration);
   }, [playOneShot, hit]);
 
+  /* SETTLEMENT幕が始まったら審判は打ち切る(2026-07-21)。
+     審判1件の表示は3.2〜5.0秒あるため、保有頭数が多いとキューが後ろへ伸び、
+     決算の幕が審判オーバーレイに覆われ続ける。窓に収まらなかった分は
+     MY LANE と最後の全結果サマリーに必ず残るので、情報は落ちない。 */
+  useEffect(() => {
+    if (debugActive.current) return;
+    if (elapsed < MARKET_OPEN.startAt) return;
+    if (verdictQueue.current.length > 0) {
+      const rest = verdictQueue.current;
+      verdictQueue.current = [];
+      setMyLane((prev) => [...prev, ...rest]);
+      setVerdictQueued(0);
+    }
+    if (verdictShowing.current) {
+      if (verdictTimer.current) clearTimeout(verdictTimer.current);
+      verdictTimer.current = null;
+      verdictShowing.current = false;
+      setVerdict(null);
+    }
+  }, [elapsed >= MARKET_OPEN.startAt]);
+
   /* リプレイ/翌日待機へ戻ったらMY LANEと審判の既読をリセット(ループ視聴)。 */
   const scheduleJoined = useRef(false);
   const wasPreShow = useRef(secondsToStart > 0);
@@ -407,10 +428,9 @@ export function DailyDerbyStage({
     const bandVerdictAt = LOGS_FROM + BAND_ACT_VERDICT_AT;
     // レースターン(生存/BURN/DAY7)。点呼の夜はスロット同期、濁流の夜はセクション同期。
     const raceTurnAt = (name: string, sectionKey: string, idxInSection: number): number => {
-      if (hasBand) {
-        // VERDICT幕(55→62秒)に詰める。溢れる分は VERDICT_QUEUE_MAX が面倒を見る。
-        return bandVerdictAt + 1.2 + idxInSection * 1.6;
-      }
+      // 帯レースの夜は下でまとめて通し番号を振り直す(セクション別 index だと
+      // 生存1頭+BURN1頭がどちらも idx=0 になり同時刻に発火する)。
+      if (hasBand) return bandVerdictAt;
       if (quiet) {
         const i = raceRunners.findIndex((h) => h.name === name);
         if (i >= 0) return LOGS_FROM + i * rollSlot + rollSlot * 0.55;
@@ -450,6 +470,19 @@ export function DailyDerbyStage({
        見せるようになったため、同じ情報を2回出すことになる。加えて従来の
        発火時刻(MATCH 78秒 / MINT 85秒)は短縮後のショー終端 78秒より後で、
        そのままでは出番自体が無い。 */
+    if (hasBand) {
+      /* VERDICT幕(55秒)から、審判1件の表示時間(3.2〜5.0秒)ぶんずつ間隔を空けて
+         通しで並べ直す。1.6秒などで詰めるとキューが後ろへ伸び、SETTLEMENT幕
+         (62秒〜)が審判オーバーレイに覆われ続ける(複数保有時のみ発現)。
+         窓(55→62秒)に収まらない分は MY LANE と最後の全結果サマリーへ回る。
+         順番は BURN → DAY7 → 生存 — 打ち切られる末尾に回すのは、
+         いちばん報せる価値の低いものにする。 */
+      const rank = (k: VerdictInfo['kind']) => (k === 'burn' ? 0 : k === 'day7' ? 1 : 2);
+      out.sort((a, b) => rank(a.info.kind) - rank(b.info.kind));
+      out.forEach((sv, i) => {
+        sv.fireAt = bandVerdictAt + 1.0 + i * 3.6;
+      });
+    }
     return out.sort((a, b) => a.fireAt - b.fireAt);
   }, [myEvents, quiet, raceRunners, rollSlot, hasBand]);
 

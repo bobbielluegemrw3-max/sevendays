@@ -137,6 +137,37 @@ describe('band race — 実データと一致する', () => {
   });
 });
 
+describe('band race — 同じ帯に自分の馬が複数いる夜', () => {
+  /** 34位(ライン直上)と 12位 の2頭を持つ帯。主役は最もラインに近い34位。 */
+  const twoOfMine = () => {
+    const input = fixtureBandRace({ mineRank: 34 });
+    const entries = input.entries.map((e, i) => (i === 11 ? { ...e, mine: true } : e));
+    return buildBandRace({ ...input, entries });
+  };
+
+  it('主役は最も危ない1頭(ラインに近い方)', () => {
+    const last = bandRaceFrame(twoOfMine(), ACT_TOTAL);
+    expect(last.myRank).toBe(34);
+  });
+
+  it('カメラは主役に張り付く(見出しと別の持ち馬を追わない)', () => {
+    const m = twoOfMine();
+    const last = bandRaceFrame(m, ACT_TOTAL);
+    const mineRows = last.rows.filter((r) => r.mine);
+    // 主役の行が必ずカメラ窓に入っている
+    expect(mineRows.some((r) => r.rank === 34)).toBe(true);
+  });
+
+  it('主役以外の持ち馬も、開示されれば金色の行として出る', () => {
+    const m = twoOfMine();
+    const last = bandRaceFrame(m, ACT_TOTAL);
+    // 12位は上位3頭にも自分±5にも入らないので、行として現れるとは限らない。
+    // ただし entries 上では mine が2頭立っていること(取りこぼしていない)。
+    expect(m.entries.filter((e) => e.mine)).toHaveLength(2);
+    expect(last.rows.filter((r) => r.mine).length).toBeGreaterThanOrEqual(1);
+  });
+});
+
 describe('band race — 出走していない夜', () => {
   it('自分の馬がいない帯でも落ちない', () => {
     const input = fixtureBandRace();

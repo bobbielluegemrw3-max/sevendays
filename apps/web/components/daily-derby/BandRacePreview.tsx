@@ -31,12 +31,14 @@ const JUMPS: ReadonlyArray<{ label: string; at: number }> = [
 ];
 
 /** 見え方が変わる代表ケース(ライン際が主役)。 */
-const CASES: ReadonlyArray<{ label: string; rank: number | null }> = [
+const CASES: ReadonlyArray<{ label: string; rank: number | null; extra?: number[] }> = [
   { label: '首位', rank: 1 },
   { label: '中位', rank: 18 },
   { label: '★ぎりぎり生存', rank: 34 },
   { label: '★ぎりぎりBURN', rank: 35 },
   { label: '最下位', rank: 38 },
+  // 同じ帯に複数所有: 主役は最もラインに近い1頭、他は金色の行として出る
+  { label: '同じ帯に3頭', rank: 35, extra: [4, 20] },
   { label: '出走なし(観戦)', rank: null },
 ];
 
@@ -45,6 +47,8 @@ export function BandRacePreview() {
   const [speed, setSpeed] = useState(1);
   const [paused, setPaused] = useState(false);
   const [rank, setRank] = useState<number | null>(34);
+  /** 同じ帯に持っている他の馬の確定順位(主役以外)。 */
+  const [extra, setExtra] = useState<number[]>([]);
   const [total, setTotal] = useState(38);
   const [burns, setBurns] = useState(4);
   const speedRef = useRef(speed);
@@ -81,12 +85,16 @@ export function BandRacePreview() {
       burns,
       ...(rank !== null ? { mineRank: rank } : {}),
     });
-    return buildBandRace(
-      rank === null
-        ? { ...input, entries: input.entries.map((e) => ({ ...e, mine: false })) }
-        : input,
-    );
-  }, [rank, total, burns]);
+    if (rank === null) {
+      return buildBandRace({ ...input, entries: input.entries.map((e) => ({ ...e, mine: false })) });
+    }
+    if (extra.length === 0) return buildBandRace(input);
+    const marked = new Set(extra);
+    return buildBandRace({
+      ...input,
+      entries: input.entries.map((e, i) => (marked.has(i + 1) ? { ...e, mine: true } : e)),
+    });
+  }, [rank, total, burns, extra]);
 
   const btn = { padding: '0.35rem 0.7rem', fontSize: '0.68rem' } as const;
 
@@ -105,7 +113,7 @@ export function BandRacePreview() {
             type="button"
             className="secondary"
             style={{ ...btn, borderColor: rank === c.rank ? 'var(--gold, #c9a86a)' : undefined }}
-            onClick={() => { setRank(c.rank); setT(0); }}
+            onClick={() => { setRank(c.rank); setExtra(c.extra ?? []); setT(0); }}
           >
             {c.label}
           </button>
