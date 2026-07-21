@@ -137,7 +137,7 @@ nav.topnav a.derby-cd-live .derby-cd-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.65; }
 }
-/* 1500px以下は「NEXT DERBY」ラベルを省き、リンク13個を1行に収める */
+/* 1500px以下は「NEXT DERBY」ラベルを省いて右クラスタを詰める */
 @media (max-width: 1500px) {
   nav.topnav a.derby-cd .derby-cd-k { display: none; }
 }
@@ -147,8 +147,8 @@ nav.topnav a:not(.brand) {
 nav.topnav a:not(.brand):hover { color: var(--cyan); }
 nav.topnav .spacer { flex: 1; }
 
-/* ゲームページ(英語)とユーティリティ(日本語)の区切りと格差 */
-nav.topnav .topnav-sep { width: 1px; height: 15px; background: var(--border-strong); flex: none; align-self: center; }
+/* ユーティリティ(日本語ラベル)はゲームページより一段控えめ。
+   区切り線 .topnav-sep は 2-2 でドロワー内の .topnav-drawer-sep に置換した。 */
 nav.topnav a.topnav-util { font-family: var(--font-jp); font-size: 0.66rem; letter-spacing: 0.02em; color: var(--faint); }
 nav.topnav a.topnav-util:hover { color: var(--cyan); }
 nav.topnav .topnav-badge {
@@ -158,18 +158,44 @@ nav.topnav .topnav-badge {
   font-family: var(--font-mono); font-size: 9px; line-height: 1; vertical-align: 1px;
 }
 
+/* 「その他」ドロワー(UI_FOUNDATION_PLAN 2-2)。稀にしか使わない8項目を畳む。
+   .topnav-links の外(右クラスタ)に置く — モバイルのリンク行は overflow-x する
+   ため、その中だと絶対配置のパネルが切り落とされる。 */
+nav.topnav .topnav-more { position: relative; display: inline-flex; align-items: center; flex: none; }
+nav.topnav .topnav-more-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.13em; color: var(--muted);
+  background: none; border: none; box-shadow: none; padding: 3px 2px; cursor: pointer;
+}
+nav.topnav .topnav-more-btn:hover { color: var(--cyan); }
+nav.topnav .topnav-more-btn:active { transform: translateY(1px); }
+nav.topnav .topnav-more-chev { transition: transform 0.15s ease; opacity: 0.7; }
+nav.topnav .topnav-more-chev-open { transform: rotate(180deg); opacity: 1; }
+nav.topnav .topnav-drawer {
+  position: absolute; top: calc(100% + 9px); right: 0; z-index: 40;
+  min-width: 172px; display: flex; flex-direction: column; gap: 1px;
+  padding: 7px; border-radius: 12px;
+  background: #12101f; border: 1px solid var(--border-strong);
+  box-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.8);
+}
+nav.topnav .topnav-drawer a { display: block; padding: 8px 10px; border-radius: 8px; }
+nav.topnav .topnav-drawer a:hover { background: rgba(255, 255, 255, 0.06); }
+nav.topnav .topnav-drawer a:active { background: rgba(255, 255, 255, 0.11); }
+nav.topnav .topnav-drawer-sep { height: 1px; margin: 5px 4px; background: var(--border); }
+
 /* Narrow screens: brand + logout on the first row, links drop to a second
-   full-width row that scrolls horizontally instead of wrapping raggedly. */
+   full-width row. 主要6になったので横スクロールの必要が無くなった
+   (旧: 13項目が入りきらず、後半は気づかれないまま隠れていた)。 */
 @media (max-width: 700px) {
   nav.topnav { gap: 0.55rem 0.9rem; padding: 0.7rem 0.95rem; }
   nav.topnav .topnav-links {
-    display: flex; order: 3; flex-basis: 100%; gap: 0.85rem;
-    justify-content: space-between;
-    overflow-x: auto; white-space: nowrap;
-    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    display: flex; order: 3; flex-basis: 100%; gap: 0.7rem;
+    justify-content: space-between; flex-wrap: wrap;
   }
-  nav.topnav .topnav-links::-webkit-scrollbar { display: none; }
   nav.topnav .topnav-links a { flex: none; padding: 2px 0; font-size: 0.62rem; letter-spacing: 0.1em; }
+  nav.topnav .topnav-more-btn { font-size: 0.62rem; letter-spacing: 0.1em; }
+  /* 画面が狭いときは右端に寄せず、はみ出さない幅で開く */
+  nav.topnav .topnav-drawer { right: 0; min-width: 168px; max-width: calc(100vw - 24px); }
 }
 
 /* ---------- panels & cards ---------- */
