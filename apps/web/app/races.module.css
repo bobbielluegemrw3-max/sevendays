@@ -57,7 +57,7 @@
 .verifyBad { border: 1px solid rgba(255, 92, 92, 0.3); background: linear-gradient(150deg, rgba(255, 92, 92, 0.07), transparent 70%); }
 .verifyPending { border: 1px solid var(--border); background: linear-gradient(150deg, rgba(255, 255, 255, 0.03), transparent 70%); }
 .verifyHead { display: flex; align-items: center; gap: 10px; }
-.verifyLabel { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.18em; color: #9dffc4; }
+.verifyLabel { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.18em; color: var(--good-soft); }
 .verifyBadge { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 11px; font-weight: 700; border-radius: 999px; padding: 4px 11px; }
 .vbOk { color: var(--good); border: 1px solid rgba(53, 208, 127, 0.45); background: rgba(53, 208, 127, 0.1); }
 .vbBad { color: var(--bad); border: 1px solid rgba(255, 92, 92, 0.45); background: rgba(255, 92, 92, 0.1); }

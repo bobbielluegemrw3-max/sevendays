@@ -68,7 +68,7 @@
 .hLabel { font-size: 12.5px; color: var(--text); font-weight: 600; }
 .hSub { font-family: var(--font-mono); font-size: 9px; color: var(--faint); }
 .hAmt { font-family: var(--font-display); font-weight: 700; font-size: 14px; white-space: nowrap; }
-.hAmtCredit { color: #9dffc4; } .hAmtDebit { color: var(--magenta-soft); } .hAmtNeutral { color: var(--muted); }
+.hAmtCredit { color: var(--good-soft); } .hAmtDebit { color: var(--magenta-soft); } .hAmtNeutral { color: var(--muted); }
 
 .pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
 .pagerBtn { font-family: var(--font-display); font-size: 11px; font-weight: 700; border: 1px solid rgba(0, 234, 255, 0.4); border-radius: 9px; padding: 8px 14px; cursor: pointer; color: var(--cyan); background: rgba(0, 234, 255, 0.08); }
@@ -81,7 +81,7 @@
 /* かんたん表示(2026-07-14): トーンタグ+台帳表示トグル */
 .hTone { display: inline-block; margin-left: 0.5rem; font-family: var(--font-mono); font-size: 0.56rem;
   letter-spacing: 0.08em; border-radius: 999px; padding: 0.08rem 0.45rem; vertical-align: 1px; }
-.hToneIn { color: #9dffc4; border: 1px solid rgba(60, 220, 130, 0.35); }
+.hToneIn { color: var(--good-soft); border: 1px solid rgba(60, 220, 130, 0.35); }
 .hToneOut { color: var(--magenta-soft); border: 1px solid rgba(255, 45, 196, 0.3); }
 .hToneMove { color: var(--muted); border: 1px solid var(--border); }
 .rawToggle { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.04em; color: var(--muted);
@@ -102,7 +102,7 @@
 .ogName { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--text); }
 .ogTag { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.04em; border-radius: 999px;
   padding: 2px 7px; white-space: nowrap; }
-.ogDirect { color: #9dffc4; border: 1px solid rgba(60, 220, 130, 0.4); }
+.ogDirect { color: var(--good-soft); border: 1px solid rgba(60, 220, 130, 0.4); }
 .ogSwap { color: #a9f6ff; border: 1px solid rgba(0, 234, 255, 0.35); }
 .ogAdvanced { color: var(--warn); border: 1px solid rgba(230, 178, 74, 0.4); }
 .ogBlurb { font-size: 11.5px; line-height: 1.6; color: var(--muted); flex: 1; }

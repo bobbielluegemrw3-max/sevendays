@@ -237,7 +237,7 @@
   white-space: nowrap; text-transform: uppercase; border: 1px solid transparent;
 }
 .rarCOMMON    { color: #c3ccd8; border-color: #8a92a0; background: rgba(130, 140, 160, 0.14); }
-.rarUNCOMMON  { color: #9dffc4; border-color: var(--good); background: rgba(53, 208, 127, 0.15); }
+.rarUNCOMMON  { color: var(--good-soft); border-color: var(--good); background: rgba(53, 208, 127, 0.15); }
 .rarRARE      { color: #a9f6ff; border-color: var(--cyan); background: rgba(0, 234, 255, 0.16); }
 .rarEPIC      { color: var(--magenta-soft); border-color: var(--magenta); background: rgba(255, 45, 196, 0.16); }
 .rarLEGENDARY { color: #0a0813; border-color: transparent; background: linear-gradient(92deg, var(--gold), #f7eccb); }

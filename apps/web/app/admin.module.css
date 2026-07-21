@@ -7,21 +7,24 @@
    Recovery/Audit）が本ファイルを共有する。
    ========================================================================== */
 
-/* --- ops-console トークン（globals.css の既存トークンに追加）--- */
+/* --- ops-console トークン（globals.css の既存トークンに追加）---
+   UI基盤 3-2: 意味色とフォントは globals.css の1系統に寄せた（同じ値を
+   2箇所で定義していたため、片方だけ動かすと admin だけ意味がずれる）。
+   面・線・インクは admin だけ意図的に高コントラストなので独自値のまま残す。 */
 :global(:root){
   --c-surface:#0e0c17;         /* フラットな面。グラデ廃止 */
   --c-surface-2:#131120;       /* 一段上げ（ヘッダ行/展開） */
   --c-line:rgba(255,255,255,0.09);
   --c-line-soft:rgba(255,255,255,0.055);
-  --c-ink:#f1effa;             /* 主テキスト（高コントラスト） */
+  --c-ink:#f1effa;             /* 主テキスト（高コントラスト・admin専用） */
   --c-ink-2:#c9c5e0;           /* 副テキスト */
   --c-ink-3:#938fb4;           /* キャプション */
-  --c-accent:#ff4dcf;          /* ADMIN識別色。操作面だけに使う */
+  --c-accent:#ff4dcf;          /* ADMIN識別色。操作面だけに使う（マゼンタ4役の分離先） */
   --c-zebra:rgba(255,255,255,0.018);
-  --c-good:#35d07f; --c-warn:#e6b24a; --c-bad:#ff5c5c;
-  --c-mono:'IBM Plex Mono',ui-monospace,monospace;
-  --c-disp:'Orbitron',system-ui,sans-serif;
-  --c-jp:'Zen Kaku Gothic New',system-ui,sans-serif;
+  --c-good:var(--good); --c-warn:var(--warn); --c-bad:var(--bad);
+  --c-mono:var(--font-mono);
+  --c-disp:var(--font-display);
+  --c-jp:var(--font-jp);
 }
 
 /* ---------- レイアウト ---------- */

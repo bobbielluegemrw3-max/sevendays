@@ -20,7 +20,7 @@
 .stepKcyan { color: var(--cyan); } .stepKgood { color: var(--good); }
 .stepT { font-size: 11.5px; color: #c3ccd8; margin-top: 5px; line-height: 1.5; }
 .stepT b { font-family: var(--font-display); color: var(--gold-bright); }
-.stepT .good { color: #9dffc4; }
+.stepT .good { color: var(--good-soft); }
 .introNote { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 11px; line-height: 1.6; }
 
 /* ---- セクション見出し ----------------------------------------------------- */
@@ -42,7 +42,7 @@
 .sVals { display: flex; gap: 22px; margin-top: 11px; flex-wrap: wrap; }
 .sK { font-family: var(--font-mono); font-size: 8.5px; color: var(--faint); }
 .sV { font-family: var(--font-display); font-weight: 700; font-size: 16px; margin-top: 2px; }
-.sVlock { color: #a9f6ff; } .sVassign { color: var(--gold-bright); } .sVrefund { color: #9dffc4; }
+.sVlock { color: #a9f6ff; } .sVassign { color: var(--gold-bright); } .sVrefund { color: var(--good-soft); }
 .sV small { font-size: 9px; color: var(--faint); margin-left: 3px; }
 
 /* ---- 割当履歴 + コントロール ---------------------------------------------- */

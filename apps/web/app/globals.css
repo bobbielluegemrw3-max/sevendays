@@ -23,8 +23,16 @@
   --gold: #c9a86a;
   --gold-bright: #f2e4bf;
 
+  /* 意味色(UI基盤 3-2)。監査時点で危険色5種・成功色3種が併存し、さらに
+     マゼンタが「ブランド / secondary / admin / bad」の4役を持っていたため、
+     プレイヤーは色から意味を学習できなかった。
+     ルール: 面・枠には濃い方、暗背景の文字には -soft を使う。
+     マゼンタは「ブランドとsecondary」だけに戻し、bad からは外した。
+     ADMIN識別色は admin.module.css の --c-accent(#ff4dcf)で別に持つ。 */
   --good: #35d07f;
+  --good-soft: #9dffc4;   /* 暗背景に置く成功テキスト */
   --bad: #ff5c5c;
+  --bad-soft: #ff9a9a;    /* 暗背景に置く失敗テキスト */
   --warn: #e6b24a;
 
   /* 角丸は3段だけ(UI基盤 3-1)。既存2段の値は動かさず、小さい器用に xs を足した。
@@ -279,7 +287,9 @@ nav.topnav .topnav-drawer-sep { height: 1px; margin: 5px 4px; background: var(--
 }
 .badge.tonight { color: #04141a; background: linear-gradient(92deg, var(--cyan), #5ff5ff); border-color: transparent; }
 .badge.good { color: var(--good); border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.08); }
-.badge.bad { color: var(--magenta-soft); border-color: rgba(255, 45, 196, 0.4); background: rgba(255, 45, 196, 0.08); }
+/* 3-2: bad をマゼンタから外した。同じマゼンタがブランド・secondary・admin・
+   「悪い」の4役を持っていて、色が意味を運べなくなっていた。 */
+.badge.bad { color: var(--bad-soft); border-color: rgba(255, 92, 92, 0.4); background: rgba(255, 92, 92, 0.08); }
 .badge.rarity-LEGENDARY, .badge.rarity-EPIC, .badge.rarity-SR {
   color: #0a0813; background: linear-gradient(92deg, var(--gold), var(--gold-bright)); border-color: transparent;
 }
