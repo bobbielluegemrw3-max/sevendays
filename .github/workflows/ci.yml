@@ -8,6 +8,27 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+
+    # 二重支払い防止テスト(packages/ledger/test/concurrency.test.ts)は
+    # **真の並行性**を要求するため PGlite(単一接続)では動かせない。実 Postgres を
+    # 立て、TEST_DATABASE_URL を与えて初めて実行される(L-5)。
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sevendays_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/sevendays_test
+
     steps:
       - uses: actions/checkout@v4
 
@@ -30,8 +51,19 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # マイグレーションを実 Postgres へ適用(PGlite版 test-db.ts と同じ手順)
+      - name: Apply schema to test database
+        run: node scripts/apply-test-schema.mjs
+
+      # --force: turbo のキャッシュヒットで「テストを1件も実行しないのに PASS」に
+      # なるのを防ぐ。CI は毎回実走させる(ゲート判定はキャッシュを信じない)
       - name: Test
-        run: pnpm test
+        run: pnpm test -- --force
+
+      # 二重支払いテストが実際に実行されたことを確認する。
+      # skip されていても vitest は成功扱いになるため、スキップ=合格のすり抜けを塞ぐ
+      - name: Verify double-spend test actually ran
+        run: pnpm --filter @sevendays/ledger exec vitest run test/concurrency.test.ts --reporter=verbose 2>&1 | tee /tmp/dbl.log && grep -q "concurrent double-spend prevention" /tmp/dbl.log && ! grep -qi "skipped" /tmp/dbl.log
 
       - name: Forbidden API check (Completion Gate G8)
         run: pnpm check:forbidden-apis
