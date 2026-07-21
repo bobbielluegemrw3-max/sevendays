@@ -57,8 +57,10 @@ jobs:
 
       # --force: turbo のキャッシュヒットで「テストを1件も実行しないのに PASS」に
       # なるのを防ぐ。CI は毎回実走させる(ゲート判定はキャッシュを信じない)
+      # ★`pnpm test -- --force` と書くと `--` 以降が下位タスク(vitest)へ転送され
+      #   `CACError: Unknown option --force` で落ちる。turbo のフラグとして渡すこと
       - name: Test
-        run: pnpm test -- --force
+        run: pnpm exec turbo run test --force
 
       # 二重支払いテストが実際に実行されたことを確認する。
       # skip されていても vitest は成功扱いになるため、スキップ=合格のすり抜けを塞ぐ
