@@ -375,6 +375,17 @@ export function DailyDerbyStage({
   /** 施策G: この夜は帯レースを上映するか(審判の発火時刻がこれで変わる)。 */
   const hasBand = (bandRace?.length ?? 0) > 0;
 
+  /* 施策G: 主役の帯を1つ選んでフル演出する(オーナー判断 2026-07-21)。
+     101秒に全帯は入らないし、頭数比で機械的に割ると尺の大半が自分と無関係な
+     帯に流れる — それは計画書が削ろうとしている「他人の話」を温存することになる。
+     他の帯にいる自分の馬は従来どおり審判オーバーレイ + MY LANE が拾う。 */
+  const bandModel = useMemo<BandRaceModel | null>(() => {
+    if (!bandRace || bandRace.length === 0) return null;
+    const featured = selectFeaturedBand(bandRace);
+    return featured ? buildBandRace(featured) : null;
+  }, [bandRace]);
+
+
   /* 施策G 後半: SETTLEMENT 幕の入力。62秒以降のダミー濁流を置き換える。
      出ていった馬(売却)→入ってきた馬(購入/ミント)。数字はすべて実データ。 */
   const settlement = useMemo<SettlementInput>(() => {
@@ -426,6 +437,8 @@ export function DailyDerbyStage({
      * したがって帯がある夜は、レースターンの審判をまとめて VERDICT 幕へ寄せる。
      * 順位表が「0.56点差で生存」と出し、そのあとに馬が浮かび上がる順序になる。 */
     const bandVerdictAt = LOGS_FROM + BAND_ACT_VERDICT_AT;
+    const protagonist =
+      bandModel && bandModel.myIndex !== null ? bandModel.entries[bandModel.myIndex]!.name : null;
     // レースターン(生存/BURN/DAY7)。点呼の夜はスロット同期、濁流の夜はセクション同期。
     const raceTurnAt = (name: string, sectionKey: string, idxInSection: number): number => {
       // 帯レースの夜は下でまとめて通し番号を振り直す(セクション別 index だと
@@ -477,14 +490,19 @@ export function DailyDerbyStage({
          窓(55→62秒)に収まらない分は MY LANE と最後の全結果サマリーへ回る。
          順番は BURN → DAY7 → 生存 — 打ち切られる末尾に回すのは、
          いちばん報せる価値の低いものにする。 */
-      const rank = (k: VerdictInfo['kind']) => (k === 'burn' ? 0 : k === 'day7' ? 1 : 2);
-      out.sort((a, b) => rank(a.info.kind) - rank(b.info.kind));
+      const kindRank = (k: VerdictInfo['kind']) => (k === 'burn' ? 0 : k === 'day7' ? 1 : 2);
+      const rank = (sv: { info: VerdictInfo }) =>
+        // 帯レースの主役は必ず先頭。25秒かけて順位が下がるのを見せた当の馬が
+        // 「0.56点差で生存」の直後に出てこないと、緊張と結果の鎖が切れる
+        // (主役が生存し別の馬がBURNした夜は、無関係な馬のBURNが先に出ていた)。
+        (sv.info.name === protagonist ? -1 : kindRank(sv.info.kind));
+      out.sort((a, b) => rank(a) - rank(b));
       out.forEach((sv, i) => {
         sv.fireAt = bandVerdictAt + 1.0 + i * 3.6;
       });
     }
     return out.sort((a, b) => a.fireAt - b.fireAt);
-  }, [myEvents, quiet, raceRunners, rollSlot, hasBand]);
+  }, [myEvents, quiet, raceRunners, rollSlot, hasBand, bandModel]);
 
   useEffect(() => {
     if (verdictSchedule.length === 0 || elapsed < LOGS_FROM) return;
@@ -589,16 +607,6 @@ export function DailyDerbyStage({
     },
     [refsForUnmount],
   );
-
-  /* 施策G: 主役の帯を1つ選んでフル演出する(オーナー判断 2026-07-21)。
-     101秒に全帯は入らないし、頭数比で機械的に割ると尺の大半が自分と無関係な
-     帯に流れる — それは計画書が削ろうとしている「他人の話」を温存することになる。
-     他の帯にいる自分の馬は従来どおり審判オーバーレイ + MY LANE が拾う。 */
-  const bandModel = useMemo<BandRaceModel | null>(() => {
-    if (!bandRace || bandRace.length === 0) return null;
-    const featured = selectFeaturedBand(bandRace);
-    return featured ? buildBandRace(featured) : null;
-  }, [bandRace]);
 
   const showTicker = !failed && elapsed >= LOGS_FROM && elapsed < SHOW_TOTAL + 30;
   const chapter = !failed && elapsed < SHOW_TOTAL

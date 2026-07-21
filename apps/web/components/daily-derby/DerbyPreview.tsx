@@ -44,6 +44,40 @@ const JUMPS: ReadonlyArray<{ label: string; seconds: number }> = [
   { label: '全結果サマリー', seconds: -(SHOW_TOTAL + 1) },
 ];
 
+
+/**
+ * プレビューの帯レースを、審判オーバーレイに出る実際の馬と一致させる。
+ *
+ * 以前は fixtureBandRace の生成名をそのまま使っていたため、25秒かけて競った
+ * 馬と、その直後に画像が出る馬が別物になっていた(2026-07-21 オーナー指摘)。
+ * 本番では同じ夜の同じデータなので当然一致する — プレビューだけが嘘をついていた。
+ *
+ * 主役の帯(LV.4)のライン直下 = 最上位のBURN に、当夜BURNされる自分の馬を置く。
+ */
+function previewBands() {
+  const night = fixtureNightResults();
+  const burned = night.burned[0];
+  const survived = night.survived.find((r) => !r.day7);
+  const named = (
+    input: ReturnType<typeof fixtureBandRace>,
+    rank: number,
+    name: string | undefined,
+  ) =>
+    name === undefined
+      ? input
+      : {
+          ...input,
+          entries: input.entries.map((e, i) => (i === rank - 1 ? { ...e, name } : e)),
+        };
+  return [
+    named(fixtureBandRace({ day: 2, total: 62, burns: 7, mineRank: 41 }), 41, survived?.name),
+    // 35位 = 最上位のBURN。帯レースが「点差で及ばず」を出した直後に、
+    // まさにこの馬の画像が浮かび上がる。
+    named(fixtureBandRace({ day: 4, total: 38, burns: 4, mineRank: 35 }), 35, burned?.name),
+    fixtureBandRace({ day: 6, total: 12, burns: 1, mineRank: 3 }),
+  ];
+}
+
 export function DerbyPreview() {
   const [secondsToStart, setSecondsToStart] = useState(PRE_SHOW_SECONDS + 12);
   const [speed, setSpeed] = useState(1);
@@ -286,15 +320,7 @@ export function DerbyPreview() {
         jackpot={jackpotSim ? fixtureJackpot() : null}
         /* 施策G: 3帯に馬がいる夜。主役は「ラインに最も近かった1頭」の帯 =
            LV.4(35位 = 最上位のBURN)が選ばれるはず。 */
-        bandRace={
-          bandOn
-            ? [
-                fixtureBandRace({ day: 2, total: 62, burns: 7, mineRank: 41 }),
-                fixtureBandRace({ day: 4, total: 38, burns: 4, mineRank: 35 }),
-                fixtureBandRace({ day: 6, total: 12, burns: 1, mineRank: 3 }),
-              ]
-            : null
-        }
+        bandRace={bandOn ? previewBands() : null}
       />
 
       <p className="faint" style={{ fontSize: '0.78rem', marginTop: '0.8rem' }}>
