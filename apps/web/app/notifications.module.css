@@ -60,6 +60,10 @@
 .title { font-size: 13px; margin-top: 5px; line-height: 1.4; color: var(--muted); }
 .titleUnread { color: var(--text); font-weight: 600; }
 .sub { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); margin-top: 4px; line-height: 1.5; }
+/* 施策E(FUN_V3): 利確フレーミングの損益行。本文より一段強い数値表示。 */
+.pnl { font-family: var(--font-mono); font-size: 11px; font-weight: 700; margin-top: 4px; letter-spacing: 0.02em; }
+.pnlUp { color: #35d07f; }
+.pnlDown { color: #ff6b6b; }
 .time { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); flex: none; white-space: nowrap; }
 .rowRight { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
 .openArrow { color: var(--faint); font-size: 12px; }

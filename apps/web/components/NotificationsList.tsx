@@ -67,6 +67,33 @@ function bodyOf(n: Notification, lvMode = false): string | null {
   const b = n.payload_json?.['body'];
   return typeof b === 'string' && b ? (lvMode ? toLvText(b) : b) : null;
 }
+/**
+ * 施策E(FUN_V3): 利確フレーミングの損益行。payload の buy/sell(サーバが
+ * 出品・売却・BURN 通知にのみ添える生数値)から、5言語で損益を組み立てる。
+ * 「馬を取られた」ではなく「儲かった / 損した」を、正直に(損失も)出す。
+ */
+function pnlOf(n: Notification, t: AppDict['notif']): { text: string; up: boolean } | null {
+  const p = n.payload_json;
+  const buyRaw = p?.['buy'];
+  const sellRaw = p?.['sell'];
+  if (typeof buyRaw !== 'string' || typeof sellRaw !== 'string') return null;
+  const buy = Number(buyRaw);
+  const sell = Number(sellRaw);
+  if (!Number.isFinite(buy) || !Number.isFinite(sell) || buy <= 0) return null;
+  const v = Math.abs(sell - buy).toFixed(2);
+  const pct = Math.abs(((sell - buy) / buy) * 100).toFixed(1);
+  if (n.notification_type === 'HORSE_BURNED') return { text: fill(t.pnl.burn_tpl, { v }), up: false };
+  const up = sell - buy >= 0;
+  const projected = p?.['projected'] === '1';
+  const tpl = projected
+    ? up
+      ? t.pnl.proj_gain_tpl
+      : t.pnl.proj_loss_tpl
+    : up
+      ? t.pnl.gain_tpl
+      : t.pnl.loss_tpl;
+  return { text: fill(tpl, { v, p: pct }), up };
+}
 /** 通知 → 関連ページ(「読む」から「次の行動」へ)。 */
 function hrefOf(n: Notification): string {
   const raw = n.payload_json?.['horse_id'];
@@ -208,6 +235,7 @@ export function NotificationsList({ notifications, preview = false, t , lvMode =
             const m = meta(n.notification_type);
             const unread = n.read_at == null && !n.is_broadcast;
             const body = bodyOf(n, lvMode);
+            const pnl = pnlOf(n, t);
             const d = dateOf(n.created_at);
             const prev = i > 0 ? dateOf(slice[i - 1]!.created_at) : null;
             return (
@@ -226,6 +254,7 @@ export function NotificationsList({ notifications, preview = false, t , lvMode =
                     </div>
                     <div className={`${s.title} ${unread ? s.titleUnread : ''}`}>{titleOf(n, t, lvMode)}</div>
                     {body ? <div className={s.sub}>{body}</div> : null}
+                    {pnl ? <div className={`${s.pnl} ${pnl.up ? s.pnlUp : s.pnlDown}`}>{pnl.text}</div> : null}
                   </div>
                   <span className={s.rowRight}>
                     <span className={s.time}>{timeAgo(n.created_at, t)}</span>

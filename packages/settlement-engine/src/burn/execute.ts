@@ -20,6 +20,7 @@ import {
   unitFromParts,
 } from '@sevendays/race-engine';
 import { itemSettlement } from '@sevendays/ledger';
+import { acquisitionCost, burnLossPnl } from '../economy/pnl.js';
 
 /**
  * Batch Steps 11-16 — Finalize rankings, calculate burn target count,
@@ -270,11 +271,15 @@ export async function finalizeAndBurn(
   for (const horseId of burnTargets) {
     const ownerId = ownerByHorse.get(horseId)!;
     const burned = renderNotification('HORSE_BURNED', { horse_name: nameById.get(horseId) ?? '' });
+    // 施策E: 全損(取得実支出をそのまま損失として)を添える。利益だけを
+    // 出して損失を隠さない(PRELAUNCH_COPY_RISKS 盛りすぎ是正)。
+    const acq = await acquisitionCost(client, horseId, ownerId);
+    const pnl = acq ? burnLossPnl(acq) : {};
     await insertNotification(client, {
       userId: ownerId,
       type: 'HORSE_BURNED',
       dedupeKey: `notif:HORSE_BURNED:${input.raceId}:${horseId}`,
-      payload: { ...burned, horse_id: horseId },
+      payload: { ...burned, horse_id: horseId, ...pnl },
     });
     // V2 (Decision 109): no revenge buffs — the drop notification above covers the memorial.
     if (!isRaceEngineV2(input.raceEngineVersion)) {

@@ -18,6 +18,7 @@ import {
   mintTotalValueV2,
   resolveNameCollision,
 } from '@sevendays/race-engine';
+import { acquisitionCost, realizedPnl } from '../economy/pnl.js';
 import type { PriceTablePolicy } from '@sevendays/economy-engine';
 import { getPrice } from '@sevendays/economy-engine';
 import { buildBuyerQueue, buildHorseQueue } from './queues.js';
@@ -337,6 +338,9 @@ async function settleOneAssignment(
       horse_name: horse.rows[0]?.name ?? '',
       proceeds: proceeds.toFixed8(),
     });
+    // 施策E: 実現損益(手取り − 取得実支出)を添える。売り手の取得原価を参照。
+    const acq = await acquisitionCost(client, assignment.horse_id, assignment.seller_user_id);
+    const pnl = acq ? realizedPnl(acq, proceeds) : {};
     await insertNotification(client, {
       userId: assignment.seller_user_id,
       type: 'HORSE_SOLD',
@@ -346,6 +350,7 @@ async function settleOneAssignment(
         horse_id: assignment.horse_id,
         proceeds: proceeds.toFixed8(),
         price: price.toFixed8(),
+        ...pnl,
       },
     });
   }

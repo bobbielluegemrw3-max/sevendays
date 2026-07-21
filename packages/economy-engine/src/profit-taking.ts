@@ -95,7 +95,16 @@ export async function selectProfitTakingListings(
   });
 
   const rate = LISTING_TARGET_RATE_V1[input.economyStatus];
-  const targetCount = floorTimesRate(eligible.length, rate);
+  // 施策F (FUN_V3): 供給の律速は「1オーナー最大2頭/バッチ」の上限であり、
+  // eligible*rate はオーナーあたり保有が増えるほど構造的に未達になる
+  // (例: 全員9頭保有で 0.30×9=2.7 > 上限2)。目標を実供給可能量
+  // (オーナー数 × 絶対上限2) で頭打ちにし、メトリクスが存在しない未達を
+  // 追いかけないようにする。上限そのものは引き上げない(律速は買い手数)。
+  const ownerCount = new Set(eligible.map((h) => h.ownerUserId)).size;
+  const targetCount = Math.min(
+    floorTimesRate(eligible.length, rate),
+    ownerCount * OWNER_LISTING_ABSOLUTE_LIMIT,
+  );
 
   // Pass 1: max 1 per owner, in deterministic order.
   const perOwner = new Map<string, number>();

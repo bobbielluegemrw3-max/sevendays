@@ -4,6 +4,7 @@ import { renderNotification } from '@sevendays/domain';
 import type { EligibleHorse, PriceTablePolicy } from '@sevendays/economy-engine';
 import { getPrice } from '@sevendays/economy-engine';
 import { marketTiebreakScore } from '../assignment/tiebreak.js';
+import { acquisitionCost, projectedPnl } from './pnl.js';
 
 /**
  * Batch Step 22 — Create Market Listings from the deterministic Profit
@@ -50,11 +51,15 @@ export async function createMarketListings(
       horse_name: named.rows[0]?.name ?? '',
       price: price.toFixed8(),
     });
+    // 施策E: 見込み損益(売却されれば幾ら手取りになるか)を添える。
+    // 出品はまだ売却ではないので projected として表示する。
+    const acq = await acquisitionCost(client, horse.horseId, horse.ownerUserId);
+    const pnl = acq ? projectedPnl(acq, price) : {};
     await insertNotification(client, {
       userId: horse.ownerUserId,
       type: 'AUTO_LISTED',
       dedupeKey: `notif:AUTO_LISTED:${input.batchRunId}:${horse.horseId}`,
-      payload: { ...rendered, horse_id: horse.horseId, price: price.toFixed8() },
+      payload: { ...rendered, horse_id: horse.horseId, price: price.toFixed8(), ...pnl },
     });
   }
   return created;

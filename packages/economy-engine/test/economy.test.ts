@@ -269,6 +269,28 @@ describe('profit taking selection (Decisions 015-017)', () => {
     expect(emergency.targetCount).toBe(0);
     expect(emergency.selected).toHaveLength(0);
   });
+
+  it('施策F: target is capped at ownerCount * 2 (supply ceiling), not eligible*rate', async () => {
+    // isolate
+    await client.query(`update horses set status = 'BURNED' where status = 'ACTIVE'`);
+    const owner = await newUser();
+    await seedHorses([owner], 10); // 10 eligible, 1 owner
+
+    const batch = await client.query<{ id: string }>(
+      `insert into batch_runs (batch_date, batch_algorithm_version) values ('2036-02-05', 'batch_v1.0') returning id`,
+    );
+    const result = await selectProfitTakingListings(client, {
+      batchRunId: batch.rows[0]!.id,
+      economyStatus: 'NORMAL',
+      liquidityPolicyVersion: 'liquidity_policy_v1.0',
+      assignmentAlgorithmVersion: 'assignment_algorithm_v1.0',
+    });
+    // 旧式: floor(10 * 0.30) = 3。新式: min(3, 1 owner × 2) = 2。
+    // 律速はオーナー上限であり、供給不可能な3は目標にしない。
+    expect(result.eligibleCount).toBe(10);
+    expect(result.targetCount).toBe(2);
+    expect(result.selected).toHaveLength(2);
+  });
 });
 
 describe('economy metrics (Decision 058)', () => {

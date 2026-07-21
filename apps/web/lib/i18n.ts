@@ -276,6 +276,14 @@ export interface AppDict {
     min_tpl: string; // 「{n}分前」
     hour_tpl: string; // 「{n}時間前」
     day_tpl: string; // 「{n}日前」
+    /** 施策E(FUN_V3): 利確フレーミングの損益行。{v}=絶対額, {p}=絶対%。 */
+    pnl: {
+      gain_tpl: string; // 実現益「収支 +{v} USDT (+{p}%)」
+      loss_tpl: string; // 実現損「収支 −{v} USDT (−{p}%)」
+      proj_gain_tpl: string; // 出品時の見込み益
+      proj_loss_tpl: string; // 出品時の見込み損
+      burn_tpl: string; // BURN 全損「損失 −{v} USDT」
+    };
   };
   /** チャンピオン(ChampionView + ChampionHero + BuybacksView + BuybackDetailView)。 */
   champion: {
@@ -867,6 +875,13 @@ const ja: AppDict = {
     min_tpl: '{n}分前',
     hour_tpl: '{n}時間前',
     day_tpl: '{n}日前',
+    pnl: {
+      gain_tpl: '収支 +{v} USDT (+{p}%)',
+      loss_tpl: '収支 −{v} USDT (−{p}%)',
+      proj_gain_tpl: '見込み +{v} USDT (+{p}%)',
+      proj_loss_tpl: '見込み −{v} USDT (−{p}%)',
+      burn_tpl: '損失 −{v} USDT',
+    },
   },
   champion: {
     hero_note: 'アクティブユーザー 10,000人 到達で開幕',
@@ -1521,6 +1536,13 @@ const en: AppDict = {
     min_tpl: '{n}m ago',
     hour_tpl: '{n}h ago',
     day_tpl: '{n}d ago',
+    pnl: {
+      gain_tpl: 'P&L +{v} USDT (+{p}%)',
+      loss_tpl: 'P&L −{v} USDT (−{p}%)',
+      proj_gain_tpl: 'Est. +{v} USDT (+{p}%)',
+      proj_loss_tpl: 'Est. −{v} USDT (−{p}%)',
+      burn_tpl: 'Loss −{v} USDT',
+    },
   },
   champion: {
     hero_note: 'Opens when active users reach 10,000',
@@ -2175,6 +2197,13 @@ const zh: AppDict = {
     min_tpl: '{n}分钟前',
     hour_tpl: '{n}小时前',
     day_tpl: '{n}天前',
+    pnl: {
+      gain_tpl: '盈亏 +{v} USDT (+{p}%)',
+      loss_tpl: '盈亏 −{v} USDT (−{p}%)',
+      proj_gain_tpl: '预计 +{v} USDT (+{p}%)',
+      proj_loss_tpl: '预计 −{v} USDT (−{p}%)',
+      burn_tpl: '亏损 −{v} USDT',
+    },
   },
   champion: {
     hero_note: '活跃用户达到 10,000 人时开赛',
@@ -2829,6 +2858,13 @@ const ko: AppDict = {
     min_tpl: '{n}분 전',
     hour_tpl: '{n}시간 전',
     day_tpl: '{n}일 전',
+    pnl: {
+      gain_tpl: '손익 +{v} USDT (+{p}%)',
+      loss_tpl: '손익 −{v} USDT (−{p}%)',
+      proj_gain_tpl: '예상 +{v} USDT (+{p}%)',
+      proj_loss_tpl: '예상 −{v} USDT (−{p}%)',
+      burn_tpl: '손실 −{v} USDT',
+    },
   },
   champion: {
     hero_note: '활성 사용자 10,000명 도달 시 개막',
@@ -3483,6 +3519,13 @@ const ms: AppDict = {
     min_tpl: '{n} min lalu',
     hour_tpl: '{n} jam lalu',
     day_tpl: '{n} hari lalu',
+    pnl: {
+      gain_tpl: 'Untung/rugi +{v} USDT (+{p}%)',
+      loss_tpl: 'Untung/rugi −{v} USDT (−{p}%)',
+      proj_gain_tpl: 'Anggaran +{v} USDT (+{p}%)',
+      proj_loss_tpl: 'Anggaran −{v} USDT (−{p}%)',
+      burn_tpl: 'Rugi −{v} USDT',
+    },
   },
   champion: {
     hero_note: 'Dibuka apabila pengguna aktif mencapai 10,000',
