@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { POOL_PACKAGES_V2, POOL_PURCHASE_MIN_USDT } from '@sevendays/domain';
 import { refreshSoft } from '@/lib/deferred-refresh';
 import { apiFetch, errorMessage } from '@/lib/client-api';
+import { Button } from '@/components/ui/Button';
+import { playUiSound } from '@/lib/ui-sound';
 import s from '../app/market.module.css';
 
 /**
@@ -64,9 +66,11 @@ export function PoolReservePanel({
     setBusy(false);
     setConfirming(false);
     if (result.status !== 200) {
+      playUiSound('error');
       setError(errorMessage(result.body) ?? '予約に失敗しました。');
       return;
     }
+    playUiSound('success');
     setDone(fmt(parsed));
     refreshSoft(router);
   };
@@ -94,14 +98,15 @@ export function PoolReservePanel({
           {' '}次のレースで出品馬(P2P)→新規発行(102 USDT)の順に予算いっぱい割当・
           余り({MIN} USDT未満)は自動返金。締切前ならいつでも変更・キャンセルできます。
         </p>
-        {error ? <p className="error">{error}</p> : null}
+        {error ? <p className="error" role="alert">{error}</p> : null}
         <div className={s.poolRow}>
-          <button className="primary" type="button" disabled={busy} onClick={() => void submit()}>
-            {busy ? '処理中…' : pool ? '金額を変更する' : '予算をロックする'}
-          </button>
-          <button type="button" className="secondary" disabled={busy} onClick={() => setConfirming(false)}>
+          {/* 1-2/3-4: 金がロックされる確定。押した瞬間に返事を返す */}
+          <Button variant="primary" busy={busy} busyLabel="処理中…" sound="confirm" onClick={() => void submit()}>
+            {pool ? '金額を変更する' : '予算をロックする'}
+          </Button>
+          <Button variant="secondary" disabled={busy} onClick={() => setConfirming(false)}>
             戻る
-          </button>
+          </Button>
         </div>
       </div>
     );

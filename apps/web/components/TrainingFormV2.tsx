@@ -15,6 +15,7 @@ import { ItemCardPicker } from '@/components/ItemCardPicker';
 import { effectSummaryJa, type CatalogItem, type InventoryData } from '@/lib/items';
 import { projectAfterConfirm, type TrainingFxDetail } from '@/components/HeroArtFx';
 import { fill, type AppDict } from '@/lib/i18n-shared';
+import { playUiSound } from '@/lib/ui-sound';
 import s from '../app/horse-detail.module.css';
 
 /**
@@ -218,6 +219,9 @@ export function TrainingFormV2({
     setBusy(false);
     setConfirming(false);
     if (res.status !== 200) {
+      // 失敗にだけ音を返す。成功は HeroArtFx の生体反応が引き受けるので、
+      // その上にUI音を重ねない(演出と返事が二重になる)
+      playUiSound('error');
       setError(errorMessage(res.body) ?? t.train_fail);
       return;
     }
@@ -308,11 +312,14 @@ export function TrainingFormV2({
               ))}
             </div>
             <div className={s.tv2Warn}>{t.tv2_confirm_warn}</div>
-            {error ? <p className="error">{error}</p> : null}
+            {error ? <p className="error" role="alert">{error}</p> : null}
             <div className={s.tv2ConfirmRow}>
-              <button type="button" className={`primary ${busy ? 'btnRolling' : ''}`} disabled={busy} onClick={() => void submit()}>
-                {busy ? t.train_busy : t.tv2_confirm_go}
-              </button>
+              {/* 1-2/3-4: このゲームで最も取り返しがつかない操作。押した瞬間に
+                  返事(confirm音)を返す。ロールの結果音ではないので、出目の
+                  良し悪しでは音を変えない */}
+              <Button variant="primary" busy={busy} busyLabel={t.train_busy} sound="confirm" onClick={() => void submit()}>
+                {t.tv2_confirm_go}
+              </Button>
               <button type="button" className={s.redoBtn} disabled={busy} onClick={() => setConfirming(false)}>
                 {t.tv2_back}
               </button>
@@ -375,10 +382,17 @@ export function TrainingFormV2({
                 </button>
               ))}
             </div>
-            {error ? <p className="error">{error}</p> : null}
-            <button className="primary" type="button" disabled={busy || menus.length === 0} onClick={() => setConfirming(true)}>
+            {error ? <p className="error" role="alert">{error}</p> : null}
+            {/* ここはまだ確認画面へ進むだけ(取り返しがつく)ので音は鳴らさない。
+                無効の理由をラベルに出す方針は 1-2 の good practice */}
+            <Button
+              variant="primary"
+              disabled={busy || menus.length === 0}
+              disabledReason={menus.length === 0 ? t.tv2_pick_hint : undefined}
+              onClick={() => setConfirming(true)}
+            >
               {t.train_submit}
-            </button>
+            </Button>
           </>
         )}
       </TrainStep>
