@@ -110,7 +110,7 @@ export function AccountView({
             <UiSoundTile
               t={{
                 label: t.sound_label, lead: t.sound_lead, on: t.sound_on, off: t.sound_off,
-                volume: t.sound_volume, note: t.sound_note,
+                volume: t.sound_volume, note: t.sound_note, test: t.sound_test,
               }}
             />
           </div>

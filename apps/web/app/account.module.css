@@ -184,3 +184,8 @@
   min-width: 2.2em; text-align: right; font-variant-numeric: tabular-nums;
 }
 .soundNote { font-family: var(--font-mono); font-size: var(--fs-1); line-height: 1.6; color: var(--faint); margin-top: var(--sp-2); }
+.soundTest {
+  margin-top: var(--sp-3); font-family: var(--font-mono); font-size: var(--fs-2);
+  letter-spacing: 0.12em; padding: 6px 14px; border-radius: var(--radius-xs); cursor: pointer;
+}
+.soundTest:disabled { opacity: 0.4; cursor: default; }

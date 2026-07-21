@@ -22,7 +22,7 @@ import s from '@/app/account.module.css';
 export function UiSoundTile({
   t,
 }: {
-  t: { label: string; lead: string; on: string; off: string; volume: string; note: string };
+  t: { label: string; lead: string; on: string; off: string; volume: string; note: string; test: string };
 }) {
   const [conf, setConf] = useState<UiSoundSettings>(DEFAULT_SETTINGS);
 
@@ -69,6 +69,16 @@ export function UiSoundTile({
         />
         <span className={s.soundVolV}>{Math.round(conf.volume * 100)}</span>
       </label>
+      {/* 実機で鳴るかを、実際の操作をしないで確かめられるようにする
+          (2026-07-21: iPhoneで鳴らない事象の切り分けに時間がかかったため) */}
+      <button
+        type="button"
+        className={s.soundTest}
+        onClick={() => previewUiSound(conf)}
+        disabled={!conf.enabled}
+      >
+        ♪ {t.test}
+      </button>
       <div className={s.soundNote}>{t.note}</div>
     </div>
   );

@@ -180,7 +180,7 @@ export interface AppDict {
     settings_label: string;
     /** UI音(3-4)。音量とミュートは必須。 */
     sound_label: string; sound_lead: string; sound_on: string; sound_off: string;
-    sound_volume: string; sound_note: string;
+    sound_volume: string; sound_note: string; sound_test: string;
     linking_label: string;
     linking_lead: string;
     support_label: string;
@@ -795,6 +795,7 @@ const ja: AppDict = {
     sound_label: 'UI音', sound_lead: '確定・完了・エラーのときだけ短く鳴ります。レース演出の音とは別です。',
     sound_on: 'ON', sound_off: 'OFF', sound_volume: '音量',
     sound_note: 'この端末にだけ保存されます。ショーの音は /races の再生画面で個別に切り替えます。',
+    sound_test: '試聴',
     linking_label: 'ログイン方法の連携',
     linking_lead: '連携すると、どのログイン方法でも同じアカウント(残高・馬)にアクセスできます。1つのウォレットは1つのアカウントにのみ紐づけできます。',
     support_label: 'サポート',
@@ -1473,6 +1474,7 @@ const en: AppDict = {
     sound_label: 'UI sound', sound_lead: 'A short cue on confirm, success and error only. Separate from the race show audio.',
     sound_on: 'ON', sound_off: 'OFF', sound_volume: 'Volume',
     sound_note: 'Stored on this device only. The show has its own toggle on the race screen.',
+    sound_test: 'Test',
     linking_label: 'Link your login methods',
     linking_lead: 'Once linked, any login method reaches the same account (balance and horses). A wallet can be linked to only one account.',
     support_label: 'Support',
@@ -2151,6 +2153,7 @@ const zh: AppDict = {
     sound_label: '界面音效', sound_lead: '仅在确认、完成、错误时短促提示。与比赛演出的音效是分开的。',
     sound_on: '开', sound_off: '关', sound_volume: '音量',
     sound_note: '仅保存在本设备。演出音效在比赛画面另行切换。',
+    sound_test: '试听',
     linking_label: '关联登录方式',
     linking_lead: '关联后，任何登录方式都可访问同一账户(余额与马匹)。一个钱包只能关联一个账户。',
     support_label: '支持',
@@ -2829,6 +2832,7 @@ const ko: AppDict = {
     sound_label: 'UI 사운드', sound_lead: '확정·완료·오류일 때만 짧게 울립니다. 레이스 연출 사운드와는 별개입니다.',
     sound_on: 'ON', sound_off: 'OFF', sound_volume: '볼륨',
     sound_note: '이 기기에만 저장됩니다. 쇼 사운드는 레이스 화면에서 따로 전환합니다.',
+    sound_test: '미리듣기',
     linking_label: '로그인 방법 연동',
     linking_lead: '연동하면 어떤 로그인 방법으로도 같은 계정(잔액·말)에 접근할 수 있습니다. 지갑 하나는 계정 하나에만 연동할 수 있습니다.',
     support_label: '지원',
@@ -3507,6 +3511,7 @@ const ms: AppDict = {
     sound_label: 'Bunyi UI', sound_lead: 'Isyarat pendek hanya pada pengesahan, kejayaan dan ralat. Berasingan daripada audio persembahan.',
     sound_on: 'ON', sound_off: 'OFF', sound_volume: 'Kelantangan',
     sound_note: 'Disimpan pada peranti ini sahaja. Persembahan mempunyai togol tersendiri di skrin perlumbaan.',
+    sound_test: 'Uji',
     linking_label: 'Pautkan kaedah log masuk anda',
     linking_lead: 'Setelah dipautkan, mana-mana kaedah log masuk mencapai akaun yang sama (baki dan kuda). Satu dompet hanya boleh dipautkan ke satu akaun.',
     support_label: 'Sokongan',
