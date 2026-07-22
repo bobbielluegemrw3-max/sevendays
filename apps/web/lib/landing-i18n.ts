@@ -79,6 +79,13 @@ export interface LandingDict {
   fc_note_b: string;
   fc_note_rest: string;
   next_race_note: string;
+  /** LP改修 2026-07-22(LP_REVISION_SPEC 層A)。
+   *  showcase_tag = 実績でなく見本であることの明示。
+   *  ladder_burn_* / s5_p3 = 値上がりと同格に置く「消滅」(R1: 上がる話だけ見せない)。 */
+  showcase_tag: string;
+  ladder_burn_v: string;
+  ladder_burn_d: string;
+  s5_p3: string;
   s5_h2: string;
   s5_p: string;
   s5_p2: string;
@@ -154,6 +161,10 @@ const ja: LandingDict = {
   fc_note_b: '予報が見られるのは、レース演出の中だけ。',
   fc_note_rest: 'だから、毎レース見る理由がある。予報は参考情報で、結果を保証するものではありません。',
   next_race_note: 'この時間だけ、次のレースの予報が出る。',
+  showcase_tag: '表示例',
+  ladder_burn_v: '0',
+  ladder_burn_d: 'BURN',
+  s5_p3: '負けた馬は消える。価値は0になり、戻らない。上がる話と同じだけ、これも起きる。',
   s5_h2: '走った馬は、売れる。',
   s5_p: 'レースが終わるたび、マーケットプレイスが開く。生き残ったあなたの馬は、価値が上がった状態で取引される。高く売るか、次も走らせるか、新しい馬を迎えるか — それを決めるのが、厩舎のオーナーの仕事だ。',
   s5_p2: '生き残るほど価値が積み上がる。手放す時は、あなたが選ぶ。',
@@ -218,6 +229,10 @@ const en: LandingDict = {
   fc_note_b: 'The forecast is only visible during the race show.',
   fc_note_rest: 'So there is a reason to watch every race. The forecast is a guide and does not guarantee results.',
   next_race_note: 'Only at this time does the next race’s forecast appear.',
+  showcase_tag: 'SHOWCASE',
+  ladder_burn_v: '0',
+  ladder_burn_d: 'BURN',
+  s5_p3: 'A horse that loses is burned. Its value becomes 0 and does not come back. This happens just as often as the rise.',
   s5_h2: 'A horse that raced can be sold.',
   s5_p: 'Each time a race ends, the marketplace opens. Your surviving horses trade at their raised value. Sell high, run the next race, or take in a new horse — deciding is the stable owner’s job.',
   s5_p2: 'The longer it survives, the more value builds. You choose the moment to let go.',
@@ -282,6 +297,10 @@ const zh: LandingDict = {
   fc_note_b: '预报只在比赛演出中才能看到。',
   fc_note_rest: '所以每场比赛都有观看的理由。预报仅供参考，不保证结果。',
   next_race_note: '只有这个时间，才会出现下一场预报。',
+  showcase_tag: '示例',
+  ladder_burn_v: '0',
+  ladder_burn_d: 'BURN',
+  s5_p3: '落败的马会消失。价值归零，且不会回来。上涨会发生，这同样会发生。',
   s5_h2: '跑过的马，可以卖出。',
   s5_p: '每场比赛结束后，市场开启。你存活的马以升高的价值交易。高价卖出、继续出赛、还是迎接新马 — 决定权在马房主人手中。',
   s5_p2: '存活越久，价值越高。何时放手，由你选择。',
@@ -346,6 +365,10 @@ const ko: LandingDict = {
   fc_note_b: '예보는 레이스 연출 중에만 볼 수 있다.',
   fc_note_rest: '그래서 매 레이스 볼 이유가 있다. 예보는 참고 정보이며 결과를 보장하지 않습니다.',
   next_race_note: '이 시간에만 다음 레이스 예보가 나온다.',
+  showcase_tag: '표시 예',
+  ladder_burn_v: '0',
+  ladder_burn_d: 'BURN',
+  s5_p3: '패한 말은 사라집니다. 가치는 0이 되고 돌아오지 않습니다. 오르는 일과 같은 만큼 이것도 일어납니다.',
   s5_h2: '달린 말은 팔 수 있다.',
   s5_p: '레이스가 끝날 때마다 마켓플레이스가 열린다. 살아남은 당신의 말은 오른 가치로 거래된다. 비싸게 팔지, 다음 레이스도 달리게 할지, 새 말을 맞이할지 — 정하는 것이 마구간 주인의 일이다.',
   s5_p2: '오래 살아남을수록 가치가 쌓인다. 놓아줄 때는 당신이 고른다.',
@@ -410,6 +433,10 @@ const ms: LandingDict = {
   fc_note_b: 'Ramalan hanya kelihatan semasa persembahan perlumbaan.',
   fc_note_rest: 'Jadi ada sebab untuk menonton setiap perlumbaan. Ramalan hanya panduan dan tidak menjamin keputusan.',
   next_race_note: 'Hanya pada masa ini ramalan perlumbaan seterusnya muncul.',
+  showcase_tag: 'CONTOH',
+  ladder_burn_v: '0',
+  ladder_burn_d: 'BURN',
+  s5_p3: 'Kuda yang kalah akan dibakar. Nilainya menjadi 0 dan tidak kembali. Ini berlaku sekerap kenaikan itu berlaku.',
   s5_h2: 'Kuda yang berlumba boleh dijual.',
   s5_p: 'Setiap kali perlumbaan tamat, pasaran dibuka. Kuda terselamat anda didagangkan pada nilai yang meningkat. Jual tinggi, berlari lagi, atau ambil kuda baharu — memutuskan itu tugas pemilik kandang.',
   s5_p2: 'Semakin lama terselamat, semakin tinggi nilainya. Saat untuk melepaskan, anda pilih.',

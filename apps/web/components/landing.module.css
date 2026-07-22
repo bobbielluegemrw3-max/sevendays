@@ -255,6 +255,19 @@
 .priceLadder .pStep .pd { font-family: var(--font-mono); font-size: 8px; color: #8f8ac2; margin-top: 3px; }
 .priceLadder .pStep.up { border-color: rgba(53, 208, 127, 0.4); }
 .priceLadder .pArrow { color: #35d07f; font-family: var(--font-display); font-size: 13px; padding-bottom: 14px; }
+/* LP改修 2026-07-22(A-4): 値上がりと同じ視覚重量で「消滅」を並べる。
+   上がる話だけを見せない — 数字も枠も上昇ステップと同じ大きさにする(R1)。 */
+.priceLadder .pArrowDown { color: var(--bad, #ff5c5c); font-family: var(--font-display); font-size: 13px; padding-bottom: 14px; }
+.priceLadder .pStep.down { border-color: rgba(255, 92, 92, 0.45); background: linear-gradient(180deg, rgba(255, 92, 92, 0.09), transparent); }
+.priceLadder .pStep.down .pv { color: var(--bad, #ff5c5c); }
+.priceLadder .pStep.down .pd { color: var(--bad, #ff5c5c); }
+
+/* A-1: 「表示例」バッジ — 稼働実績ではなくUIの見本だと分かるようにする */
+.showTitle .showcaseTag {
+  font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.16em;
+  color: #8f8ac2; border: 1px solid rgba(255,255,255,0.16); border-radius: 999px;
+  padding: 2px 8px; margin-left: auto;
+}
 
 /* ⑥ champion */
 .champCard { position: relative; border: 1px solid rgba(201, 168, 106, 0.45); border-radius: 22px; overflow: hidden;

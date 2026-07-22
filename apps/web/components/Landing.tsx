@@ -127,18 +127,20 @@ export function Landing({
                 <button className={s.btnGhost}>{t.hero_cta_how}</button>
               </Link>
             </div>
+            {/* LP_REVISION_SPEC B-1: money を先頭から3番手へ下げる(撤去はしない)。
+                投資の顔で始めず、検証可能性 → レースの物語 → 賞金 の順にする */}
             <div className={s.hstats}>
               <div>
-                <div className={`${s.n} ${s.go}`}>200 USDT</div>
-                <div className={s.k}>LV.7 CHAMPION</div>
+                <div className={`${s.n} ${s.gr}`}>100%</div>
+                <div className={s.k}>DETERMINISTIC</div>
               </div>
               <div>
                 <div className={`${s.n} ${s.cy}`}>7 RACES</div>
                 <div className={s.k}>TO GLORY</div>
               </div>
               <div>
-                <div className={`${s.n} ${s.gr}`}>100%</div>
-                <div className={s.k}>DETERMINISTIC</div>
+                <div className={`${s.n} ${s.go}`}>200 USDT</div>
+                <div className={s.k}>LV.7 CHAMPION</div>
               </div>
             </div>
           </div>
@@ -150,7 +152,6 @@ export function Landing({
               <div className={s.goldbar} />
               <div className={s.art}>
                 <span className={s.idl}>#0001</span>
-                <span className={s.idr}>♡ 2.1k</span>
                 <span className={s.aura} />
                 <img src="/horses/manus/v2.png" alt="Genesis #0001" />
               </div>
@@ -379,9 +380,12 @@ export function Landing({
         <div className={s.showWrap}>
           <div className={s.showPanel}>
             <div className={s.showTop}>
+              {/* LP_REVISION_SPEC A-1: liveDot(点滅=稼働中の合図)を外し、
+                  「表示例」を明示する。数字はデザインの見本として残すが、
+                  実績や他者の人気に見える形にはしない(R1/景表法) */}
               <div className={s.showTitle}>
-                <span className={s.liveDot} />
                 THE DAILY DERBY <span className={s.cyd}>· RACE TURN</span>
+                <span className={s.showcaseTag}>{t.showcase_tag}</span>
               </div>
               <div className={s.showCount}>
                 <div>
@@ -502,9 +506,19 @@ export function Landing({
                 <div className={s.pv}>…</div>
                 <div className={s.pd}>LV.3+</div>
               </div>
+              {/* LP_REVISION_SPEC A-4: 上がる話だけを見せない。
+                  敗れた馬の消滅を、同じ大きさ・同じ列で並べる(R1) */}
+              <span className={s.pArrowDown}>✕</span>
+              <div className={`${s.pStep} ${s.down}`}>
+                <div className={s.pv}>{t.ladder_burn_v}</div>
+                <div className={s.pd}>{t.ladder_burn_d}</div>
+              </div>
             </div>
             <p className={s.p} style={{ margin: '16px 0 0', fontSize: 12.5, color: '#8f8ac2' }}>
               {t.s5_p2}
+            </p>
+            <p className={s.p} style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--bad, #ff5c5c)' }}>
+              {t.s5_p3}
             </p>
           </div>
         </div>
@@ -631,7 +645,6 @@ export function Landing({
                   <span className={s.id} style={{ color: f.frameLine }}>
                     {h.id}
                   </span>
-                  <span className={s.lk}>♡ {h.likes}</span>
                   <span className={s.rib} style={{ background: h.rarityRibbon, color: h.rarityInk }}>
                     TOTAL {showcaseTotal(h)}
                   </span>
@@ -821,12 +834,12 @@ export function Landing({
             <span className={s.l2}>DERBY</span>
           </span>
         </div>
+        {/* LP_REVISION_SPEC A-3: 実体の無いリンク(Whitepaper/Discord/X/Contract)は
+            置かない。あるものだけ出す — 無いものを並べるのは vaporware の合図 */}
         <div className={s.links}>
-          <span>Whitepaper</span>
           <Link href="/docs">Docs</Link>
-          <span>Discord</span>
-          <span>X</span>
-          <span>Contract</span>
+          <Link href="/guide">How to Play</Link>
+          <Link href="/ledger">Ledger</Link>
         </div>
         <div className={s.cpy}>© 2026 Seven Days Derby · Deterministic · Auditable</div>
       </div>
