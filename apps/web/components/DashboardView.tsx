@@ -137,6 +137,8 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
   const participants = lastRace?.participant_count ?? 0;
 
   const hasTasks = untrained.length > 0 || pendingCount > 0;
+  /** 予約は済ませたが、まだ1頭も割り当たっていない — 次のバッチ待ちの状態。 */
+  const reservedWaiting = active.length === 0 && pendingCount > 0;
   // 真の新規 = 1頭も持たず、レース履歴も無く、予約も無い。
   // ★「履歴はあるが今 0頭」(全馬BURN/売却済みの常連)は新規ではないので歓迎ブロックを出さない
   // ★ pendingCount を見ないと、プール予約を済ませた(=支払い済みの)新規に
@@ -268,9 +270,18 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
               <span className={s.taskItem}><b>{pendingCount}{c.cases_unit}</b>{t.pending_suffix}</span>
             ) : null}
             <Link href="/items" className={s.taskGhost}>{t.tasks_prepare_items}</Link>
-            <Link href={untrained.length > 0 ? '/horses' : '/market'} className={s.taskCta}>
-              {untrained.length > 0 ? t.tasks_train : t.tasks_adopt} →
-            </Link>
+            {/* 予約待ち(0頭・予約あり)には主CTAを出さない。
+                ・「馬を迎える」は、支払い直後の人にもう一度「買え」と言う形になり
+                  「さっきの支払いは効いていない?」と読まれ得る(レビュー指摘 2026-07-22)
+                ・かわりに watch_show を置くと、真上のカウントダウンにある
+                  「最新のショーを見る」と文言も遷移先も完全に重複する(実画面で確認)
+                この状態の次の一手は「次のバッチを待つ」で、待ち先はカウントダウン
+                カードが既に主アクションとして持っている。ここは静かにしておく */}
+            {reservedWaiting ? null : (
+              <Link href={untrained.length > 0 ? '/horses' : '/market'} className={s.taskCta}>
+                {untrained.length > 0 ? t.tasks_train : t.tasks_adopt} →
+              </Link>
+            )}
           </div>
           <div className={s.taskSub}>{t.tasks_sub}</div>
         </section>
