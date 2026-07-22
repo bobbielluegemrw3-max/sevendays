@@ -30,11 +30,11 @@ function bandCls(band: string | null | undefined): string {
 function bandLabel(band: string | null | undefined, t: T): string {
   return band === 'SAFE' ? t.band_safe : band === 'RISK' ? t.band_risk : t.band_mid;
 }
-function TvChip({ h, t, extraCls = '' }: { h: StableHorse; t: T; extraCls?: string }) {
+function TvChip({ h, t, extraCls = '', size = 'md' }: { h: StableHorse; t: T; extraCls?: string; size?: 'sm' | 'md' | 'lg' | 'xl' }) {
   if (h.total_value === null || h.total_value === undefined) return null;
   // ティアカラー(2026-07-18): チップの色は「価値の帯」。今夜の安全圏はRankLineが担う。
   // 2026-07-22: 箱をやめて数字とティア色だけに(全画面で同じ見せ方に揃える)
-  return <TotalValue value={h.total_value} label={t.tv_chip} size="md" className={extraCls} />;
+  return <TotalValue value={h.total_value} label={t.tv_chip} size={size} className={extraCls} />;
 }
 function RankLine({ h, t }: { h: StableHorse; t: T }) {
   if (!h.tonight_rank || !h.tonight_entrants) return null;
@@ -98,20 +98,22 @@ function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
          している)。RankLine のテキストとは別に、カード全体の警告として足す。
          色は BURN/危険と同系 — 強さの数字に赤を使わない原則には抵触しない */
       className={`${s.hcard} ${untrained ? s.untrained : ''} ${h.tonight_band === 'RISK' ? s.riskCard : ''}`}
-      style={{ ...tvCardGlowStyle(h.total_value), ...tvCardMoodStyle(h.total_value) }}
+      style={tvCardGlowStyle(h.total_value)}
     >
-      <div className={s.hart}>
+      {/* 弱い馬のくすみは中身(絵とテキスト)にだけ掛ける。カード側に掛けると
+          RISK の警告まで一緒に沈み、「弱くて危ない馬」ほど警告が薄れてしまう */}
+      <div className={s.hart} style={tvCardMoodStyle(h.total_value)}>
         <StableArt horse={h} t={t} />
-        <TvChip h={h} t={t} extraCls={`${s.artBadge} ${s.artRarity}`} />
+        <TvChip h={h} t={t} extraCls={`${s.artBadge} ${s.artRarity}`} size="xl" />
         <span className={`${s.trainBadge} ${trainCls} ${s.artBadge} ${s.artTrain}`}>{trainText}</span>
       </div>
       {h.tonight_band === 'RISK' ? (
-        <span className={s.riskMark} title={t.band_risk} aria-label={t.band_risk}>⚠</span>
+        <span className={s.riskFlag} title={t.band_risk} aria-label={t.band_risk}>⚠</span>
       ) : null}
-      <div className={s.hbody}>
+      <div className={s.hbody} style={tvCardMoodStyle(h.total_value)}>
         <div className={s.hrow1}>
           <span className={s.hname}>{h.name}</span>
-          <TvChip h={h} t={t} extraCls={s.inlineRarity!} />
+          <TvChip h={h} t={t} extraCls={s.inlineRarity!} size="lg" />
           {/* Decision 087監査: スマート出品中は走るが今夜売れる可能性がある — 事実を小さく明示 */}
           {h.listing === 'SMART' ? <span className={s.smartTag}>{t.smart_tag}</span> : null}
           <span className={s.htype}>{h.horse_type}</span>

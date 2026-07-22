@@ -191,10 +191,24 @@
 @media (prefers-reduced-motion: reduce) {
   .riskCard::after { animation: none; }
 }
-.riskMark {
-  position: absolute; top: 6px; right: 8px; z-index: 2;
-  font-size: 13px; line-height: 1; color: #ff4038; font-weight: 700;
-  text-shadow: 0 0 3px #0a0813, 0 0 10px rgba(255, 64, 58, 0.75);
+/* 警告は「枠の色」ではなく「塗り」で出す — 未調教のマゼンタ枠と質的に違う形に
+   すること自体が目的(2026-07-22 オーナー実機: 赤枠は未調教枠に埋没した)。
+   置き場所はカードの左辺 + 左上角。総合値(アート左上)・未調教バッジ(アート右上)の
+   どちらとも重ならない唯一の空き。くすみフィルタの外(=.hcard側)なので、
+   弱くて危ない馬でも警告だけは沈まない */
+.riskCard::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 2;
+  border-radius: 16px 0 0 16px; pointer-events: none;
+  background: linear-gradient(180deg, #ff6152, #d81d11);
+  box-shadow: 0 0 16px rgba(255, 64, 58, 0.6);
+}
+.riskFlag {
+  position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none;
+  width: 26px; height: 26px; border-radius: 16px 0 12px 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #ff6152, #d81d11);
+  color: #fff; font-size: 13px; line-height: 1; font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 .hcard.untrained {
   border-color: rgba(255, 45, 196, 0.45);
@@ -207,11 +221,14 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 .hartCanvas { display: block; width: 100%; height: 100%; object-fit: contain; }
-.hcard .artBadge { display: none; }                 /* モバイル: アート上オーバーレイ OFF */
+/* TotalValue はインラインで display:inline-flex を持つ(数字とラベルのベースライン
+   合わせのため)。インラインstyleはCSSに勝つので、表示の出し分けだけ !important で
+   取り返す。2026-07-22: これが無いとアート上と名前横に総合値が二重に出ていた */
+.hcard .artBadge { display: none !important; }       /* モバイル: アート上オーバーレイ OFF */
 .hbody { flex: 1; min-width: 0; }
 .hrow1 { display: flex; align-items: center; gap: 6px; }
 .hname { font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hcard .inlineRarity { display: inline-flex; }      /* モバイル: 名前隣にレアリティ ON */
+.hcard .inlineRarity { display: inline-flex !important; }  /* モバイル: 名前隣に総合値 ON */
 .htype { display: none; }                            /* モバイル: タイプ非表示 */
 .hcard .rail { margin-top: 7px; }
 .hmeters { display: none; }                          /* モバイル: COND/FTG メーター省略 */
@@ -227,10 +244,10 @@
   .hcard { flex-direction: column; align-items: stretch; }
   .hcard:hover { transform: translateY(-2px); }
   .hart { width: auto; height: 132px; }
-  .hcard .artBadge { display: inline-flex; position: absolute; }
+  .hcard .artBadge { display: inline-flex !important; position: absolute; }
   .artRarity { top: 8px; left: 8px; }
   .artTrain { top: 8px; right: 8px; }
-  .hcard .inlineRarity { display: none; }
+  .hcard .inlineRarity { display: none !important; }
   .htype { display: inline; margin-left: auto; font-family: var(--font-mono); font-size: 9px; color: var(--faint); }
   .hcard .rail { margin-top: 2px; }
   .hbody { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }

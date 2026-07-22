@@ -1,4 +1,4 @@
-import { tvNumStyle } from '@/lib/tv-tier';
+import { tvMedalStyle, tvNumStyle, tvTier } from '@/lib/tv-tier';
 
 /* ============================================================================
  * TotalValue — 総合値の表示(2026-07-22)。
@@ -21,11 +21,17 @@ export function TotalValue({
   value: number;
   /** 「総合値」等のラベル。省略時は TV。 */
   label?: string | undefined;
-  /** sm = 一覧の行 / md = カード / lg = 見出し級。 */
-  size?: 'sm' | 'md' | 'lg';
+  /** sm = 一覧の行 / md = カード / lg = 見出し級 / xl = カードの主役。 */
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string | undefined;
 }) {
-  const px = size === 'lg' ? 22 : size === 'sm' ? 15 : 17;
+  const px = size === 'xl' ? 30 : size === 'lg' ? 22 : size === 'sm' ? 15 : 17;
+  // 上位帯はメダル(強グロー+ドロップシャドウ)で「宝物」に。絵が派手なので、
+  // 強さの signal は絵と別に太く出す(STABLE_CARDS_REDESIGN §2-B)
+  const tier = tvTier(value).key;
+  const numStyle = size === 'xl' && (tier === 'GOLD' || tier === 'SILVER')
+    ? tvMedalStyle(value)
+    : tvNumStyle(value);
   return (
     <span
       className={className}
@@ -41,7 +47,7 @@ export function TotalValue({
       >
         {label ?? 'TV'}
       </span>
-      <b style={{ ...tvNumStyle(value), fontSize: px, fontWeight: 800 }}>{value.toFixed(1)}</b>
+      <b style={{ ...numStyle, fontSize: px, fontWeight: size === 'xl' ? 900 : 800 }}>{value.toFixed(1)}</b>
     </span>
   );
 }

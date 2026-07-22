@@ -51,7 +51,7 @@ const TIERS: readonly (TvTierDef & { min: number })[] = [
     glow: 'rgba(255,217,122,0.65)', border: 'rgba(255,217,122,0.6)',
     tint: 'rgba(255,217,122,0.18)',
     chipShadow: '0 0 16px rgba(255,217,122,0.28), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 0 14px rgba(255,217,122,0.14)',
-    frameShadow: '0 0 22px rgba(255,217,122,0.22), inset 0 0 26px rgba(255,217,122,0.07)',
+    frameShadow: '0 0 30px rgba(255,217,122,0.45), 0 0 0 1px rgba(255,217,122,0.5), inset 0 0 34px rgba(255,217,122,0.13)',
   },
   {
     min: 80, key: 'SILVER', label: 'SILVER',
@@ -60,7 +60,7 @@ const TIERS: readonly (TvTierDef & { min: number })[] = [
     glow: 'rgba(212,224,244,0.5)', border: 'rgba(212,224,244,0.5)',
     tint: 'rgba(212,224,244,0.15)',
     chipShadow: '0 0 13px rgba(212,224,244,0.18), inset 0 1px 0 rgba(255,255,255,0.34)',
-    frameShadow: '0 0 15px rgba(212,224,244,0.13)',
+    frameShadow: '0 0 20px rgba(212,224,244,0.3), inset 0 0 20px rgba(212,224,244,0.07)',
   },
   {
     min: 70, key: 'BRONZE', label: 'BRONZE',
@@ -69,7 +69,7 @@ const TIERS: readonly (TvTierDef & { min: number })[] = [
     glow: 'rgba(216,160,90,0.48)', border: 'rgba(216,160,90,0.42)',
     tint: 'rgba(216,160,90,0.14)',
     chipShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
-    frameShadow: '0 0 10px rgba(216,160,90,0.10)',
+    frameShadow: '0 0 14px rgba(216,160,90,0.24)',
   },
   {
     min: 55, key: 'STEEL', label: 'STEEL',
@@ -171,7 +171,9 @@ export function tvCardMoodStyle(value: number | null | undefined): CSSProperties
   if (value === null || value === undefined) return undefined;
   const t = tvTier(value);
   if (t.key !== 'STEEL' && t.key !== 'IRON') return undefined;
-  return { filter: t.key === 'IRON' ? 'saturate(0.74) brightness(0.88)' : 'saturate(0.85) brightness(0.94)' };
+  // 2026-07-22 オーナー実機: 0.85/0.94 ではネオン極彩色のアートに埋もれて
+  // 判別できなかった。埋もれない強度まで上げる(強すぎたら戻す)
+  return { filter: t.key === 'IRON' ? 'saturate(0.4) brightness(0.82)' : 'saturate(0.6) brightness(0.9)' };
 }
 
 /** 馬アートの内側リムライト(ヒーロー表示用・控えめ)。 */
