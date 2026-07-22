@@ -73,7 +73,7 @@ for (const h of HORSES) {
 export default async function StablePreview({
   searchParams,
 }: {
-  searchParams: Promise<{ newcomer?: string; nonight?: string; allsafe?: string; norank?: string }>;
+  searchParams: Promise<{ newcomer?: string; nonight?: string; allsafe?: string; norank?: string; real?: string }>;
 }) {
   await requireDevPreviewAccess();
   const flags = await searchParams;
@@ -81,7 +81,20 @@ export default async function StablePreview({
   //  ?newcomer=1 … 1頭も持たない真の新規 → サマリーを出さない
   //  ?nonight=1  … 現役はいるが今夜の出走が0(全馬が手動出品中 等)
   //  ?allsafe=1  … RISK が0頭 → 名指しを出さず「全頭が安全圏(目安)」
-  const horses = flags.newcomer === '1'
+  // ?real=1 … オーナーの実厩舎(2026-07-22 スクショ)と同じ総合値・順位で再現する。
+  // 「実プレイの厩舎は 50〜76 に固まる」ので、見え方の検証はこの並びで行う
+  const REAL: [number, number, string][] = [
+    [76.1, 4, 'SAFE'], [59.8, 9, 'MID'], [55.7, 10, 'MID'],
+    [53.3, 12, 'RISK'], [52.9, 13, 'RISK'], [50.2, 14, 'RISK'],
+  ];
+  const horses = flags.real === '1'
+    ? HORSES.filter((h) => h.status === 'ACTIVE' && h.listing !== 'MANUAL')
+        .slice(0, 6)
+        .map((h, i) => ({
+          ...h, total_value: REAL[i]![0], tonight_rank: REAL[i]![1], tonight_entrants: 14,
+          tonight_band: REAL[i]![2] as 'SAFE' | 'MID' | 'RISK', trained_for_next_race: false,
+        }))
+    : flags.newcomer === '1'
     ? []
     : flags.nonight === '1'
       ? HORSES.map((h) => (h.status === 'ACTIVE' ? { ...h, listing: 'MANUAL' } : h))

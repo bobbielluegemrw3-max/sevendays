@@ -33,6 +33,8 @@ export interface TvTierDef {
   numGradient: string;
   /** グロー(text-shadow / box-shadow 用の透過色)。 */
   glow: string;
+  /** グローを連続的に強弱させるための素の RGB("r,g,b")。 */
+  rgb: string;
   /** カード枠線の透過色。 */
   border: string;
   /** メダリオン台座の帯ティント(上端)。 */
@@ -48,6 +50,7 @@ const TIERS: readonly (TvTierDef & { min: number })[] = [
     min: 90, key: 'GOLD', label: 'GOLD',
     color: '#ffd97a',
     numGradient: 'linear-gradient(135deg,#fff4cf 0%,#ffe9a8 20%,#ffd97a 44%,#d9a441 58%,#ffe490 76%,#fff6dc 100%)',
+    rgb: '255,217,122',
     glow: 'rgba(255,217,122,0.65)', border: 'rgba(255,217,122,0.6)',
     tint: 'rgba(255,217,122,0.18)',
     chipShadow: '0 0 16px rgba(255,217,122,0.28), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 0 14px rgba(255,217,122,0.14)',
@@ -57,6 +60,7 @@ const TIERS: readonly (TvTierDef & { min: number })[] = [
     min: 80, key: 'SILVER', label: 'SILVER',
     color: '#d4e0f4',
     numGradient: 'linear-gradient(135deg,#ffffff 0%,#e8f0ff 28%,#bccdea 52%,#f2f7ff 72%,#d4e0f4 100%)',
+    rgb: '212,224,244',
     glow: 'rgba(212,224,244,0.5)', border: 'rgba(212,224,244,0.5)',
     tint: 'rgba(212,224,244,0.15)',
     chipShadow: '0 0 13px rgba(212,224,244,0.18), inset 0 1px 0 rgba(255,255,255,0.34)',
@@ -66,6 +70,7 @@ const TIERS: readonly (TvTierDef & { min: number })[] = [
     min: 70, key: 'BRONZE', label: 'BRONZE',
     color: '#d8a05a',
     numGradient: 'linear-gradient(135deg,#ffdca8 0%,#e6a860 38%,#bd7d38 58%,#f0c088 100%)',
+    rgb: '216,160,90',
     glow: 'rgba(216,160,90,0.48)', border: 'rgba(216,160,90,0.42)',
     tint: 'rgba(216,160,90,0.14)',
     chipShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
@@ -75,6 +80,7 @@ const TIERS: readonly (TvTierDef & { min: number })[] = [
     min: 55, key: 'STEEL', label: 'STEEL',
     color: '#00eaff',
     numGradient: 'linear-gradient(135deg,#d3fbff 0%,#5ff5ff 38%,#00eaff 68%,#7ff8ff 100%)',
+    rgb: '0,234,255',
     glow: 'rgba(0,234,255,0.45)', border: 'rgba(0,234,255,0.34)',
     tint: 'rgba(0,234,255,0.12)',
     chipShadow: 'inset 0 1px 0 rgba(255,255,255,0.16)',
@@ -82,10 +88,13 @@ const TIERS: readonly (TvTierDef & { min: number })[] = [
   },
   {
     min: -Infinity, key: 'IRON', label: 'IRON',
-    color: '#a3acc2',
-    numGradient: 'linear-gradient(135deg,#cbd3e4 0%,#9aa3ba 55%,#b7bfd2 100%)',
-    glow: 'rgba(151,160,184,0.38)', border: 'rgba(151,160,184,0.3)',
-    tint: 'rgba(151,160,184,0.1)',
+    color: '#8c8fa0',
+    // 2026-07-22: 旧 #cbd3e4→#9aa3ba(淡い青灰)は STEEL のシアンと隣り合うと
+    // 見分けがつかなかった。名前どおり「鈍い鉄」の無彩色へ落とす
+    numGradient: 'linear-gradient(135deg,#a9adba 0%,#7c8090 52%,#969aa8 100%)',
+    rgb: '140,143,160',
+    glow: 'rgba(140,143,160,0.3)', border: 'rgba(140,143,160,0.28)',
+    tint: 'rgba(140,143,160,0.08)',
     chipShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)',
     frameShadow: 'none',
   },
@@ -149,15 +158,42 @@ export function tvFrameStyle(value: number | null | undefined): CSSProperties | 
   return style;
 }
 
+/* ---------------------------------------------------------------------------
+ * 連続マッピング(2026-07-22・オーナー実機で2度「違いが分からない」)。
+ *
+ * 原因は強度ではなく **階段** だった。実プレイの厩舎は 50〜76 に固まる
+ * (ミント 40〜75・domain/v2.ts)。この帯は BRONZE/STEEL/IRON の下位3ティアに
+ * 全部入るので、光るカード(GOLD/SILVER)が1枚も無く、しかも 53.3 と 50.2 は
+ * 同じ IRON = 完全に同じ見た目になっていた。
+ *
+ * ティアの意味(色・ラベル・GOLD 90+ の特別さ)は保ったまま、
+ * **見た目の強弱だけを総合値の連続関数**にする。これで隣り合う馬が必ず違う。
+ * 基準域は実分布に合わせて 45〜85。
+ * ------------------------------------------------------------------------- */
+const MOOD_LO = 45;
+const MOOD_HI = 85;
+function moodT(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, (value - MOOD_LO) / (MOOD_HI - MOOD_LO)));
+}
+
 /**
  * カードのグロー(box-shadowのみ)。枠線色は触らない — 厩舎カードの枠線は
  * 「未調教=マゼンタ」等の機能色を担っているため、ティアは発光でだけ語る。
+ * 強さは連続。58 あたりから灯りはじめ、85 で最大になる。
  */
 export function tvCardGlowStyle(value: number | null | undefined): CSSProperties | undefined {
-  if (value === null || value === undefined) return undefined;
+  if (value === null || value === undefined || !Number.isFinite(value)) return undefined;
   const t = tvTier(value);
-  if (t.frameShadow === 'none') return undefined;
-  return { boxShadow: t.frameShadow };
+  // 灯りはじめ(58)〜最大(85)。下位帯は完全に無灯 = 「暗い厩舎」が成立する
+  const g = Math.max(0, Math.min(1, (value - 58) / (85 - 58)));
+  if (g <= 0.02) return undefined;
+  const blur = 10 + 26 * g;
+  const alpha = (0.08 + 0.46 * g).toFixed(3);
+  const ring = (0.05 + 0.45 * g).toFixed(3);
+  return {
+    boxShadow: `0 0 ${blur.toFixed(1)}px rgba(${t.rgb},${alpha}), 0 0 0 1px rgba(${t.rgb},${ring}), inset 0 0 ${(blur * 1.2).toFixed(1)}px rgba(${t.rgb},${(Number(alpha) * 0.3).toFixed(3)})`,
+  };
 }
 
 /**
@@ -168,12 +204,13 @@ export function tvCardGlowStyle(value: number | null | undefined): CSSProperties
  * 強度は控えめから始める(戻すより足す方が安全)。
  */
 export function tvCardMoodStyle(value: number | null | undefined): CSSProperties | undefined {
-  if (value === null || value === undefined) return undefined;
-  const t = tvTier(value);
-  if (t.key !== 'STEEL' && t.key !== 'IRON') return undefined;
-  // 2026-07-22 オーナー実機: 0.85/0.94 ではネオン極彩色のアートに埋もれて
-  // 判別できなかった。埋もれない強度まで上げる(強すぎたら戻す)
-  return { filter: t.key === 'IRON' ? 'saturate(0.4) brightness(0.82)' : 'saturate(0.6) brightness(0.9)' };
+  if (value === null || value === undefined || !Number.isFinite(value)) return undefined;
+  // ティアの階段ではなく総合値の連続関数。45=くすみ最大 / 85=最も鮮やか。
+  // 50.2 と 53.3 と 55.7 が、隣に並んだときに必ず違って見えることが目的
+  const t = moodT(value);
+  const sat = (0.32 + 0.86 * t).toFixed(3);   // 45→0.32 / 65→0.75 / 85→1.18
+  const bri = (0.76 + 0.31 * t).toFixed(3);   // 45→0.76 / 65→0.92 / 85→1.07
+  return { filter: `saturate(${sat}) brightness(${bri})` };
 }
 
 /** 馬アートの内側リムライト(ヒーロー表示用・控えめ)。 */
