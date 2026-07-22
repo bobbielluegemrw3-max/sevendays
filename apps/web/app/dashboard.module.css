@@ -83,6 +83,10 @@
   .extras  { grid-area: extras; }
   /* 新規は①結果が無い。カウントダウンが右半分だけに残ると左が空くので全幅にする */
   .countWide { grid-area: auto; grid-column: 1 / -1; }
+  /* 新規は result / task / assets / stable が丸ごと無いため、bento の named row が
+     空のまま残り、その行間 gap だけが縦の穴として見えていた。
+     新規のときは bento をやめて素直な縦積みにする(2026-07-22) */
+  .appFlow { display: flex; flex-direction: column; align-items: stretch; }
 }
 
 /* ---- 主動線の外(設定・特典コード・アプリ化) — Tier 2-2 -------------------- */

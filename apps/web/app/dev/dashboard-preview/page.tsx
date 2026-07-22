@@ -31,22 +31,28 @@ const HORSES: DashHorse[] = [
 export default async function DashboardPreview({
   searchParams,
 }: {
-  searchParams: Promise<{ choose?: string; newcomer?: string }>;
+  searchParams: Promise<{ choose?: string; newcomer?: string; pending?: string }>;
 }) {
   await requireDevPreviewAccess();
   const flags = await searchParams;
-  // ?newcomer=1 … 真の新規(0頭・履歴なし)の見え方を確認する
+  // ?newcomer=1 … 真の新規(0頭・履歴なし・予約なし・残高0)の見え方
   // (DASHBOARD_REVISION_SPEC 2026-07-22: 歓迎ブロックはこの状態でしか出ない)
-  const newcomer = flags.newcomer === '1';
+  // ?pending=1 … 新規が初回のプール予約を済ませた直後(0頭・履歴なし・予約1件)。
+  //   ここで歓迎ブロックが再び出ると「買ったのにまた最初の馬を迎えろ」になる —
+  //   レビュー側指摘(2026-07-22)の再現・確認用
+  const pending = flags.pending === '1';
+  const newcomer = flags.newcomer === '1' || pending;
   const now = Date.now();
   const iso = (minsAgo: number) => new Date(now - minsAgo * 60000).toISOString();
   return (
     <DashboardView
       data={{
-        wallet: { available: '312.55', locked: '177.16' },
+        wallet: newcomer
+          ? (pending ? { available: '0.00', locked: '100.00' } : { available: '0.00', locked: '0.00' })
+          : { available: '312.55', locked: '177.16' },
         horses: newcomer ? [] : HORSES,
         buff: { buff_rarity: 'RARE', buff_bonus_score: '2.40', status: 'ACTIVE' },
-        pendingCount: 1,
+        pendingCount: newcomer && !pending ? 0 : 1,
         lastRace: { id: 'race-demo', status: 'COMPLETED', participant_count: 1874, batch_date: '2026-07-04' },
         myResults: newcomer ? [] : [
           // margin は帯内の実測差(Dashboard.tsx が算出)。プレビューは値を直接与える

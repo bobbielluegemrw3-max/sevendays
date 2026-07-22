@@ -137,12 +137,18 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
   const participants = lastRace?.participant_count ?? 0;
 
   const hasTasks = untrained.length > 0 || pendingCount > 0;
-  // 真の新規 = 1頭も持たず、レース履歴も無い。
+  // 真の新規 = 1頭も持たず、レース履歴も無く、予約も無い。
   // ★「履歴はあるが今 0頭」(全馬BURN/売却済みの常連)は新規ではないので歓迎ブロックを出さない
-  const isNewcomer = active.length === 0 && myResults.length === 0;
+  // ★ pendingCount を見ないと、プール予約を済ませた(=支払い済みの)新規に
+  //    もう一度「最初の馬を迎える」が出続け、しかも「予約手続き中」の
+  //    フィードバックが歓迎ブロックに隠される。初回購入直後が一番大事な導線
+  const isNewcomer = active.length === 0 && myResults.length === 0 && pendingCount === 0;
+  // 資産セクションを新規から隠すのは「残高0.00 / 0頭」がノイズだから。
+  // ただし入金だけ済ませた新規からは隠さない(自分の金がどこにあるか消える)
+  const hasMoney = wallet ? Number(wallet.available) > 0 || Number(wallet.locked) > 0 : false;
 
   return (
-    <div className={s.app}>
+    <div className={`${s.app} ${isNewcomer ? s.appFlow : ''}`}>
       {/* DASHBOARD_REVISION_SPEC レベル1: このページが何かを言う1行。
           常連にはハブの枠、新規には「厩舎のゲーム」だと即伝わる */}
       <div className={s.pageHead}>
@@ -292,6 +298,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
       {/* ===== ④ 資産(総資産 / 残高 / 評価額 / Revenge Buff) ===== */}
       {/* 見出し(2026-07-22 オーナー指摘: 見出しが無くて何の塊か分からない)。
           見出しとカード群を1つの塊にしないと、grid の自動配置で見出しだけが飛ぶ */}
+      {isNewcomer && !hasMoney ? null : (
       <div className={s.assetsBlock}>
       <div className={s.secHead}>{t.assets_label}</div>
       <section className={s.assets}>
@@ -313,6 +320,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
         {/* Revenge BuffカードはV2で撤去(Decision 109: バフ廃止 — 弔いはBurnドロップへ) */}
       </section>
       </div>
+      )}
 
       {/* ===== マイ厩舎(要約ストリップ + 直接購入) ===== */}
       {isNewcomer ? null : (
