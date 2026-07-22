@@ -40,11 +40,14 @@ function loadImg(src: string): Promise<HTMLImageElement | null> {
  */
 function transform(
   d: Uint8ClampedArray,
-  mode: 'rot' | 'mono' | 'desat' | 'tint',
+  mode: 'rot' | 'mono' | 'desat' | 'tint' | 'tone',
   value: number,
   tintSat = 0,
   tintVal = 1,
 ): void {
+  // 表示ヘルパーは絶対に落ちない/壊れない。不正値は変換しないで返す
+  // (2026-07-22: undefined が入って NaN になり、馬がマゼンタに化けた)
+  if (!Number.isFinite(value) || !Number.isFinite(tintSat) || !Number.isFinite(tintVal)) return;
   const degNorm = value / 360;
   for (let i = 0; i < d.length; i += 4) {
     if (d[i + 3]! === 0) continue;
@@ -68,6 +71,8 @@ function transform(
     if (mode === 'rot') h = (h + degNorm) % 1;
     else if (mode === 'mono') h = degNorm;
     else if (mode === 'tint') { h = degNorm; s = Math.min(1, Math.max(s, tintSat)); v2 = Math.min(1, v * tintVal); }
+    // tone: 素材の色相はそのまま(value=わずかな揺らぎ)。彩度と明度だけ倍率で振る
+    else if (mode === 'tone') { h = (h + degNorm + 1) % 1; s = Math.min(1, s * tintSat); v2 = Math.min(1, v * tintVal); }
     else s *= 0.12; // desat = 銀白
     const k = Math.floor(h * 6) % 6;
     const f = h * 6 - Math.floor(h * 6);
@@ -108,7 +113,11 @@ export function NftHorseArt({
 }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
   const maneKey = `${look.mane.kind}:${'deg' in look.mane ? look.mane.deg : 'hue' in look.mane ? look.mane.hue : ''}`;
-  const tintKey = look.tint ? `${look.tint.hue}:${look.tint.sat}:${look.tint.val}` : '';
+  const tintKey = look.tint
+    ? `t${look.tint.hue}:${look.tint.sat}:${look.tint.val}`
+    : look.matTone
+      ? `n${look.matTone.jitter}:${look.matTone.sat}:${look.matTone.val}`
+      : '';
 
   useEffect(() => {
     // サムネイル用途はここで縮小して描く(768のままCSS縮小するとGPUバイリニアで
@@ -147,8 +156,10 @@ export function NftHorseArt({
         if (look.tint) {
           // 銀は色相回転が効かない。彩度を足して色を乗せる
           transform(id.data, 'tint', look.tint.hue, look.tint.sat, look.tint.val);
-        } else if (look.bodyDeg !== 0) {
-          transform(id.data, 'rot', look.bodyDeg);
+        } else if (look.matTone) {
+          // ★ 色相は回さない。銅は橙だから銅であり、紫の銅は存在しない
+          //   (2026-07-22 夜・実機で紫の銅が玩具に見えた)
+          transform(id.data, 'tone', look.matTone.jitter, look.matTone.sat, look.matTone.val);
         }
         wx.putImageData(id, 0, 0);
         cx.drawImage(work, 0, 0, R, R);

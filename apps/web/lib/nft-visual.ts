@@ -25,6 +25,31 @@ export function isSingleArch(a: Arch): boolean {
 
 /** 銀は色相を回しても変わらないので、彩度を足して色を乗せ明度で濃淡を作る。 */
 export interface NftTint { hue: number; sat: number; val: number }
+
+/**
+ * 素材色を保ったままの濃淡(2026-07-22 夜・オーナー実機で破綻を確認して修正)。
+ *
+ * ★ 新4型に色相回転を掛けてはいけない。**銅は橙だから銅**であり、紫の銅は
+ *   存在しない(実機で紫の銅がプラスチックの玩具に見えた)。チタンの鋼緑も同じ。
+ *   既存3型(クローム/金黒)は色に依存しない素材なので回せるが、新型は違う。
+ *   これは 7/22 朝に氷・溶岩で破綻したのと**同じ構造**の誤り。
+ *
+ * したがって色相は素材の値に固定し(±わずかな揺らぎのみ)、彩度と明度で振る。
+ * 見た目の多様性は「7つの素材」が担い、1素材の中では濃淡だけが変わる。
+ */
+export interface NftTone { jitter: number; sat: number; val: number }
+export const MATERIAL_TONES: readonly NftTone[] = [
+  { jitter: 0, sat: 1.0, val: 1.0 },
+  { jitter: -10, sat: 0.8, val: 0.92 },
+  { jitter: 10, sat: 1.2, val: 1.05 },
+  { jitter: -6, sat: 0.62, val: 0.86 },
+  { jitter: 12, sat: 1.3, val: 0.94 },
+  { jitter: -14, sat: 0.95, val: 1.1 },
+  { jitter: 6, sat: 1.12, val: 0.9 },
+  { jitter: -4, sat: 0.72, val: 1.03 },
+];
+/** 枠色に使う「素材そのものの色相」。 */
+const ARCH_BASE_HUE: Partial<Record<Arch, number>> = { v6: 25, v7: 150, v8: 225 };
 /** プラチナ用の金属トーン12種。明度の下限は 0.72 — これ以上暗いとカードの
  *  黒背景に沈む(チタンで起きた問題と同じ轍を踏まない)。 */
 export const PLATINUM_TINTS: readonly NftTint[] = [
@@ -34,12 +59,10 @@ export const PLATINUM_TINTS: readonly NftTint[] = [
   { hue: 205, sat: 0.22, val: 1.00 }, // スチール
   { hue: 230, sat: 0.16, val: 0.80 }, // ガンメタル
   { hue: 30, sat: 0.30, val: 0.88 },  // ブロンズ
-  { hue: 165, sat: 0.20, val: 0.95 }, // ペール緑青
-  { hue: 280, sat: 0.20, val: 0.86 }, // 紫鋼
   { hue: 50, sat: 0.10, val: 1.10 },  // 白金(明)
-  { hue: 120, sat: 0.16, val: 0.90 }, // セージ
-  { hue: 320, sat: 0.16, val: 0.92 }, // モーヴ
-  { hue: 190, sat: 0.28, val: 0.94 }, // アイスブルー
+  { hue: 190, sat: 0.24, val: 0.94 }, // ロジウム(冷たい青銀)
+  { hue: 20, sat: 0.16, val: 0.92 },  // ペールカッパー
+  { hue: 215, sat: 0.10, val: 0.86 }, // ダークスチール
 ];
 export type ManeVariant =
   | { kind: 'rot'; deg: number } // 原画の2色構造を保った回転 (M01-M12)
@@ -48,8 +71,13 @@ export type ManeVariant =
 
 export interface NftLook {
   arch: Arch;
-  /** 1枚絵アーキタイプの色付け(v5 のみ)。未指定なら bodyDeg の色相回転。 */
+  /** 1枚絵アーキタイプの色付け(v5 プラチナのみ — 銀は色相が無いので色を乗せる)。 */
   tint?: NftTint;
+  /** 1枚絵アーキタイプの濃淡(v6/v7/v8 — 素材色は保ち、彩度と明度だけ振る)。
+   *  ★ 名前は matTone。既存の `tone: 'dark' | 'vivid'` と衝突させないこと —
+   *    2026-07-22 に `tone` で足して文字列 'dark' に上書きされ、
+   *    look.tone.jitter が undefined → NaN → 色が壊れた(実機でマゼンタの銅)。 */
+  matTone?: NftTone;
   bodyDeg: number; // coat の色相回転 (シートA承認 12角度)
   mane: ManeVariant;
   hue: number; // カード枠・ショーケース分散用の代表色相 (たてがみ主体)
@@ -147,7 +175,11 @@ export function deriveNftLook(dnaHash: string, name: string): NftLook {
   const arch: Arch = biased && archRoll < 0.6 ? biased : ALL_ARCHES[Math.floor(rng() * ALL_ARCHES.length)]!;
 
   const bodyDeg = BODY_DEGS[Math.floor(rng() * BODY_DEGS.length)]!;
-  const tint = arch === 'v5' ? PLATINUM_TINTS[Math.floor(rng() * PLATINUM_TINTS.length)]! : undefined;
+  const variantRoll = rng();
+  const tint = arch === 'v5' ? PLATINUM_TINTS[Math.floor(variantRoll * PLATINUM_TINTS.length)]! : undefined;
+  const matTone = isSingleArch(arch) && arch !== 'v5'
+    ? MATERIAL_TONES[Math.floor(variantRoll * MATERIAL_TONES.length)]!
+    : undefined;
 
   const target = PREFIX_TARGET[prefix];
   let mane: ManeVariant;
@@ -164,11 +196,12 @@ export function deriveNftLook(dnaHash: string, name: string): NftLook {
   // 1枚絵アーキタイプは「たてがみの色」が独立に存在しないので、枠色は
   // 実際に絵へ掛ける変換(tint の色相 / 回転角)から取る
   const hue = isSingleArch(arch)
-    ? (tint ? tint.hue : (MANE_BASE_HUE + bodyDeg) % 360)
+    ? (tint ? tint.hue : ((ARCH_BASE_HUE[arch] ?? MANE_BASE_HUE) + (matTone?.jitter ?? 0) + 360) % 360)
     : maneHueOf(mane);
   return {
     arch, bodyDeg, mane, hue,
     ...(tint ? { tint } : {}),
+    ...(matTone ? { matTone } : {}),
     tone: arch === 'v4' || arch === 'v7' || arch === 'v8' ? 'dark' : 'vivid',
     ...frameOf(hue),
   };
