@@ -9,7 +9,8 @@ import { horseValue, uncollectedGain } from '@/components/stable-shared';
 import type { StableHorse } from '@/components/StableView';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
-import { tvChipStyle, tvNumStyle, tvCardGlowStyle } from '@/lib/tv-tier';
+import { tvCardGlowStyle } from '@/lib/tv-tier';
+import { TotalValue } from '@/components/ui/TotalValue';
 
 /* ============================================================================
  * StableBrowser — 出走中 / 過去 の馬リストを「検索・ソート・絞り込み・
@@ -32,12 +33,8 @@ function bandLabel(band: string | null | undefined, t: T): string {
 function TvChip({ h, t, extraCls = '' }: { h: StableHorse; t: T; extraCls?: string }) {
   if (h.total_value === null || h.total_value === undefined) return null;
   // ティアカラー(2026-07-18): チップの色は「価値の帯」。今夜の安全圏はRankLineが担う。
-  return (
-    <span className={`${s.tvChip} ${extraCls}`} style={tvChipStyle(h.total_value)}>
-      {t.tv_chip}{' '}
-      <b style={{ ...tvNumStyle(h.total_value), fontSize: '17px' }}>{Number(h.total_value).toFixed(1)}</b>
-    </span>
-  );
+  // 2026-07-22: 箱をやめて数字とティア色だけに(全画面で同じ見せ方に揃える)
+  return <TotalValue value={h.total_value} label={t.tv_chip} size="md" className={extraCls} />;
 }
 function RankLine({ h, t }: { h: StableHorse; t: T }) {
   if (!h.tonight_rank || !h.tonight_entrants) return null;

@@ -8,20 +8,23 @@ import { DashboardView, type DashHorse } from '@/components/DashboardView';
  */
 const H = (
   id: string, name: string, rarity: string, type: string, day: number,
-  cond: number, ftg: number, trained: boolean, status = 'ACTIVE',
+  cond: number, ftg: number, trained: boolean, status = 'ACTIVE', totalValue: number | null = null,
 ): DashHorse => ({
   id, name, status, current_day: day, horse_type: type, rarity,
   condition: String(cond), fatigue: String(ftg),
   dna_hash: `0x${id.repeat(8).slice(0, 64)}`, trained_for_next_race: trained,
+  // 総合値(V2)。実データでは必ず入る値なので、プレビューでも与えて
+  // 表示崩れを見られるようにする(2026-07-22)。ティア5帯を一通り並べる
+  total_value: totalValue,
 });
 
 const HORSES: DashHorse[] = [
-  H('a1f4', 'Crimson Tiger', 'LEGENDARY', 'POWER', 5, 82, 34, true),
-  H('b2e7', 'Azure Comet', 'RARE', 'SPRINTER', 3, 64, 51, false),
-  H('c3d9', 'Golden Wolf', 'UNCOMMON', 'BALANCED', 2, 71, 22, true),
-  H('d4c2', 'Phantom Frost', 'COMMON', 'LUCK', 1, 58, 12, false),
-  H('e5b8', 'Emerald Storm', 'COMMON', 'ENDURANCE', 6, 44, 78, true),
-  H('f6a3', 'Silent Dash', 'COMMON', 'SPRINTER', 0, 66, 8, false),
+  H('a1f4', 'Crimson Tiger', 'LEGENDARY', 'POWER', 5, 82, 34, true, 'ACTIVE', 92.4),
+  H('b2e7', 'Azure Comet', 'RARE', 'SPRINTER', 3, 64, 51, false, 'ACTIVE', 84.1),
+  H('c3d9', 'Golden Wolf', 'UNCOMMON', 'BALANCED', 2, 71, 22, true, 'ACTIVE', 73.6),
+  H('d4c2', 'Phantom Frost', 'COMMON', 'LUCK', 1, 58, 12, false, 'ACTIVE', 58.9),
+  H('e5b8', 'Emerald Storm', 'COMMON', 'ENDURANCE', 6, 44, 78, true, 'ACTIVE', 47.2),
+  H('f6a3', 'Silent Dash', 'COMMON', 'SPRINTER', 0, 66, 8, false, 'ACTIVE', 55.3),
   H('0797', 'Burning Meteor', 'RARE', 'POWER', 4, 0, 0, false, 'BURNED'),
 ];
 

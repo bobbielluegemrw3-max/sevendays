@@ -8,7 +8,7 @@ import { deriveNftLook } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { localDate, localDateTime } from '@/lib/format-time';
 import s from '../app/market.module.css';
-import { tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
+import { TotalValue } from '@/components/ui/TotalValue';
 import d from '../app/support.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
 import { Button } from '@/components/ui/Button';
@@ -211,10 +211,7 @@ export function MarketPlaceView({
                 <div className={s.shelfName}>{item.name}</div>
                 <div className={s.shelfRar}>
                   {item.total_value !== null && item.total_value !== undefined ? (
-                    <span className={s.shelfTv} style={tvChipStyle(item.total_value)}>
-                      総合値{' '}
-                      <b style={{ ...tvNumStyle(item.total_value), fontSize: '15px' }}>{Number(item.total_value).toFixed(1)}</b>
-                    </span>
+                    <TotalValue value={item.total_value} label="総合値" size="sm" className={s.shelfTv} />
                   ) : null}
                 </div>
                 <div className={s.shelfMeta}>DAY {item.current_day}</div>

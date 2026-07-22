@@ -11,7 +11,7 @@ import { uncollectedGain } from '@/components/stable-shared';
 import { APP_COPY, type Lang, type AppDict } from '@/lib/i18n';
 import { formatMonthDay } from '@/lib/i18n-shared';
 import s from '../app/dashboard.module.css';
-import { tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
+import { TotalValue } from '@/components/ui/TotalValue';
 import { isLvDisplayMode } from '@/lib/i18n';
 
 /** テンプレ文字列の {name} を値で埋める(多言語の語順差を吸収)。 */
@@ -73,8 +73,6 @@ export interface DashboardData {
 }
 
 /* ---- helpers -------------------------------------------------------------- */
-const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
-
 function money(v: string): string {
   return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -85,10 +83,6 @@ function num(n: number): string {
 function horseValue(currentDay: number): string {
   return PRICE_TABLE_V1[Math.max(0, Math.min(6, currentDay))] ?? PRICE_TABLE_V1[0]!;
 }
-function rarClass(rarity: string): string {
-  return s[`rar${RARITIES.includes(rarity) ? rarity : 'COMMON'}`]!;
-}
-
 /** dna_hash から決定論生成された HorseArt を厩舎用に描画。 */
 function StableArt({ horse }: { horse: DashHorse }) {
   const look = deriveNftLook(horse.dna_hash, horse.name);
@@ -104,22 +98,23 @@ function HorseStrip({ h, t }: { h: DashHorse; t: AppDict['dash'] }) {
         <StableArt horse={h} />
       </div>
       <span className={s.sname}>{h.name}</span>
-      {h.total_value !== null && h.total_value !== undefined ? (
-        /* ティアカラー(2026-07-18): レアリティ枠は総合値へ置換 — 一目で強さが分かる */
-        <span className={s.rar} style={{ ...tvChipStyle(h.total_value), fontWeight: 800 }}>
-          <b style={{ ...tvNumStyle(h.total_value), fontSize: '16px', fontWeight: 900 }}>{Number(h.total_value).toFixed(1)}</b>
+      {/* 数字群は1つの塊にする。モバイルでは名前の下へ回り込ませるため
+          (2026-07-22 オーナー指摘: 1行に並べると総合値以降が画面外へ切れていた) */}
+      <span className={s.smeta}>
+        {/* レアリティ用バッジ枠の流用をやめ、数字とティア色だけに
+            (一覧は数字を見比べる場所。箱が比較を邪魔していた) */}
+        {h.total_value !== null && h.total_value !== undefined ? (
+          <TotalValue value={h.total_value} size="sm" />
+        ) : null}
+        <span className={s.sday}>{isLvDisplayMode() ? 'LV.' : 'Day '}{Math.min(7, h.current_day)}/7</span>
+        {/* 7日間の物語 — この馬は走破まであと何走か(current_day から。データ追加なし) */}
+        <span className={s.sleft}>
+          {7 - Math.min(7, h.current_day) <= 1
+            ? t.races_left_last
+            : fill(t.races_left_tpl, { n: 7 - Math.min(7, h.current_day) })}
         </span>
-      ) : (
-        <span className={`${s.rar} ${rarClass(h.rarity)}`}>{h.rarity}</span>
-      )}
-      <span className={s.sday}>{isLvDisplayMode() ? 'LV.' : 'Day '}{Math.min(7, h.current_day)}/7</span>
-      {/* 7日間の物語 — この馬は走破まであと何走か(current_day から。データ追加なし) */}
-      <span className={s.sleft}>
-        {7 - Math.min(7, h.current_day) <= 1
-          ? t.races_left_last
-          : fill(t.races_left_tpl, { n: 7 - Math.min(7, h.current_day) })}
+        <span className={`${s.trainBadge} ${trained ? s.trainYes : s.trainNo}`}>{trained ? t.train_yes : t.train_no}</span>
       </span>
-      <span className={`${s.trainBadge} ${trained ? s.trainYes : s.trainNo}`}>{trained ? t.train_yes : t.train_no}</span>
     </Link>
   );
 }

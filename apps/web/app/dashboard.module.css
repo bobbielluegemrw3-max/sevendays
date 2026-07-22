@@ -284,7 +284,22 @@
 .sday { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); flex: none; }
 /* 7日の物語: 走破まであと何走か(2026-07-22) */
 .sleft { font-family: var(--font-mono); font-size: var(--fs-1); color: var(--cyan); white-space: nowrap; }
-.srow .trainBadge { margin-left: auto; flex: none; }
+/* 数字群(総合値・LV・残り走・調教バッジ)。行の右端に寄せる */
+.smeta { display: flex; align-items: center; gap: 10px; margin-left: auto; flex: none; }
+.srow .trainBadge { flex: none; }
+
+/* モバイル(2026-07-22 オーナー指摘): 1行では幅が足りず、総合値以降が画面外へ
+   切れていた。名前の下に数字群を回り込ませる — 情報は削らない */
+@media (max-width: 700px) {
+  .srow {
+    display: grid; grid-template-columns: 46px 1fr;
+    grid-template-areas: "art name" "art meta";
+    align-items: center; row-gap: 6px; column-gap: 11px;
+  }
+  .srow .sart { grid-area: art; }
+  .srow .sname { grid-area: name; align-self: end; }
+  .smeta { grid-area: meta; margin-left: 0; flex-wrap: wrap; gap: 8px 10px; }
+}
 
 /* 厩舎ヘッダーの「馬を迎える」直接購入ボタン */
 .stableActions { display: flex; align-items: center; gap: 14px; flex: none; white-space: nowrap; }
