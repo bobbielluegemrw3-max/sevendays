@@ -1699,10 +1699,16 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       // それまでは horse_id(UUID)だけだったため、**自分の馬を名前で探せなかった**。
       // 馬名は公開情報(帯レースの順位表や台帳でも出る)。所有者は出さない。
       const rows = await ctx.client.query(
+        // current_day(=帯/LV)も返す(2026-07-22)。BURNは帯ごとの下位N切りなので、
+        // 「あと何点で助かったか」は帯が分からないと計算できない。
+        // 帯はスナップショット(レース時点の値)が正典。horses.current_day は
+        // レース後に加算されるため使えない。
         `select r.horse_id, r.final_score::text as final_score, r.final_rank, r.is_burned,
-                h.name as horse_name
+                h.name as horse_name, s.current_day
            from race_results r
            join horses h on h.id = r.horse_id
+           left join race_participant_snapshots s
+             on s.race_id = r.race_id and s.horse_id = r.horse_id
           where r.race_id = $1
           order by r.final_rank
           limit 1000`,

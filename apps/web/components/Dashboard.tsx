@@ -14,7 +14,7 @@ import {
 
 interface Me { id: string; stable_name?: string | null; training_tickets?: number; jackpot?: { enabled: boolean; prize_usdt: string; winners: number } | null }
 interface Session { id: string; status: string }
-interface RaceResultRow { horse_id: string; final_score: string; final_rank: number; is_burned: boolean }
+interface RaceResultRow { horse_id: string; final_score: string; final_rank: number; is_burned: boolean; current_day?: number | null }
 
 /** Signed-in home: fetches everything through the in-process API bridge and
  *  hands plain data to the presentational DashboardView. */
@@ -46,9 +46,31 @@ export default async function Dashboard() {
     const resultsR = await serverApi<{ results: RaceResultRow[] }>(`/api/v1/races/${lastRace.id}/results`);
     if (resultsR.status === 200) {
       const byId = new Map(horses.map((h) => [h.id, h]));
-      myResults = resultsR.body.results
+      const rows = resultsR.body.results;
+      /* 「あと何点で助かったか」— band-race.ts:302-305 と同じ定義で計算する。
+         BURNは帯(=同じLV)の下位N切りなので、帯の中でしか意味を持たない。
+           生存 … 自分と「BURNの最上位」の差
+           BURN … 自分と「生存の最下位」の差
+         レースは1レースで確定するので、ここは開示順序ではなく確定値の集計。
+         結果は既に取得済みの配列から出す(追加リクエストなし)。 */
+      const marginOf = (row: RaceResultRow): number | null => {
+        const lv = row.current_day;
+        if (lv === null || lv === undefined) return null;
+        const band = rows.filter((x) => x.current_day === lv);
+        const scores = (list: RaceResultRow[]) => list.map((x) => Number(x.final_score));
+        const mine = Number(row.final_score);
+        if (row.is_burned) {
+          const survivors = scores(band.filter((x) => !x.is_burned));
+          if (survivors.length === 0) return null;
+          return Math.round((Math.min(...survivors) - mine) * 100) / 100;
+        }
+        const burned = scores(band.filter((x) => x.is_burned));
+        if (burned.length === 0) return null; // 全馬生還の夜は「差」が存在しない
+        return Math.round((mine - Math.max(...burned)) * 100) / 100;
+      };
+      myResults = rows
         .filter((r) => byId.has(r.horse_id))
-        .map((r) => ({ ...r, horse: byId.get(r.horse_id)! }));
+        .map((r) => ({ ...r, horse: byId.get(r.horse_id)!, margin: marginOf(r) }));
     }
   }
 

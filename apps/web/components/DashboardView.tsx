@@ -45,7 +45,11 @@ export interface DashHorse {
 export interface DashWallet { available: string; locked: string }
 export interface DashBuff { buff_rarity: string; buff_bonus_score: string; status: string }
 export interface DashRace { id: string; status: string; participant_count: number | null; batch_date: string; slot?: string | null }
-export interface DashResult { horse_id: string; final_score: string; final_rank: number; is_burned: boolean; horse: DashHorse }
+export interface DashResult {
+  horse_id: string; final_score: string; final_rank: number; is_burned: boolean; horse: DashHorse;
+  /** 帯(同じLV)内での「あと何点で助かったか」。全馬生還の夜や帯不明のときは null。 */
+  margin?: number | null;
+}
 export interface DashBuyback { id: string; status: string; payments_paid: number | string }
 export interface DashNotification { id: string; notification_type: string; payload_json: { title?: string; body?: string } | null; read_at: string | null; created_at: string }
 
@@ -109,6 +113,12 @@ function HorseStrip({ h, t }: { h: DashHorse; t: AppDict['dash'] }) {
         <span className={`${s.rar} ${rarClass(h.rarity)}`}>{h.rarity}</span>
       )}
       <span className={s.sday}>{isLvDisplayMode() ? 'LV.' : 'Day '}{Math.min(7, h.current_day)}/7</span>
+      {/* 7日間の物語 — この馬は走破まであと何走か(current_day から。データ追加なし) */}
+      <span className={s.sleft}>
+        {7 - Math.min(7, h.current_day) <= 1
+          ? t.races_left_last
+          : fill(t.races_left_tpl, { n: 7 - Math.min(7, h.current_day) })}
+      </span>
       <span className={`${s.trainBadge} ${trained ? s.trainYes : s.trainNo}`}>{trained ? t.train_yes : t.train_no}</span>
     </Link>
   );
@@ -189,6 +199,13 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
                 <Link key={r.horse_id} href={`/horses/${r.horse_id}`} className={s.resRow}>
                   <span className={s.resRank}>#{num(r.final_rank)}</span>
                   <span className={s.resName}>{r.horse.name}</span>
+                  {/* 「あと何点で助かったか」— ショーで見せた緊張を翌朝にも残す。
+                      帯(同じLV)内の実測差。全馬生還の夜は margin が無いので出ない */}
+                  {typeof r.margin === 'number' ? (
+                    <span className={`${s.resMargin} ${r.is_burned ? s.resMarginBad : ''}`}>
+                      {fill(r.is_burned ? t.margin_burn_tpl : t.margin_survive_tpl, { v: r.margin.toFixed(2) })}
+                    </span>
+                  ) : null}
                   {r.is_burned ? (
                     <span className={`${s.pill} ${s.pillBurned}`}>{t.pill_burn}</span>
                   ) : (
@@ -278,6 +295,10 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
       )}
 
       {/* ===== ④ 資産(総資産 / 残高 / 評価額 / Revenge Buff) ===== */}
+      {/* 見出し(2026-07-22 オーナー指摘: 見出しが無くて何の塊か分からない)。
+          見出しとカード群を1つの塊にしないと、grid の自動配置で見出しだけが飛ぶ */}
+      <div className={s.assetsBlock}>
+      <div className={s.secHead}>{t.assets_label}</div>
       <section className={s.assets}>
         {wallet ? (
           <div className={s.totalRow}>
@@ -296,6 +317,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
         </Link>
         {/* Revenge BuffカードはV2で撤去(Decision 109: バフ廃止 — 弔いはBurnドロップへ) */}
       </section>
+      </div>
 
       {/* ===== マイ厩舎(要約ストリップ + 直接購入) ===== */}
       {isNewcomer ? null : (
@@ -319,6 +341,11 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
               : t.stable_empty_none}
           </div>
         )}
+        {/* 施策D(育成者クレジット)の導線。ダッシュボードからは辿れていなかった —
+            「手放した後も功績が残る」のはこのゲームで唯一の非金銭の報酬 */}
+        <Link href="/breeders" className={s.breederLink}>
+          {t.breeders_link}<span className={s.breederNote}>{t.breeders_note}</span>
+        </Link>
       </section>
       )}
 

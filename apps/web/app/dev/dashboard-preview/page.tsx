@@ -46,9 +46,10 @@ export default async function DashboardPreview({
         pendingCount: 1,
         lastRace: { id: 'race-demo', status: 'COMPLETED', participant_count: 1874, batch_date: '2026-07-04' },
         myResults: newcomer ? [] : [
-          { horse_id: 'a1f4', final_score: '84.31', final_rank: 12, is_burned: false, horse: HORSES[0]! },
-          { horse_id: 'e5b8', final_score: '71.02', final_rank: 341, is_burned: false, horse: HORSES[4]! },
-          { horse_id: '0797', final_score: '42.77', final_rank: 1743, is_burned: true, horse: HORSES[6]! },
+          // margin は帯内の実測差(Dashboard.tsx が算出)。プレビューは値を直接与える
+          { horse_id: 'a1f4', final_score: '84.31', final_rank: 12, is_burned: false, horse: HORSES[0]!, margin: 4.66 },
+          { horse_id: 'e5b8', final_score: '71.02', final_rank: 341, is_burned: false, horse: HORSES[4]!, margin: 12.3 },
+          { horse_id: '0797', final_score: '42.77', final_rank: 1743, is_burned: true, horse: HORSES[6]!, margin: 1.2 },
         ],
         buybacks: [{ id: 'bb-1', status: 'IN_PROGRESS', payments_paid: 3 }],
         notifications: [

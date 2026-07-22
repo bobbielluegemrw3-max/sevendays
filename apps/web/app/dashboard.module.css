@@ -77,7 +77,7 @@
   .result  { grid-area: result; }
   .count   { grid-area: count; }
   .task    { grid-area: task; }
-  .assets  { grid-area: assets; }
+  .assetsBlock { grid-area: assets; }
   .stable  { grid-area: stable; }
   .buyback { grid-area: buyback; }
   .extras  { grid-area: extras; }
@@ -102,10 +102,17 @@
 }
 .tileLabel {
   font-family: var(--font-display);
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  color: var(--muted);
+  /* 2026-07-22: 10px では「何の塊か」が読めなかった(オーナー指摘)。
+     セクションの見出しとして機能する大きさ・明度に上げる */
+  font-size: var(--fs-3);
+  letter-spacing: 0.18em;
+  color: #b7b2e0;
   text-transform: uppercase;
+}
+/* セクション見出し(資産のようにカード外に置く塊用) */
+.secHead {
+  font-family: var(--font-display); font-size: var(--fs-3); letter-spacing: 0.18em;
+  color: #b7b2e0; text-transform: uppercase; margin-bottom: calc(-1 * var(--sp-1));
 }
 .tileLink { font-size: 12px; color: var(--cyan); text-decoration: none; }
 .tileLink:hover { color: var(--gold-bright); }
@@ -136,6 +143,9 @@
 .resRow:hover { border-color: var(--border-strong); }
 .resRank { font-family: var(--font-display); font-size: 11.5px; color: var(--muted); min-width: 50px; }
 .resName { flex: 1; min-width: 0; font-weight: 700; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 昨夜の僅差(2026-07-22): ショーで見せた「あと何点で助かったか」を翌朝にも残す */
+.resMargin { font-family: var(--font-mono); font-size: var(--fs-1); color: var(--good); white-space: nowrap; }
+.resMarginBad { color: var(--bad); }
 
 .pill { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.04em; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
 .pillSurvived { color: var(--good); border: 1px solid rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.08); }
@@ -197,7 +207,7 @@
   background: linear-gradient(120deg, rgba(255, 45, 196, 0.09), transparent 72%);
 }
 .taskRow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.taskLabel { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.2em; color: var(--magenta-soft); white-space: nowrap; }
+.taskLabel { font-family: var(--font-display); font-size: var(--fs-3); letter-spacing: 0.18em; color: var(--magenta-soft); white-space: nowrap; }
 .taskItem { font-size: 12.5px; color: var(--text); }
 .taskItem b { font-family: var(--font-mono); color: var(--magenta-soft); }
 .taskItem + .taskItem { border-left: 1px solid var(--border); padding-left: 12px; }
@@ -229,6 +239,7 @@
 .taskDoneText { font-size: 12.5px; color: var(--good-soft); }
 
 /* ---- ④ 資産(KPI 3タイル) -------------------------------------------------- */
+.assetsBlock { display: flex; flex-direction: column; gap: var(--sp-2); }
 .assets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .totalRow { grid-column: 1 / -1; min-width: 0; }
 .kpi { border-radius: 14px; padding: 13px 15px; text-decoration: none; display: block; min-width: 0; }
@@ -271,6 +282,8 @@
 .hartCanvas { display: block; width: 100%; height: 100%; object-fit: contain; }
 .sname { flex: 1; font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .sday { font-family: var(--font-mono); font-size: 9.5px; color: var(--faint); flex: none; }
+/* 7日の物語: 走破まであと何走か(2026-07-22) */
+.sleft { font-family: var(--font-mono); font-size: var(--fs-1); color: var(--cyan); white-space: nowrap; }
 .srow .trainBadge { margin-left: auto; flex: none; }
 
 /* 厩舎ヘッダーの「馬を迎える」直接購入ボタン */
@@ -489,3 +502,13 @@
 .promoDone { font-size: 0.82rem; color: var(--gold-bright); }
 .promoErr { flex-basis: 100%; font-size: 0.75rem; color: var(--bad); }
 .promoLink { font-family: var(--font-mono); font-size: 0.74rem; color: var(--cyan); text-decoration: none; margin-left: auto; }
+
+/* 施策D の導線(2026-07-22)。厩舎セクションの足元に静かに置く */
+.breederLink {
+  display: flex; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap;
+  margin-top: var(--sp-3); padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-jp); font-size: var(--fs-3); color: var(--gold-bright); text-decoration: none;
+}
+.breederLink:hover { color: var(--gold); }
+.breederNote { font-family: var(--font-mono); font-size: var(--fs-1); color: var(--faint); }

@@ -59,6 +59,11 @@ export interface AppDict {
     /** ダッシュボード改修 2026-07-22(DASHBOARD_REVISION_SPEC)。
      *  新規ユーザーが「何のゲームで、まず何をするか」を一目で掴むための最小の文言。
      *  R1: 数字は事実のみ(8:00/20:00・7日)。値上がり・利益・保証の語を入れない。 */
+    /** 常連向け改修 2026-07-22: 昨夜の僅差 / 7日の物語 / 育成者クレジット導線。
+     *  margin は帯(同じLV)内の実測差。全馬生還の夜は出さない。 */
+    margin_survive_tpl: string; margin_burn_tpl: string;
+    races_left_tpl: string; races_left_last: string;
+    assets_label: string; breeders_link: string; breeders_note: string;
     dash_stable_default: string;
     welcome_h: string; welcome_lead: string; welcome_cta: string;
     welcome_step1: string; welcome_step2: string; welcome_step3: string;
@@ -742,6 +747,10 @@ const ja: AppDict = {
     watch_show: '最新のショーを見る →',
     jp_tickets_tpl: '今週の応募 {n} 口', jp_prize_tpl: '賞金 {p} USDT',
     jp_desc: '調教を確定するたび自動で1口たまります(操作は不要)。毎週日曜夜のショー最終幕で抽選し、当選金はウォレットへ自動で支払われます。',
+    margin_survive_tpl: '{v}点差で生存', margin_burn_tpl: '{v}点差で及ばず',
+    races_left_tpl: 'あと{n}走', races_left_last: '次で走破',
+    assets_label: '資産 · ASSETS',
+    breeders_link: '育てた馬の記録 →', breeders_note: '手放した馬の功績も残ります',
     dash_stable_default: 'あなたの厩舎',
     welcome_h: 'あなたは厩舎のオーナーです。',
     welcome_lead: '毎朝8:00と毎晩20:00、全馬が一斉に走る。7日走り切れば、チャンピオン。',
@@ -1494,6 +1503,10 @@ const en: AppDict = {
     watch_show: 'Watch the latest show →',
     jp_tickets_tpl: 'This week’s entries: {n}', jp_prize_tpl: 'Prize {p} USDT',
     jp_desc: 'Every training confirm automatically adds one entry — nothing to redeem. The draw runs in the final act of Sunday night’s show, and winnings are paid straight to your wallet.',
+    margin_survive_tpl: 'survived by {v}', margin_burn_tpl: 'short by {v}',
+    races_left_tpl: '{n} to go', races_left_last: 'one more to finish',
+    assets_label: 'ASSETS',
+    breeders_link: 'Horses you raised →', breeders_note: 'Credit stays with you after a horse leaves',
     dash_stable_default: 'Your stable',
     welcome_h: 'You are a stable owner.',
     welcome_lead: 'At 8:00 and 20:00 every day, all horses run at once. Finish seven days and your horse is a champion.',
@@ -2246,6 +2259,10 @@ const zh: AppDict = {
     watch_show: '观看最新演出 →',
     jp_tickets_tpl: '本周报名 {n} 口', jp_prize_tpl: '奖金 {p} USDT',
     jp_desc: '每次确定训练自动累计1口(无需任何操作)。每周日晚演出的最终幕开奖，奖金自动支付到钱包。',
+    margin_survive_tpl: '以{v}分之差存活', margin_burn_tpl: '差{v}分未能存活',
+    races_left_tpl: '还剩{n}场', races_left_last: '下一场即完赛',
+    assets_label: '资产 · ASSETS',
+    breeders_link: '您培育的马匹记录 →', breeders_note: '马匹离开后，功绩仍会留下',
     dash_stable_default: '您的马厩',
     welcome_h: '您是马厩的主人。',
     welcome_lead: '每天早上8:00与晚上20:00，所有马匹同时起跑。跑完七天，就是冠军。',
@@ -2998,6 +3015,10 @@ const ko: AppDict = {
     watch_show: '최신 쇼 보기 →',
     jp_tickets_tpl: '이번 주 응모 {n}구', jp_prize_tpl: '상금 {p} USDT',
     jp_desc: '조교를 확정할 때마다 자동으로 1구 쌓입니다(별도 조작 불요). 매주 일요일 밤 쇼 최종막에서 추첨하며, 당첨금은 지갑으로 자동 지급됩니다.',
+    margin_survive_tpl: '{v}점 차로 생존', margin_burn_tpl: '{v}점 차로 미달',
+    races_left_tpl: '{n}회 남음', races_left_last: '다음에 완주',
+    assets_label: '자산 · ASSETS',
+    breeders_link: '키운 말의 기록 →', breeders_note: '말이 떠난 뒤에도 공적은 남습니다',
     dash_stable_default: '내 마구간',
     welcome_h: '당신은 마구간의 주인입니다.',
     welcome_lead: '매일 아침 8시와 밤 8시, 모든 말이 일제히 달립니다. 7일을 완주하면 챔피언입니다.',
@@ -3750,6 +3771,10 @@ const ms: AppDict = {
     watch_show: 'Tonton pertunjukan terkini →',
     jp_tickets_tpl: 'Penyertaan minggu ini: {n}', jp_prize_tpl: 'Hadiah {p} USDT',
     jp_desc: 'Setiap pengesahan latihan menambah satu penyertaan secara automatik — tiada apa perlu ditebus. Cabutan berlangsung pada babak akhir persembahan malam Ahad, dan kemenangan dibayar terus ke dompet anda.',
+    margin_survive_tpl: 'selamat dengan {v}', margin_burn_tpl: 'tersasar {v}',
+    races_left_tpl: '{n} lagi', races_left_last: 'satu lagi untuk tamat',
+    assets_label: 'ASET',
+    breeders_link: 'Kuda yang anda besarkan →', breeders_note: 'Jasa kekal walau kuda itu pergi',
     dash_stable_default: 'Kandang anda',
     welcome_h: 'Anda pemilik kandang.',
     welcome_lead: 'Pada 8:00 pagi dan 20:00 malam setiap hari, semua kuda berlari serentak. Tamatkan tujuh hari dan kuda anda menjadi juara.',
