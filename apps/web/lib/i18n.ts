@@ -603,6 +603,10 @@ export interface AppDict {
     rank_tpl: string; rank_note: string; sort_total: string;
     uncollected_tpl: string; tickets_k: string; tickets_note: string; bulk_harvest_tpl: string;
     legend_title: string; legend_note: string; legend_chip_tpl: string;
+    /* 厩舎サマリー(STABLE_REVISION_SPEC 2026-07-22) — 毎日開く理由を最上部へ */
+    sum_tonight_h_tpl: string; sum_tonight_none: string; sum_risk_point_tpl: string;
+    sum_all_safe: string; sum_road_h: string; sum_road_tpl: string; sum_road_last_tpl: string;
+    sum_best_depth_tpl: string;
   };
   /** /horses/[id](馬詳細)+ 調教フォーム + ページャ + ブースト + 転送。 */
   /** /wallet ページ(2026-07-22 i18n化)。金が動く面なので、
@@ -1305,6 +1309,12 @@ const ja: AppDict = {
     uncollected_tpl: '未回収 +{v}$', tickets_k: '調教チケット(今週)', tickets_note: '調教確定1回=週次ジャックポット応募1口。毎週日曜夜のショーで自動抽選・当選金は自動支払い(操作は不要です)。', bulk_harvest_tpl: '+{v}$ をまとめて回収!',
     legend_title: 'レアリティ', legend_note: '加点は毎晩のレーススコアに常時反映(公開ルール)',
     legend_chip_tpl: '{pct} · スコア+{n}',
+    sum_tonight_h_tpl: '今夜 {n}頭が出走', sum_tonight_none: '今夜の出走はありません',
+    sum_risk_point_tpl: '{name} — LV帯内 {r}位/{n}頭 · 危険圏(目安)',
+    sum_all_safe: '今夜は全頭が安全圏(目安)',
+    sum_road_h: 'チャンピオンへの道',
+    sum_road_tpl: '{name} · Day {d} — あと{n}走で走破', sum_road_last_tpl: '{name} · Day {d} — あと1走!',
+    sum_best_depth_tpl: '最高 Day {d}',
   },
   walletPage: {
     h1: 'ウォレット',
@@ -2061,6 +2071,12 @@ const en: AppDict = {
     uncollected_tpl: 'Unclaimed +{v}$', tickets_k: 'Training tickets (this week)', tickets_note: 'Each training confirm = one entry in the weekly jackpot. Drawn automatically in Sunday night’s show; winnings are paid to your wallet — nothing to redeem.', bulk_harvest_tpl: 'Claimed +{v}$ in one go!',
     legend_title: 'Rarity', legend_note: 'Bonuses apply to every night’s race score (public rule)',
     legend_chip_tpl: '{pct} · score +{n}',
+    sum_tonight_h_tpl: '{n} racing tonight', sum_tonight_none: 'No runners tonight',
+    sum_risk_point_tpl: '{name} — #{r} of {n} in its LV band · danger zone (a guide)',
+    sum_all_safe: 'Every runner is in the safe zone tonight (a guide)',
+    sum_road_h: 'Road to champion',
+    sum_road_tpl: '{name} · Day {d} — {n} races from the finish', sum_road_last_tpl: '{name} · Day {d} — one race to go!',
+    sum_best_depth_tpl: 'Best Day {d}',
   },
   walletPage: {
     h1: 'Wallet',
@@ -2817,6 +2833,12 @@ const zh: AppDict = {
     uncollected_tpl: '未领取 +{v}$', tickets_k: '训练券(本周)', tickets_note: '每确定1次训练=每周大奖1口报名。周日晚演出自动开奖、奖金自动支付(无需操作)。', bulk_harvest_tpl: '一次性领取 +{v}$!',
     legend_title: '稀有度', legend_note: '加分每晚都计入比赛得分(公开规则)',
     legend_chip_tpl: '{pct} · 得分+{n}',
+    sum_tonight_h_tpl: '今晚 {n}匹出赛', sum_tonight_none: '今晚没有出赛',
+    sum_risk_point_tpl: '{name} — LV组内 第{r}名/{n}匹 · 危险圈(仅供参考)',
+    sum_all_safe: '今晚全部处于安全圈(仅供参考)',
+    sum_road_h: '通往冠军之路',
+    sum_road_tpl: '{name} · Day {d} — 还差{n}场走完', sum_road_last_tpl: '{name} · Day {d} — 只差1场!',
+    sum_best_depth_tpl: '最高 Day {d}',
   },
   walletPage: {
     h1: '钱包',
@@ -3573,6 +3595,12 @@ const ko: AppDict = {
     uncollected_tpl: '미회수 +{v}$', tickets_k: '조교 티켓(이번 주)', tickets_note: '조교 확정 1회=주간 잭팟 응모 1구. 일요일 밤 쇼에서 자동 추첨・당첨금 자동 지급(조작 불요).', bulk_harvest_tpl: '+{v}$ 한 번에 회수!',
     legend_title: '레어리티', legend_note: '가산점은 매일 밤 레이스 점수에 상시 반영(공개 규칙)',
     legend_chip_tpl: '{pct} · 점수+{n}',
+    sum_tonight_h_tpl: '오늘 밤 {n}마리 출주', sum_tonight_none: '오늘 밤 출주가 없습니다',
+    sum_risk_point_tpl: '{name} — LV대 내 {r}위/{n}마리 · 위험권(참고)',
+    sum_all_safe: '오늘 밤은 전부 안전권(참고)',
+    sum_road_h: '챔피언으로 가는 길',
+    sum_road_tpl: '{name} · Day {d} — 완주까지 {n}주', sum_road_last_tpl: '{name} · Day {d} — 앞으로 1주!',
+    sum_best_depth_tpl: '최고 Day {d}',
   },
   walletPage: {
     h1: '지갑',
@@ -4329,6 +4357,12 @@ const ms: AppDict = {
     uncollected_tpl: 'Belum dituntut +{v}$', tickets_k: 'Tiket latihan (minggu ini)', tickets_note: 'Setiap pengesahan latihan = satu penyertaan jackpot mingguan. Dicabut secara automatik dalam persembahan malam Ahad; kemenangan dibayar ke dompet anda.', bulk_harvest_tpl: '+{v}$ dituntut sekali gus!',
     legend_title: 'Kejarangan', legend_note: 'Bonus sentiasa dikira dalam skor perlumbaan setiap malam (peraturan umum)',
     legend_chip_tpl: '{pct} · skor +{n}',
+    sum_tonight_h_tpl: '{n} berlumba malam ini', sum_tonight_none: 'Tiada peserta malam ini',
+    sum_risk_point_tpl: '{name} — #{r} daripada {n} dalam jalur LV · zon bahaya (panduan)',
+    sum_all_safe: 'Semua peserta berada di zon selamat malam ini (panduan)',
+    sum_road_h: 'Jalan ke juara',
+    sum_road_tpl: '{name} · Day {d} — {n} perlumbaan lagi', sum_road_last_tpl: '{name} · Day {d} — tinggal 1 perlumbaan!',
+    sum_best_depth_tpl: 'Terbaik Day {d}',
   },
   walletPage: {
     h1: 'Dompet',

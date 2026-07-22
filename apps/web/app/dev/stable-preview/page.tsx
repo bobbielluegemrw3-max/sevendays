@@ -70,12 +70,28 @@ for (const h of HORSES) {
   });
 }
 
-export default async function StablePreview() {
+export default async function StablePreview({
+  searchParams,
+}: {
+  searchParams: Promise<{ newcomer?: string; nonight?: string; allsafe?: string }>;
+}) {
   await requireDevPreviewAccess();
+  const flags = await searchParams;
+  // STABLE_REVISION_SPEC §3 のエッジを目視するためのフラグ(devのみ)
+  //  ?newcomer=1 … 1頭も持たない真の新規 → サマリーを出さない
+  //  ?nonight=1  … 現役はいるが今夜の出走が0(全馬が手動出品中 等)
+  //  ?allsafe=1  … RISK が0頭 → 名指しを出さず「全頭が安全圏(目安)」
+  const horses = flags.newcomer === '1'
+    ? []
+    : flags.nonight === '1'
+      ? HORSES.map((h) => (h.status === 'ACTIVE' ? { ...h, listing: 'MANUAL' } : h))
+      : flags.allsafe === '1'
+        ? HORSES.map((h) => (h.tonight_band === 'RISK' || h.tonight_band === 'MID' ? { ...h, tonight_band: 'SAFE' as const } : h))
+        : HORSES;
   return (
     <StableView
       data={{
-        horses: HORSES,
+        horses,
         pendingCount: 2,
         hiddenBadges: [
           { key: 'rain_reader', name: '雨読みの三重奏', flavor: '雨を味方につけた者にだけ、水面は道を見せる。', tone: 'rain' },

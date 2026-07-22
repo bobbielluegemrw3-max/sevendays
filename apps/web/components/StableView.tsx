@@ -56,6 +56,19 @@ export interface StableData {
   hiddenBadges?: HiddenBadge[];
 }
 
+/** 7日レール(サマリー用の大きい版)。StableBrowser の DayRail と同じ見え方。 */
+function SummaryRail({ day }: { day: number }) {
+  return (
+    <div className={`${s.rail} ${s.railBig}`}>
+      {Array.from({ length: 7 }, (_, i) => {
+        const d = i + 1;
+        const cls = d < day + 1 ? s.pipDone : d === day + 1 ? s.pipToday : s.pip;
+        return <span key={d} className={cls} />;
+      })}
+    </div>
+  );
+}
+
 export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lang }) {
   const { horses, pendingCount } = data;
   const t = APP_COPY[lang].stable;
@@ -69,39 +82,120 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
   const stableValue = active.reduce((sum, h) => sum + Number(horseValue(h.current_day)), 0);
   const uncollectedTotal = racing.reduce((sum, h) => sum + uncollectedGain(h), 0);
   // 頭数サマリー(チャンピオン0頭のときは省略 — 従来と同じ)
+  // C(誇り): 最高到達 Day は「まだチャンピオンなし」より前向きな到達目標として出す
+  const bestDepth = horses.reduce((m, h) => Math.max(m, Math.min(7, h.current_day)), 0);
   const subParts = [
     fill(t.sub_active_tpl, { n: active.length }),
     ...(champions.length > 0 ? [fill(t.sub_champ_tpl, { n: champions.length })] : []),
     fill(t.sub_burned_tpl, { n: burned.length }),
+    ...(bestDepth > 0 ? [fill(t.sum_best_depth_tpl, { d: bestDepth })] : []),
   ];
+
+  /* ---- サマリー A: 今夜(STABLE_REVISION_SPEC 2026-07-22) --------------------
+     tonight_band は API が既に返している目安値。ここは集計するだけで、
+     新しい数字を作らない。R1: 「BURNされる」とは書かない(帯は目安)。 */
+  const racingTonight = racing.filter((h) => h.tonight_band);
+  const safeN = racingTonight.filter((h) => h.tonight_band === 'SAFE').length;
+  const midN = racingTonight.filter((h) => h.tonight_band === 'MID').length;
+  const riskN = racingTonight.filter((h) => h.tonight_band === 'RISK').length;
+  // 名指しは「最初に見つかった RISK」ではなく **帯内で最も下の1頭**。
+  // 配列順は取得順で意味が無く、名指しする以上は一番危ない馬であるべき
+  const riskHorse = racingTonight
+    .filter((h) => h.tonight_band === 'RISK' && h.tonight_rank && h.tonight_entrants)
+    .reduce<StableHorse | null>((worst, h) => {
+      if (!worst) return h;
+      const a1 = h.tonight_rank! / h.tonight_entrants!;
+      const b1 = worst.tonight_rank! / worst.tonight_entrants!;
+      return a1 > b1 ? h : worst;
+    }, null);
+
+  /* ---- サマリー B: 走破に一番近い現役馬 ---------------------------------- */
+  // 母集団は racing ではなく active。全馬が手動出品中で今夜の出走が0でも、
+  // 「走破に一番近い馬」は変わらず存在する(SPEC §3: 今夜0でも B は継続)
+  const roadHorse = active.reduce<StableHorse | null>(
+    (best, h) => (!best || h.current_day > best.current_day ? h : best),
+    null,
+  );
+  const racesLeft = roadHorse ? 7 - Math.min(7, roadHorse.current_day) : 0;
+  // 真の新規(1頭も持たず履歴も無い)にはサマリーを出さない。
+  // 空の TONIGHT ブロックを出すのが一番やってはいけないこと(ダッシュの轍)
+  const showSummary = horses.length > 0;
   // {amt} の前後に分割して金額だけ太字にする(語順の言語差を吸収)
 
 
   return (
     <div className={s.app}>
-      {/* ===== ヘッダ(頭数 + 評価額合計) ===== */}
+      {/* ===== ヘッダ(厩舎名 + 誇り) =====
+          C(誇り)は独立した箱を作らず、既存の見出し行に寄せる。箱を増やすと
+          上部が過密になり「引き算」に反する(STABLE_REVISION_SPEC §1 視覚階層) */}
       <div className={s.header}>
         <div>
           <div className={s.headTitle}>{data.stableName ?? t.default_name}</div>
           <div className={s.headSub}>{subParts.join(' · ')}</div>
         </div>
-        <div className={s.headStats}>
-          <div className={`${s.stat} ${s.statCount}`}>
-            <div className="k">{t.stat_horses_k}</div>
-            <div className="v">{horses.length}</div>
-          </div>
-          <div className={`${s.stat} ${s.statValue}`}>
-            <div className="k">{t.stat_value_k}</div>
-            {/* 評価額は馬の育成・売買で変わる — 変化時に登る(2026-07-21・1-1) */}
-            <div className="v"><AnimatedNumber value={stableValue} digits={2} group /><small>USDT</small></div>
-          </div>
-          <div className={`${s.stat} ${s.statTickets}`}>
-            <div className="k">{t.tickets_k}</div>
-            <div className="v"><AnimatedNumber value={data.trainingTickets ?? 0} /></div>
-          </div>
-        </div>
-        <div className={s.ticketsNote}>{t.tickets_note}</div>
       </div>
+
+      {/* ===== STABLE SUMMARY(A: 今夜 / B: チャンピオンへの道) =====
+          この厩舎ページを毎日開く理由は「今夜うちの馬は生き残るか」。
+          その答えは各カードの RankLine に埋もれていたので最上部へ引き上げる。
+          数字はすべて既存の実データ(tonight_band / current_day)の集計 */}
+      {showSummary ? (
+        <section className={s.summary}>
+          <div className={s.sumTonight}>
+            <div className={s.sumEyebrow}><span className={s.live}>●</span> TONIGHT</div>
+            <div className={s.sumH}>
+              {racingTonight.length > 0
+                ? fill(t.sum_tonight_h_tpl, { n: racingTonight.length })
+                : t.sum_tonight_none}
+            </div>
+            {racingTonight.length > 0 ? (
+              <>
+                <div className={s.sumBands}>
+                  <span className={s.sumSafe}><b>{safeN}</b> {t.band_safe}</span>
+                  <span className={s.sumMid}><b>{midN}</b> {t.band_mid}</span>
+                  <span className={s.sumRisk}><b>{riskN}</b> {t.band_risk}</span>
+                </div>
+                {riskHorse ? (
+                  <div className={s.sumPoint}>
+                    → {fill(t.sum_risk_point_tpl, {
+                      name: riskHorse.name,
+                      r: riskHorse.tonight_rank ?? 0,
+                      n: riskHorse.tonight_entrants ?? 0,
+                    })}
+                  </div>
+                ) : (
+                  <div className={s.sumSafeNote}>{t.sum_all_safe}</div>
+                )}
+              </>
+            ) : null}
+          </div>
+
+          {roadHorse ? (
+            <div className={s.sumRoad}>
+              <div className={s.sumEyebrow}>◆ {t.sum_road_h}</div>
+              <SummaryRail day={roadHorse.current_day} />
+              <div className={s.sumRoadText}>
+                {fill(racesLeft <= 1 ? t.sum_road_last_tpl : t.sum_road_tpl, {
+                  name: roadHorse.name, d: Math.min(7, roadHorse.current_day), n: racesLeft,
+                })}
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* ===== 在庫メトリクス(頭数 / 評価額 / チケット) =====
+          管理情報なので、毎日の核(サマリー)の下へ小さく降ろす(消さない) */}
+      <div className={s.metaRow}>
+        <span className={s.metaItem}>{t.stat_horses_k}<b>{horses.length}</b></span>
+        <span className={`${s.metaItem} ${s.metaValue}`}>
+          {t.stat_value_k}
+          {/* 評価額は馬の育成・売買で変わる — 変化時に登る(2026-07-21・1-1) */}
+          <b><AnimatedNumber value={stableValue} digits={2} group /><small>USDT</small></b>
+        </span>
+        <span className={s.metaItem}>{t.tickets_k}<b><AnimatedNumber value={data.trainingTickets ?? 0} /></b></span>
+      </div>
+      <div className={s.ticketsNote}>{t.tickets_note}</div>
 
       {/* ===== 獲得した称号(隠し実績・EASTER_EGG_PLAN.md) ===== */}
       {data.hiddenBadges && data.hiddenBadges.length > 0 ? (

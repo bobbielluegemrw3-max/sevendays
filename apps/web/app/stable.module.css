@@ -22,30 +22,68 @@
 .header { display: flex; flex-direction: column; gap: 12px; }
 .headTitle { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: 0.02em; color: var(--text); }
 .headSub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 5px; letter-spacing: 0.06em; }
-.headStats { display: flex; gap: 12px; }
-.stat { border-radius: 13px; padding: 11px 16px; flex: 1; min-width: 0; }
 .ticketsNote { font-family: var(--font-mono); font-size: 8.5px; color: var(--faint); margin-top: 7px; line-height: 1.6; }
-.stat :global(.k) { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; }
-.stat :global(.v) { font-family: var(--font-display); font-weight: 700; font-size: 22px; margin-top: 2px; font-variant-numeric: tabular-nums; }
-.stat :global(.v) small { font-size: 11px; color: var(--faint); margin-left: 3px; }
-.statCount { border: 1px solid rgba(0, 234, 255, 0.28); background: linear-gradient(180deg, rgba(0, 234, 255, 0.08), rgba(0, 234, 255, 0.015)); }
-.statCount :global(.k) { color: var(--cyan); } .statCount :global(.v) { color: #a9f6ff; }
-.statValue { border: 1px solid rgba(201, 168, 106, 0.34); background: linear-gradient(180deg, rgba(201, 168, 106, 0.11), rgba(201, 168, 106, 0.02)); }
-.statValue :global(.k) { color: var(--gold); } .statValue :global(.v) { color: var(--gold-bright); }
 
 @media (min-width: 900px) {
   .header { flex-direction: row; justify-content: space-between; align-items: flex-end; }
-  .headStats { flex: none; }
-  .stat { flex: none; }
 }
-/* モバイル(2026-07-19 オーナー指摘: 評価額のUSDTが隣のボックスへはみ出す) —
-   3ボックス時代の22px数字は390px幅で溢れる。縮小+折返し許可で絶対にはみ出させない */
-@media (max-width: 899px) {
-  .headStats { flex-wrap: wrap; }
-  .stat { padding: 10px 12px; overflow: hidden; }
-  .stat :global(.v) { font-size: 17px; white-space: nowrap; }
-  .stat :global(.v) small { font-size: 9.5px; margin-left: 2px; }
+
+/* ---- STABLE SUMMARY(STABLE_REVISION_SPEC 2026-07-22) ----------------------
+   厩舎ページを毎日開く理由 = 「今夜うちの馬は生き残るか」。各カードの
+   RankLine に埋もれていたそれを最上部へ引き上げる。A(今夜)を最も大きく、
+   B(チャンピオンへの道)を次に。在庫メトリクスは .metaRow へ降格。 */
+.summary {
+  display: grid; grid-template-columns: 1fr; gap: 14px;
+  border: 1px solid var(--border-strong); border-radius: 16px; padding: 16px 18px;
+  background: linear-gradient(150deg, rgba(255, 45, 196, 0.07), rgba(10, 8, 19, 0.5) 62%);
 }
+.sumEyebrow {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em; color: var(--faint);
+  display: flex; align-items: center; gap: 6px;
+}
+.sumEyebrow .live { color: var(--magenta); animation: sdd-pulse 1.6s infinite; }
+/* A は「毎日開く理由」の本命なので、このページで一番大きい文字にする */
+.sumH {
+  font-family: var(--font-display); font-weight: 800; font-size: 27px; line-height: 1.15;
+  color: var(--text); margin-top: 6px;
+}
+.sumBands { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 9px; }
+.sumBands span {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--faint);
+  display: inline-flex; align-items: baseline; gap: 5px;
+}
+.sumBands b { font-family: var(--font-display); font-size: 19px; font-weight: 800; }
+.sumSafe b { color: #35d07f; }
+.sumMid b { color: #aab4c8; }
+.sumRisk b { color: #ff5c8a; }
+/* 名指しの1頭 — 今夜レースを見に戻る理由そのもの。帯は目安なので断定しない */
+.sumPoint {
+  margin-top: 10px; font-size: 12.5px; color: #ff8fb0; line-height: 1.5;
+  border-left: 2px solid rgba(255, 92, 138, 0.55); padding-left: 9px;
+}
+.sumSafeNote { margin-top: 10px; font-family: var(--font-mono); font-size: 10.5px; color: #35d07f; }
+.sumRoad { border-top: 1px solid var(--border); padding-top: 13px; }
+.railBig { margin-top: 9px; }
+.railBig span { height: 9px; border-radius: 3px; }
+.sumRoadText { margin-top: 8px; font-size: 12.5px; color: var(--text); }
+
+/* ---- 在庫メトリクス(管理情報 — 小さく下段) ------------------------------ */
+.metaRow { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.metaItem {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; color: var(--faint);
+  display: inline-flex; align-items: baseline; gap: 7px;
+}
+.metaItem b { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.metaItem b small { font-size: 9px; color: var(--faint); margin-left: 3px; }
+.metaValue b { color: var(--gold-bright); }
+
+@media (min-width: 900px) {
+  /* PC は A と B を横に。A を広く(1.5fr)して主役のままにする */
+  .summary { grid-template-columns: 1.5fr 1fr; align-items: start; }
+  .sumRoad { border-top: none; border-left: 1px solid var(--border); padding-top: 0; padding-left: 18px; }
+}
+/* 旧・3つの stat ボックス(頭数/評価額/チケット)は .metaRow へ降格したので
+   関連CSSごと撤去(2026-07-22)。はみ出し対策はテキスト行になった時点で不要 */
 
 /* ---- 出品中/チャンピオンセクション(Decision 087監査) ------------------------ */
 .secLabelListed { color: var(--warn); }
@@ -401,5 +439,3 @@
 }
 
 /* 調教チケットのスタットタイル(A2) */
-.statTickets { border: 1px solid rgba(255, 45, 196, 0.3); background: linear-gradient(180deg, rgba(255, 45, 196, 0.09), rgba(255, 45, 196, 0.015)); }
-.statTickets :global(.k) { color: var(--magenta-soft); } .statTickets :global(.v) { color: #ff9ade; }
