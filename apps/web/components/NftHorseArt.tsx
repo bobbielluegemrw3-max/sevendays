@@ -11,6 +11,15 @@ import { isSingleArch, type NftLook } from '@/lib/nft-visual';
  */
 
 const LAYERS = ['coat', 'mane_tail', 'accents', 'eye_glow'] as const;
+
+/**
+ * アセットの版番号(2026-07-22)。
+ * 画像はパスが固定なので、中身を直しても URL が変わらず、ブラウザとCDNが
+ * 古いファイルを最大4時間(Cache-Control: max-age=14400)持ち続ける。
+ * 実際に「直したのに何も変わっていない」が起きた。
+ * **public/horses/nft/ の画像を差し替えたら、必ずこの数字を上げること。**
+ */
+const ART_VERSION = 2;
 const S = 768;
 
 const imgCache = new Map<string, Promise<HTMLImageElement | null>>();
@@ -129,8 +138,8 @@ export function NftHorseArt({
       // 変換して成立する(NFT_ART_HANDOVER §0-A: 回転が壊すのは非金属だけ)
       const single = isSingleArch(look.arch);
       const imgs = single
-        ? [await loadImg(`/horses/nft/${look.arch}_full.png`)]
-        : await Promise.all(LAYERS.map((l) => loadImg(`/horses/nft/${look.arch}_${l}.png`)));
+        ? [await loadImg(`/horses/nft/${look.arch}_full.png?v=${ART_VERSION}`)]
+        : await Promise.all(LAYERS.map((l) => loadImg(`/horses/nft/${look.arch}_${l}.png?v=${ART_VERSION}`)));
       if (cancelled) return;
       const canvas = ref.current;
       if (!canvas) return;
