@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { refreshSoft } from '@/lib/deferred-refresh';
 import { apiFetch, errorMessage } from '@/lib/client-api';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { Button } from '@/components/ui/Button';
 
 /** 予約のキャンセル(20:00のバッチロック前のみ)。作成は ReservePanel(Decision 085)。 */
 export function CancelSessionButton({ sessionId }: { sessionId: string }) {
@@ -26,9 +27,9 @@ export function CancelSessionButton({ sessionId }: { sessionId: string }) {
 
   return (
     <span>
-      <button className="secondary" onClick={() => void cancel()} disabled={busy}>
+      <Button variant="secondary" onClick={() => void cancel()} busy={busy} busyLabel="取消中…" sound="confirm">
         キャンセル
-      </button>
+      </Button>
       {error ? <ErrorLine inline> {error}</ErrorLine> : null}
     </span>
   );

@@ -8,6 +8,7 @@ import type { AppDict } from '@/lib/i18n-shared';
 import s from '../app/dashboard.module.css';
 import d from '../app/support.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { Button } from '@/components/ui/Button';
 
 /**
  * 売買自動化の設定UI(Decision 086)。
@@ -86,9 +87,9 @@ export function TradeModeModal({ settings, preview = false, t }: { settings: Tra
               <li>{t.smart_li3}</li>
               <li>{t.smart_li4}</li>
             </ul>
-            <button type="button" className={s.tmCta} disabled={busy} onClick={() => void choose(true)}>
+            <Button className={s.tmCta} busy={busy} sound="confirm" onClick={() => void choose(true)}>
               {t.smart_cta}
-            </button>
+            </Button>
           </div>
           <div className={s.tmCard}>
             <div className={s.tmCardHead}>{t.manual_head}</div>
@@ -98,9 +99,9 @@ export function TradeModeModal({ settings, preview = false, t }: { settings: Tra
               <li>{t.manual_li3}</li>
               <li>{t.manual_li4}</li>
             </ul>
-            <button type="button" className={`secondary ${s.tmGhost}`} disabled={busy} onClick={() => void choose(false)}>
+            <Button className={`secondary ${s.tmGhost}`} busy={busy} sound="confirm" onClick={() => void choose(false)}>
               {t.manual_cta}
-            </button>
+            </Button>
           </div>
         </div>
         {error ? <ErrorLine>{error}</ErrorLine> : null}

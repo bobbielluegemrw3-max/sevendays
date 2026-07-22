@@ -14,6 +14,7 @@ import { apiFetch, errorMessage } from '@/lib/client-api';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { Button } from '@/components/ui/Button';
 
 /**
  * Daily training selection (Decision 066 / UX redesign 088).
@@ -180,9 +181,9 @@ export function TrainingForm({
       {error ? <ErrorLine>{error}</ErrorLine> : null}
       {harvest ? <p className={`ok ${s.harvestMsg}`}>{harvest}</p> : null}
       {message ? <p className="ok">{message}</p> : null}
-      <button className="primary" type="button" disabled={busy} onClick={() => void submit()}>
-        {busy ? t.train_busy : t.train_submit}
-      </button>
+      <Button variant="primary" busy={busy} busyLabel={t.train_busy} sound="confirm" onClick={() => void submit()}>
+        {t.train_submit}
+      </Button>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { apiFetch, errorMessage } from '@/lib/client-api';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { Button } from '@/components/ui/Button';
 
 /**
  * 一括調教(Decision 088)。未調教の全馬に recommendedTrainingV1(タイプ相性+
@@ -70,9 +71,9 @@ export function BulkTrainButton({
   return (
     <div className={s.bulkTrain}>
       {untrainedCount > 0 ? (
-        <button type="button" className={s.bulkTrainBtn} disabled={busy} onClick={() => void run()}>
-          {busy ? t.bulk_busy : fill(t.bulk_btn_tpl, { n: untrainedCount })}
-        </button>
+        <Button className={s.bulkTrainBtn} busy={busy} busyLabel={t.bulk_busy} sound="confirm" onClick={() => void run()}>
+          {fill(t.bulk_btn_tpl, { n: untrainedCount })}
+        </Button>
       ) : null}
       <span className={s.bulkTrainNote}>{t.bulk_note}</span>
       {error ? <ErrorLine>{error}</ErrorLine> : null}

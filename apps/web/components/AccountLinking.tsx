@@ -6,6 +6,7 @@ import type { UserIdentity } from '@supabase/supabase-js';
 import { apiFetch, errorMessage, siteOrigin, supabaseBrowser } from '@/lib/client-api';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { Button } from '@/components/ui/Button';
 
 interface Eip1193Provider {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;
@@ -136,9 +137,9 @@ export function AccountLinking({ userId, wallets, t }: { userId: string; wallets
                 <td className="muted">{(identity.identity_data?.email as string | undefined) ?? ''}</td>
                 <td>
                   {identities.length > 1 ? (
-                    <button className="secondary" onClick={() => void unlinkIdentity(identity)} disabled={busy}>
+                    <Button variant="secondary" onClick={() => void unlinkIdentity(identity)} busy={busy} sound="confirm">
                       {t.unlink}
-                    </button>
+                    </Button>
                   ) : (
                     <span className="muted">{t.last_id}</span>
                   )}
@@ -149,9 +150,9 @@ export function AccountLinking({ userId, wallets, t }: { userId: string; wallets
         </table>
       )}
       {!hasGoogle ? (
-        <button className="primary" onClick={() => void linkGoogle()} disabled={busy}>
+        <Button variant="primary" onClick={() => void linkGoogle()} busy={busy} sound="confirm">
           {t.link_google}
-        </button>
+        </Button>
       ) : null}
 
       <h3>{t.wallet_h}</h3>
@@ -164,9 +165,9 @@ export function AccountLinking({ userId, wallets, t }: { userId: string; wallets
                   <code>{address}</code>
                 </td>
                 <td>
-                  <button className="secondary" onClick={() => void unlinkWallet(address)} disabled={busy}>
+                  <Button variant="secondary" onClick={() => void unlinkWallet(address)} busy={busy} sound="confirm">
                     {t.unlink}
-                  </button>
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -175,9 +176,9 @@ export function AccountLinking({ userId, wallets, t }: { userId: string; wallets
       ) : (
         <p className="muted">{t.no_wallet}</p>
       )}
-      <button onClick={() => void linkMetaMask()} disabled={busy}>
+      <Button onClick={() => void linkMetaMask()} busy={busy} sound="confirm">
         {t.link_metamask}
-      </button>
+      </Button>
 
       {message ? <p className="ok">{message}</p> : null}
       {error ? <ErrorLine>{error}</ErrorLine> : null}

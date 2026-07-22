@@ -83,14 +83,11 @@ const fmt = (v: string): string =>
   Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** レアリティ(5段階)→ CSS Module のバッジクラス。未知値は COMMON 扱い。 */
-const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
-const rarClass = (rarity: string): string => (RARITIES.includes(rarity) ? rarity : 'COMMON');
 
 export function MarketPlaceView({
   data,
   myHorses,
   reserveSlot,
-  engineV2 = false,
   preview = false,
 }: {
   data: MarketPlaceData;
@@ -98,8 +95,6 @@ export function MarketPlaceView({
   myHorses: ListableHorse[];
   /** SHOWCASE直下に差し込む購入予約パネル+予約一覧(Decision 085)。 */
   reserveSlot?: React.ReactNode;
-  /** V2シーズンか。廃止したレアリティ表示を出さないための判定(2026-07-21・0-3)。 */
-  engineV2?: boolean;
   preview?: boolean;
 }) {
   const router = useRouter();
@@ -220,9 +215,7 @@ export function MarketPlaceView({
                       総合値{' '}
                       <b style={{ ...tvNumStyle(item.total_value), fontSize: '15px' }}>{Number(item.total_value).toFixed(1)}</b>
                     </span>
-                  ) : (
-                    <span className={`${s.rar} ${s[`rar${rarClass(item.rarity)}`]}`}>{item.rarity}</span>
-                  )}
+                  ) : null}
                 </div>
                 <div className={s.shelfMeta}>DAY {item.current_day}</div>
                 <div className={s.shelfPrice}>{fmt(item.price)} USDT</div>
@@ -241,9 +234,8 @@ export function MarketPlaceView({
                 <span className={s.soldTag}>{m.is_mint ? 'SOLD · 新規発行' : 'SOLD'}</span>
                 <NftHorseArt look={deriveNftLook(m.dna_hash, m.horse_name)} className={`${s.shelfArt} ${s.soldArt}`} size={224} />
                 <div className={s.shelfName}>{m.horse_name}</div>
-                {engineV2 ? null : (
-                  <div className={s.shelfRar}><span className={`${s.rar} ${s[`rar${rarClass(m.rarity)}`]}`}>{m.rarity}</span></div>
-                )}
+                {/* レアリティは廃止済み(総合値へ一本化)。engineV2 フラグに依存させると
+                    フラグ次第で廃止概念が復活するため、依存ごと外した(2026-07-22) */}
                 <div className={s.shelfMeta}>{localDate(m.matched_at).slice(5)} 成約 → {m.buyer}</div>
                 <div className={`${s.shelfPrice} ${s.soldPrice}`}>{fmt(m.price)} USDT</div>
               </div>
@@ -275,9 +267,7 @@ export function MarketPlaceView({
             <div key={l.listing_id} className={s.myRow}>
               <NftHorseArt look={deriveNftLook(l.dna_hash, l.name)} className={s.myArt} size={112} />
               <span className={s.myName}>{l.name}</span>
-              {engineV2 ? null : (
-                <span className={`${s.rar} ${s[`rar${rarClass(l.rarity)}`]}`}>{l.rarity}</span>
-              )}
+
               <span className={`${s.srcBadge} ${l.source === 'SMART' ? s.srcSmart : ''}`}>
                 {l.source === 'SMART' ? 'スマート出品' : '手動出品'}
               </span>

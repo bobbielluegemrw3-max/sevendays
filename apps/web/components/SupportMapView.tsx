@@ -14,6 +14,7 @@ import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/support-map.module.css';
 import d from '../app/support.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { Button } from '@/components/ui/Button';
 
 /**
  * /support/map — 組織マップ(ジェネアロジーツリー)。
@@ -596,10 +597,10 @@ export function SupportMapView({ data, preview = false, t }: { data: SupportMapD
             </label>
             {error && <ErrorLine>{error}</ErrorLine>}
             <div className={d.dialogActions}>
-              <button type="button" className="secondary" onClick={() => setTargetId(null)}>{t.reselect}</button>
-              <button type="button" disabled={!confirmed || busy} onClick={() => void submitPlacement()}>
-                {busy ? t.placing : t.confirm_btn}
-              </button>
+              <Button variant="secondary" onClick={() => setTargetId(null)}>{t.reselect}</Button>
+              <Button busy={busy} busyLabel={t.placing} disabled={!confirmed} sound="confirm" onClick={() => void submitPlacement()}>
+                {t.confirm_btn}
+              </Button>
             </div>
           </div>
         </div>
