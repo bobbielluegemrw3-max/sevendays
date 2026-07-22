@@ -1695,9 +1695,17 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       const ttl = Number(process.env.RACE_RESULTS_CACHE_MS ?? 60000);
       const hit = raceResultsCache.get(raceId);
       if (hit && Date.now() - hit.at < ttl) return hit.body as Record<string, unknown>;
+      // 馬名を併せて返す(2026-07-22・UI_FOUNDATION_PLAN 0-3(ii))。
+      // それまでは horse_id(UUID)だけだったため、**自分の馬を名前で探せなかった**。
+      // 馬名は公開情報(帯レースの順位表や台帳でも出る)。所有者は出さない。
       const rows = await ctx.client.query(
-        `select horse_id, final_score::text as final_score, final_rank, is_burned
-         from race_results where race_id = $1 order by final_rank limit 1000`,
+        `select r.horse_id, r.final_score::text as final_score, r.final_rank, r.is_burned,
+                h.name as horse_name
+           from race_results r
+           join horses h on h.id = r.horse_id
+          where r.race_id = $1
+          order by r.final_rank
+          limit 1000`,
         [ctx.params.id],
       );
       const body = { results: rows.rows };

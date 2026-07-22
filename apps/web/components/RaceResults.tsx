@@ -11,6 +11,8 @@ import s from '../app/races.module.css';
 
 export interface RaceResult {
   horse_id: string; final_score: string; final_rank: number; is_burned: boolean;
+  /** 馬名(2026-07-22: UUIDでは自分の馬を探せなかった)。古いキャッシュ応答には無い。 */
+  horse_name?: string | null;
 }
 
 const PAGE_SIZES = [50, 100, 200];
@@ -28,7 +30,11 @@ export function RaceResults({ results }: { results: RaceResult[] }) {
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const arr = results.filter((r) => {
-      if (needle && !r.horse_id.toLowerCase().includes(needle)) return false;
+      if (needle) {
+        const name = (r.horse_name ?? '').toLowerCase();
+        // 馬名で探せることが主目的。UUIDでの検索も従来どおり残す(台帳との突合用)
+        if (!name.includes(needle) && !r.horse_id.toLowerCase().includes(needle)) return false;
+      }
       if (filt === 'SURVIVED') return !r.is_burned;
       if (filt === 'BURNED') return r.is_burned;
       return true;
@@ -51,7 +57,7 @@ export function RaceResults({ results }: { results: RaceResult[] }) {
       </div>
 
       <div className={s.controls}>
-        <input className={s.search} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder="馬IDで検索…" aria-label="馬IDで検索" />
+        <input className={s.search} value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder="馬名で検索…" aria-label="馬名で検索" />
         <AppSelect
           className={s.select}
           value={filt}
@@ -71,7 +77,7 @@ export function RaceResults({ results }: { results: RaceResult[] }) {
           {slice.map((r) => (
             <div key={r.horse_id} className={`${s.rRow} ${r.is_burned ? s.rBurned : ''}`}>
               <span className={`${s.rRank} ${r.final_rank <= 3 && !r.is_burned ? s.rRankTop : ''}`}>#{r.final_rank.toLocaleString('en-US')}</span>
-              <span className={s.rId}>{r.horse_id}</span>
+              <span className={s.rId} title={r.horse_id}>{r.horse_name ?? r.horse_id}</span>
               <span className={s.rScore}>SCORE {Number(r.final_score).toFixed(2)}</span>
               <span className={`${s.rPill} ${r.is_burned ? s.rPillBurned : s.rPillSurvived}`}>{r.is_burned ? 'Burn' : '生存'}</span>
             </div>
