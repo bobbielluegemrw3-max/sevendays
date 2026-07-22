@@ -82,6 +82,15 @@ export interface LandingDict {
   /** LP改修 2026-07-22(LP_REVISION_SPEC 層A)。
    *  showcase_tag = 実績でなく見本であることの明示。
    *  ladder_burn_* / s5_p3 = 値上がりと同格に置く「消滅」(R1: 上がる話だけ見せない)。 */
+  /** LP改修 B-2(2026-07-22): ④を帯レースの順位表に描き替える。
+   *  実データではなく UI の例示。数字は価格表・スコアの体裁に収まる範囲のみ。 */
+  br_eyebrow: string;
+  br_you: string;
+  br_prov_tpl: string;
+  br_line_tpl: string;
+  br_margin_k: string;
+  br_margin_t: string;
+  br_note: string;
   showcase_tag: string;
   ladder_burn_v: string;
   ladder_burn_d: string;
@@ -161,6 +170,13 @@ const ja: LandingDict = {
   fc_note_b: '予報が見られるのは、レース演出の中だけ。',
   fc_note_rest: 'だから、毎レース見る理由がある。予報は参考情報で、結果を保証するものではありません。',
   next_race_note: 'この時間だけ、次のレースの予報が出る。',
+  br_eyebrow: 'BRACKET · LV.4',
+  br_you: 'あなたの馬',
+  br_prov_tpl: '暫定 {r}位',
+  br_line_tpl: '生存ライン {n}位',
+  br_margin_k: 'MARGIN',
+  br_margin_t: '点差で生存',
+  br_note: '同じLVの馬が同じ帯で走る。下位の数頭がBURNされる — 誰が消えるかは、最後の1頭が確定するまで決まらない。',
   showcase_tag: '表示例',
   ladder_burn_v: '0',
   ladder_burn_d: 'BURN',
@@ -229,6 +245,13 @@ const en: LandingDict = {
   fc_note_b: 'The forecast is only visible during the race show.',
   fc_note_rest: 'So there is a reason to watch every race. The forecast is a guide and does not guarantee results.',
   next_race_note: 'Only at this time does the next race’s forecast appear.',
+  br_eyebrow: 'BRACKET · LV.4',
+  br_you: 'YOUR HORSE',
+  br_prov_tpl: 'Provisional #{r}',
+  br_line_tpl: 'Survival line #{n}',
+  br_margin_k: 'MARGIN',
+  br_margin_t: 'points clear — survived',
+  br_note: 'Horses of the same LV run in the same bracket. The lowest few are burned — and who they are is not settled until the last horse is revealed.',
   showcase_tag: 'SHOWCASE',
   ladder_burn_v: '0',
   ladder_burn_d: 'BURN',
@@ -297,6 +320,13 @@ const zh: LandingDict = {
   fc_note_b: '预报只在比赛演出中才能看到。',
   fc_note_rest: '所以每场比赛都有观看的理由。预报仅供参考，不保证结果。',
   next_race_note: '只有这个时间，才会出现下一场预报。',
+  br_eyebrow: 'BRACKET · LV.4',
+  br_you: '您的马',
+  br_prov_tpl: '暂定第{r}位',
+  br_line_tpl: '存活线 第{n}位',
+  br_margin_k: 'MARGIN',
+  br_margin_t: '分之差存活',
+  br_note: '同一LV的马在同一梯队比赛。末位数匹会被销毁 — 谁会消失，要到最后一匹确定后才知道。',
   showcase_tag: '示例',
   ladder_burn_v: '0',
   ladder_burn_d: 'BURN',
@@ -365,6 +395,13 @@ const ko: LandingDict = {
   fc_note_b: '예보는 레이스 연출 중에만 볼 수 있다.',
   fc_note_rest: '그래서 매 레이스 볼 이유가 있다. 예보는 참고 정보이며 결과를 보장하지 않습니다.',
   next_race_note: '이 시간에만 다음 레이스 예보가 나온다.',
+  br_eyebrow: 'BRACKET · LV.4',
+  br_you: '내 말',
+  br_prov_tpl: '잠정 {r}위',
+  br_line_tpl: '생존 라인 {n}위',
+  br_margin_k: 'MARGIN',
+  br_margin_t: '점 차로 생존',
+  br_note: '같은 LV의 말이 같은 구간에서 달립니다. 하위 몇 마리가 소멸하며, 누가 사라질지는 마지막 한 마리가 확정될 때까지 정해지지 않습니다.',
   showcase_tag: '표시 예',
   ladder_burn_v: '0',
   ladder_burn_d: 'BURN',
@@ -433,6 +470,13 @@ const ms: LandingDict = {
   fc_note_b: 'Ramalan hanya kelihatan semasa persembahan perlumbaan.',
   fc_note_rest: 'Jadi ada sebab untuk menonton setiap perlumbaan. Ramalan hanya panduan dan tidak menjamin keputusan.',
   next_race_note: 'Hanya pada masa ini ramalan perlumbaan seterusnya muncul.',
+  br_eyebrow: 'BRACKET · LV.4',
+  br_you: 'KUDA ANDA',
+  br_prov_tpl: 'Sementara #{r}',
+  br_line_tpl: 'Garis hidup #{n}',
+  br_margin_k: 'MARGIN',
+  br_margin_t: 'mata — selamat',
+  br_note: 'Kuda pada LV yang sama berlumba dalam kumpulan yang sama. Beberapa yang terbawah akan dibakar — siapa yang hilang tidak diketahui sehingga kuda terakhir disahkan.',
   showcase_tag: 'CONTOH',
   ladder_burn_v: '0',
   ladder_burn_d: 'BURN',

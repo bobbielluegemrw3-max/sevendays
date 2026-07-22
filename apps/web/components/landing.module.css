@@ -211,6 +211,63 @@
 .logLine .nmn { color: #8f8ac2; }
 .logLine .dy { color: #6f6a9c; text-align: right; }
 .myLane { border-left: 1px solid rgba(255, 255, 255, 0.08); padding-left: 14px; display: flex; flex-direction: column; gap: 9px; }
+
+/* ---- ④ 帯レースの順位表(LP改修 B-2・2026-07-22) ------------------------------
+   旧ログ濁流(.floodGrid/.floodCol/.logLine)の置き換え。本編 BandRaceAct と
+   同じ情報構造を、静止フレーム1枚で見せる。新規要素は Tier 3 の意味色
+   (--good/--bad)を参照し、LPに方言を増やさない(LP_REVISION_SPEC C-3)。 */
+.brGrid { display: grid; grid-template-columns: 1fr 190px; gap: 14px; padding: 0 18px 18px; }
+.brBoardCol { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+/* 自分のスコアは先に固定される — もう動かない、という一枚 */
+.brYouCard {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  border: 1px solid rgba(0, 234, 255, 0.34); border-radius: 12px; padding: 10px 14px;
+  background: linear-gradient(120deg, rgba(0, 234, 255, 0.08), transparent 70%);
+}
+.brYouK { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.22em; color: #00eaff; }
+.brYouV { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: #eae7ff; font-variant-numeric: tabular-nums; }
+.brYouR { font-family: var(--font-mono); font-size: 10px; color: #8f8ac2; margin-left: auto; }
+.brYouLine { color: #5a5580; }
+
+.brBoard { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.brRow {
+  display: grid; grid-template-columns: 30px 1fr auto auto; gap: 10px; align-items: center;
+  font-family: var(--font-mono); font-size: 11px; color: #8f8ac2;
+  padding: 5px 10px; border: 1px solid transparent; border-radius: 8px;
+}
+.brRow .brRank { color: #5a5580; text-align: right; }
+.brRow .brName { color: #8f8ac2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brRow .brScore { color: #c9c5e0; font-variant-numeric: tabular-nums; }
+.brMine {
+  border-color: rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.07);
+}
+.brMine .brName, .brMine .brScore { color: #eae7ff; }
+/* 生存ライン = ここまでが生き残り。線そのものを見せる */
+.brAtLine { border-bottom: 1px dashed rgba(255, 92, 92, 0.55); border-radius: 8px 8px 0 0; }
+.brBurned { color: #6f6a9c; }
+.brBurned .brName, .brBurned .brScore { color: #6f6a9c; }
+.brTag {
+  font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.1em;
+  color: var(--bad, #ff5c5c); border: 1px solid rgba(255, 92, 92, 0.5);
+  border-radius: 999px; padding: 1px 7px;
+}
+
+/* 決着 — 「あと何点で助かったか」。この数字が体験の芯 */
+.brMargin { display: flex; align-items: baseline; gap: 9px; padding-top: 2px; }
+.brMarginK { font-family: var(--font-display); font-size: 9px; letter-spacing: 0.3em; color: #5a5580; }
+.brMarginN {
+  font-family: var(--font-display); font-weight: 900; font-size: 26px; line-height: 1;
+  color: var(--good, #35d07f); font-variant-numeric: tabular-nums;
+}
+.brMarginT { font-family: var(--font-jp); font-size: 11px; color: var(--good, #35d07f); }
+.brNote { font-family: var(--font-jp); font-size: 9.5px; line-height: 1.7; color: #6f6a9c; margin-top: 4px; }
+
+@media (max-width: 900px) {
+  .brGrid { grid-template-columns: 1fr; }
+  .brBoard { font-size: 10.5px; }
+}
+
 .myLaneH { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.12em; color: #00eaff; margin-bottom: 2px; }
 .myEv { border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 11px; padding: 10px 11px; background: rgba(255, 255, 255, 0.02); }
 .myEv .mn { font-family: var(--font-display); font-weight: 700; font-size: 12px; color: #f2ead6; }

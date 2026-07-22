@@ -35,14 +35,6 @@ const TYPE_COLOR: Record<string, string> = {
   LUCK: '#c9a86a',
 };
 
-/** ④結果の濁流のダミー行(正典のNAMES)。1ブロックを2回描画してループを継ぎ目なしに。 */
-const FLOOD_NAMES = [
-  'Crimson King', 'Storm Flame', 'Silver Comet', 'Velvet Crown', 'Phantom Legend', 'Iron Legend',
-  'Storm Pulse', 'Wild Rocket', 'Blazing Wolf', 'Silver Bolt', 'Azure Mirage', 'Iron Star',
-  'Cosmic Dash', 'Frozen Star', 'Cosmic Pulse', 'Black Frost', 'Storm Wolf', 'Grand Tiger',
-  'Rapid Arrow', 'Velvet Echo', 'Wild Dash', 'Neon Gale',
-];
-
 /** ⑨台帳カレンダーの雰囲気(記録なし日=素・記録あり=on・7日毎=gold)。 */
 const CAL_OFF_DAYS = new Set([3, 9, 16, 24, 26]);
 
@@ -73,11 +65,6 @@ export function Landing({
   const looks = pickNftShowcase(8, () => (Math.random() * 0xffffffff) >>> 0);
   const stableHorses = pickShowcase(6, () => (Math.random() * 0xffffffff) >>> 0);
   const stableLooks = pickNftShowcase(6, () => (Math.random() * 0xffffffff) >>> 0);
-  const floodLines = FLOOD_NAMES.map((name) => ({
-    name,
-    id: String(Math.floor(10000 + Math.random() * 89999)),
-    day: Math.floor(Math.random() * 6),
-  }));
   return (
     <div className={`landing-bleed ${s.page}`}>
       <span className={s.hairline} />
@@ -398,23 +385,54 @@ export function Landing({
                 </div>
               </div>
             </div>
-            <div className={s.floodGrid}>
-              <div className={s.floodCol}>
-                <div className={s.floodTrack}>
-                  {[0, 1].map((rep) => (
-                    <div key={rep} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      {floodLines.map((line, i) => (
-                        <div key={i} className={s.logLine}>
-                          <span className={s.st}>SRVD</span>
-                          <span className={s.idn}>#{line.id}</span>
-                          <span className={s.nmn}>{line.name}</span>
-                          <span className={s.dy}>
-                            LV.{line.day} → LV.{line.day + 1}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+            {/* LP_REVISION_SPEC B-2(2026-07-22): 旧ログ濁流(SRVD の羅列)は
+                2026-07-21 に本編から削除した体験。LPが宣伝しているものが
+                実際に遊べるものと違っていたため、帯レースの順位表に描き替える。
+                これは UI の例示(実データではない)。構造は BandRaceAct と同じ:
+                  ・自分のスコアは先に固定され、もう動かない
+                  ・他馬が確定するたび暫定順位が下がる
+                  ・生存ラインとの距離が最後まで分からない
+                新規アートは作らない(7/10 ドット走行撤去の教訓)。 */}
+            <div className={s.brGrid}>
+              <div className={s.brBoardCol}>
+                <div className={s.brYouCard}>
+                  <span className={s.brYouK}>{t.br_you}</span>
+                  <span className={s.brYouV}>71.30</span>
+                  <span className={s.brYouR}>
+                    {t.br_prov_tpl.replace('{r}', '14')}
+                    <span className={s.brYouLine}> · {t.br_line_tpl.replace('{n}', '17')}</span>
+                  </span>
+                </div>
+                <ol className={s.brBoard}>
+                  {[
+                    { r: 12, n: 'Iron Mirage', v: '72.44' },
+                    { r: 13, n: 'Silver Bolt', v: '71.86' },
+                    { r: 14, n: 'Azure Comet', v: '71.30', mine: true },
+                    { r: 15, n: 'Storm Pulse', v: '70.98' },
+                    { r: 16, n: 'Wild Rocket', v: '70.74' },
+                    { r: 17, n: 'Desert River', v: '70.74', line: true },
+                    { r: 18, n: 'Mystic Thunder', v: '66.08', burned: true },
+                  ].map((row) => (
+                    <li
+                      key={row.r}
+                      className={[
+                        s.brRow,
+                        row.mine ? s.brMine : '',
+                        row.line ? s.brAtLine : '',
+                        row.burned ? s.brBurned : '',
+                      ].filter(Boolean).join(' ')}
+                    >
+                      <span className={s.brRank}>{row.r}</span>
+                      <span className={s.brName}>{row.n}</span>
+                      <span className={s.brScore}>{row.v}</span>
+                      {row.burned ? <span className={s.brTag}>BURN</span> : null}
+                    </li>
                   ))}
+                </ol>
+                <div className={s.brMargin}>
+                  <span className={s.brMarginK}>{t.br_margin_k}</span>
+                  <span className={s.brMarginN}>0.56</span>
+                  <span className={s.brMarginT}>{t.br_margin_t}</span>
                 </div>
               </div>
               <div className={s.myLane}>
@@ -431,6 +449,7 @@ export function Landing({
                   <div className={s.mn}>Crimson Nova</div>
                   <div className={s.ms}>{t.ev_burn}</div>
                 </div>
+                <div className={s.brNote}>{t.br_note}</div>
               </div>
             </div>
           </div>
