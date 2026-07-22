@@ -600,7 +600,7 @@ export interface AppDict {
     type_speed: string; type_power: string; type_recovery: string;
     badges_title: string;
     tv_chip: string; band_safe: string; band_mid: string; band_risk: string;
-    rank_tpl: string; rank_note: string; sort_total: string;
+    rank_tpl: string; rank_note: string; sort_total: string; day_tpl: string;
     uncollected_tpl: string; tickets_k: string; tickets_note: string; bulk_harvest_tpl: string;
     legend_title: string; legend_note: string; legend_chip_tpl: string;
     /* 厩舎サマリー(STABLE_REVISION_SPEC 2026-07-22) — 毎日開く理由を最上部へ */
@@ -1306,6 +1306,7 @@ const ja: AppDict = {
     badges_title: '獲得した称号',
     tv_chip: '総合値', band_safe: '安全圏', band_mid: '中位', band_risk: '危険圏',
     rank_tpl: 'LV帯内 {r}位 / {n}頭', rank_note: '順位は目安 — 当日の運と条件で変動します', sort_total: '総合値が高い順',
+    day_tpl: 'Day {d} / 7',
     uncollected_tpl: '未回収 +{v}$', tickets_k: '調教チケット(今週)', tickets_note: '調教確定1回=週次ジャックポット応募1口。毎週日曜夜のショーで自動抽選・当選金は自動支払い(操作は不要です)。', bulk_harvest_tpl: '+{v}$ をまとめて回収!',
     legend_title: 'レアリティ', legend_note: '加点は毎晩のレーススコアに常時反映(公開ルール)',
     legend_chip_tpl: '{pct} · スコア+{n}',
@@ -2069,6 +2070,7 @@ const en: AppDict = {
     badges_title: 'Titles earned',
     tv_chip: 'TOTAL', band_safe: 'Safe zone', band_mid: 'Mid', band_risk: 'Danger zone',
     rank_tpl: 'LV band #{r} / {n}', rank_note: 'Rank is a guide — luck and conditions vary on the night', sort_total: 'Highest total',
+    day_tpl: 'Day {d} / 7',
     uncollected_tpl: 'Unclaimed +{v}$', tickets_k: 'Training tickets (this week)', tickets_note: 'Each training confirm = one entry in the weekly jackpot. Drawn automatically in Sunday night’s show; winnings are paid to your wallet — nothing to redeem.', bulk_harvest_tpl: 'Claimed +{v}$ in one go!',
     legend_title: 'Rarity', legend_note: 'Bonuses apply to every night’s race score (public rule)',
     legend_chip_tpl: '{pct} · score +{n}',
@@ -2832,6 +2834,7 @@ const zh: AppDict = {
     badges_title: '获得的称号',
     tv_chip: '综合值', band_safe: '安全圈', band_mid: '中位', band_risk: '危险圈',
     rank_tpl: 'LV组内 第{r}名 / {n}匹', rank_note: '排名仅供参考 — 当晚的运气与条件会变动', sort_total: '综合值从高到低',
+    day_tpl: 'Day {d} / 7',
     uncollected_tpl: '未领取 +{v}$', tickets_k: '训练券(本周)', tickets_note: '每确定1次训练=每周大奖1口报名。周日晚演出自动开奖、奖金自动支付(无需操作)。', bulk_harvest_tpl: '一次性领取 +{v}$!',
     legend_title: '稀有度', legend_note: '加分每晚都计入比赛得分(公开规则)',
     legend_chip_tpl: '{pct} · 得分+{n}',
@@ -3595,6 +3598,7 @@ const ko: AppDict = {
     badges_title: '획득한 칭호',
     tv_chip: '종합치', band_safe: '안전권', band_mid: '중위', band_risk: '위험권',
     rank_tpl: 'LV대역 내 {r}위 / {n}두', rank_note: '순위는 참고용 — 당일 운과 조건에 따라 변동합니다', sort_total: '종합치 높은 순',
+    day_tpl: 'Day {d} / 7',
     uncollected_tpl: '미회수 +{v}$', tickets_k: '조교 티켓(이번 주)', tickets_note: '조교 확정 1회=주간 잭팟 응모 1구. 일요일 밤 쇼에서 자동 추첨・당첨금 자동 지급(조작 불요).', bulk_harvest_tpl: '+{v}$ 한 번에 회수!',
     legend_title: '레어리티', legend_note: '가산점은 매일 밤 레이스 점수에 상시 반영(공개 규칙)',
     legend_chip_tpl: '{pct} · 점수+{n}',
@@ -4358,6 +4362,7 @@ const ms: AppDict = {
     badges_title: 'Gelaran diperoleh',
     tv_chip: 'NILAI', band_safe: 'Zon selamat', band_mid: 'Pertengahan', band_risk: 'Zon bahaya',
     rank_tpl: 'Jalur LV #{r} / {n}', rank_note: 'Kedudukan hanyalah panduan — tuah dan keadaan malam berbeza', sort_total: 'Nilai tertinggi',
+    day_tpl: 'Day {d} / 7',
     uncollected_tpl: 'Belum dituntut +{v}$', tickets_k: 'Tiket latihan (minggu ini)', tickets_note: 'Setiap pengesahan latihan = satu penyertaan jackpot mingguan. Dicabut secara automatik dalam persembahan malam Ahad; kemenangan dibayar ke dompet anda.', bulk_harvest_tpl: '+{v}$ dituntut sekali gus!',
     legend_title: 'Kejarangan', legend_note: 'Bonus sentiasa dikira dalam skor perlumbaan setiap malam (peraturan umum)',
     legend_chip_tpl: '{pct} · skor +{n}',

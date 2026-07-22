@@ -9,7 +9,7 @@ import { horseValue, uncollectedGain } from '@/components/stable-shared';
 import type { StableHorse } from '@/components/StableView';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
-import { tvCardGlowStyle, tvCardMoodStyle } from '@/lib/tv-tier';
+import { tvCardGlowStyle } from '@/lib/tv-tier';
 import { TotalValue } from '@/components/ui/TotalValue';
 
 /* ============================================================================
@@ -24,9 +24,6 @@ import { TotalValue } from '@/components/ui/TotalValue';
 type T = AppDict['stable'];
 
 /* 総合値チップ+安全圏(FUN_V2_PLAN.md §3 A1)。band色はCSS側で管理。 */
-function bandCls(band: string | null | undefined): string {
-  return band === 'SAFE' ? s.bandSafe! : band === 'RISK' ? s.bandRisk! : s.bandMid!;
-}
 function bandLabel(band: string | null | undefined, t: T): string {
   return band === 'SAFE' ? t.band_safe : band === 'RISK' ? t.band_risk : t.band_mid;
 }
@@ -35,14 +32,6 @@ function TvChip({ h, t, extraCls = '', size = 'md' }: { h: StableHorse; t: T; ex
   // ティアカラー(2026-07-18): チップの色は「価値の帯」。今夜の安全圏はRankLineが担う。
   // 2026-07-22: 箱をやめて数字とティア色だけに(全画面で同じ見せ方に揃える)
   return <TotalValue value={h.total_value} label={t.tv_chip} size={size} className={extraCls} />;
-}
-function RankLine({ h, t }: { h: StableHorse; t: T }) {
-  if (!h.tonight_rank || !h.tonight_entrants) return null;
-  return (
-    <div className={`${s.rankLine} ${bandCls(h.tonight_band)}`}>
-      {fill(t.rank_tpl, { r: h.tonight_rank, n: h.tonight_entrants })} · {bandLabel(h.tonight_band, t)}
-    </div>
-  );
 }
 const PAGE_SIZES = [24, 48, 96, 99999];
 
@@ -75,61 +64,141 @@ function StableArt({ horse, t }: { horse: StableHorse; t: T }) {
   );
 }
 
-function DayRail({ day }: { day: number }) {
+
+/* ---- 厩舎カード(構図リデザイン 2026-07-22・デザイン側 handoff) -------------
+ * 正典: STABLE_CARD_DESIGN_BRIEF.md + handoff の Stable Card Composition.html
+ *
+ * 設計の核:
+ *  - 6頭は同ポーズ色違いなので **絵では強弱を区別できない**。絵は壁紙に落とし、
+ *    強さは **円ゲージの満ち欠け** が読ませる(到達可能帯 40〜85 で正規化)。
+ *  - 全カードで同一だった行(現在価値・未回収の常時表示・CTAの常時表示)を撤去。
+ *  - 1カード=ティア色1つ。マゼンタ=調教専用 / 赤=危険専用に予約。
+ *
+ * 閾値は **この画面だけのローカル**(handoff §3)。lib/tv-tier.ts はダッシュボード
+ * 等でも使われるため、そちらは触らない。
+ * ------------------------------------------------------------------------ */
+const AC_TV_MIN = 40;
+const AC_TV_MAX = 85;
+const AC_SWEEP = 270;
+const AC_R = 62;
+const AC_CIRC = 2 * Math.PI * AC_R;
+const AC_ARC = AC_CIRC * (AC_SWEEP / 360);
+
+interface AcTier { cls: string; cap: string; stroke: string; treasure: boolean }
+function acTier(v: number): AcTier {
+  if (v >= 76) return { cls: s.acTierGold!, cap: 'APEX', stroke: '#e9d9ac', treasure: true };
+  if (v >= 66) return { cls: s.acTierCyan!, cap: 'ELITE', stroke: '#00eaff', treasure: false };
+  if (v >= 58) return { cls: s.acTierSteel!, cap: 'STEEL', stroke: '#9db8cf', treasure: false };
+  return { cls: s.acTierIron!, cap: 'IRON', stroke: '#8f8ab0', treasure: false };
+}
+
+function StrengthGauge({ tv, tier, t }: { tv: number; tier: AcTier; t: T }) {
+  const fillRatio = Math.max(0, Math.min(1, (tv - AC_TV_MIN) / (AC_TV_MAX - AC_TV_MIN)));
   return (
-    <div className={s.rail}>
-      {Array.from({ length: 7 }, (_, i) => {
-        const d = i + 1;
-        const cls = d < day + 1 ? s.pipDone : d === day + 1 ? s.pipToday : s.pip;
-        return <span key={d} className={cls} />;
-      })}
+    <div className={s.acGauge}>
+      <svg viewBox="0 0 150 150" aria-hidden="true">
+        <circle className={s.acTrack} cx="75" cy="75" r={AC_R} strokeDasharray={`${AC_ARC} ${AC_CIRC}`} />
+        <circle
+          className={s.acFill} cx="75" cy="75" r={AC_R} stroke={tier.stroke}
+          strokeDasharray={`${AC_ARC} ${AC_CIRC}`} strokeDashoffset={AC_ARC * (1 - fillRatio)}
+        />
+      </svg>
+      <div className={s.acCtr}>
+        <div className={s.acNum}>{tv.toFixed(1)}</div>
+        <div className={s.acTierLabel}>{tier.cap}</div>
+        <div className={s.acCap}>{t.tv_chip}</div>
+      </div>
     </div>
+  );
+}
+
+/** 壁紙用の馬アート(隠し演出の全身着色は残す・マークは別枠で出す)。 */
+function CardWallpaper({ horse }: { horse: StableHorse }) {
+  const look = horse.night_variant ? NIGHT_LOOK : deriveNftLook(horse.dna_hash, horse.name);
+  const color = horse.color_variant ? COLOR_OVERLAY[horse.color_variant] : null;
+  return (
+    <span className={s.acArt} aria-hidden="true">
+      <NftHorseArt look={look} className={s.hartCanvas} size={288} />
+      {color ? (
+        <span
+          className={s.colorSkin}
+          style={{ background: color, mixBlendMode: horse.color_variant === 'black' ? 'multiply' : 'color' }}
+        />
+      ) : null}
+    </span>
   );
 }
 
 function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
   const untrained = !h.trained_for_next_race;
-  const trainCls = untrained ? s.trainNo : s.trainYes;
-  const trainText = untrained ? t.badge_untrained : t.badge_trained;
+  const tv = h.total_value;
+  const tier = tv === null || tv === undefined ? null : acTier(tv);
+  const gain = uncollectedGain(h);
+  // 壁紙のごく淡いウォッシュに個体色相を流す(既存 deriveNftLook の hue)
+  const tint = `hsl(${Math.round(deriveNftLook(h.dna_hash, h.name).hue)} 80% 55% / .28)`;
+  const bandCell =
+    h.tonight_band === 'SAFE' ? s.acPillSafe : h.tonight_band === 'RISK' ? s.acPillRisk : s.acPillMid;
+
   return (
     <Link
       href={`/horses/${h.id}`}
-      /* 今夜 RISK の馬はグリッドの中で一目で目が飛ぶべき(この馬が手を必要と
-         している)。RankLine のテキストとは別に、カード全体の警告として足す。
-         色は BURN/危険と同系 — 強さの数字に赤を使わない原則には抵触しない */
-      className={`${s.hcard} ${untrained ? s.untrained : ''} ${h.tonight_band === 'RISK' ? s.riskCard : ''}`}
-      style={tvCardGlowStyle(h.total_value)}
+      className={[
+        s.activeCard, tier?.cls, h.tonight_band === 'RISK' ? s.acRisk : '',
+        tier?.treasure ? s.acTreasure : '',
+      ].filter(Boolean).join(' ')}
+      style={{ ['--acTint' as string]: tint }}
     >
-      {/* 絵の上には何も重ねない(2026-07-22b)。総合値を絵に乗せたら、どのカードも
-          数字が馬の頭に被って事故に見えた。数字は名前の行が持つ */}
-      <div className={s.hart} style={tvCardMoodStyle(h.total_value)}>
-        <StableArt horse={h} t={t} />
-        <span className={`${s.trainBadge} ${trainCls} ${s.artBadge} ${s.artTrain}`}>{trainText}</span>
+      <span className={s.acWash} />
+      <CardWallpaper horse={h} />
+      {/* 未調教 = マゼンタの角tick。危険(赤・左端)と場所も色も分ける */}
+      {untrained ? <span className={s.acTodo}>{t.badge_untrained}</span> : null}
+
+      <div className={s.acHead}>
+        <div className={s.acName}>{h.name}</div>
+        {/* 隠し演出のマークは壁紙(opacity .14)では見えなくなるので、ここで出す */}
+        {h.golden_star ? <span className={s.acMark} title={t.tip_golden}>★</span> : null}
+        {h.revenge_flame ? <span className={s.acMark} title={t.tip_flame}>焔</span> : null}
+        {h.milestone ? <span className={s.acMark} title={t.tip_milestone}>7</span> : null}
       </div>
-      {/* 本文にはトーンを掛けない — 文字が褪せると「無効化された行」に見える */}
-      <div className={s.hbody}>
-        <div className={s.hrow1}>
-          <span className={s.hname}>{h.name}</span>
-          {/* Decision 087監査: スマート出品中は走るが今夜売れる可能性がある — 事実を小さく明示 */}
-          {h.listing === 'SMART' ? <span className={s.smartTag}>{t.smart_tag}</span> : null}
-          <span className={s.htype}>{h.horse_type}</span>
-        </div>
-        {/* 左=7日の進み / 右=強さ。名前の行に数字を入れると馬名が切れ、
-            順位の行に入れると順位が2行に折り返した(2026-07-22b・実画面で確認) */}
-        <div className={s.hstats}>
-          <DayRail day={h.current_day} />
-          <TvChip h={h} t={t} extraCls={s.inlineRarity!} size="lg" />
-        </div>
-        <RankLine h={h} t={t} />
-        {uncollectedGain(h) > 0 ? (
-          <div className={s.harvestTag}>{fill(t.uncollected_tpl, { v: uncollectedGain(h).toFixed(2) })}</div>
+
+      {tier && tv !== null && tv !== undefined ? <StrengthGauge tv={tv} tier={tier} t={t} /> : null}
+
+      <div className={s.acRail}>
+        {Array.from({ length: 7 }, (_, i) => (
+          <span
+            key={i}
+            className={`${s.acPip} ${i < h.current_day ? s.acPipDone : ''} ${i === h.current_day ? s.acPipToday : ''}`}
+          />
+        ))}
+      </div>
+      {/* Day/LV の表記ゆれは辞書側の LV 変換に任せる(クライアントから
+          lib/i18n は import できない — 136KB辞書がバンドルに混入する) */}
+      {/* タイプは名前の行から降ろす — 未調教tickの逃げ幅と合わさって馬名が
+          切れていた(Phantom F…)。日付行はもともと余白が空いている */}
+      <div className={s.acDayCap}>
+        {fill(t.day_tpl, { d: Math.min(7, h.current_day) })}
+        <span className={s.acType}>{h.horse_type}</span>
+        {/* Decision 087監査: スマート出品中は走るが今夜売れる可能性がある — 事実を小さく明示 */}
+        {h.listing === 'SMART' ? <span className={s.acSmart}>{t.smart_tag}</span> : null}
+      </div>
+
+      <div className={s.acStatus}>
+        {h.tonight_rank && h.tonight_entrants ? (
+          <span className={s.acRank}>{fill(t.rank_tpl, { r: h.tonight_rank, n: h.tonight_entrants })}</span>
         ) : null}
-        <div className={s.hfoot}>
-          <span className={s.hvalue}>{t.value_now} <b>{horseValue(h.current_day)}</b> USDT</span>
-          <span className={`${s.hcta} ${untrained ? s.hctaTrain : s.hctaDetail}`}>{untrained ? t.cta_train : t.cta_detail}</span>
-          <span className={`${s.trainBadge} ${trainCls} ${s.inlineTrain}`}>{trainText}</span>
-        </div>
+        {h.tonight_band ? (
+          <span className={`${s.acPill} ${bandCell}`}>{bandLabel(h.tonight_band, t)}</span>
+        ) : null}
       </div>
+
+      {/* フッターは条件付きのみ。全カード同じ文字列が並ぶ行を作らない */}
+      {untrained ? (
+        <div className={s.acFoot}><span className={s.acCta}>{t.cta_train}</span></div>
+      ) : gain > 0 ? (
+        <div className={s.acFoot}><span className={s.acGain}>{fill(t.uncollected_tpl, { v: gain.toFixed(2) })}</span></div>
+      ) : (
+        <div className={s.acSpacer} />
+      )}
     </Link>
   );
 }
