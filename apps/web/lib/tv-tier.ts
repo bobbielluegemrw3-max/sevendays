@@ -160,6 +160,20 @@ export function tvCardGlowStyle(value: number | null | undefined): CSSProperties
   return { boxShadow: t.frameShadow };
 }
 
+/**
+ * カードの気分(STABLE_CARDS_SPEC 2026-07-22)。
+ * 強い側を明るくすると厩舎グリッドが眩しくなるので、感情の振れ幅は
+ * **暗い側を沈めて**作る。STEEL/IRON だけ わずかに減彩・減光し、
+ * 「くすんだ厩舎 = 鍛えなきゃ」を出す。GOLD/SILVER/BRONZE は触らない。
+ * 強度は控えめから始める(戻すより足す方が安全)。
+ */
+export function tvCardMoodStyle(value: number | null | undefined): CSSProperties | undefined {
+  if (value === null || value === undefined) return undefined;
+  const t = tvTier(value);
+  if (t.key !== 'STEEL' && t.key !== 'IRON') return undefined;
+  return { filter: t.key === 'IRON' ? 'saturate(0.74) brightness(0.88)' : 'saturate(0.85) brightness(0.94)' };
+}
+
 /** 馬アートの内側リムライト(ヒーロー表示用・控えめ)。 */
 export function tvArtGlowStyle(value: number | null | undefined): CSSProperties | undefined {
   if (value === null || value === undefined) return undefined;

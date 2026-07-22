@@ -168,12 +168,34 @@
 
 /* 馬カード: 既定=横行(モバイル)、≥900px=縦カード */
 .hcard {
+  position: relative;
   display: flex; flex-direction: row; align-items: center; gap: 11px;
   border: 1px solid var(--border); border-radius: 16px; padding: 11px;
   background: linear-gradient(160deg, rgba(0, 234, 255, 0.05), transparent 62%);
   text-decoration: none; color: inherit; transition: border-color 0.15s ease, transform 0.15s ease;
 }
 .hcard:hover { border-color: var(--border-strong); }
+/* 今夜 RISK(STABLE_CARDS_SPEC 2026-07-22) — カード枠線は「未調教=マゼンタ」等の
+   機能色を担っているので触らない。警告はリング(::after)として重ねる。
+   インラインの box-shadow(ティア発光)とも衝突しない */
+.riskCard { position: relative; }
+.riskCard::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  /* 赤(危険)であって、未調教のマゼンタ枠(#ff2dc4)ではないと分かる色にする。
+     ピンク系(#ff5c8a)だと未調教カードと見分けがつかなかった(実画面で確認) */
+  border: 1.5px solid rgba(255, 64, 58, 0.9);
+  box-shadow: 0 0 16px rgba(255, 64, 58, 0.3), inset 0 0 20px rgba(255, 64, 58, 0.09);
+  animation: sdd-risk 2.4s ease-in-out infinite;
+}
+@keyframes sdd-risk { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) {
+  .riskCard::after { animation: none; }
+}
+.riskMark {
+  position: absolute; top: 6px; right: 8px; z-index: 2;
+  font-size: 13px; line-height: 1; color: #ff4038; font-weight: 700;
+  text-shadow: 0 0 3px #0a0813, 0 0 10px rgba(255, 64, 58, 0.75);
+}
 .hcard.untrained {
   border-color: rgba(255, 45, 196, 0.45);
   background: linear-gradient(160deg, rgba(255, 45, 196, 0.07), transparent 62%);

@@ -9,7 +9,7 @@ import { horseValue, uncollectedGain } from '@/components/stable-shared';
 import type { StableHorse } from '@/components/StableView';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
-import { tvCardGlowStyle } from '@/lib/tv-tier';
+import { tvCardGlowStyle, tvCardMoodStyle } from '@/lib/tv-tier';
 import { TotalValue } from '@/components/ui/TotalValue';
 
 /* ============================================================================
@@ -94,14 +94,20 @@ function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
   return (
     <Link
       href={`/horses/${h.id}`}
-      className={`${s.hcard} ${untrained ? s.untrained : ''}`}
-      style={tvCardGlowStyle(h.total_value)}
+      /* 今夜 RISK の馬はグリッドの中で一目で目が飛ぶべき(この馬が手を必要と
+         している)。RankLine のテキストとは別に、カード全体の警告として足す。
+         色は BURN/危険と同系 — 強さの数字に赤を使わない原則には抵触しない */
+      className={`${s.hcard} ${untrained ? s.untrained : ''} ${h.tonight_band === 'RISK' ? s.riskCard : ''}`}
+      style={{ ...tvCardGlowStyle(h.total_value), ...tvCardMoodStyle(h.total_value) }}
     >
       <div className={s.hart}>
         <StableArt horse={h} t={t} />
         <TvChip h={h} t={t} extraCls={`${s.artBadge} ${s.artRarity}`} />
         <span className={`${s.trainBadge} ${trainCls} ${s.artBadge} ${s.artTrain}`}>{trainText}</span>
       </div>
+      {h.tonight_band === 'RISK' ? (
+        <span className={s.riskMark} title={t.band_risk} aria-label={t.band_risk}>⚠</span>
+      ) : null}
       <div className={s.hbody}>
         <div className={s.hrow1}>
           <span className={s.hname}>{h.name}</span>

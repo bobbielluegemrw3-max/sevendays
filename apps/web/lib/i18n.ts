@@ -606,7 +606,7 @@ export interface AppDict {
     /* 厩舎サマリー(STABLE_REVISION_SPEC 2026-07-22) — 毎日開く理由を最上部へ */
     sum_tonight_h_tpl: string; sum_tonight_none: string; sum_risk_point_tpl: string;
     sum_all_safe: string; sum_road_h: string; sum_road_tpl: string; sum_road_last_tpl: string;
-    sum_best_depth_tpl: string;
+    sum_best_depth_tpl: string; sum_breeder_rank_tpl: string;
   };
   /** /horses/[id](馬詳細)+ 調教フォーム + ページャ + ブースト + 転送。 */
   /** /wallet ページ(2026-07-22 i18n化)。金が動く面なので、
@@ -1315,6 +1315,7 @@ const ja: AppDict = {
     sum_road_h: 'チャンピオンへの道',
     sum_road_tpl: '{name} · Day {d} — あと{n}走で走破', sum_road_last_tpl: '{name} · Day {d} — あと1走!',
     sum_best_depth_tpl: '最高 Day {d}',
+    sum_breeder_rank_tpl: '名伯楽 #{r}',
   },
   walletPage: {
     h1: 'ウォレット',
@@ -2077,6 +2078,7 @@ const en: AppDict = {
     sum_road_h: 'Road to champion',
     sum_road_tpl: '{name} · Day {d} — {n} races from the finish', sum_road_last_tpl: '{name} · Day {d} — one race to go!',
     sum_best_depth_tpl: 'Best Day {d}',
+    sum_breeder_rank_tpl: 'Breeder #{r}',
   },
   walletPage: {
     h1: 'Wallet',
@@ -2839,6 +2841,7 @@ const zh: AppDict = {
     sum_road_h: '通往冠军之路',
     sum_road_tpl: '{name} · Day {d} — 还差{n}场走完', sum_road_last_tpl: '{name} · Day {d} — 只差1场!',
     sum_best_depth_tpl: '最高 Day {d}',
+    sum_breeder_rank_tpl: '名伯乐 #{r}',
   },
   walletPage: {
     h1: '钱包',
@@ -3601,6 +3604,7 @@ const ko: AppDict = {
     sum_road_h: '챔피언으로 가는 길',
     sum_road_tpl: '{name} · Day {d} — 완주까지 {n}주', sum_road_last_tpl: '{name} · Day {d} — 앞으로 1주!',
     sum_best_depth_tpl: '최고 Day {d}',
+    sum_breeder_rank_tpl: '명조련사 #{r}',
   },
   walletPage: {
     h1: '지갑',
@@ -4363,6 +4367,7 @@ const ms: AppDict = {
     sum_road_h: 'Jalan ke juara',
     sum_road_tpl: '{name} · Day {d} — {n} perlumbaan lagi', sum_road_last_tpl: '{name} · Day {d} — tinggal 1 perlumbaan!',
     sum_best_depth_tpl: 'Terbaik Day {d}',
+    sum_breeder_rank_tpl: 'Pemulih #{r}',
   },
   walletPage: {
     h1: 'Dompet',

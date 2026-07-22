@@ -54,6 +54,8 @@ export interface StableData {
   pendingCount: number;    // 割当待ちの購入予約数
   /** 獲得済みの隠し称号(EASTER_EGG_PLAN.md)。0件なら非表示。 */
   hiddenBadges?: HiddenBadge[];
+  /** 名伯楽ランク(施策D・top60圏内のみ)。圏外/新規/取得失敗は null で非表示。 */
+  breederRank?: number | null;
 }
 
 /** 7日レール(サマリー用の大きい版)。StableBrowser の DayRail と同じ見え方。 */
@@ -89,6 +91,8 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
     ...(champions.length > 0 ? [fill(t.sub_champ_tpl, { n: champions.length })] : []),
     fill(t.sub_burned_tpl, { n: burned.length }),
     ...(bestDepth > 0 ? [fill(t.sum_best_depth_tpl, { d: bestDepth })] : []),
+    // 腕を認められた人にだけ出る誇り(top60圏内)。圏外は出さない
+    ...(data.breederRank ? [fill(t.sum_breeder_rank_tpl, { r: data.breederRank })] : []),
   ];
 
   /* ---- サマリー A: 今夜(STABLE_REVISION_SPEC 2026-07-22) --------------------

@@ -73,7 +73,7 @@ for (const h of HORSES) {
 export default async function StablePreview({
   searchParams,
 }: {
-  searchParams: Promise<{ newcomer?: string; nonight?: string; allsafe?: string }>;
+  searchParams: Promise<{ newcomer?: string; nonight?: string; allsafe?: string; norank?: string }>;
 }) {
   await requireDevPreviewAccess();
   const flags = await searchParams;
@@ -93,6 +93,7 @@ export default async function StablePreview({
       data={{
         horses,
         pendingCount: 2,
+        breederRank: flags.norank === '1' ? null : 14,
         hiddenBadges: [
           { key: 'rain_reader', name: '雨読みの三重奏', flavor: '雨を味方につけた者にだけ、水面は道を見せる。', tone: 'rain' },
           { key: 'mud_general', name: '泥将', flavor: '道悪を制する者は、晴天の勝者を三度食う。', tone: 'mud' },

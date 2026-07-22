@@ -8,13 +8,21 @@ interface Session { id: string; status: string }
 export default async function StablePage() {
   // 4本を並列取得(2026-07-16 §D: 直列4往復→1往復ぶんの待ちに短縮)。
   // 隠し実績バッジ(EASTER_EGG_PLAN.md)— 取得失敗しても厩舎は表示する。
-  const [{ horses }, me, sessionsRes, badgesRes, lang] = await Promise.all([
+  // 名伯楽ランク(施策D)は既存 /api/v1/breeders の top60。圏外・新規は
+  // is_you の行が無いので null になり、表示しない(取得失敗も同じ扱い)。
+  // 集計クエリなのでエンドポイント側に短TTLキャッシュを入れてある
+  const [{ horses }, me, sessionsRes, badgesRes, breedersRes, lang] = await Promise.all([
     serverApiOrLogin<{ horses: StableHorse[] }>('/api/v1/horses'),
     serverApi<{ stable_name?: string | null; training_tickets?: number }>('/api/v1/me'),
     serverApi<{ sessions: Session[]; engine_v2?: boolean }>('/api/v1/purchase'),
     serverApi<{ badges: HiddenBadge[] }>('/api/v1/hidden-badges'),
+    serverApi<{ breeders: { rank: number; is_you: boolean }[] }>('/api/v1/breeders'),
     getLang(),
   ]);
+  const breederRank =
+    breedersRes.status === 200
+      ? breedersRes.body.breeders.find((b) => b.is_you)?.rank ?? null
+      : null;
   const pendingCount =
     sessionsRes.status === 200
       ? sessionsRes.body.sessions.filter((s) => s.status === 'PENDING_ASSIGNMENT').length
@@ -30,6 +38,7 @@ export default async function StablePage() {
         stableName: me.status === 200 ? me.body.stable_name ?? null : null,
         trainingTickets: me.status === 200 ? me.body.training_tickets ?? 0 : 0,
         hiddenBadges: badgesRes.status === 200 ? badgesRes.body.badges : [],
+        breederRank,
       }}
     />
   );

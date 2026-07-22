@@ -92,16 +92,28 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
     },
   });
 
+  interface BreederRow {
+    user_id: string; stable_name: string | null; email: string | null;
+    skill_sum: number; horses: number; champions: number;
+  }
   // 施策D (FUN_V3): 名伯楽ランキング — 総合値とは別の「純粋な腕」の指標。
   // delta_v2(調教ロールの実力ぶんのみ)の総和で並べる。アイテム上乗せ
   // (item_bonus_v3)は含めない(課金額ランキングに寄せない)。育成者の帰属は
   // 所有権移転でも不変・V2行は削除不可なので、売った後も功績が残る。
+  // 集計そのものは全ユーザー共通(is_you と名前マスクだけが個人依存)なので、
+  // 行はプロセス内で短時間キャッシュする。2026-07-22: 厩舎ページのヘッダ
+  // (名伯楽ランク)がこれを毎回叩くようになり、training_sessions の group by が
+  // ページ表示のたびに走るのを避ける。status と同じ流儀(env で 0 にできる)。
+  let breedersCache: { at: number; rows: BreederRow[] } | null = null;
+
   registry.register({
     method: 'GET',
     path: '/api/v1/breeders',
     auth: 'user',
     handler: async (ctx) => {
-      const rows = await ctx.client.query<{
+      const ttl = Number(process.env.DERBY_BREEDERS_CACHE_MS ?? 30000);
+      const cached = breedersCache && Date.now() - breedersCache.at < ttl ? breedersCache.rows : null;
+      const rows = cached ? { rows: cached } : await ctx.client.query<{
         user_id: string; stable_name: string | null; email: string | null;
         skill_sum: number; horses: number; champions: number;
       }>(
@@ -120,6 +132,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
          limit 60`,
         [],
       );
+      if (!cached) breedersCache = { at: Date.now(), rows: rows.rows };
       return {
         breeders: rows.rows.map((r, i) => ({
           rank: i + 1,
