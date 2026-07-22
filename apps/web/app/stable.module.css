@@ -179,36 +179,14 @@
    機能色を担っているので触らない。警告はリング(::after)として重ねる。
    インラインの box-shadow(ティア発光)とも衝突しない */
 .riskCard { position: relative; }
-.riskCard::after {
-  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  /* 赤(危険)であって、未調教のマゼンタ枠(#ff2dc4)ではないと分かる色にする。
-     ピンク系(#ff5c8a)だと未調教カードと見分けがつかなかった(実画面で確認) */
-  border: 1.5px solid rgba(255, 64, 58, 0.9);
-  box-shadow: 0 0 16px rgba(255, 64, 58, 0.3), inset 0 0 20px rgba(255, 64, 58, 0.09);
-  animation: sdd-risk 2.4s ease-in-out infinite;
-}
-@keyframes sdd-risk { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-@media (prefers-reduced-motion: reduce) {
-  .riskCard::after { animation: none; }
-}
-/* 警告は「枠の色」ではなく「塗り」で出す — 未調教のマゼンタ枠と質的に違う形に
-   すること自体が目的(2026-07-22 オーナー実機: 赤枠は未調教枠に埋没した)。
-   置き場所はカードの左辺 + 左上角。総合値(アート左上)・未調教バッジ(アート右上)の
-   どちらとも重ならない唯一の空き。くすみフィルタの外(=.hcard側)なので、
-   弱くて危ない馬でも警告だけは沈まない */
+/* 警告は「塗りの左帯」1つだけ(2026-07-22b)。
+   左帯・角フラグ・点滅リングの3つを重ねたら、ただの騒がしいカードになった。
+   枠でなく塗りなので、未調教のマゼンタ枠とは質的に違って読める。
+   くすみフィルタの外(=.hcard側)なので、弱くて危ない馬でも警告は沈まない */
 .riskCard::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 2;
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; z-index: 2;
   border-radius: 16px 0 0 16px; pointer-events: none;
-  background: linear-gradient(180deg, #ff6152, #d81d11);
-  box-shadow: 0 0 16px rgba(255, 64, 58, 0.6);
-}
-.riskFlag {
-  position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none;
-  width: 26px; height: 26px; border-radius: 16px 0 12px 0;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #ff6152, #d81d11);
-  color: #fff; font-size: 13px; line-height: 1; font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(180deg, #ff5a4a, #d4180c);
 }
 .hcard.untrained {
   border-color: rgba(255, 45, 196, 0.45);
@@ -226,8 +204,12 @@
    取り返す。2026-07-22: これが無いとアート上と名前横に総合値が二重に出ていた */
 .hcard .artBadge { display: none !important; }       /* モバイル: アート上オーバーレイ OFF */
 .hbody { flex: 1; min-width: 0; }
-.hrow1 { display: flex; align-items: center; gap: 6px; }
-.hname { font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hrow1 { display: flex; align-items: baseline; gap: 7px; }
+.hname { font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+/* 左=7日の進み(レール) / 右=総合値。数字はこの行の主役 */
+.hstats { display: flex; align-items: center; gap: 11px; }
+.hstats .rail { flex: 1; min-width: 0; }
+.hcard .inlineRarity { flex: none; }
 .hcard .inlineRarity { display: inline-flex !important; }  /* モバイル: 名前隣に総合値 ON */
 .htype { display: none; }                            /* モバイル: タイプ非表示 */
 .hcard .rail { margin-top: 7px; }
@@ -247,8 +229,8 @@
   .hcard .artBadge { display: inline-flex !important; position: absolute; }
   .artRarity { top: 8px; left: 8px; }
   .artTrain { top: 8px; right: 8px; }
-  .hcard .inlineRarity { display: none !important; }
-  .htype { display: inline; margin-left: auto; font-family: var(--font-mono); font-size: 9px; color: var(--faint); }
+  .hcard .inlineRarity { display: inline-flex !important; }
+  .htype { display: inline; margin-left: auto; font-family: var(--font-mono); font-size: 9px; color: var(--faint); flex: none; }
   .hcard .rail { margin-top: 2px; }
   .hbody { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
   .hmeters { display: flex; gap: 12px; }

@@ -100,25 +100,26 @@ function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
       className={`${s.hcard} ${untrained ? s.untrained : ''} ${h.tonight_band === 'RISK' ? s.riskCard : ''}`}
       style={tvCardGlowStyle(h.total_value)}
     >
-      {/* 弱い馬のくすみは中身(絵とテキスト)にだけ掛ける。カード側に掛けると
-          RISK の警告まで一緒に沈み、「弱くて危ない馬」ほど警告が薄れてしまう */}
+      {/* 絵の上には何も重ねない(2026-07-22b)。総合値を絵に乗せたら、どのカードも
+          数字が馬の頭に被って事故に見えた。数字は名前の行が持つ */}
       <div className={s.hart} style={tvCardMoodStyle(h.total_value)}>
         <StableArt horse={h} t={t} />
-        <TvChip h={h} t={t} extraCls={`${s.artBadge} ${s.artRarity}`} size="xl" />
         <span className={`${s.trainBadge} ${trainCls} ${s.artBadge} ${s.artTrain}`}>{trainText}</span>
       </div>
-      {h.tonight_band === 'RISK' ? (
-        <span className={s.riskFlag} title={t.band_risk} aria-label={t.band_risk}>⚠</span>
-      ) : null}
-      <div className={s.hbody} style={tvCardMoodStyle(h.total_value)}>
+      {/* 本文にはトーンを掛けない — 文字が褪せると「無効化された行」に見える */}
+      <div className={s.hbody}>
         <div className={s.hrow1}>
           <span className={s.hname}>{h.name}</span>
-          <TvChip h={h} t={t} extraCls={s.inlineRarity!} size="lg" />
           {/* Decision 087監査: スマート出品中は走るが今夜売れる可能性がある — 事実を小さく明示 */}
           {h.listing === 'SMART' ? <span className={s.smartTag}>{t.smart_tag}</span> : null}
           <span className={s.htype}>{h.horse_type}</span>
         </div>
-        <DayRail day={h.current_day} />
+        {/* 左=7日の進み / 右=強さ。名前の行に数字を入れると馬名が切れ、
+            順位の行に入れると順位が2行に折り返した(2026-07-22b・実画面で確認) */}
+        <div className={s.hstats}>
+          <DayRail day={h.current_day} />
+          <TvChip h={h} t={t} extraCls={s.inlineRarity!} size="lg" />
+        </div>
         <RankLine h={h} t={t} />
         {uncollectedGain(h) > 0 ? (
           <div className={s.harvestTag}>{fill(t.uncollected_tpl, { v: uncollectedGain(h).toFixed(2) })}</div>

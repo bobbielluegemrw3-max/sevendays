@@ -207,9 +207,13 @@ export function tvCardMoodStyle(value: number | null | undefined): CSSProperties
   if (value === null || value === undefined || !Number.isFinite(value)) return undefined;
   // ティアの階段ではなく総合値の連続関数。45=くすみ最大 / 85=最も鮮やか。
   // 50.2 と 53.3 と 55.7 が、隣に並んだときに必ず違って見えることが目的
+  // 2026-07-22b: 床を 0.32/0.76 まで落としたら、弱い馬の絵が灰色の塊になり
+  // 「渋い」ではなく「壊れている/無効化されている」に見えた(オーナー実機)。
+  // 絵は潰さない。弱さは「カードが光らない」ことと数字の金属色で語り、
+  // 絵のトーンはあくまで補助にとどめる
   const t = moodT(value);
-  const sat = (0.32 + 0.86 * t).toFixed(3);   // 45→0.32 / 65→0.75 / 85→1.18
-  const bri = (0.76 + 0.31 * t).toFixed(3);   // 45→0.76 / 65→0.92 / 85→1.07
+  const sat = (0.78 + 0.37 * t).toFixed(3);   // 45→0.78 / 65→0.97 / 85→1.15
+  const bri = (0.90 + 0.16 * t).toFixed(3);   // 45→0.90 / 65→0.98 / 85→1.06
   return { filter: `saturate(${sat}) brightness(${bri})` };
 }
 
