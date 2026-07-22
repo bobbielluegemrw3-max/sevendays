@@ -28,21 +28,24 @@ const HORSES: DashHorse[] = [
 export default async function DashboardPreview({
   searchParams,
 }: {
-  searchParams: Promise<{ choose?: string }>;
+  searchParams: Promise<{ choose?: string; newcomer?: string }>;
 }) {
   await requireDevPreviewAccess();
   const flags = await searchParams;
+  // ?newcomer=1 … 真の新規(0頭・履歴なし)の見え方を確認する
+  // (DASHBOARD_REVISION_SPEC 2026-07-22: 歓迎ブロックはこの状態でしか出ない)
+  const newcomer = flags.newcomer === '1';
   const now = Date.now();
   const iso = (minsAgo: number) => new Date(now - minsAgo * 60000).toISOString();
   return (
     <DashboardView
       data={{
         wallet: { available: '312.55', locked: '177.16' },
-        horses: HORSES,
+        horses: newcomer ? [] : HORSES,
         buff: { buff_rarity: 'RARE', buff_bonus_score: '2.40', status: 'ACTIVE' },
         pendingCount: 1,
         lastRace: { id: 'race-demo', status: 'COMPLETED', participant_count: 1874, batch_date: '2026-07-04' },
-        myResults: [
+        myResults: newcomer ? [] : [
           { horse_id: 'a1f4', final_score: '84.31', final_rank: 12, is_burned: false, horse: HORSES[0]! },
           { horse_id: 'e5b8', final_score: '71.02', final_rank: 341, is_burned: false, horse: HORSES[4]! },
           { horse_id: '0797', final_score: '42.77', final_rank: 1743, is_burned: true, horse: HORSES[6]! },

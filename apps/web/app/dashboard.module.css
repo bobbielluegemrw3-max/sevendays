@@ -23,11 +23,46 @@
   gap: 14px;
 }
 
+/* ---- ページ見出し / 新規の歓迎ブロック(DASHBOARD_REVISION_SPEC 2026-07-22) ----
+   新規ユーザーは「何のページか・まず何をするか」が分からないまま空タイルを見ていた。
+   余白・文字・角丸は Tier 3-1 のトークンから選ぶ(方言を増やさない)。 */
+.pageHead { display: flex; align-items: baseline; gap: var(--sp-2); }
+.pageHeadBrand {
+  font-family: var(--font-display); font-weight: 800; font-size: var(--fs-2);
+  letter-spacing: 0.24em; color: var(--muted);
+}
+.pageHeadSep { color: var(--faint); }
+.pageHeadStable { font-family: var(--font-jp); font-size: var(--fs-4); color: var(--text); }
+
+.welcome {
+  border: 1px solid rgba(0, 234, 255, 0.3); border-radius: var(--radius);
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  background: linear-gradient(150deg, rgba(0, 234, 255, 0.08), transparent 62%);
+}
+.welcomeH { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-6); color: var(--text); line-height: 1.3; }
+.welcomeLead { margin: var(--sp-2) 0 0; font-size: var(--fs-4); line-height: 1.8; color: var(--muted); }
+.welcomeCta {
+  display: inline-block; margin-top: var(--sp-4); text-decoration: none;
+  /* .primary の塗りは globals が与えるが、<a> には button の既定パディングが
+     効かないため、ここで器の形を持つ(2026-07-22) */
+  padding: 12px 22px; border-radius: 12px;
+  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-4);
+}
+.welcomeSteps {
+  display: flex; gap: var(--sp-5); flex-wrap: wrap;
+  margin-top: var(--sp-4); padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: var(--fs-2); color: var(--faint);
+}
+.welcomeSteps b { color: var(--cyan); margin-right: 4px; }
+
 @media (min-width: 900px) {
   .app {
     display: grid;
     grid-template-columns: 1.35fr 1fr;
     grid-template-areas:
+      "head     head"
+      "welcome  welcome"
       "result   count"
       "task     task"
       "assets   assets"
@@ -37,6 +72,8 @@
     gap: 16px;
     align-items: start;
   }
+  .pageHead { grid-area: head; }
+  .welcome  { grid-area: welcome; }
   .result  { grid-area: result; }
   .count   { grid-area: count; }
   .task    { grid-area: task; }
@@ -44,6 +81,8 @@
   .stable  { grid-area: stable; }
   .buyback { grid-area: buyback; }
   .extras  { grid-area: extras; }
+  /* 新規は①結果が無い。カウントダウンが右半分だけに残ると左が空くので全幅にする */
+  .countWide { grid-area: auto; grid-column: 1 / -1; }
 }
 
 /* ---- 主動線の外(設定・特典コード・アプリ化) — Tier 2-2 -------------------- */
@@ -146,6 +185,9 @@
   padding: 10px 14px; border-radius: 10px; box-shadow: 0 10px 24px -10px rgba(0, 234, 255, 0.6);
 }
 .showCta:hover { filter: brightness(1.07); color: #04141a; }
+/* 新規時のショー導線(2026-07-22): 歓迎CTAと主役を争わせないため塗りを外す */
+.showCtaQuiet { background: none; color: var(--cyan); border: 1px solid rgba(0, 234, 255, 0.4); box-shadow: none; }
+.showCtaQuiet:hover { background: rgba(0, 234, 255, 0.08); color: var(--cyan); }
 
 /* ---- ③ 今日やること -------------------------------------------------------- */
 .task {

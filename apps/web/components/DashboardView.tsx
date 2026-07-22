@@ -132,10 +132,37 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
   const participants = lastRace?.participant_count ?? 0;
 
   const hasTasks = untrained.length > 0 || pendingCount > 0;
+  // 真の新規 = 1頭も持たず、レース履歴も無い。
+  // ★「履歴はあるが今 0頭」(全馬BURN/売却済みの常連)は新規ではないので歓迎ブロックを出さない
+  const isNewcomer = active.length === 0 && myResults.length === 0;
 
   return (
     <div className={s.app}>
+      {/* DASHBOARD_REVISION_SPEC レベル1: このページが何かを言う1行。
+          常連にはハブの枠、新規には「厩舎のゲーム」だと即伝わる */}
+      <div className={s.pageHead}>
+        <span className={s.pageHeadBrand}>SEVEN DAYS DERBY</span>
+        <span className={s.pageHeadSep}>·</span>
+        <span className={s.pageHeadStable}>{data.stableName ?? t.dash_stable_default}</span>
+      </div>
+
+      {/* レベル2: 真の新規には、空のタイル格子ではなく「まず何をするか」を1枚で。
+          チュートリアルではない — 何のゲームで最初の一手がどれか、だけを言う */}
+      {isNewcomer ? (
+        <section className={s.welcome}>
+          <div className={s.welcomeH}>{t.welcome_h}</div>
+          <p className={s.welcomeLead}>{t.welcome_lead}</p>
+          <Link href="/market" className={`${s.welcomeCta} primary`}>{t.welcome_cta} →</Link>
+          <div className={s.welcomeSteps}>
+            <span><b>1</b> {t.welcome_step1}</span>
+            <span><b>2</b> {t.welcome_step2}</span>
+            <span><b>3</b> {t.welcome_step3}</span>
+          </div>
+        </section>
+      ) : null}
+
       {/* ===== ① レース結果(日付つき — 2026-07-16: ショー直後に「昨夜」は違和感) ===== */}
+      {isNewcomer ? null : (
       <section className={s.result}>
         <div className={s.tileHead}>
           <span className={s.tileLabel}>
@@ -177,9 +204,10 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
           </div>
         )}
       </section>
+      )}
 
       {/* ===== ② 今夜のレースまで ===== */}
-      <section className={s.count}>
+      <section className={`${s.count} ${isNewcomer ? s.countWide : ''}`}>
         <div className={s.tileHead}>
           <span className={s.tileLabel}>{t.tonight_label}</span>
           <span className={s.live}><span className={s.dot}>●</span> LIVE 8:00 / 20:00 MYT</span>
@@ -205,11 +233,13 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
             <div className={s.jpDesc}>{t.jp_desc}</div>
           </div>
         ) : null}
-        <Link href="/races" className={s.showCta}>{t.watch_show}</Link>
+        {/* 0-1原則: 新規の画面で主アクションは「最初の馬を迎える」1つだけ。
+            ショー導線は残すが、塗りを外して主役を争わせない */}
+        <Link href="/races" className={`${s.showCta} ${isNewcomer ? s.showCtaQuiet : ''}`}>{t.watch_show}</Link>
       </section>
 
       {/* ===== ③ 今日やること ===== */}
-      {hasTasks ? (
+      {isNewcomer ? null : hasTasks ? (
         <section className={s.task}>
           <div className={s.taskRow}>
             <span className={s.taskLabel}>{t.tasks_label}</span>
@@ -268,6 +298,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
       </section>
 
       {/* ===== マイ厩舎(要約ストリップ + 直接購入) ===== */}
+      {isNewcomer ? null : (
       <section className={s.stable}>
         <div className={s.tileHead}>
           <span className={s.stableTitle}>{data.stableName ?? t.stable_mine}<small>{fill(t.stable_sub_tpl, { n: active.length, v: stableValue.toFixed(2) })}</small></span>
@@ -289,6 +320,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
           </div>
         )}
       </section>
+      )}
 
       {/* ===== チャンピオン報酬(進行中の全件) ===== */}
       {activeBuybacks.length > 0 ? (
@@ -328,7 +360,9 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
       </section>
 
       {/* ===== 出品方式の必須選択(未選択ユーザーにブロッキング表示) ===== */}
-      {data.trade ? <TradeModeModal settings={data.trade} t={APP_COPY[lang].trade} /> : null}
+      {/* DASHBOARD_REVISION_SPEC レベル3: 1頭も持たない人に「自動出品方式を選べ」と
+          迫るのは無意味かつ有害(出品対象がそもそも無い)。馬を持ってから初めて訊く */}
+      {data.trade && active.length > 0 ? <TradeModeModal settings={data.trade} t={APP_COPY[lang].trade} /> : null}
     </div>
   );
 }

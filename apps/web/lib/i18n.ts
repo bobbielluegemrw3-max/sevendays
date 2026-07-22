@@ -56,6 +56,12 @@ export interface AppDict {
     watch_show: string;
     jp_tickets_tpl: string; jp_prize_tpl: string; jp_desc: string;
 
+    /** ダッシュボード改修 2026-07-22(DASHBOARD_REVISION_SPEC)。
+     *  新規ユーザーが「何のゲームで、まず何をするか」を一目で掴むための最小の文言。
+     *  R1: 数字は事実のみ(8:00/20:00・7日)。値上がり・利益・保証の語を入れない。 */
+    dash_stable_default: string;
+    welcome_h: string; welcome_lead: string; welcome_cta: string;
+    welcome_step1: string; welcome_step2: string; welcome_step3: string;
     tasks_label: string;
     untrained_suffix: string; // 「 が未調教」(直前に <b>{n}頭</b>)
     pending_suffix: string; // 「 が割当待ち」(直前に <b>{n}件</b>)
@@ -736,6 +742,11 @@ const ja: AppDict = {
     watch_show: '最新のショーを見る →',
     jp_tickets_tpl: '今週の応募 {n} 口', jp_prize_tpl: '賞金 {p} USDT',
     jp_desc: '調教を確定するたび自動で1口たまります(操作は不要)。毎週日曜夜のショー最終幕で抽選し、当選金はウォレットへ自動で支払われます。',
+    dash_stable_default: 'あなたの厩舎',
+    welcome_h: 'あなたは厩舎のオーナーです。',
+    welcome_lead: '毎朝8:00と毎晩20:00、全馬が一斉に走る。7日走り切れば、チャンピオン。',
+    welcome_cta: '最初の馬を迎える',
+    welcome_step1: '迎える', welcome_step2: '調教する', welcome_step3: 'レースを見る',
     tasks_label: '今日やること',
     untrained_suffix: ' が未調教',
     pending_suffix: ' が割当待ち',
@@ -1483,6 +1494,11 @@ const en: AppDict = {
     watch_show: 'Watch the latest show →',
     jp_tickets_tpl: 'This week’s entries: {n}', jp_prize_tpl: 'Prize {p} USDT',
     jp_desc: 'Every training confirm automatically adds one entry — nothing to redeem. The draw runs in the final act of Sunday night’s show, and winnings are paid straight to your wallet.',
+    dash_stable_default: 'Your stable',
+    welcome_h: 'You are a stable owner.',
+    welcome_lead: 'At 8:00 and 20:00 every day, all horses run at once. Finish seven days and your horse is a champion.',
+    welcome_cta: 'Get your first horse',
+    welcome_step1: 'Get a horse', welcome_step2: 'Train', welcome_step3: 'Watch the race',
     tasks_label: 'Today’s tasks',
     untrained_suffix: ' untrained',
     pending_suffix: ' awaiting assignment',
@@ -2230,6 +2246,11 @@ const zh: AppDict = {
     watch_show: '观看最新演出 →',
     jp_tickets_tpl: '本周报名 {n} 口', jp_prize_tpl: '奖金 {p} USDT',
     jp_desc: '每次确定训练自动累计1口(无需任何操作)。每周日晚演出的最终幕开奖，奖金自动支付到钱包。',
+    dash_stable_default: '您的马厩',
+    welcome_h: '您是马厩的主人。',
+    welcome_lead: '每天早上8:00与晚上20:00，所有马匹同时起跑。跑完七天，就是冠军。',
+    welcome_cta: '迎接第一匹马',
+    welcome_step1: '迎接', welcome_step2: '训练', welcome_step3: '观看比赛',
     tasks_label: '今日待办',
     untrained_suffix: ' 未训练',
     pending_suffix: ' 等待分配',
@@ -2977,6 +2998,11 @@ const ko: AppDict = {
     watch_show: '최신 쇼 보기 →',
     jp_tickets_tpl: '이번 주 응모 {n}구', jp_prize_tpl: '상금 {p} USDT',
     jp_desc: '조교를 확정할 때마다 자동으로 1구 쌓입니다(별도 조작 불요). 매주 일요일 밤 쇼 최종막에서 추첨하며, 당첨금은 지갑으로 자동 지급됩니다.',
+    dash_stable_default: '내 마구간',
+    welcome_h: '당신은 마구간의 주인입니다.',
+    welcome_lead: '매일 아침 8시와 밤 8시, 모든 말이 일제히 달립니다. 7일을 완주하면 챔피언입니다.',
+    welcome_cta: '첫 말을 맞이하기',
+    welcome_step1: '맞이하기', welcome_step2: '조교하기', welcome_step3: '레이스 보기',
     tasks_label: '오늘 할 일',
     untrained_suffix: ' 미조련',
     pending_suffix: ' 배정 대기',
@@ -3724,6 +3750,11 @@ const ms: AppDict = {
     watch_show: 'Tonton pertunjukan terkini →',
     jp_tickets_tpl: 'Penyertaan minggu ini: {n}', jp_prize_tpl: 'Hadiah {p} USDT',
     jp_desc: 'Setiap pengesahan latihan menambah satu penyertaan secara automatik — tiada apa perlu ditebus. Cabutan berlangsung pada babak akhir persembahan malam Ahad, dan kemenangan dibayar terus ke dompet anda.',
+    dash_stable_default: 'Kandang anda',
+    welcome_h: 'Anda pemilik kandang.',
+    welcome_lead: 'Pada 8:00 pagi dan 20:00 malam setiap hari, semua kuda berlari serentak. Tamatkan tujuh hari dan kuda anda menjadi juara.',
+    welcome_cta: 'Dapatkan kuda pertama anda',
+    welcome_step1: 'Dapatkan', welcome_step2: 'Latih', welcome_step3: 'Tonton perlumbaan',
     tasks_label: 'Tugas hari ini',
     untrained_suffix: ' belum dilatih',
     pending_suffix: ' menunggu penetapan',
