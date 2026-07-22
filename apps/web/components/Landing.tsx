@@ -379,15 +379,19 @@ export function Landing({
               </div>
               <div className={s.showCount}>
                 <div>
-                  <div className={`${s.cN} ${s.bad}`}>1,403</div>
+                  <div className={`${s.cN} ${s.bad}`}>2,100</div>
                   <div className={s.cK}>BURNED</div>
                 </div>
                 <div>
-                  <div className={`${s.cN} ${s.good}`}>19,646</div>
+                  <div className={`${s.cN} ${s.good}`}>17,500</div>
                   <div className={s.cK}>SURVIVED</div>
                 </div>
               </div>
             </div>
+            {/* ★margin の定義(band-race.ts:302-305): 生存なら「自分と BURN 最上位の差」。
+                したがって自分は**最後の生存馬(ライン)**に置く。ここを中位の馬にすると
+                margin が自己矛盾し、危うさを過大に演出することになる(2026-07-22 差し戻し)。
+                70.74 − 66.08 = 4.66 は FUN_V3_PLAN §2 の正典実例と一致する。 */}
             {/* LP_REVISION_SPEC B-2(2026-07-22): 旧ログ濁流(SRVD の羅列)は
                 2026-07-21 に本編から削除した体験。LPが宣伝しているものが
                 実際に遊べるものと違っていたため、帯レースの順位表に描き替える。
@@ -400,9 +404,9 @@ export function Landing({
               <div className={s.brBoardCol}>
                 <div className={s.brYouCard}>
                   <span className={s.brYouK}>{t.br_you}</span>
-                  <span className={s.brYouV}>71.30</span>
+                  <span className={s.brYouV}>70.74</span>
                   <span className={s.brYouR}>
-                    {t.br_prov_tpl.replace('{r}', '14')}
+                    {t.br_prov_tpl.replace('{r}', '17')}
                     <span className={s.brYouLine}> · {t.br_line_tpl.replace('{n}', '17')}</span>
                   </span>
                 </div>
@@ -410,10 +414,10 @@ export function Landing({
                   {[
                     { r: 12, n: 'Iron Mirage', v: '72.44' },
                     { r: 13, n: 'Silver Bolt', v: '71.86' },
-                    { r: 14, n: 'Azure Comet', v: '71.30', mine: true },
+                    { r: 14, n: 'Azure Comet', v: '71.30' },
                     { r: 15, n: 'Storm Pulse', v: '70.98' },
                     { r: 16, n: 'Wild Rocket', v: '70.74' },
-                    { r: 17, n: 'Desert River', v: '70.74', line: true },
+                    { r: 17, n: 'Desert River', v: '70.74', mine: true, line: true },
                     { r: 18, n: 'Mystic Thunder', v: '66.08', burned: true },
                   ].map((row) => (
                     <li
@@ -434,7 +438,7 @@ export function Landing({
                 </ol>
                 <div className={s.brMargin}>
                   <span className={s.brMarginK}>{t.br_margin_k}</span>
-                  <span className={s.brMarginN}>0.56</span>
+                  <span className={s.brMarginN}>4.66</span>
                   <span className={s.brMarginT}>{t.br_margin_t}</span>
                 </div>
               </div>
@@ -445,7 +449,7 @@ export function Landing({
                   <div className={s.ms}>{t.ev_champ}</div>
                 </div>
                 <div className={`${s.myEv} ${s.survive}`}>
-                  <div className={s.mn}>Azure Comet</div>
+                  <div className={s.mn}>Desert River</div>
                   <div className={s.ms}>{t.ev_survive}</div>
                 </div>
                 <div className={`${s.myEv} ${s.burn}`}>
