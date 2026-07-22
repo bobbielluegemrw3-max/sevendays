@@ -213,16 +213,26 @@ nav.topnav .topnav-drawer a:hover { background: rgba(255, 255, 255, 0.06); }
 nav.topnav .topnav-drawer a:active { background: rgba(255, 255, 255, 0.11); }
 nav.topnav .topnav-drawer-sep { height: 1px; margin: 5px 4px; background: var(--border); }
 
-/* Narrow screens: brand + logout on the first row, links drop to a second
-   full-width row. 実用リンクをドロワーへ移したので横スクロールをやめ、
-   折り返しで全部見えるようにする(旧: 13項目が入りきらず、後半は
-   スクロールの向こうに隠れて気づかれなかった)。 */
+/* Narrow screens: brand + 右クラスタが1行目、リンクは2行目に全幅で入る。
+   ★2026-07-22 オーナー判断で横スクロールへ戻した。実測(360px端末):
+     8項目 = 523px 必要 / 6項目でも 379px 必要 / 使える幅は約330px
+   つまり**項目を減らしても1段には収まらない**。折り返すとナビが2段になって
+   画面を圧迫するため、1段スクロール + 右端フェードで「続きがある」ことを示す。
+   旧実装の問題は横スクロールそのものではなく、**スクロールできると分からない**
+   ことだった(13項目時代)。フェードはその一点だけを潰す。 */
 @media (max-width: 700px) {
   nav.topnav { gap: 0.55rem 0.9rem; padding: 0.7rem 0.95rem; }
   nav.topnav .topnav-links {
-    display: flex; order: 3; flex-basis: 100%; gap: 0.7rem;
-    justify-content: space-between; flex-wrap: wrap;
+    display: flex; order: 3; flex-basis: 100%; gap: 0.85rem;
+    justify-content: flex-start; flex-wrap: nowrap;
+    overflow-x: auto; white-space: nowrap;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    /* 右端をフェード = 続きがある合図。最後の項目が溶けて切れる見え方になる
+       ところまで強くする(92%では「そこで終わり」に見えて合図にならなかった) */
+    -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 82%, transparent 100%);
   }
+  nav.topnav .topnav-links::-webkit-scrollbar { display: none; }
   nav.topnav .topnav-links a { flex: none; padding: 2px 0; font-size: 0.62rem; letter-spacing: 0.1em; }
   nav.topnav .topnav-more-btn { font-size: 0.62rem; letter-spacing: 0.1em; }
   /* 画面が狭いときは右端に寄せず、はみ出さない幅で開く */
