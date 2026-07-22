@@ -344,6 +344,9 @@ export function Landing({
           </div>
         </div>
         <p className={s.closing}>{t.s3_closing}</p>
+        {/* LP_REVISION_SPEC B-4: 「投資でなく腕」の核。施策D(育成者クレジット/
+            名伯楽ランキング)は、手放した後も功績が残る唯一の仕組み。LPに1行入れる */}
+        <p className={s.breederLine}>{t.s3_breeder}</p>
       </LandingReveal>
 
       {/* ===== ④ 毎晩20:00、全馬一斉の巨大レース ===== */}

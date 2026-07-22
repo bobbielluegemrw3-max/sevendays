@@ -61,6 +61,8 @@ export interface LandingDict {
   q3_h: string;
   q3_p: string;
   s3_closing: string;
+  /** LP改修 B-4(2026-07-22): 「育てた腕が報われる」訴求。施策D(/breeders)の要約。 */
+  s3_breeder: string;
   s4_h2: string;
   s4_lead_a: string;
   s4_lead_b: string;
@@ -139,7 +141,7 @@ const ja: LandingDict = {
   nav_how: '遊び方', nav_collection: 'コレクション', nav_economy: 'エコノミー',
   login: 'Google でログイン', login_join_race: 'Google でレースに参加',
   login_own: 'Google で厩舎を持つ', login_buy: 'Google で購入',
-  hero_lead: 'LV.7まで、走り抜け。全馬が一斉に発走。下位はBurn、生き残った馬はレースごとに価値が高まる。P2Pで売買。',
+  hero_lead: 'あなたは厩舎のオーナー。朝8:00と夜20:00、すべての馬が一斉に走る。紙一重で生き残るか、消えるか — 7日を走り切れば、チャンピオン。',
   hero_cta_adopt: '馬を迎える ▶', hero_cta_how: '遊び方を見る',
   trust_commit: '結果は事前にコミットされ、後から検証できる。',
   trust_usdt: '賞金はオンチェーンで受け取る。',
@@ -161,6 +163,7 @@ const ja: LandingDict = {
   q2_h: '狙う', q2_p: 'チャンピオンになる馬を、見抜けるか。',
   q3_h: '守る', q3_p: 'BURNされない馬を、走らせ続けられるか。',
   s3_closing: '買う・鍛える・走らせる・手放す。すべての判断が、あなたの厩舎の物語になる。',
+  s3_breeder: '手放した馬がチャンピオンになっても、育てた功績はあなたに残る。名伯楽として、記録に名前が刻まれる。',
   s4_h2: '朝8:00と夜20:00 — 全馬一斉の巨大レース、1日2回。',
   s4_lead_a: 'あなたの国では ', s4_lead_b: ' — マイ厩舎の馬は、毎日2回デイリーダービーに出走する。勝ち残った馬は価値が上がり(100 → 110 → 121 → …)、敗れた馬はBURN — 消滅する。',
   mylane_yours: 'あなたの馬',
@@ -214,7 +217,7 @@ const en: LandingDict = {
   nav_how: 'How to Play', nav_collection: 'Collection', nav_economy: 'Economy',
   login: 'Sign in with Google', login_join_race: 'Join the race with Google',
   login_own: 'Start your stable with Google', login_buy: 'Buy with Google',
-  hero_lead: 'Race to LV.7. Every horse starts at once. The lowest are Burned; survivors gain value with every race. Trade P2P.',
+  hero_lead: 'You are a stable owner. At 8:00 and 20:00, every horse runs at once. Survive by a hair, or vanish — finish seven days and your horse is a champion.',
   hero_cta_adopt: 'Get a horse ▶', hero_cta_how: 'See how it works',
   trust_commit: 'Every result is committed in advance and verifiable afterward.',
   trust_usdt: 'Rewards are received on-chain.',
@@ -236,6 +239,7 @@ const en: LandingDict = {
   q2_h: 'Spot', q2_p: 'Can you pick the horse that becomes a Champion?',
   q3_h: 'Protect', q3_p: 'Can you keep a horse running without it being Burned?',
   s3_closing: 'Buy, train, race, let go. Every decision becomes your stable’s story.',
+  s3_breeder: 'Even after a horse leaves your stable, the credit for raising it stays with you — your name is recorded among the horsemen who made it.',
   s4_h2: 'At 8:00 and 20:00 — one massive race for all horses, twice a day.',
   s4_lead_a: 'In your country that is ', s4_lead_b: ' — your stable’s horses run in the Daily Derby twice a day. Winners rise in value (100 → 110 → 121 → …); the defeated are Burned — destroyed.',
   mylane_yours: 'your horses',
@@ -289,7 +293,7 @@ const zh: LandingDict = {
   nav_how: '玩法', nav_collection: '收藏', nav_economy: '经济',
   login: '使用 Google 登录', login_join_race: '用 Google 参加比赛',
   login_own: '用 Google 建立马房', login_buy: '用 Google 购买',
-  hero_lead: '一路跑到LV.7。所有马匹同时起跑。垫底者被销毁（Burn），存活的马每场比赛身价上涨。可P2P交易。',
+  hero_lead: '您是马厩的主人。早上8:00与晚上20:00，所有马匹同时起跑。以毫厘之差存活，或者消失 — 跑完七天，就是冠军。',
   hero_cta_adopt: '迎接一匹马 ▶', hero_cta_how: '查看玩法',
   trust_commit: '每个结果都事先承诺，赛后可验证。',
   trust_usdt: '奖励在链上领取。',
@@ -311,6 +315,7 @@ const zh: LandingDict = {
   q2_h: '识别', q2_p: '你能看出哪匹马会成为冠军吗？',
   q3_h: '守护', q3_p: '你能让马持续奔跑而不被销毁吗？',
   s3_closing: '买马、训练、出赛、放手。每一个决定，都成为你马房的故事。',
+  s3_breeder: '即使马匹离开了您的马厩，培育的功绩仍属于您 — 您的名字会留在名伯乐的记录中。',
   s4_h2: '8:00 与 20:00 — 所有马匹同场竞逐的大型比赛，每天两场。',
   s4_lead_a: '在你的国家是 ', s4_lead_b: ' — 马房的马每天两次出战每日德比。胜出的马身价上涨（100 → 110 → 121 → …），落败的马被销毁（Burn）。',
   mylane_yours: '你的马',
@@ -364,7 +369,7 @@ const ko: LandingDict = {
   nav_how: '플레이 방법', nav_collection: '컬렉션', nav_economy: '이코노미',
   login: 'Google로 로그인', login_join_race: 'Google로 레이스 참가',
   login_own: 'Google로 마구간 시작', login_buy: 'Google로 구매',
-  hero_lead: 'LV.7까지 달려라. 모든 말이 일제히 출발. 하위권은 소멸(Burn), 살아남은 말은 레이스마다 가치가 오른다. P2P 거래.',
+  hero_lead: '당신은 마구간의 주인입니다. 아침 8시와 밤 8시, 모든 말이 일제히 달립니다. 종이 한 장 차이로 살아남거나 사라지거나 — 7일을 완주하면 챔피언입니다.',
   hero_cta_adopt: '말 맞이하기 ▶', hero_cta_how: '플레이 방법 보기',
   trust_commit: '모든 결과는 사전에 커밋되고, 이후 검증할 수 있습니다.',
   trust_usdt: '보상은 온체인으로 받습니다.',
@@ -386,6 +391,7 @@ const ko: LandingDict = {
   q2_h: '노리기', q2_p: '챔피언이 될 말을 알아볼 수 있는가.',
   q3_h: '지키기', q3_p: '소멸되지 않는 말을 계속 달리게 할 수 있는가.',
   s3_closing: '사고, 단련하고, 달리게 하고, 놓아준다. 모든 판단이 당신 마구간의 이야기가 된다.',
+  s3_breeder: '말이 마구간을 떠난 뒤에도, 키운 공적은 당신에게 남습니다 — 명조련사의 기록에 이름이 새겨집니다.',
   s4_h2: '아침 8:00과 밤 20:00 — 모든 말이 일제히 달리는 거대한 레이스, 하루 2회.',
   s4_lead_a: '당신의 나라에서는 ', s4_lead_b: ' — 마구간의 말은 매일 2회 데일리 더비에 출전한다. 이긴 말은 가치가 오르고(100 → 110 → 121 → …), 진 말은 소멸(Burn)한다.',
   mylane_yours: '당신의 말',
@@ -439,7 +445,7 @@ const ms: LandingDict = {
   nav_how: 'Cara Bermain', nav_collection: 'Koleksi', nav_economy: 'Ekonomi',
   login: 'Log masuk dengan Google', login_join_race: 'Sertai perlumbaan dengan Google',
   login_own: 'Mulakan kandang dengan Google', login_buy: 'Beli dengan Google',
-  hero_lead: 'Berlumba ke LV.7. Semua kuda bermula serentak. Yang terbawah dibakar (Burn); yang terselamat naik nilai setiap perlumbaan. Dagang P2P.',
+  hero_lead: 'Anda pemilik kandang. Pada 8:00 pagi dan 20:00 malam, semua kuda berlari serentak. Selamat dengan bezanya sehelai rambut, atau lenyap — tamatkan tujuh hari dan kuda anda menjadi juara.',
   hero_cta_adopt: 'Dapatkan kuda ▶', hero_cta_how: 'Lihat cara bermain',
   trust_commit: 'Setiap keputusan dikomit lebih awal dan boleh disahkan selepas itu.',
   trust_usdt: 'Ganjaran diterima on-chain.',
@@ -461,6 +467,7 @@ const ms: LandingDict = {
   q2_h: 'Kesan', q2_p: 'Bolehkah anda mengenal pasti kuda yang akan menjadi Juara?',
   q3_h: 'Lindungi', q3_p: 'Bolehkah anda memastikan kuda terus berlari tanpa dibakar?',
   s3_closing: 'Beli, latih, lumba, lepaskan. Setiap keputusan menjadi kisah kandang anda.',
+  s3_breeder: 'Walaupun kuda itu meninggalkan kandang anda, jasa membesarkannya kekal milik anda — nama anda dicatat dalam rekod pemelihara terbaik.',
   s4_h2: 'Pada 8:00 dan 20:00 — satu perlumbaan besar untuk semua kuda, dua kali sehari.',
   s4_lead_a: 'Di negara anda ialah ', s4_lead_b: ' — kuda kandang anda berlumba dalam Daily Derby dua kali sehari. Yang menang naik nilai (100 → 110 → 121 → …); yang kalah dibakar (Burn) — musnah.',
   mylane_yours: 'kuda anda',
