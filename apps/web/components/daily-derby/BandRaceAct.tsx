@@ -10,6 +10,8 @@ import {
   type BandRaceModel,
 } from '@/lib/band-race';
 import s from '../../app/daily-derby.module.css';
+import { useLang } from '@/components/LangProvider';
+import { horseDisplayName } from '@/lib/horse-name';
 
 /* ============================================================================
  * BRACKET RACE — 帯レース(FUN_V3 施策G「帯の可視化」)
@@ -72,6 +74,7 @@ export function BandRaceAct({
   /** act ローカルの経過秒(0 = 幕開け)。 */
   elapsed: number;
 }) {
+  const lang = useLang();
   const model = useMemo(
     () => modelProp ?? (input ? buildBandRace(input) : null),
     [modelProp, input],
@@ -147,7 +150,7 @@ export function BandRaceAct({
               ].filter(Boolean).join(' ')}
             >
               <span className={s.brRank}>{r.rank}</span>
-              <span className={s.brName}>{r.name}</span>
+              <span className={s.brName}>{horseDisplayName(r.name, lang)}</span>
               <span className={s.brScore}>{r.score.toFixed(2)}</span>
               {r.burned && <span className={s.brTag}>BURN</span>}
             </li>

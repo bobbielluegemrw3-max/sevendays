@@ -10,6 +10,8 @@ import {
   type SettlementInput,
 } from '@/lib/settlement-act';
 import s from '../../app/daily-derby.module.css';
+import { useLang } from '@/components/LangProvider';
+import { horseDisplayName } from '@/lib/horse-name';
 
 /* ============================================================================
  * SETTLEMENT — 「あなたの一日の決算」
@@ -32,6 +34,7 @@ export function SettlementAct({
   /** 1頭が開示された瞬間(音の合図に使う。out=出ていった / in=入ってきた)。 */
   onRowRevealed?: ((row: HarvestRow) => void) | undefined;
 }) {
+  const lang = useLang();
   const frame = useMemo(() => settlementFrame(input, elapsed), [input, elapsed]);
 
   /* 行が1つ増えた瞬間だけ呼ぶ。音は「方向」だけを伝える —
@@ -76,7 +79,7 @@ export function SettlementAct({
                 <li key={`${r.kind}:${r.name}`} className={`${s.stRow} ${r.kind === 'out' ? s.stOut : s.stIn}`}>
                   <NftHorseArt look={deriveNftLook(r.dnaHash, r.name)} className={s.stArt} />
                   <div className={s.stBody}>
-                    <div className={s.stName}>{r.name}</div>
+                    <div className={s.stName}>{horseDisplayName(r.name, lang)}</div>
                     <div className={s.stLine}>
                       {r.kind === 'out' ? (
                         <>

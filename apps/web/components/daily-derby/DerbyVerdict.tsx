@@ -6,6 +6,8 @@ import { deriveNftLook } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import type { MyDerbyHorse } from '@/lib/daily-derby';
 import s from '../../app/daily-derby.module.css';
+import { useLang } from '@/components/LangProvider';
+import { horseDisplayName } from '@/lib/horse-name';
 
 /**
  * 審判演出(2026-07-10 R3): 自分の馬の結果行が流れた瞬間、
@@ -40,6 +42,7 @@ function dnaFor(horse: MyDerbyHorse | undefined, name: string): string {
 }
 
 export function DerbyVerdict({ verdict, queued = 0 }: { verdict: VerdictInfo; queued?: number }) {
+  const lang = useLang();
   const [showDrop, setShowDrop] = useState(false);
   useEffect(() => {
     setShowDrop(false);
@@ -75,7 +78,7 @@ export function DerbyVerdict({ verdict, queued = 0 }: { verdict: VerdictInfo; qu
         <div className={`${s.vHorse} ${horseCls}`}>
           <NftHorseArt look={deriveNftLook(dnaFor(verdict.horse, verdict.name), verdict.name)} className={s.vHorseArt} />
         </div>
-        <div className={s.verdictName}>{verdict.name}</div>
+        <div className={s.verdictName}>{horseDisplayName(verdict.name, lang)}</div>
         {verdict.kind === 'survive' ? (
           <div className={s.verdictSub}>
             {day !== undefined ? (

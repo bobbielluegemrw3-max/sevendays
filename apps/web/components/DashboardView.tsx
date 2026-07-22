@@ -12,6 +12,7 @@ import { APP_COPY, type Lang, type AppDict } from '@/lib/i18n';
 import { formatMonthDay } from '@/lib/i18n-shared';
 import s from '../app/dashboard.module.css';
 import { TotalValue } from '@/components/ui/TotalValue';
+import { horseDisplayName } from '@/lib/horse-name';
 import { isLvDisplayMode } from '@/lib/i18n';
 
 /** テンプレ文字列の {name} を値で埋める(多言語の語順差を吸収)。 */
@@ -90,14 +91,14 @@ function StableArt({ horse }: { horse: DashHorse }) {
 }
 
 /** 厩舎ストリップの1頭 — 要約行のみ(詳細はSTABLEページの仕事)。 */
-function HorseStrip({ h, t }: { h: DashHorse; t: AppDict['dash'] }) {
+function HorseStrip({ h, t, lang }: { h: DashHorse; t: AppDict['dash']; lang: Lang }) {
   const trained = h.trained_for_next_race;
   return (
     <Link href={`/horses/${h.id}`} className={s.srow}>
       <div className={s.sart}>
         <StableArt horse={h} />
       </div>
-      <span className={s.sname}>{h.name}</span>
+      <span className={s.sname}>{horseDisplayName(h.name, lang)}</span>
       {/* 数字群は1つの塊にする。モバイルでは名前の下へ回り込ませるため
           (2026-07-22 オーナー指摘: 1行に並べると総合値以降が画面外へ切れていた) */}
       <span className={s.smeta}>
@@ -201,7 +202,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
               {myResults.map((r) => (
                 <Link key={r.horse_id} href={`/horses/${r.horse_id}`} className={s.resRow}>
                   <span className={s.resRank}>#{num(r.final_rank)}</span>
-                  <span className={s.resName}>{r.horse.name}</span>
+                  <span className={s.resName}>{horseDisplayName(r.horse.name, lang)}</span>
                   {/* 「あと何点で助かったか」— ショーで見せた緊張を翌朝にも残す。
                       帯(同じLV)内の実測差。全馬生還の夜は margin が無いので出ない */}
                   {typeof r.margin === 'number' ? (
@@ -346,7 +347,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
         </div>
         {active.length > 0 ? (
           <div className={s.strip}>
-            {active.slice(0, 8).map((h) => <HorseStrip key={h.id} h={h} t={t} />)}
+            {active.slice(0, 8).map((h) => <HorseStrip key={h.id} h={h} t={t} lang={lang} />)}
           </div>
         ) : (
           <div className={s.stableEmpty}>

@@ -29,6 +29,8 @@ import {
 import { localDateTime } from '@/lib/format-time';
 import s from '../app/items.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { useLang } from '@/components/LangProvider';
+import { horseDisplayName } from '@/lib/horse-name';
 
 /**
  * /items — アイテムショップ+インベントリ+ギフト+履歴(Decision 078/079) リデザイン。
@@ -64,6 +66,7 @@ export function ItemsView({
   today?: string;
   preview?: boolean;
 }) {
+  const lang = useLang();
   const router = useRouter();
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -364,7 +367,7 @@ export function ItemsView({
                     <img className={s.pendingThumb} src={`/items/${p.item_key}.webp`} alt="" width={34} height={34} loading="lazy" />
                     <span className={s.pendingBadge}>適用予定</span>
                     <b>{byKey.get(p.item_key)?.name_ja ?? p.item_key}</b>
-                    <span className="muted">→ {p.horse_name}</span>
+                    <span className="muted">→ {horseDisplayName(p.horse_name, lang)}</span>
                     <span className={s.pendingDate}>{p.effective_race_date} のレース</span>
                   </div>
                 ))}
@@ -512,7 +515,7 @@ export function ItemsView({
             {transactions.map((t) => {
               const meta = TXN_META[t.kind];
               const detail =
-                t.kind === 'USED' ? `→ ${t.horse_name ?? ''}`
+                t.kind === 'USED' ? `→ ${horseDisplayName(t.horse_name ?? '', lang)}`
                 : t.kind === 'SENT' ? `${t.counterparty ?? ''} へ`
                 : t.kind === 'RECEIVED' ? `${t.counterparty ?? 'Burnドロップ'} から`
                 : 'ショップで購入';

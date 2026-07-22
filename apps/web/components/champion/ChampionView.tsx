@@ -10,6 +10,8 @@ import { SAMPLE_CHAMPIONS } from '@/lib/champion-fixtures';
 import { tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../../app/champion.module.css';
+import { useLang } from '@/components/LangProvider';
+import { horseDisplayName } from '@/lib/horse-name';
 
 /**
  * /champion — チャンピオンの栄誉を1ページに集約(ADR-011 / Decision 080)。
@@ -60,6 +62,7 @@ export function ChampionView({
   hall: HallChampion[];
   t: AppDict['champion'];
 }) {
+  const lang = useLang();
   // 昇級ラダー(勝数は言語別テンプレ、Maiden/G1等は競馬の固有表記で共通)
   const CLASS_LADDER = ['Maiden', fill(t.class_win_tpl, { n: 1 }), fill(t.class_win_tpl, { n: 2 }), fill(t.class_win_tpl, { n: 3 }), 'G3', 'G2', 'G1'];
   const isSample = hall.length === 0;
@@ -138,7 +141,7 @@ export function ChampionView({
                     <NftHorseArt look={deriveNftLook(spotlight.dna_hash, spotlight.name)} className={s.artCanvas} />
                   </div>
                   <div className={s.spotlightBody}>
-                    <div className={s.spotlightName}>{spotlight.name}</div>
+                    <div className={s.spotlightName}>{horseDisplayName(spotlight.name, lang)}</div>
                     <div className={s.spotlightChips}>
                       <span className={s.typeChip}>{spotlight.horse_type}</span>
                       {spotlight.total_value != null && (
@@ -163,7 +166,7 @@ export function ChampionView({
                   <div className={s.hallArt}>
                     <NftHorseArt look={deriveNftLook(c.dna_hash, c.name)} className={s.artCanvas} />
                   </div>
-                  <div className={s.hallName}>{c.name}</div>
+                  <div className={s.hallName}>{horseDisplayName(c.name, lang)}</div>
                   <div className={s.hallMetaRow}>
                     {c.total_value != null && (
                       <span className={s.rar} style={tvChipStyle(c.total_value)}>

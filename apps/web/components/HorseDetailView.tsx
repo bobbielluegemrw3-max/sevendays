@@ -15,6 +15,7 @@ import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { uncollectedGain } from '@/components/stable-shared';
 import { APP_COPY, isLvDisplayMode, type Lang } from '@/lib/i18n';
+import { horseDisplayName } from '@/lib/horse-name';
 import { tvArtGlowStyle, tvMedalStyle } from '@/lib/tv-tier';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
@@ -387,7 +388,7 @@ export function HorseDetailView({
       <div className={s.mast}>
         <div className={s.mastL}>
           <div className={s.titleRow}>
-            <span className={s.title}>{horse.name}</span>
+            <span className={s.title}>{horseDisplayName(horse.name, lang)}</span>
             {/* Tier 2-1: 総合値は馬アートの TOTAL メダル1箇所だけにする。
                 同じ数字を9pxのピルでもう一度出していたのを落とした。 */}
             <span className={`${s.badge} ${s.typeBadge}`}>{horse.horse_type}</span>

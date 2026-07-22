@@ -54,6 +54,8 @@ import { deriveNftLook } from '@/lib/nft-visual';
 import { DailyDerbyFailureState } from '@/components/daily-derby/DailyDerbyFailureState';
 import s from '../../app/daily-derby.module.css';
 import { tvNumStyle } from '@/lib/tv-tier';
+import { useLang } from '@/components/LangProvider';
+import { horseDisplayName } from '@/lib/horse-name';
 
 /**
  * THE DAILY DERBY のステージ全体。「開始までの残り秒数」(負値 = 開始後の経過)
@@ -1006,6 +1008,7 @@ function dnaOf(h: MyDerbyHorse): string {
 
 /** 案1: 出走カード — 実NFTアート+DAY進行7点+今夜の価値(実価格テーブルのみ)。 */
 function TonightEntryCards({ myHorses, engineV2 = false }: { myHorses: readonly MyDerbyHorse[]; engineV2?: boolean }) {
+  const lang = useLang();
   return (
     <div className={s.tn1Grid}>
       {myHorses.slice(0, 8).map((h) => {
@@ -1017,7 +1020,7 @@ function TonightEntryCards({ myHorses, engineV2 = false }: { myHorses: readonly 
             <NftHorseArt look={deriveNftLook(dnaOf(h), h.name)} className={s.tn1Art} />
             <div className={s.tn1Body}>
               <div className={s.tn1NameRow}>
-                <span className={s.tn1Name}>{h.name}</span>
+                <span className={s.tn1Name}>{horseDisplayName(h.name, lang)}</span>
                 {h.totalValue !== null && h.totalValue !== undefined ? (
                   <b className={s.tn1Tv} style={tvNumStyle(h.totalValue)}>{Number(h.totalValue).toFixed(1)}</b>
                 ) : null}
@@ -1042,6 +1045,7 @@ function TonightEntryCards({ myHorses, engineV2 = false }: { myHorses: readonly 
 
 /** 案2: パドック風の出走表 — 枠番+実NFTアートの横並び。 */
 function TonightPaddock({ myHorses, engineV2 = false }: { myHorses: readonly MyDerbyHorse[]; engineV2?: boolean }) {
+  const lang = useLang();
   return (
     <div className={s.tn2Row}>
       {myHorses.slice(0, 12).map((h, i) => (
@@ -1050,7 +1054,7 @@ function TonightPaddock({ myHorses, engineV2 = false }: { myHorses: readonly MyD
           <div className={s.tn2ArtWrap}>
             <NftHorseArt look={deriveNftLook(dnaOf(h), h.name)} className={s.tn2Art} />
           </div>
-          <div className={s.tn2Name}>{h.name}</div>
+          <div className={s.tn2Name}>{horseDisplayName(h.name, lang)}</div>
           <div className={s.tn2Day}>
             {engineV2 ? 'LV.' : 'DAY'}{h.currentDay ?? 0}
             {h.totalValue !== null && h.totalValue !== undefined ? (
@@ -1075,6 +1079,7 @@ function PreShowCountdown({
   variant?: 0 | 1 | 2;
   engineV2?: boolean;
 }) {
+  const lang = useLang();
   const total = Math.max(0, Math.ceil(secondsToStart));
   const pad = (n: number) => String(n).padStart(2, '0');
   const text = `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
@@ -1099,7 +1104,7 @@ function PreShowCountdown({
             <div className={s.tonightChips}>
               {myHorses.slice(0, 4).map((h) => (
                 <span key={h.name} className={s.tonightChip}>
-                  {h.name}
+                  {horseDisplayName(h.name, lang)}
                   {h.currentDay !== undefined && <b> {engineV2 ? 'LV.' : 'DAY'}{h.currentDay}</b>}
                 </span>
               ))}
@@ -1361,6 +1366,7 @@ function Rollcall({
   runners: readonly MyDerbyHorse[];
   slot: number;
 }) {
+  const lang = useLang();
   const idx = Math.min(
     Math.max(0, Math.floor((elapsed - LOGS_FROM) / slot)),
     runners.length - 1,
@@ -1373,7 +1379,7 @@ function Rollcall({
       <div className={s.rollArt}>
         <NftHorseArt look={deriveNftLook(dna, horse.name)} className={s.vHorseArt} />
       </div>
-      <div className={s.rollName}>{horse.name}</div>
+      <div className={s.rollName}>{horseDisplayName(horse.name, lang)}</div>
       <div className={s.rollSub}>
         点呼 {idx + 1} / {runners.length} — 静かな夜
       </div>
@@ -1404,6 +1410,7 @@ function LogPhase({
   settlement: SettlementInput;
   onSettlementRow: (row: HarvestRow) => void;
 }) {
+  const lang = useLang();
   // 正典のなめらかなログの流れ: ショー時計(1秒刻み)を60fpsに補間して描画する
   const elapsed = useShowClock(propElapsed);
   // 2026-07-14: 行数は当夜の実件数でキャップ(案①「件数だけ実数」の結線)。
@@ -1487,7 +1494,7 @@ function LogPhase({
                   : day !== undefined ? `LV.${day} → LV.${Math.min(7, day + 1)} 生存` : '生存';
                 return (
                   <div key={`${ev.kind}:${ev.name}:${i}`} className={`${s.myEv} ${cls}`}>
-                    <div className={s.myEvN}>{ev.name}</div>
+                    <div className={s.myEvN}>{horseDisplayName(ev.name, lang)}</div>
                     <div className={s.myEvS}>{sub}</div>
                   </div>
                 );
@@ -1589,6 +1596,7 @@ function PoolStableAct({ pool }: { pool: PoolActView }) {
 /* V2実装-7c(Decision 106/108): 週次ジャックポット幕(ショーの本当の最終幕)。
    支払い済み(PAID)の週だけ表示 — 中止/不成立の週は幕ごと出さない(108)。 */
 function JackpotAct({ jackpot }: { jackpot: DerbyJackpotView }) {
+  const lang = useLang();
   if (jackpot.status !== 'PAID' || jackpot.winners.length === 0) return null;
   return (
     <div className={s.fcWrap}>
@@ -1602,7 +1610,7 @@ function JackpotAct({ jackpot }: { jackpot: DerbyJackpotView }) {
       {jackpot.winners.map((w, i) => (
         <div key={i} className={s.fcRow}>
           <span className={s.condK}>当選</span>
-          <b>{w.name}</b>
+          <b>{horseDisplayName(w.name, lang)}</b>
           {w.amount ? (
             <>
               <span className={s.condK}>—</span>

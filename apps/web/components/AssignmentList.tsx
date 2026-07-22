@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { AppSelect } from '@/components/AppSelect';
 import { localDate } from '@/lib/format-time';
 import s from '../app/purchase.module.css';
+import { useLang } from '@/components/LangProvider';
+import { horseDisplayName } from '@/lib/horse-name';
 
 /* ============================================================================
  * AssignmentList — 割当履歴を馬ID検索・種別(Day0/P2P)絞り込み・ページングで表示。
@@ -31,6 +33,7 @@ function realAmount(a: Assignment): string {
 }
 
 export function AssignmentList({ assignments }: { assignments: Assignment[] }) {
+  const lang = useLang();
   const [q, setQ] = useState('');
   const [filt, setFilt] = useState('ALL'); // ALL | DAY0 | P2P
   const [page, setPage] = useState(0);
@@ -39,7 +42,7 @@ export function AssignmentList({ assignments }: { assignments: Assignment[] }) {
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return assignments.filter((a) => {
-      if (needle && !`${a.horse_name ?? ''} ${a.horse_id}`.toLowerCase().includes(needle)) return false;
+      if (needle && !`${a.horse_name ?? ''} ${horseDisplayName(a.horse_name ?? '', lang)} ${a.horse_id}`.toLowerCase().includes(needle)) return false;
       if (filt === 'DAY0') return a.was_day0_mint;
       if (filt === 'P2P') return !a.was_day0_mint;
       return true;
@@ -81,7 +84,7 @@ export function AssignmentList({ assignments }: { assignments: Assignment[] }) {
             const label = sell ? '売却' : a.was_day0_mint ? '新規発行で入手' : 'マーケットで購入';
             return (
               <Link key={a.id} href={`/horses/${a.horse_id}`} className={s.aRow}>
-                <span className={s.aId}>{a.horse_name ?? a.horse_id}</span>
+                <span className={s.aId}>{a.horse_name ? horseDisplayName(a.horse_name, lang) : a.horse_id}</span>
                 <span className={`${s.badge} ${sell ? s.kP2P : a.was_day0_mint ? s.kDay0 : s.kP2P}`}>{label}</span>
                 <span className={s.aPrice}>{sell ? '+' : '−'}{realAmount(a)}<small>USDT</small></span>
                 <span className={s.aDate}>{localDate(a.created_at)}</span>

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/client-api';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/races.module.css';
+import { useLang } from '@/components/LangProvider';
+import { horseDisplayName } from '@/lib/horse-name';
 
 /**
  * 透明性台帳(オーナー承認 2026-07-10)。
@@ -59,6 +61,7 @@ function downloadCsv(filename: string, rows: (string | number | null)[][]): void
 }
 
 export function LedgerView({ t }: { t: AppDict['ledger'] }) {
+  const lang = useLang();
   const fmtFull = (iso: string): string => {
     const [y, m, d] = iso.split('-');
     return fill(t.date_full_tpl, { y: y!, m: Number(m), d: Number(d) });
@@ -227,7 +230,8 @@ export function LedgerView({ t }: { t: AppDict['ledger'] }) {
                 {trades.slice(0, 30).map((tr, i) => (
                   <div key={i} className={s.recRow}>
                     <div className={s.recBody}>
-                      <div className={s.recName}>{tr.horse_name}</div>
+                      {/* CSVは検証用なので正典(英語)のまま。画面だけカタカナ */}
+                      <div className={s.recName}>{horseDisplayName(tr.horse_name, lang)}</div>
                       <div className={s.recSub}>
                         {tr.is_mint
                           ? <>{t.mint_label_day0} → {tr.buyer_anon}</>

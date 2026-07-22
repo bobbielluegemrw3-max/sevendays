@@ -6,6 +6,7 @@ import { getAccessToken, serverApi } from '@/lib/server-api';
 import { withSqlClient } from '@/lib/db';
 import { getMaintenanceState } from '@/lib/maintenance';
 import { getLang } from '@/lib/i18n-server';
+import { LangProvider } from '@/components/LangProvider';
 import { setLvDisplayMode, type Lang } from '@/lib/i18n';
 import { isEngineV2Active } from '@/lib/engine-server';
 import { TopNav } from '@/components/TopNav';
@@ -101,6 +102,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
+        {/* 馬名のカタカナ表示など「言語で変わる表示」をクライアント部品にも
+            届ける(2026-07-22)。値はサーバーが決めるのでSSR/CSRが一致する */}
+        <LangProvider lang={lang}>
         {/* 起動スプラッシュ(セッション初回のみ・全ページ共通) */}
         <Splash />
         {maintenance.enabled && maintenanceAdmin ? (
@@ -116,6 +120,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </Suspense>
         ) : null}
         <main>{children}</main>
+        </LangProvider>
       </body>
     </html>
   );

@@ -6,6 +6,8 @@ import { NftHorseArt } from '@/components/NftHorseArt';
 import type { DerbyNightResults } from '@/lib/daily-derby';
 import { tvMedalStyle } from '@/lib/tv-tier';
 import s from '../../app/races.module.css';
+import { useLang } from '@/components/LangProvider';
+import { horseDisplayName } from '@/lib/horse-name';
 
 /* 表示は実際に動いたお金(2026-07-14 オーナー指摘):
    新規発行=価格100+ミント手数料2=102 / P2P購入=成立額そのまま /
@@ -61,6 +63,7 @@ function GroupHead({ tone, label, count }: { tone: string | undefined; label: st
 }
 
 export function NightResultsList({ results, grouped = false }: { results: DerbyNightResults; grouped?: boolean }) {
+  const lang = useLang();
   const day7 = results.survived.filter((h) => h.day7);
   const survived = results.survived.filter((h) => !h.day7);
 
@@ -68,7 +71,7 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
     <div key={`d7:${h.name}`} className={`${s.recRow} ${s.recDay7}`}>
       <HorseThumb dna={h.dna_hash} name={h.name} />
       <div className={s.recBody}>
-        <div className={s.recName}>{h.name}</div>
+        <div className={s.recName}>{horseDisplayName(h.name, lang)}</div>
         <div className={s.recSub}>LV.7 走破 — CHAMPION</div>
       </div>
       <TvBig tv={h.total_value} />
@@ -80,7 +83,7 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
     <div key={`sv:${h.name}`} className={s.recRow}>
       <HorseThumb dna={h.dna_hash} name={h.name} />
       <div className={s.recBody}>
-        <div className={s.recName}>{h.name}</div>
+        <div className={s.recName}>{horseDisplayName(h.name, lang)}</div>
         <div className={s.recSub}>LV.{h.from_day} → <b className={s.recGood}>LV.{h.to_day}</b> 生存</div>
       </div>
       <TvBig tv={h.total_value} />
@@ -92,7 +95,7 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
     <div key={`bu:${h.name}`} className={`${s.recRow} ${s.recBurn}`}>
       <HorseThumb dna={h.dna_hash} name={h.name} />
       <div className={s.recBody}>
-        <div className={s.recName}>{h.name}</div>
+        <div className={s.recName}>{horseDisplayName(h.name, lang)}</div>
         <div className={s.recSub}>
           {h.day !== null ? `LV.${h.day} — BURN` : 'BURN'}
           {itemName(h.used_item_key) && ` · 使用アイテム(消費): ${itemName(h.used_item_key)}`}
@@ -110,7 +113,7 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
     <div key={`so:${h.name}`} className={s.recRow}>
       <HorseThumb dna={h.dna_hash} name={h.name} />
       <div className={s.recBody}>
-        <div className={s.recName}>{h.name}</div>
+        <div className={s.recName}>{horseDisplayName(h.name, lang)}</div>
         <div className={s.recSub}>{h.counterpart} と売却マッチング成立 {money(h.price)} — 受取 <b className={s.recGold}>{soldNet(h.price)} USDT</b>(手数料2%)</div>
       </div>
       <TvBig tv={h.total_value} />
@@ -122,7 +125,7 @@ export function NightResultsList({ results, grouped = false }: { results: DerbyN
     <div key={`bo:${h.name}`} className={s.recRow}>
       <HorseThumb dna={h.dna_hash} name={h.name} />
       <div className={s.recBody}>
-        <div className={s.recName}>{h.name}</div>
+        <div className={s.recName}>{horseDisplayName(h.name, lang)}</div>
         <div className={s.recSub}>
           {h.is_mint
             ? <>新規発行(LV.0)で入手 — 支払 <b className={s.recGold}>{mintPaid(h.price)} USDT</b>({money(h.price)}+手数料{MINT_FEE})</>

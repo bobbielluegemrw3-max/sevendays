@@ -11,6 +11,8 @@ import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/stable.module.css';
 import { tvCardGlowStyle } from '@/lib/tv-tier';
 import { TotalValue } from '@/components/ui/TotalValue';
+import { useLang } from '@/components/LangProvider';
+import { horseDisplayName } from '@/lib/horse-name';
 
 /* ============================================================================
  * StableBrowser — 出走中 / 過去 の馬リストを「検索・ソート・絞り込み・
@@ -130,6 +132,7 @@ function CardWallpaper({ horse }: { horse: StableHorse }) {
 }
 
 function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
+  const lang = useLang();
   const untrained = !h.trained_for_next_race;
   const tv = h.total_value;
   const tier = tv === null || tv === undefined ? null : acTier(tv);
@@ -154,7 +157,9 @@ function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
       {untrained ? <span className={s.acTodo}>{t.badge_untrained}</span> : null}
 
       <div className={s.acHead}>
-        <div className={s.acName}>{h.name}</div>
+        {/* 表示だけカタカナ(2026-07-22)。DBの正典は英語のまま — 色決定
+            (deriveNftLook)も検索も正典側で動く */}
+        <div className={s.acName}>{horseDisplayName(h.name, lang)}</div>
         {/* 隠し演出のマークは壁紙(opacity .14)では見えなくなるので、ここで出す */}
         {h.golden_star ? <span className={s.acMark} title={t.tip_golden}>★</span> : null}
         {h.revenge_flame ? <span className={s.acMark} title={t.tip_flame}>焔</span> : null}
@@ -208,6 +213,7 @@ function ActiveCard({ h, t }: { h: StableHorse; t: T }) {
  * 今夜は出走しない事実を明示し、無駄になる調教CTAは出さない。管理は/marketへ。
  */
 export function ListedCard({ h, t }: { h: StableHorse; t: T }) {
+  const lang = useLang();
   return (
     <Link href="/market" className={`${s.hcard} ${s.listedCard}`} style={tvCardGlowStyle(h.total_value)}>
       <div className={s.hart}>
@@ -217,7 +223,7 @@ export function ListedCard({ h, t }: { h: StableHorse; t: T }) {
       </div>
       <div className={s.hbody}>
         <div className={s.hrow1}>
-          <span className={s.hname}>{h.name}</span>
+          <span className={s.hname}>{horseDisplayName(h.name, lang)}</span>
           <TvChip h={h} t={t} extraCls={s.inlineRarity!} />
           <span className={s.htype}>{h.horse_type}</span>
         </div>
@@ -236,12 +242,13 @@ export function ListedCard({ h, t }: { h: StableHorse; t: T }) {
  * チャンピオンコレクション — Day7走破馬を金枠NFTとして飾るギャラリーカード。
  */
 export function ChampionCard({ h, t }: { h: StableHorse; t: T }) {
+  const lang = useLang();
   const memorial = h.status === 'MEMORIALIZED';
   return (
     <Link href={`/horses/${h.id}`} className={s.champCard}>
       <div className={s.champInner}>
         <div className={s.champArt}><StableArt horse={h} t={t} /></div>
-        <div className={s.champName}>{h.name}</div>
+        <div className={s.champName}>{horseDisplayName(h.name, lang)}</div>
         <div className={s.champTag}>{memorial ? 'MEMORIAL NFT' : 'CHAMPION'}</div>
         <div className={s.champSub}>
           {memorial ? t.champ_sub_memorial : t.champ_sub_cleared}
@@ -264,6 +271,7 @@ function pastMeta(status: string, t: T): { mod: string; badge: string; label: st
 }
 
 function PastCard({ h, t }: { h: StableHorse; t: T }) {
+  const lang = useLang();
   const m = pastMeta(h.status, t);
   return (
     <Link href={`/horses/${h.id}`} className={`${s.pcard} ${m.mod}`}>
@@ -273,7 +281,7 @@ function PastCard({ h, t }: { h: StableHorse; t: T }) {
       </div>
       <div className={s.pbody}>
         <div className={s.prow}>
-          <span className={s.pname}>{h.name}</span>
+          <span className={s.pname}>{horseDisplayName(h.name, lang)}</span>
           <span className={s.ptype}>{h.horse_type}</span>
         </div>
         <div className={s.pnote}>{m.note}</div>
@@ -299,6 +307,7 @@ const PAST_SORTS: Record<string, (a: StableHorse, b: StableHorse) => number> = {
 
 /* ---- 本体 ----------------------------------------------------------------- */
 export function StableBrowser({ kind, horses, t }: { kind: 'active' | 'past'; horses: StableHorse[]; t: T }) {
+  const lang = useLang();
   const [q, setQ] = useState('');
   const [sort, setSort] = useState(kind === 'active' ? 'value_desc' : 'total');
   const [untrainedOnly, setUntrainedOnly] = useState(false);
@@ -308,7 +317,8 @@ export function StableBrowser({ kind, horses, t }: { kind: 'active' | 'past'; ho
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     let arr = horses.filter((h) => {
-      if (needle && !h.name.toLowerCase().includes(needle)) return false;
+      // カタカナ表示のユーザーはカタカナで打つ。正典(英語)とカナの両方に当てる
+      if (needle && !`${h.name} ${horseDisplayName(h.name, lang)}`.toLowerCase().includes(needle)) return false;
       if (kind === 'active' && untrainedOnly && h.trained_for_next_race) return false;
       return true;
     });

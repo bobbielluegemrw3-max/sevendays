@@ -12,6 +12,8 @@ import { TotalValue } from '@/components/ui/TotalValue';
 import d from '../app/support.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
 import { Button } from '@/components/ui/Button';
+import { useLang } from '@/components/LangProvider';
+import { horseDisplayName } from '@/lib/horse-name';
 
 /**
  * /market — 見えるマーケットプレイス(Decision 076) リデザイン。
@@ -97,6 +99,7 @@ export function MarketPlaceView({
   reserveSlot?: React.ReactNode;
   preview?: boolean;
 }) {
+  const lang = useLang();
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pick, setPick] = useState<ListableHorse | null>(null);
@@ -125,7 +128,7 @@ export function MarketPlaceView({
     if (preview) {
       setBusy(false);
       setDialogOpen(false);
-      setNotice(`${pick.name} を出品しました(プレビュー)。`);
+      setNotice(`${horseDisplayName(pick.name, lang)} を出品しました(プレビュー)。`);
       return;
     }
     const result = await apiFetch('/api/v1/market/list', {
@@ -135,7 +138,7 @@ export function MarketPlaceView({
     setBusy(false);
     if (result.status === 200) {
       setDialogOpen(false);
-      setNotice(`${pick.name} を出品しました。次のレースから出走しません。`);
+      setNotice(`${horseDisplayName(pick.name, lang)} を出品しました。次のレースから出走しません。`);
       refreshSoft(router);
     } else {
       setError(errorMessage(result.body) ?? '出品に失敗しました。');
@@ -151,7 +154,7 @@ export function MarketPlaceView({
       : await apiFetch('/api/v1/market/unlist', { method: 'POST', body: { horse_id: listing.horse_id } });
     setBusy(false);
     if (result.status === 200) {
-      setNotice(`${listing.name} の取り下げを受け付けました。次のバッチ後に外れ、その後のレースから戻ります。`);
+      setNotice(`${horseDisplayName(listing.name, lang)} の取り下げを受け付けました。次のバッチ後に外れ、その後のレースから戻ります。`);
       if (!preview) refreshSoft(router);
     } else {
       setNotice(errorMessage(result.body) ?? '取り下げに失敗しました。');
@@ -180,7 +183,7 @@ export function MarketPlaceView({
         <div className={`${s.pulseCard} ${s.pulseMatch}`}>
           <div className={s.pulseK}>直近の成約価格</div>
           <div className={s.pulseV}>{data.recent_matches.length > 0 ? fmt(data.recent_matches[0]!.price) : '—'}</div>
-          <div className={s.pulseSub}>{data.recent_matches.length > 0 ? `${data.recent_matches[0]!.horse_name} · 最新` : 'まだありません'}</div>
+          <div className={s.pulseSub}>{data.recent_matches.length > 0 ? `${horseDisplayName(data.recent_matches[0]!.horse_name, lang)} · 最新` : 'まだありません'}</div>
         </div>
       </div>
 
@@ -230,7 +233,7 @@ export function MarketPlaceView({
               >
                 <span className={s.soldTag}>{m.is_mint ? 'SOLD · 新規発行' : 'SOLD'}</span>
                 <NftHorseArt look={deriveNftLook(m.dna_hash, m.horse_name)} className={`${s.shelfArt} ${s.soldArt}`} size={224} />
-                <div className={s.shelfName}>{m.horse_name}</div>
+                <div className={s.shelfName}>{horseDisplayName(m.horse_name, lang)}</div>
                 {/* レアリティは廃止済み(総合値へ一本化)。engineV2 フラグに依存させると
                     フラグ次第で廃止概念が復活するため、依存ごと外した(2026-07-22) */}
                 <div className={s.shelfMeta}>{localDate(m.matched_at).slice(5)} 成約 → {m.buyer}</div>
@@ -263,7 +266,7 @@ export function MarketPlaceView({
           data.my_listings.map((l) => (
             <div key={l.listing_id} className={s.myRow}>
               <NftHorseArt look={deriveNftLook(l.dna_hash, l.name)} className={s.myArt} size={112} />
-              <span className={s.myName}>{l.name}</span>
+              <span className={s.myName}>{horseDisplayName(l.name, lang)}</span>
 
               <span className={`${s.srcBadge} ${l.source === 'SMART' ? s.srcSmart : ''}`}>
                 {l.source === 'SMART' ? 'スマート出品' : '手動出品'}
@@ -296,7 +299,7 @@ export function MarketPlaceView({
         ) : (
           data.recent_matches.map((m, i) => (
             <div key={i} className={s.matchRow}>
-              <span className={s.matchHorse}>{m.horse_name}</span>
+              <span className={s.matchHorse}>{horseDisplayName(m.horse_name, lang)}</span>
               <span className={s.matchPrice}>{fmt(m.price)} USDT</span>
               <span className={s.matchBuyer}>→ {m.buyer}</span>
               <span className={s.matchTime}>{localDateTime(m.matched_at).slice(5)}</span>
@@ -310,7 +313,7 @@ export function MarketPlaceView({
         <div className={d.overlay} role="dialog" aria-modal="true" onClick={() => setFunnel(null)}>
           <div className={d.dialog} onClick={(e) => e.stopPropagation()}>
             <div className={d.dialogTitle}>
-              {funnel.sold ? `${funnel.name} は成約済みです` : `${funnel.name} を指名して購入することはできません`}
+              {funnel.sold ? `${horseDisplayName(funnel.name, lang)} は成約済みです` : `${horseDisplayName(funnel.name, lang)} を指名して購入することはできません`}
             </div>
             <p className={s.funnelText}>
               公平性のため、特定の馬を選んで買う仕組みはありません。
@@ -346,7 +349,7 @@ export function MarketPlaceView({
                     role="button"
                   >
                     <NftHorseArt look={deriveNftLook(h.dna_hash, h.name)} className={s.pickArt} />
-                    <div className={s.pickName}>{h.name}</div>
+                    <div className={s.pickName}>{horseDisplayName(h.name, lang)}</div>
                     <div className={s.pickMeta}>DAY {h.current_day}</div>
                   </div>
                 ))}
