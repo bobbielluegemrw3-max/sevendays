@@ -8,7 +8,39 @@
  * ポーズ量産(旧18素体)方式はこの方式に置き換えられた。
  */
 
-export type Arch = 'v2' | 'v3' | 'v4';
+/* 2026-07-22: Manus 新4型を追加。
+ *  既存3型(v2/v3/v4) = レイヤー4枚方式(体とたてがみを別々に色相回転)。
+ *  新4型(v5〜v8)     = 1枚絵方式(絵ごと回す)。レイヤー分離が不要なのは、
+ *    4体とも金属で「絵全体を回しても金属のまま」だから(7/22朝の破綻は
+ *    氷・溶岩・星雲=その色でしか成立しない素材に回転をかけたのが原因)。
+ *  v5(プラチナ)だけは銀=彩度ゼロで色相回転が効かない。彩度と明度で変化を
+ *    作る(NFT_ART_HANDOVER §0-A の「将来やるなら」の方針そのもの)。 */
+export type Arch = 'v2' | 'v3' | 'v4' | 'v5' | 'v6' | 'v7' | 'v8';
+
+/** 1枚絵アーキタイプ(`<arch>_full.png` を読み、絵ごと変換する)。 */
+export const SINGLE_ARCHES = ['v5', 'v6', 'v7', 'v8'] as const;
+export function isSingleArch(a: Arch): boolean {
+  return (SINGLE_ARCHES as readonly string[]).includes(a);
+}
+
+/** 銀は色相を回しても変わらないので、彩度を足して色を乗せ明度で濃淡を作る。 */
+export interface NftTint { hue: number; sat: number; val: number }
+/** プラチナ用の金属トーン12種。明度の下限は 0.72 — これ以上暗いとカードの
+ *  黒背景に沈む(チタンで起きた問題と同じ轍を踏まない)。 */
+export const PLATINUM_TINTS: readonly NftTint[] = [
+  { hue: 210, sat: 0.04, val: 1.00 }, // 素のプラチナ
+  { hue: 45, sat: 0.22, val: 1.00 },  // シャンパン
+  { hue: 350, sat: 0.20, val: 0.98 }, // ローズ
+  { hue: 205, sat: 0.22, val: 1.00 }, // スチール
+  { hue: 230, sat: 0.16, val: 0.80 }, // ガンメタル
+  { hue: 30, sat: 0.30, val: 0.88 },  // ブロンズ
+  { hue: 165, sat: 0.20, val: 0.95 }, // ペール緑青
+  { hue: 280, sat: 0.20, val: 0.86 }, // 紫鋼
+  { hue: 50, sat: 0.10, val: 1.10 },  // 白金(明)
+  { hue: 120, sat: 0.16, val: 0.90 }, // セージ
+  { hue: 320, sat: 0.16, val: 0.92 }, // モーヴ
+  { hue: 190, sat: 0.28, val: 0.94 }, // アイスブルー
+];
 export type ManeVariant =
   | { kind: 'rot'; deg: number } // 原画の2色構造を保った回転 (M01-M12)
   | { kind: 'mono'; hue: number } // 単色圧縮 (M13 金 / M15 緋 / M16 緑)
@@ -16,6 +48,8 @@ export type ManeVariant =
 
 export interface NftLook {
   arch: Arch;
+  /** 1枚絵アーキタイプの色付け(v5 のみ)。未指定なら bodyDeg の色相回転。 */
+  tint?: NftTint;
   bodyDeg: number; // coat の色相回転 (シートA承認 12角度)
   mane: ManeVariant;
   hue: number; // カード枠・ショーケース分散用の代表色相 (たてがみ主体)
@@ -25,6 +59,9 @@ export interface NftLook {
   framePanel: string;
   frameGrad: string;
 }
+
+/** 実際に選ばれる全アーキタイプ(頻度は均等)。 */
+const ALL_ARCHES = ['v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8'] as const;
 
 /** シートA承認: 全12角度 (B01=0° 原画 … B12=330°)。 */
 export const BODY_DEGS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330] as const;
@@ -105,9 +142,12 @@ export function deriveNftLook(dnaHash: string, name: string): NftLook {
 
   const biased = ARCH_BIAS[prefix];
   const archRoll = rng();
-  const arch: Arch = biased && archRoll < 0.6 ? biased : (['v2', 'v3', 'v4'] as const)[Math.floor(rng() * 3)]!;
+  // 7型は均等・無条件。特定の型を珍しくすると「銀=レア」のような認識が生まれ、
+  // 廃止したレアリティを裏口から復活させることになる(R1・射幸性)
+  const arch: Arch = biased && archRoll < 0.6 ? biased : ALL_ARCHES[Math.floor(rng() * ALL_ARCHES.length)]!;
 
   const bodyDeg = BODY_DEGS[Math.floor(rng() * BODY_DEGS.length)]!;
+  const tint = arch === 'v5' ? PLATINUM_TINTS[Math.floor(rng() * PLATINUM_TINTS.length)]! : undefined;
 
   const target = PREFIX_TARGET[prefix];
   let mane: ManeVariant;
@@ -121,8 +161,17 @@ export function deriveNftLook(dnaHash: string, name: string): NftLook {
     mane = MANE_VARIANTS[Math.floor(rng() * MANE_VARIANTS.length)]!;
   }
 
-  const hue = maneHueOf(mane);
-  return { arch, bodyDeg, mane, hue, tone: arch === 'v4' ? 'dark' : 'vivid', ...frameOf(hue) };
+  // 1枚絵アーキタイプは「たてがみの色」が独立に存在しないので、枠色は
+  // 実際に絵へ掛ける変換(tint の色相 / 回転角)から取る
+  const hue = isSingleArch(arch)
+    ? (tint ? tint.hue : (MANE_BASE_HUE + bodyDeg) % 360)
+    : maneHueOf(mane);
+  return {
+    arch, bodyDeg, mane, hue,
+    ...(tint ? { tint } : {}),
+    tone: arch === 'v4' || arch === 'v7' || arch === 'v8' ? 'dark' : 'vivid',
+    ...frameOf(hue),
+  };
 }
 
 /**

@@ -114,19 +114,14 @@ function StrengthGauge({ tv, tier, t }: { tv: number; tier: AcTier; t: T }) {
   );
 }
 
-/** 壁紙用の馬アート(隠し演出の全身着色は残す・マークは別枠で出す)。 */
+/** 壁紙用の馬アート。全身原色(隠し演出)はキャンバス側で染める —
+ *  DOMの色付き四角のままだと、絵を壁紙にした新カードでただの色ブロックとして
+ *  露出する(2026-07-22 実画面で確認)。 */
 function CardWallpaper({ horse }: { horse: StableHorse }) {
   const look = horse.night_variant ? NIGHT_LOOK : deriveNftLook(horse.dna_hash, horse.name);
-  const color = horse.color_variant ? COLOR_OVERLAY[horse.color_variant] : null;
   return (
     <span className={s.acArt} aria-hidden="true">
-      <NftHorseArt look={look} className={s.hartCanvas} size={288} />
-      {color ? (
-        <span
-          className={s.colorSkin}
-          style={{ background: color, mixBlendMode: horse.color_variant === 'black' ? 'multiply' : 'color' }}
-        />
-      ) : null}
+      <NftHorseArt look={look} className={s.hartCanvas} size={288} colorVariant={horse.color_variant} />
     </span>
   );
 }

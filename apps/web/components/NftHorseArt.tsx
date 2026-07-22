@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import type { NftLook } from '@/lib/nft-visual';
+import { isSingleArch, type NftLook } from '@/lib/nft-visual';
 
 /**
  * NFTルック描画 — Manusフルカラーレイヤー(768px)を真HSVで色相変換して合成。
@@ -29,7 +29,22 @@ function loadImg(src: string): Promise<HTMLImageElement | null> {
 }
 
 /** 真HSVでの色相変換 (rot/mono/desat)。ImageData を直接書き換える。 */
-function transform(d: Uint8ClampedArray, mode: 'rot' | 'mono' | 'desat', value: number): void {
+/**
+ * 色変換。
+ *  rot   … 色相を回す(金属専用。既存3型と新3型 v6/v7/v8)
+ *  mono  … 色相を固定色へ
+ *  desat … 銀白へ
+ *  tint  … **彩度を足して**色を乗せ、明度で濃淡を作る(2026-07-22)。
+ *          銀(彩度ゼロ)は色相を回しても変わらないので、プラチナ型はこれを使う。
+ *          value = 色相、tintSat/tintVal で濃さと明るさ。
+ */
+function transform(
+  d: Uint8ClampedArray,
+  mode: 'rot' | 'mono' | 'desat' | 'tint',
+  value: number,
+  tintSat = 0,
+  tintVal = 1,
+): void {
   const degNorm = value / 360;
   for (let i = 0; i < d.length; i += 4) {
     if (d[i + 3]! === 0) continue;
@@ -49,29 +64,51 @@ function transform(d: Uint8ClampedArray, mode: 'rot' | 'mono' | 'desat', value: 
     }
     let s = mx > 1e-6 ? diff / mx : 0;
     const v = mx;
+    let v2 = v;
     if (mode === 'rot') h = (h + degNorm) % 1;
     else if (mode === 'mono') h = degNorm;
+    else if (mode === 'tint') { h = degNorm; s = Math.min(1, Math.max(s, tintSat)); v2 = Math.min(1, v * tintVal); }
     else s *= 0.12; // desat = 銀白
     const k = Math.floor(h * 6) % 6;
     const f = h * 6 - Math.floor(h * 6);
-    const p = v * (1 - s);
-    const q = v * (1 - f * s);
-    const t = v * (1 - (1 - f) * s);
-    let nr = v, ng = t, nb = p;
-    if (k === 1) { nr = q; ng = v; nb = p; }
-    else if (k === 2) { nr = p; ng = v; nb = t; }
-    else if (k === 3) { nr = p; ng = q; nb = v; }
-    else if (k === 4) { nr = t; ng = p; nb = v; }
-    else if (k === 5) { nr = v; ng = p; nb = q; }
+    const p = v2 * (1 - s);
+    const q = v2 * (1 - f * s);
+    const t = v2 * (1 - (1 - f) * s);
+    let nr = v2, ng = t, nb = p;
+    if (k === 1) { nr = q; ng = v2; nb = p; }
+    else if (k === 2) { nr = p; ng = v2; nb = t; }
+    else if (k === 3) { nr = p; ng = q; nb = v2; }
+    else if (k === 4) { nr = t; ng = p; nb = v2; }
+    else if (k === 5) { nr = v2; ng = p; nb = q; }
     d[i] = Math.round(nr * 255);
     d[i + 1] = Math.round(ng * 255);
     d[i + 2] = Math.round(nb * 255);
   }
 }
 
-export function NftHorseArt({ look, className, size }: { look: NftLook; className?: string | undefined; size?: number }) {
+/** 隠し演出「全身原色」(EASTER_EGG_PLAN)の染め色。DOMの色付き四角ではなく
+ *  キャンバスの画素へ直接適用する — 四角のままだと、絵を壁紙にした新カードで
+ *  ただの色ブロックとして露出する(2026-07-22 実画面で確認)。 */
+const SKIN_TINT: Record<string, { hue: number; sat: number; val: number }> = {
+  red: { hue: 2, sat: 0.78, val: 1.0 },
+  blue: { hue: 223, sat: 0.72, val: 1.0 },
+  yellow: { hue: 48, sat: 0.85, val: 1.05 },
+  green: { hue: 145, sat: 0.7, val: 1.0 },
+  black: { hue: 240, sat: 0.1, val: 0.32 },
+};
+
+export function NftHorseArt({
+  look, className, size, colorVariant,
+}: {
+  look: NftLook;
+  className?: string | undefined;
+  size?: number;
+  /** 全身原色ルック(隠し演出)。指定時は最後にキャンバス全体を染める。 */
+  colorVariant?: string | null | undefined;
+}) {
   const ref = useRef<HTMLCanvasElement | null>(null);
   const maneKey = `${look.mane.kind}:${'deg' in look.mane ? look.mane.deg : 'hue' in look.mane ? look.mane.hue : ''}`;
+  const tintKey = look.tint ? `${look.tint.hue}:${look.tint.sat}:${look.tint.val}` : '';
 
   useEffect(() => {
     // サムネイル用途はここで縮小して描く(768のままCSS縮小するとGPUバイリニアで
@@ -79,7 +116,12 @@ export function NftHorseArt({ look, className, size }: { look: NftLook; classNam
     const R = size ?? S;
     let cancelled = false;
     void (async () => {
-      const imgs = await Promise.all(LAYERS.map((l) => loadImg(`/horses/nft/${look.arch}_${l}.png`)));
+      // 1枚絵アーキタイプ(v5〜v8)は分離レイヤーを持たない。金属なので絵ごと
+      // 変換して成立する(NFT_ART_HANDOVER §0-A: 回転が壊すのは非金属だけ)
+      const single = isSingleArch(look.arch);
+      const imgs = single
+        ? [await loadImg(`/horses/nft/${look.arch}_full.png`)]
+        : await Promise.all(LAYERS.map((l) => loadImg(`/horses/nft/${look.arch}_${l}.png`)));
       if (cancelled) return;
       const canvas = ref.current;
       if (!canvas) return;
@@ -96,6 +138,22 @@ export function NftHorseArt({ look, className, size }: { look: NftLook; classNam
       const wx = work.getContext('2d', { willReadFrequently: true })!;
       wx.imageSmoothingEnabled = true;
       wx.imageSmoothingQuality = 'high';
+      if (single) {
+        const img = imgs[0];
+        if (!img) return;
+        wx.clearRect(0, 0, R, R);
+        wx.drawImage(img, 0, 0, R, R);
+        const id = wx.getImageData(0, 0, R, R);
+        if (look.tint) {
+          // 銀は色相回転が効かない。彩度を足して色を乗せる
+          transform(id.data, 'tint', look.tint.hue, look.tint.sat, look.tint.val);
+        } else if (look.bodyDeg !== 0) {
+          transform(id.data, 'rot', look.bodyDeg);
+        }
+        wx.putImageData(id, 0, 0);
+        cx.drawImage(work, 0, 0, R, R);
+        return;
+      }
       LAYERS.forEach((layer, li) => {
         const img = imgs[li];
         if (!img) return;
@@ -122,12 +180,19 @@ export function NftHorseArt({ look, className, size }: { look: NftLook; classNam
         wx.putImageData(id, 0, 0);
         cx.drawImage(work, 0, 0, R, R);
       });
+      // 全身原色(隠し演出)は最後に一度だけ。馬の画素にだけ乗るので四角にならない
+      const skin = colorVariant ? SKIN_TINT[colorVariant] : undefined;
+      if (skin) {
+        const id = cx.getImageData(0, 0, R, R);
+        transform(id.data, 'tint', skin.hue, skin.sat, skin.val);
+        cx.putImageData(id, 0, 0);
+      }
     })();
     return () => {
       cancelled = true;
     };
     // maneKey が look.mane の内容を安定に表現する(オブジェクト参照の揺れで再描画しない)
-  }, [look.arch, look.bodyDeg, maneKey, size]);
+  }, [look.arch, look.bodyDeg, maneKey, tintKey, size, colorVariant]);
 
   return <canvas ref={ref} className={className} aria-hidden="true" />;
 }
