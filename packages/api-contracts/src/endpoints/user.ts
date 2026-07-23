@@ -9,6 +9,7 @@ import {
   TRAINING_COMBO_SIZE_V2,
   TRAINING_MENU_KEYS_V2,
   isRaceEngineV2,
+  isRaceEngineV3,
   recommendedTrainingV1,
   renderNotification,
   type TrainingMenuV2,
@@ -82,19 +83,28 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
   // 帯(current_day)ごとに持つ — 順位・母数・SAFE/RISKすべて「同じ帯の中」で計算する。
   // Decision 112 (2026-07-19): V2の表示総合値はDBの実値(horses.total_value)。
   // V0計算(調子/疲労/レアリティ由来)はV1シーズン専用。判定はプロセス内キャッシュ。
-  let engineFlag: { at: number; v2: boolean } | null = null;
-  async function engineV2Active(
+  // アクティブなエンジン版数を1度だけ引いてキャッシュし、v2/v3 の両フラグを導出する。
+  let engineFlag: { at: number; version: string | null } | null = null;
+  async function activeEngineVersion(
     client: import('@sevendays/shared').SqlClient,
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     const ttl = Number(process.env.TOTAL_VALUE_DIST_CACHE_MS ?? 60000);
-    if (engineFlag && Date.now() - engineFlag.at < ttl) return engineFlag.v2;
+    if (engineFlag && Date.now() - engineFlag.at < ttl) return engineFlag.version;
     const rows = await client.query<{ version: string }>(
       `select version from race_engine_versions
        where activated_at is not null and deactivated_at is null`,
     );
-    const v2 = rows.rows.length === 1 && isRaceEngineV2(rows.rows[0]!.version);
-    engineFlag = { at: Date.now(), v2 };
-    return v2;
+    const version = rows.rows.length === 1 ? rows.rows[0]!.version : null;
+    engineFlag = { at: Date.now(), version };
+    return version;
+  }
+  async function engineV2Active(client: import('@sevendays/shared').SqlClient): Promise<boolean> {
+    const v = await activeEngineVersion(client);
+    return v !== null && isRaceEngineV2(v);
+  }
+  async function engineV3Active(client: import('@sevendays/shared').SqlClient): Promise<boolean> {
+    const v = await activeEngineVersion(client);
+    return v !== null && isRaceEngineV3(v);
   }
   let tonightDist: { key: string; at: number; byDay: Map<number, number[]> } | null = null;
   async function tonightDistribution(
@@ -541,6 +551,21 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         raceItemV2 = hRow.race_item_v2_row;
         decayShieldV2 = hRow.decay_shield_v2 ?? 0;
       }
+      // V3(調教・適性再設計): エンジンV3がアクティブなら、馬柱パネルが今夜の予報と
+      // 過去成績を突き合わせるための「今夜の予報」を返す(最新コミット分=次レース)。
+      // V3休眠中は返さない(現行V2の馬詳細は不変)。
+      const engineV3 = await engineV3Active(ctx.client);
+      let tonight_forecast: { weather: string; track: string; surface: string } | null = null;
+      if (engineV3) {
+        const fc = await ctx.client.query<{ weather: string; track: string; surface: string }>(
+          `select forecast_weather::text as weather, forecast_track::text as track,
+                  forecast_surface::text as surface
+           from night_forecasts
+           order by forecast_date desc, (slot = 'NIGHT') desc
+           limit 1`,
+        );
+        tonight_forecast = fc.rows[0] ?? null;
+      }
       // 畳み込み用の生フィールドはレスポンス形状に出さない(decay_shield_v2 は加工値で返す)
       const {
         tonight_training: tt, effective_race_date: efd,
@@ -551,6 +576,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       return {
         ...detailRest,
         engine_v2: engineV2,
+        engine_v3: engineV3,
+        tonight_forecast,
         race_item_v2: raceItemV2,
         decay_shield_v2: decayShieldV2,
         training_v2: trainingV2,

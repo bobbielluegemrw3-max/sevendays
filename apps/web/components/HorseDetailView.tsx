@@ -16,6 +16,9 @@ import { deriveNftLook, NIGHT_LOOK } from '@/lib/nft-visual';
 import { uncollectedGain } from '@/components/stable-shared';
 import { APP_COPY, isLvDisplayMode, type Lang } from '@/lib/i18n';
 import { horseDisplayName } from '@/lib/horse-name';
+import { FormPanel } from '@/components/FormPanel';
+import { buildFormPanelData, type FormPanelSource } from '@/lib/form-panel-data';
+import type { Surface, TrackCondition, Weather } from '@sevendays/domain';
 import { tvArtGlowStyle, tvMedalStyle } from '@/lib/tv-tier';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
@@ -76,6 +79,10 @@ export interface HorseDetail {
   tonight_training?: string | null;
   /** V2エンジンがアクティブ(Decision 101)— 調教UIをメニュー方式へ切替。 */
   engine_v2?: boolean;
+  /** V3エンジンがアクティブ(調教・適性再設計)— 馬柱パネルへ切替。V3休眠中は undefined/false。 */
+  engine_v3?: boolean;
+  /** 今夜の予報(V3のみ・馬柱が過去成績と突き合わせる)。 */
+  tonight_forecast?: { weather: string; track: string; surface: string } | null;
   /** 次サイクルの確定済みV2ロール(Decision 107: 変更不可の完了表示)。 */
   training_v2?: TrainingV2Confirmed | null;
   /** 次レースに装着中のレースアイテム(装備バッジ 2026-07-18)。 */
@@ -372,6 +379,34 @@ export function HorseDetailView({
   const abilities = Object.entries(horse.ability_json ?? {});
   const history = horse.history ?? [];
   const isActive = mode === 'ACTIVE';
+
+  // V3(調教・適性再設計): エンジンV3がアクティブなら、畳んだ戦績を「馬柱パネル」に
+  // 開き直す(§3)。今夜の予報と過去成績を突き合わせて読解する。V3休眠中は従来の戦績。
+  const formSrc: FormPanelSource | null =
+    horse.engine_v3 && horse.tonight_forecast
+      ? {
+          kana: horseDisplayName(horse.name, lang),
+          en: horse.name,
+          totalValue: Math.round(horse.total_value ?? 0),
+          horseType: horse.horse_type,
+          runs: history
+            .filter((r) => r.weather && r.track_condition && r.surface)
+            .slice(-5)
+            .reverse()
+            .map((r) => ({
+              weather: r.weather as Weather,
+              track: r.track_condition as TrackCondition,
+              surface: r.surface as Surface,
+              rank: r.final_rank,
+              entrants: r.participant_count,
+            })),
+          forecast: {
+            weather: horse.tonight_forecast.weather as Weather,
+            track: horse.tonight_forecast.track as TrackCondition,
+            surface: horse.tonight_forecast.surface as Surface,
+          },
+        }
+      : null;
   // 未回収(利確待ち)の上昇分 — A2の収穫の儀式(FUN_V2_PLAN §3)
   const uncollected = uncollectedGain({
     status: horse.status,
@@ -604,7 +639,10 @@ export function HorseDetailView({
         </div>
         )}
 
-        {history.length > 0 ? (
+        {/* V3: 馬柱パネル(§3「畳んだ戦績を推理の材料に開き直す」)。V3休眠中は従来の戦績。 */}
+        {formSrc ? (
+          <FormPanel d={buildFormPanelData(formSrc)} />
+        ) : history.length > 0 ? (
           <div>
             <div className={s.secLabel}>{t.hist_sec}</div>
             {/* Tier 2-1: 既定は直近1戦だけ。過去は畳む(18個の数字 → 6個)。
