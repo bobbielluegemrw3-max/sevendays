@@ -4,17 +4,26 @@ import {
   ABILITY_WEIGHTS_V1,
   ITEM_POLICY_VERSION_V2,
   ITEM_POLICY_VERSION_V3,
+  ITEM_POLICY_VERSION_V4,
+  aptitudeEdgeV3,
   applyRacePrepItemV3,
+  composeConditionPrepV3,
+  deriveAptitudeV3,
   deriveNightForecastV1,
   isRaceEngineV2,
+  isRaceEngineV3,
+  raceItemEdgeV4,
+  trainingPrepEdgeV3,
   type AbilityName,
   type HorseType,
+  type RaceConditionsV3,
   type RacePrepParamsV3,
   type RaceSlotV2,
   type Rarity,
   type Surface,
   type TrackCondition,
   type TrainingMenuV2,
+  type TrainingMenuV3,
   type TrainingType,
   type Weather,
 } from '@sevendays/domain';
@@ -107,8 +116,12 @@ export async function createParticipantSnapshots(
   input: CreateSnapshotsInput,
 ): Promise<number> {
   const conditions = await deriveAndFreezeConditions(client, input);
-  // V2(Decision 101/104): 保存済みバージョンで分岐 — 過去レースのリプレイは
-  // 常に当時の経路を通る(リプレイ互換は憲法)。
+  // 保存済みバージョンで分岐 — 過去レースのリプレイは常に当時の経路を通る(憲法)。
+  // V3(調教・適性再設計): condition_prep を「個体適性+調教の備え+レースアイテム(加算)」で作る。
+  if (isRaceEngineV3(input.raceEngineVersion)) {
+    return createParticipantSnapshotsV3(client, input, conditions);
+  }
+  // V2(Decision 101/104): 総合値の漸化+備え(タイプ適性)凍結。
   if (isRaceEngineV2(input.raceEngineVersion)) {
     return createParticipantSnapshotsV2(client, input, conditions);
   }
@@ -560,6 +573,198 @@ async function createParticipantSnapshotsV2(
               [usage.id, input.raceId],
             );
           }
+        }
+      }
+      await client.query('commit');
+    } catch (error) {
+      await client.query('rollback').catch(() => undefined);
+      throw error;
+    }
+  }
+
+  await client.query(
+    `update races set participant_count = (
+       select count(*) from race_participant_snapshots where race_id = $1
+     ) where id = $1`,
+    [input.raceId],
+  );
+  return created;
+}
+
+interface HorseRowV3 {
+  id: string;
+  owner_user_id: string;
+  current_day: number;
+  horse_type: HorseType;
+  rarity: Rarity;
+  dna_hash: string;
+  total_value: string | null;
+  decay_shield_v2: number;
+}
+
+/**
+ * V3 snapshot (調教・適性再設計 — TRAINING_APTITUDE_REDESIGN.md):
+ * total_value の漸化(減衰・V2と同一。骨格は不変 §9)は V2 と同じだが、
+ * condition_prep を**新しい入力で作る**:
+ *   condition_prep = clamp( 個体適性(dna由来) + 調教の備え(メニュー↔条件) + レースアイテム(加算), ±4 )
+ * ★コース(surface)がここで初めてスコアに効く(適性/レースアイテムの1軸として)。
+ * ★合算後の ±4 クランプは composeConditionPrepV3 が担う(prep>±4 での例外を防ぐ・§12.2)。
+ * 調教ロールは V2 同様、確定時に total_value へ反映済み(Decision 112)。ここは読むだけ。
+ */
+async function createParticipantSnapshotsV3(
+  client: SqlClient,
+  input: CreateSnapshotsInput,
+  conditions: { weather: Weather; track: TrackCondition; surface: Surface },
+): Promise<number> {
+  const { weather, track, surface } = conditions;
+  const conds: RaceConditionsV3 = { weather, track, surface };
+
+  // Market Lock (Decision 076) 不変: 手動出品中の馬は走らない。
+  const horses = await client.query<HorseRowV3>(
+    `select h.id, h.owner_user_id, h.current_day, h.horse_type::text as horse_type,
+            h.rarity::text as rarity, h.dna_hash, h.total_value::text as total_value,
+            h.decay_shield_v2
+     from horses h
+     where h.status = 'ACTIVE'
+       and not exists (
+         select 1 from market_listings ml
+         where ml.horse_id = h.id and ml.status = 'LISTED' and ml.source = 'MANUAL'
+       )
+     order by h.id`,
+  );
+
+  let created = 0;
+  for (const horse of horses.rows) {
+    if (horse.total_value === null) {
+      throw new Error(`V3_TOTAL_VALUE_MISSING: horse ${horse.id} has no total_value`);
+    }
+
+    // 調教: 選んだメニュー(menus_v2 を V3 でも流用 — キーは同じ enum)と REST 減衰無効。
+    const training = await client.query<{ id: string; menus_v2: string[] | null; rests_decay_v2: boolean | null }>(
+      `select id, menus_v2, rests_decay_v2 from training_sessions
+       where horse_id = $1 and effective_race_date = $2 and slot = $3::race_slot
+         and snapshot_included_at is null`,
+      [horse.id, input.batchDate, input.slot ?? 'NIGHT'],
+    );
+    const trainingRow = training.rows[0] ?? null;
+    const menus = (trainingRow?.menus_v2 ?? []) as TrainingMenuV3[];
+    const restsDecay = trainingRow ? trainingRow.rests_decay_v2 === true : false;
+
+    // レースアイテム(V4): 今夜の条件に対する加算値(的中で+/外れで−・保険は常時+)。
+    const raceUsage =
+      (
+        await client.query<{ id: string; item_key: string; unit_price: string }>(
+          `select id, item_key, unit_price::text as unit_price from item_usages
+           where horse_id = $1 and effective_race_date = $2 and slot = $3::race_slot
+             and usage_kind = 'RACE' and status = 'PENDING'`,
+          [horse.id, input.batchDate, input.slot ?? 'NIGHT'],
+        )
+      ).rows[0] ?? null;
+    const itemEdge = raceUsage ? raceItemEdgeV4(raceUsage.item_key, conds) : 0;
+
+    // 減衰シールド(aeon_sand 等): REST が覆わない時に1レース消費。
+    const shieldUsed = !restsDecay && horse.decay_shield_v2 > 0;
+    const before = Number(horse.total_value);
+    // 総合値の漸化はレースでは減衰のみ(Decision 112・ロールは確定時反映済み)。
+    const totalValue = applyDecayV2(before, restsDecay || shieldUsed);
+
+    // ★condition_prep = 個体適性 + 調教の備え + レースアイテム(加算)→ ±4 クランプ。
+    const apt = deriveAptitudeV3(horse.dna_hash);
+    const aptEdge = aptitudeEdgeV3(apt, conds);
+    const trnEdge = trainingPrepEdgeV3(menus, conds);
+    const prep = round2(composeConditionPrepV3({ apt, menus, itemEdge, conditions: conds }));
+
+    const trainingSnapshot = trainingRow
+      ? { menus, rests_decay: restsDecay, apt_edge: round2(aptEdge), prep_edge: round2(trnEdge) }
+      : null;
+    const itemSnapshot =
+      raceUsage || shieldUsed
+        ? {
+            item_policy_version: ITEM_POLICY_VERSION_V4,
+            race_item: raceUsage
+              ? { item_key: raceUsage.item_key, item_edge: round2(itemEdge), unit_price: raceUsage.unit_price }
+              : null,
+            decay_shield_used: shieldUsed,
+          }
+        : null;
+
+    const snapshotHash = sha256Parts(
+      input.raceId,
+      horse.id,
+      horse.owner_user_id,
+      String(horse.current_day),
+      horse.horse_type,
+      horse.dna_hash,
+      String(totalValue),
+      String(prep),
+      JSON.stringify(trainingSnapshot),
+      JSON.stringify(itemSnapshot),
+      weather,
+      track,
+      surface,
+      input.raceEngineVersion,
+    );
+
+    await client.query('begin');
+    try {
+      const inserted = await client.query<{ id: string }>(
+        `insert into race_participant_snapshots (
+           race_id, horse_id, owner_user_id, current_day, horse_type, rarity, dna_hash,
+           ability_snapshot_json, training_snapshot_json, item_snapshot_json,
+           total_value, condition_prep_modifier,
+           weather, track_condition, race_engine_version, liquidity_policy_version,
+           price_table_version, race_seed_hash, snapshot_hash
+         )
+         select $1, $2, $3, $4, $5::horse_type, $6::rarity, $7, '{}'::jsonb, $8, $9,
+                $10, $11, $12::weather, $13::track_condition, $14, $15, $16,
+                (select commit_hash from randomness_commits rc
+                   join races r on r.seed_commit_id = rc.id where r.id = $1),
+                $17
+         on conflict (race_id, horse_id) do nothing
+         returning id`,
+        [
+          input.raceId,
+          horse.id,
+          horse.owner_user_id,
+          horse.current_day,
+          horse.horse_type,
+          horse.rarity,
+          horse.dna_hash,
+          trainingSnapshot ? JSON.stringify(trainingSnapshot) : null,
+          itemSnapshot ? JSON.stringify(itemSnapshot) : null,
+          totalValue,
+          prep,
+          weather,
+          track,
+          input.raceEngineVersion,
+          input.liquidityPolicyVersion,
+          input.priceTableVersion,
+          snapshotHash,
+        ],
+      );
+
+      if (inserted.rows.length > 0) {
+        created += 1;
+        await client.query(`update horses set total_value = $2 where id = $1`, [horse.id, totalValue]);
+        if (shieldUsed) {
+          await client.query(
+            `update horses set decay_shield_v2 = decay_shield_v2 - 1
+             where id = $1 and decay_shield_v2 > 0`,
+            [horse.id],
+          );
+        }
+        if (trainingRow) {
+          await client.query(
+            `update training_sessions set snapshot_included_at = now() where id = $1`,
+            [trainingRow.id],
+          );
+        }
+        if (raceUsage) {
+          await client.query(
+            `update item_usages set status = 'SNAPSHOTTED', race_id = $2
+             where id = $1 and status = 'PENDING'`,
+            [raceUsage.id, input.raceId],
+          );
         }
       }
       await client.query('commit');

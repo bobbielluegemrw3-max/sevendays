@@ -1,6 +1,7 @@
 import type { SqlClient } from '@sevendays/shared';
 import {
   isRaceEngineV2,
+  isRaceEngineV3,
   type AbilityName,
   type BuffRarity,
   type HorseType,
@@ -45,9 +46,10 @@ export interface RunScoresInput {
 }
 
 export async function runRaceScores(client: SqlClient, input: RunScoresInput): Promise<number> {
-  // V2(Decision 101): score = total_value + condition_prep + luck。保存済み
-  // バージョンで分岐 — 過去レースのリプレイは常に当時の経路(憲法)。
-  if (isRaceEngineV2(input.raceEngineVersion)) {
+  // score = total_value + condition_prep + luck。保存済みバージョンで分岐 — 過去
+  // レースのリプレイは常に当時の経路(憲法)。V3 は prep の作り方だけが違い、採点式は
+  // V2 と同一(凍結済み prep を読むだけ)なので同じ採点経路を通す。
+  if (isRaceEngineV2(input.raceEngineVersion) || isRaceEngineV3(input.raceEngineVersion)) {
     return runRaceScoresV2(client, input);
   }
   const snapshots = await client.query<SnapshotRow>(
