@@ -65,14 +65,15 @@
   /* 馬個別ページ刷新(HORSE_PAGE_LAYOUT_SPEC §3): A大ヒーロー = アート全幅・横並びをやめる。
      調教(C/D)はヒーロー・馬柱の下へ回す(読む→備えるの縦順)。 */
   .heroRow { grid-template-columns: 1fr; align-items: start; }
-  /* ★A大ヒーロー = 全幅バナー(HORSE_PAGE_LAYOUT_SPEC §3/§6)。旧2カラム時代の
-     「幅基準の正方形(aspect-ratio 1/1)＋ max-height:100vh級 ＋ sticky」は、全幅に
-     なると画面いっぱいの巨大アートになり、馬柱がスクロールの彼方へ落ちる(§3違反)。
-     全幅では: ①高さをバナーに固定 ②sticky を外す(バナーが下の馬柱を覆わない)
-     ③canvas は contain で歪ませず中央に収める。 */
-  .hero { position: static; }
-  .artBox { flex: none; min-height: 0; height: clamp(320px, 42vh, 440px); max-height: none; aspect-ratio: auto; }
-  .heroCanvas { height: 100%; width: 100%; aspect-ratio: auto; object-fit: contain; padding: 36px 10px 62px; }
+  /* 馬カードは自然高のまま画面に追従(2026-07-20 オーナー選択: スティッキー案)。
+     旧: stretch で右カラム(アイテム列で伸長)に合わせて引き伸ばされ、
+     アート下に大きな空洞ができていた。top はトップナビ(sticky ≈52px)ぶん。 */
+  .hero { position: sticky; top: 64px; }
+  /* canvas は絶対配置の .fxWrap 内にあり枠の高さに寄与しない — artBox 自身が
+     実高を持つ(幅基準の正方形・低い画面は画面高でクランプ)。canvas は器に
+     追従させ、余白は object-fit: contain が吸収する(モバイル版と同じ方式) */
+  .artBox { flex: none; min-height: 0; height: auto; aspect-ratio: 1 / 1; max-height: calc(100vh - 340px); }
+  .heroCanvas { height: 100%; aspect-ratio: auto; }
 }
 
 .hero { border-radius: 18px; padding: 1px; box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.7);
