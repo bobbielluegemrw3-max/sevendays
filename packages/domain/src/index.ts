@@ -6,3 +6,5 @@ export * from './items.js';
 export * from './items-v3.js';
 export * from './volatility.js';
 export * from './v2.js';
+export * from './v3.js';
+export * from './items-v4.js';
