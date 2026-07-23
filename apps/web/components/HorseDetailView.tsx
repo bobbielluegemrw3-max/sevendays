@@ -17,9 +17,9 @@ import { uncollectedGain } from '@/components/stable-shared';
 import { APP_COPY, isLvDisplayMode, type Lang } from '@/lib/i18n';
 import { horseDisplayName } from '@/lib/horse-name';
 import { FormPanel } from '@/components/FormPanel';
+import { PrepareV3 } from '@/components/PrepareV3';
 import { buildFormPanelData, type FormPanelSource } from '@/lib/form-panel-data';
 import type { Surface, TrackCondition, Weather } from '@sevendays/domain';
-import { SURFACE_JA, TRACK_JA, WEATHER_JA } from '@sevendays/domain';
 import { tvArtGlowStyle, tvMedalStyle } from '@/lib/tv-tier';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
@@ -61,12 +61,6 @@ function css(text: string): import('react').CSSProperties {
   }
   return o;
 }
-/** 条件の意味色(FormPanel v2 / レースページと一致)。予報の生ラベルにも対応。 */
-const V3_COND_COLOR: Record<string, string> = {
-  晴れ: '#ffd97a', 曇り: '#aab4c8', 雨: '#6fc3ff', 嵐: '#c78cff',
-  高速: '#00eaff', 良: '#35d07f', 稍重: '#e6b24a', 不良: '#d87b3a', 芝: '#58d68d', ダート: '#d8a05a',
-};
-const v3Cond = (v: string) => V3_COND_COLOR[v] ?? 'var(--text)';
 /** V3構図の A/B/C/D/E セクションタグ。 */
 function V3SecTag({ letter, bg, color, title, sub }: { letter: string; bg: string; color: string; title: string; sub?: string }) {
   return (
@@ -446,21 +440,36 @@ export function HorseDetailView({
     listing: horse.listing,
   });
 
-  // 今夜の予報(V3・色分けテキスト。B馬柱=FormPanel v2 と同じ生ラベルで統一)。
   const fc3 = horse.tonight_forecast;
-  const fcDisp = fc3
-    ? [
-        { axis: '天候', val: WEATHER_JA[fc3.weather as Weather] ?? fc3.weather },
-        { axis: '馬場', val: TRACK_JA[fc3.track as TrackCondition] ?? fc3.track },
-        { axis: 'コース', val: SURFACE_JA[fc3.surface as Surface] ?? fc3.surface },
-      ]
-    : [];
 
   // ============================ V3 構図(engine_v3 のみ)============================
   // engine_v3 がアクティブなときだけ、ハンドオフV2の2カラム構図(読む→備える)で描画。
   // V2(engine_v3 でない)は下の既存 return に落ちる = 一切変更なし・ライブ無傷。
   // C/D は現状の実パネル(TrainingFormV2 / ItemPrepPanelV3)を配置(中身の再設計は次段階)。
   if (horse.engine_v3) {
+    // 聖杯=総合値90+。正典どおり金コニック枠＋光輪＋★＋アート発光。
+    const isGrail = (horse.total_value ?? 0) >= 90;
+    const heroFrameStyle = 'border-radius:18px;padding:1px;box-shadow:0 18px 40px -18px rgba(0,0,0,.7);'
+      + (isGrail
+          ? 'background:conic-gradient(from 140deg,#5a4a1e,#f2e4bf,#fff6da,var(--gold-bright),#f2e4bf,#c9a86a,#5a4a1e);'
+          : 'background:conic-gradient(from 140deg,#3a2f18,var(--gold),#f2e4bf,var(--cyan),var(--magenta),var(--gold),#3a2f18);');
+    const tv = horse.total_value ?? null;
+    const totalColor = isGrail ? 'var(--gold-bright)' : (tv != null && tv >= 85 ? 'var(--gold-bright)' : tv != null && tv >= 70 ? '#a9f6ff' : 'var(--text)');
+    const v3pips = Array.from({ length: 7 }, (_, idx) => {
+      const i = idx + 1; let bg = 'rgba(255,255,255,.1)';
+      if (i <= horse.current_day) bg = 'var(--cyan)';
+      if (i === horse.current_day + 1 && isActive) bg = 'var(--magenta)';
+      const ex = (i === horse.current_day + 1 && isActive) ? 'box-shadow:0 0 7px var(--magenta);' : '';
+      return `flex:1;height:6px;border-radius:2px;background:${bg};${ex}`;
+    });
+    // 備える用の群予報(道悪/雨/芝)。B馬柱=FormPanel v2 は生ラベルだが③/C/Dは正典どおり群表示。
+    const groupForecast = fc3
+      ? [
+          { axis: '天候', val: ['RAIN', 'STORM'].includes(fc3.weather) ? '雨' : '晴' },
+          { axis: '馬場', val: ['SOFT', 'HEAVY'].includes(fc3.track) ? '道悪' : '良馬場' },
+          { axis: 'コース', val: fc3.surface === 'TURF' ? '芝' : 'ダート' },
+        ]
+      : [];
     return (
       <div className={s.wrap}>
         <Link href="/horses" className={s.crumb}>{t.crumb}</Link>
@@ -491,56 +500,55 @@ export function HorseDetailView({
         {/* MAIN GRID: A アート(sticky) | B〜E */}
         <div className={`${s.v3grid} ${isActive ? s.v3gridActive : ''}`}>
 
-          {/* ---- A 誰の馬か ---- */}
+          {/* ---- A 誰の馬か(正典ヒーロー・金コニック枠＋聖杯発光) ---- */}
           <div className={s.v3artcol}>
-            <div className={`${s.hero} ${mode === 'BURNED' ? s.heroBurned : ''}`}>
-              <div className={s.heroInner}>
-                <div className={`${s.artBox} ${horse.golden_aura ? s.heroAura : ''}`} style={tvArtGlowStyle(horse.total_value)}>
-                  <HeroReactionOverlay horseId={horse.id} horseName={horse.name} dnaHash={horse.dna_hash} />
-                  <HeroArtFx horseId={horse.id}>
-                    <NftHorseArt look={look} className={s.heroCanvas} />
-                    {(horse.decay_shield_v2 ?? 0) > 0 ? <span className={s.shieldFilm} aria-hidden="true" /> : null}
-                  </HeroArtFx>
+            <div style={css(heroFrameStyle)}>
+              <div style={{ borderRadius: 17, background: 'linear-gradient(180deg,#12101d,#0a0813)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <div className={s.v3HeroArt} style={{ position: 'relative', minHeight: 340, display: 'flex', background: 'radial-gradient(90% 80% at 50% 42%,rgba(0,234,255,.07),transparent 70%)' }}>
+                  {isGrail ? <span aria-hidden="true" style={css('position:absolute;inset:-30%;z-index:0;pointer-events:none;background:conic-gradient(from 0deg,transparent,rgba(242,228,191,.16),transparent 30%,rgba(0,234,255,.12),transparent 55%,rgba(255,45,196,.12),transparent 80%,rgba(242,228,191,.16));animation:sddGrailSpin 14s linear infinite')} /> : null}
+                  <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 8px 30px' }}>
+                    <HeroReactionOverlay horseId={horse.id} horseName={horse.name} dnaHash={horse.dna_hash} />
+                    <HeroArtFx horseId={horse.id}>
+                      <NftHorseArt look={look} />
+                      {(horse.decay_shield_v2 ?? 0) > 0 ? <span className={s.shieldFilm} aria-hidden="true" /> : null}
+                    </HeroArtFx>
+                    {horse.color_variant ? <span className={s.heroColorSkin} style={{ background: HERO_COLOR[horse.color_variant], mixBlendMode: horse.color_variant === 'black' ? 'multiply' : 'color' }} /> : null}
+                  </div>
                   {horse.race_item_v2 ? (
                     <span className={s.gearBadge} title={`装着中: ${horse.race_item_v2.item_key}`}>
                       <img src={`/items/${horse.race_item_v2.item_key}.webp`} alt="装着中のレースアイテム" />
                     </span>
                   ) : null}
                   {(horse.decay_shield_v2 ?? 0) > 0 ? <span className={s.shieldChip}>SHIELD ×{horse.decay_shield_v2}</span> : null}
-                  {horse.color_variant ? (
-                    <span className={s.heroColorSkin} style={{ background: HERO_COLOR[horse.color_variant], mixBlendMode: horse.color_variant === 'black' ? 'multiply' : 'color' }} />
-                  ) : null}
-                  {horse.golden_star ? <span className={s.heroGoldenStar} title={ts.tip_golden}>★</span> : null}
                   {horse.night_variant ? <span className={s.heroNightTag}>MIDNIGHT</span> : null}
-                  {horse.revenge_flame ? (
-                    <span className={`${s.heroFlameTag} ${horse.revenge_gold ? s.heroFlameGold : ''}`}>{t.mark_flame}</span>
-                  ) : null}
+                  {horse.revenge_flame ? <span className={`${s.heroFlameTag} ${horse.revenge_gold ? s.heroFlameGold : ''}`}>{t.mark_flame}</span> : null}
                   {horse.milestone ? <span className={s.heroMilestone}>{t.mark_milestone}</span> : null}
-                  <div className={s.scrim} />
-                  <div className={s.artCap}>
+                  {isGrail ? <span title="聖杯" style={css('position:absolute;top:12px;right:14px;z-index:5;color:#ffd977;font-size:26px;line-height:1;text-shadow:0 0 14px #ffcf4bdd,0 0 4px #fff;pointer-events:none')}>★</span> : null}
+                  <div style={css('position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,19,0) 46%,rgba(10,8,19,.92) 96%);pointer-events:none')} />
+                  {nav ? <HorsePager nav={nav} t={t} /> : null}
+                  <div style={{ position: 'absolute', left: 16, right: 16, bottom: 13, zIndex: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', rowGap: 6, textShadow: '0 2px 10px rgba(5,4,9,.85)' }}>
                     <div>
-                      <div className={s.artCapK}>{horse.name.toUpperCase()}</div>
-                      <div className={s.artCapSub}>{horse.horse_type}</div>
+                      <div style={css('font-family:var(--font-mono);font-size:9.5px;color:var(--muted);letter-spacing:.08em')}>{horse.name.toUpperCase()}</div>
+                      <div style={css('font-family:var(--font-display);font-weight:800;font-size:15px;color:var(--text);letter-spacing:.02em')}>{horse.horse_type}</div>
                     </div>
-                    <div className={s.capBlocks}>
-                      {horse.total_value !== null && horse.total_value !== undefined ? (
-                        <div className={s.tvBig}>
-                          <div className="l">TOTAL</div>
-                          <AnimatedNumber className="v" style={tvMedalStyle(horse.total_value)} value={Number(horse.total_value)} digits={1} durationMs={800} />
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flex: 'none' }}>
+                      {tv != null ? (
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={css('font-family:var(--font-display);font-size:8.5px;color:var(--faint);letter-spacing:.14em')}>TOTAL</div>
+                          <div style={css(`font-family:var(--font-display);font-weight:900;font-size:38px;line-height:1;color:${totalColor};`)}>{Math.round(tv)}</div>
                         </div>
                       ) : null}
-                      <div className={s.dayBig}>
-                        <div className="l">{isLvDisplayMode() ? 'LV' : 'DAY'}</div>
-                        <div className="v">{Math.min(7, horse.current_day)}<small>/7</small></div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={css('font-family:var(--font-display);font-size:8.5px;color:var(--faint);letter-spacing:.14em')}>{isLvDisplayMode() ? 'LV' : 'DAY'}</div>
+                        <div style={css('font-family:var(--font-display);font-weight:800;font-size:26px;color:var(--cyan);line-height:1')}>{Math.min(7, horse.current_day)}<small style={css('font-size:13px;color:var(--faint)')}>/7</small></div>
                       </div>
                     </div>
                   </div>
-                  {nav ? <HorsePager nav={nav} t={t} /> : null}
                 </div>
-                <div className={s.heroFoot}>
-                  <DayRail horse={horse} mode={mode} />
+                <div style={{ padding: '13px 16px 15px' }}>
+                  <div style={{ display: 'flex', gap: 4 }}>{v3pips.map((p, i) => <span key={i} style={css(p)} />)}</div>
                   {horse.tonight_rank && horse.tonight_entrants ? (
-                    <div className={`${s.rankLine} ${bandClsDetail(horse.tonight_band)}`}>
+                    <div className={`${s.rankLine} ${bandClsDetail(horse.tonight_band)}`} style={{ marginTop: 9 }}>
                       {fill(ts.rank_tpl, { r: horse.tonight_rank, n: horse.tonight_entrants })} ·{' '}
                       {horse.tonight_band === 'SAFE' ? ts.band_safe : horse.tonight_band === 'RISK' ? ts.band_risk : ts.band_mid}
                       <span className={s.rankNote}> — {ts.rank_note}</span>
@@ -562,39 +570,12 @@ export function HorseDetailView({
 
             {isActive ? (
               <>
-                {/* ③ 今夜の条件ドライバーバー */}
-                {fcDisp.length ? (
-                  <div style={css('border:1px solid var(--border-strong);border-radius:14px;padding:12px 15px;background:linear-gradient(100deg,rgba(0,234,255,.08),rgba(255,45,196,.05))')}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={css('font-family:var(--font-display);font-size:10px;letter-spacing:.14em;color:var(--text)')}>今夜はこの3つに備える</span>
-                      <span style={css('font-family:var(--font-mono);font-size:8px;color:var(--faint);letter-spacing:.06em')}>予報 70% · 目安</span>
-                      <div style={{ flex: 1 }} />
-                      <div style={{ display: 'flex', gap: 14, alignItems: 'baseline' }}>
-                        {fcDisp.map((cc) => (
-                          <span key={cc.axis} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5 }}>
-                            <span style={css('font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;color:var(--faint)')}>{cc.axis}</span>
-                            <b style={css(`font-family:var(--font-sans);font-weight:800;font-size:12px;color:${v3Cond(cc.val)}`)}>{cc.val}</b>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-
-                {/* C 備える① 調教 */}
-                <div className={s.v3sec}>
-                  <V3SecTag letter="C" bg="var(--cyan)" color="#04141a" title="備える① 調教" sub={t.free_tag} />
-                  <div className={s.trainCard}>
-                    <TrainingFormV2 horseId={horse.id} confirmed={horse.training_v2 ?? null} lv={horse.current_day} totalValue={horse.total_value ?? null} desc={t.train_desc} t={t} itemsCopy={itemsCopy} variant="v3" />
-                    <HorseReserveControl horseId={horse.id} reserved={horse.reserved ?? false} t={t} />
-                    {horse.listing === null ? <HorseTransferForm horseId={horse.id} horseName={horse.name} t={t} /> : null}
-                  </div>
-                </div>
-
-                {/* D 備える② レースアイテム */}
-                <div className={s.v3sec}>
-                  <V3SecTag letter="D" bg="var(--magenta)" color="#fff" title="備える② レースアイテム" sub="予報駆動 · 今夜のだけ前に" />
-                  <ItemPrepPanelV3 horseId={horse.id} t={t} itemsCopy={itemsCopy} />
+                {/* ③今夜バー / C 調教 / D レースアイテム(正典を忠実移植) */}
+                <PrepareV3 forecast={groupForecast} baseTotal={Math.round(horse.total_value ?? 0)} />
+                {/* 管理系(非売指定・転送)は備えるの下に控えめに */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <HorseReserveControl horseId={horse.id} reserved={horse.reserved ?? false} t={t} />
+                  {horse.listing === null ? <HorseTransferForm horseId={horse.id} horseName={horse.name} t={t} /> : null}
                 </div>
               </>
             ) : mode === 'LISTED' ? (
