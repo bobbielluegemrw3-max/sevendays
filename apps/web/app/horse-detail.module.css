@@ -976,3 +976,18 @@
 .formV2 .fTblCap .leg i{background:rgba(0,234,255,.35);border:1px solid var(--border,rgba(255,255,255,.12))}
 /* strong の根拠走ハイライトもシアンへ(得意=緑ベタの緩和・示唆ピルは据え置き) */
 .formV2 .axRuns .hi{color:var(--cyan)}
+
+/* =========================================================================
+   V3 構図(engine_v3 のみ)— 馬個別ページ再デザインV2ハンドオフの2カラム。
+   PC=左アートsticky 0.84fr / 右レール 1.16fr。モバイル=1カラム。
+   V2(engine_v3 でない)には一切影響しない(このクラスを使うのはV3ブランチだけ)。
+   ========================================================================= */
+.v3grid{display:grid;grid-template-columns:1fr;gap:18px;align-items:start}
+.v3grid>*{min-width:0}
+@media(min-width:980px){
+  .v3grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .v3grid.v3gridActive{grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr)}
+  .v3artcol{position:sticky;top:20px}
+}
+.v3rail{display:flex;flex-direction:column;gap:16px;min-width:0}
+.v3sec{display:flex;flex-direction:column;gap:9px}

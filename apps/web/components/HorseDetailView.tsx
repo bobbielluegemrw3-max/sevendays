@@ -19,6 +19,7 @@ import { horseDisplayName } from '@/lib/horse-name';
 import { FormPanel } from '@/components/FormPanel';
 import { buildFormPanelData, type FormPanelSource } from '@/lib/form-panel-data';
 import type { Surface, TrackCondition, Weather } from '@sevendays/domain';
+import { SURFACE_JA, TRACK_JA, WEATHER_JA } from '@sevendays/domain';
 import { tvArtGlowStyle, tvMedalStyle } from '@/lib/tv-tier';
 import { fill, type AppDict } from '@/lib/i18n-shared';
 import s from '../app/horse-detail.module.css';
@@ -46,6 +47,36 @@ import s from '../app/horse-detail.module.css';
 const HERO_COLOR: Record<string, string> = {
   black: 'rgba(6,6,10,0.72)', red: '#e5322d', blue: '#2f6bff', yellow: '#ffcf1f', green: '#22c55e',
 };
+
+/** V3構図(engine_v3)向け: CSSテキスト → React style。ハンドオフ正典の値をそのまま当てる。 */
+function css(text: string): import('react').CSSProperties {
+  const o: Record<string, string> = {};
+  for (const decl of text.split(';')) {
+    const i = decl.indexOf(':');
+    if (i < 0) continue;
+    const k = decl.slice(0, i).trim();
+    const v = decl.slice(i + 1).trim();
+    if (!k) continue;
+    o[k.startsWith('--') ? k : k.replace(/-([a-z])/g, (_m: string, ch: string) => ch.toUpperCase())] = v;
+  }
+  return o;
+}
+/** 条件の意味色(FormPanel v2 / レースページと一致)。予報の生ラベルにも対応。 */
+const V3_COND_COLOR: Record<string, string> = {
+  晴れ: '#ffd97a', 曇り: '#aab4c8', 雨: '#6fc3ff', 嵐: '#c78cff',
+  高速: '#00eaff', 良: '#35d07f', 稍重: '#e6b24a', 不良: '#d87b3a', 芝: '#58d68d', ダート: '#d8a05a',
+};
+const v3Cond = (v: string) => V3_COND_COLOR[v] ?? 'var(--text)';
+/** V3構図の A/B/C/D/E セクションタグ。 */
+function V3SecTag({ letter, bg, color, title, sub }: { letter: string; bg: string; color: string; title: string; sub?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+      <span style={css(`font-family:var(--font-display);font-weight:800;font-size:11px;letter-spacing:.06em;color:${color};background:${bg};border-radius:5px;padding:2px 7px`)}>{letter}</span>
+      <span style={css('font-family:var(--font-display);font-size:12px;letter-spacing:.14em;color:var(--text)')}>{title}</span>
+      {sub ? <span style={css('font-family:var(--font-jp);font-size:11px;color:var(--faint)')}>{sub}</span> : null}
+    </div>
+  );
+}
 
 export interface HorseRaceResult {
   batch_date: string; final_rank: number; final_score: string; is_burned: boolean;
@@ -414,6 +445,216 @@ export function HorseDetailView({
     trained_for_next_race: horse.trained_for_next_race === true,
     listing: horse.listing,
   });
+
+  // 今夜の予報(V3・色分けテキスト。B馬柱=FormPanel v2 と同じ生ラベルで統一)。
+  const fc3 = horse.tonight_forecast;
+  const fcDisp = fc3
+    ? [
+        { axis: '天候', val: WEATHER_JA[fc3.weather as Weather] ?? fc3.weather },
+        { axis: '馬場', val: TRACK_JA[fc3.track as TrackCondition] ?? fc3.track },
+        { axis: 'コース', val: SURFACE_JA[fc3.surface as Surface] ?? fc3.surface },
+      ]
+    : [];
+
+  // ============================ V3 構図(engine_v3 のみ)============================
+  // engine_v3 がアクティブなときだけ、ハンドオフV2の2カラム構図(読む→備える)で描画。
+  // V2(engine_v3 でない)は下の既存 return に落ちる = 一切変更なし・ライブ無傷。
+  // C/D は現状の実パネル(TrainingFormV2 / ItemPrepPanelV3)を配置(中身の再設計は次段階)。
+  if (horse.engine_v3) {
+    return (
+      <div className={s.wrap}>
+        <Link href="/horses" className={s.crumb}>{t.crumb}</Link>
+
+        {/* MASTHEAD */}
+        <div className={s.mast}>
+          <div className={s.mastL}>
+            <div className={s.titleRow}>
+              <span className={s.title}>{horseDisplayName(horse.name, lang)}</span>
+              <span className={`${s.badge} ${s.typeBadge}`}>{horse.horse_type}</span>
+              <span className={`${s.badge} ${badge.cls}`}>{badge.label}</span>
+              {horse.listing === 'SMART' ? <span className={`${s.badge} ${s.stSmart}`}>{t.st_smart}</span> : null}
+              {horse.reserved ? <span className={`${s.badge} ${s.stReserved}`}>{t.st_reserved}</span> : null}
+              {horse.gifted_at ? <span className={`${s.badge} ${s.stGifted}`}>{t.st_gifted}</span> : null}
+              {uncollected > 0 ? (
+                <span className={`${s.badge} ${s.uncollectedBadge}`}>{fill(ts.uncollected_tpl, { v: uncollected.toFixed(2) })}</span>
+              ) : null}
+            </div>
+          </div>
+          <div className={s.mastR}>
+            <div className={s.mastValK}>{mv.k}</div>
+            <div className={`${s.mastVal} ${mv.muted ? s.mastValMuted : ''}`}>
+              {mv.v}{mv.unit ? <small>{mv.unit}</small> : null}
+            </div>
+          </div>
+        </div>
+
+        {/* MAIN GRID: A アート(sticky) | B〜E */}
+        <div className={`${s.v3grid} ${isActive ? s.v3gridActive : ''}`}>
+
+          {/* ---- A 誰の馬か ---- */}
+          <div className={s.v3artcol}>
+            <div className={`${s.hero} ${mode === 'BURNED' ? s.heroBurned : ''}`}>
+              <div className={s.heroInner}>
+                <div className={`${s.artBox} ${horse.golden_aura ? s.heroAura : ''}`} style={tvArtGlowStyle(horse.total_value)}>
+                  <HeroReactionOverlay horseId={horse.id} horseName={horse.name} dnaHash={horse.dna_hash} />
+                  <HeroArtFx horseId={horse.id}>
+                    <NftHorseArt look={look} className={s.heroCanvas} />
+                    {(horse.decay_shield_v2 ?? 0) > 0 ? <span className={s.shieldFilm} aria-hidden="true" /> : null}
+                  </HeroArtFx>
+                  {horse.race_item_v2 ? (
+                    <span className={s.gearBadge} title={`装着中: ${horse.race_item_v2.item_key}`}>
+                      <img src={`/items/${horse.race_item_v2.item_key}.webp`} alt="装着中のレースアイテム" />
+                    </span>
+                  ) : null}
+                  {(horse.decay_shield_v2 ?? 0) > 0 ? <span className={s.shieldChip}>SHIELD ×{horse.decay_shield_v2}</span> : null}
+                  {horse.color_variant ? (
+                    <span className={s.heroColorSkin} style={{ background: HERO_COLOR[horse.color_variant], mixBlendMode: horse.color_variant === 'black' ? 'multiply' : 'color' }} />
+                  ) : null}
+                  {horse.golden_star ? <span className={s.heroGoldenStar} title={ts.tip_golden}>★</span> : null}
+                  {horse.night_variant ? <span className={s.heroNightTag}>MIDNIGHT</span> : null}
+                  {horse.revenge_flame ? (
+                    <span className={`${s.heroFlameTag} ${horse.revenge_gold ? s.heroFlameGold : ''}`}>{t.mark_flame}</span>
+                  ) : null}
+                  {horse.milestone ? <span className={s.heroMilestone}>{t.mark_milestone}</span> : null}
+                  <div className={s.scrim} />
+                  <div className={s.artCap}>
+                    <div>
+                      <div className={s.artCapK}>{horse.name.toUpperCase()}</div>
+                      <div className={s.artCapSub}>{horse.horse_type}</div>
+                    </div>
+                    <div className={s.capBlocks}>
+                      {horse.total_value !== null && horse.total_value !== undefined ? (
+                        <div className={s.tvBig}>
+                          <div className="l">TOTAL</div>
+                          <AnimatedNumber className="v" style={tvMedalStyle(horse.total_value)} value={Number(horse.total_value)} digits={1} durationMs={800} />
+                        </div>
+                      ) : null}
+                      <div className={s.dayBig}>
+                        <div className="l">{isLvDisplayMode() ? 'LV' : 'DAY'}</div>
+                        <div className="v">{Math.min(7, horse.current_day)}<small>/7</small></div>
+                      </div>
+                    </div>
+                  </div>
+                  {nav ? <HorsePager nav={nav} t={t} /> : null}
+                </div>
+                <div className={s.heroFoot}>
+                  <DayRail horse={horse} mode={mode} />
+                  {horse.tonight_rank && horse.tonight_entrants ? (
+                    <div className={`${s.rankLine} ${bandClsDetail(horse.tonight_band)}`}>
+                      {fill(ts.rank_tpl, { r: horse.tonight_rank, n: horse.tonight_entrants })} ·{' '}
+                      {horse.tonight_band === 'SAFE' ? ts.band_safe : horse.tonight_band === 'RISK' ? ts.band_risk : ts.band_mid}
+                      <span className={s.rankNote}> — {ts.rank_note}</span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ---- 右レール: B 読む → C/D 備える → E 文脈 ---- */}
+          <div className={s.v3rail}>
+
+            {/* B 読む(馬柱・A案 v2) */}
+            <div className={s.v3sec}>
+              <V3SecTag letter="B" bg="var(--cyan)" color="#04141a" title="読む — 馬柱" sub="予報 × 成績 × レース予想板" />
+              {formSrc ? <FormPanel d={buildFormPanelData(formSrc)} variant="v2" /> : null}
+            </div>
+
+            {isActive ? (
+              <>
+                {/* ③ 今夜の条件ドライバーバー */}
+                {fcDisp.length ? (
+                  <div style={css('border:1px solid var(--border-strong);border-radius:14px;padding:12px 15px;background:linear-gradient(100deg,rgba(0,234,255,.08),rgba(255,45,196,.05))')}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={css('font-family:var(--font-display);font-size:10px;letter-spacing:.14em;color:var(--text)')}>今夜はこの3つに備える</span>
+                      <span style={css('font-family:var(--font-mono);font-size:8px;color:var(--faint);letter-spacing:.06em')}>予報 70% · 目安</span>
+                      <div style={{ flex: 1 }} />
+                      <div style={{ display: 'flex', gap: 14, alignItems: 'baseline' }}>
+                        {fcDisp.map((cc) => (
+                          <span key={cc.axis} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5 }}>
+                            <span style={css('font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;color:var(--faint)')}>{cc.axis}</span>
+                            <b style={css(`font-family:var(--font-sans);font-weight:800;font-size:12px;color:${v3Cond(cc.val)}`)}>{cc.val}</b>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* C 備える① 調教 */}
+                <div className={s.v3sec}>
+                  <V3SecTag letter="C" bg="var(--cyan)" color="#04141a" title="備える① 調教" sub={t.free_tag} />
+                  <div className={s.trainCard}>
+                    <TrainingFormV2 horseId={horse.id} confirmed={horse.training_v2 ?? null} lv={horse.current_day} totalValue={horse.total_value ?? null} desc={t.train_desc} t={t} itemsCopy={itemsCopy} />
+                    <HorseReserveControl horseId={horse.id} reserved={horse.reserved ?? false} t={t} />
+                    {horse.listing === null ? <HorseTransferForm horseId={horse.id} horseName={horse.name} t={t} /> : null}
+                  </div>
+                </div>
+
+                {/* D 備える② レースアイテム */}
+                <div className={s.v3sec}>
+                  <V3SecTag letter="D" bg="var(--magenta)" color="#fff" title="備える② レースアイテム" sub="予報駆動 · 今夜のだけ前に" />
+                  <ItemPrepPanelV3 horseId={horse.id} t={t} itemsCopy={itemsCopy} />
+                </div>
+              </>
+            ) : mode === 'LISTED' ? (
+              <div className={`${s.outcome} ${s.outListed}`}>
+                <div className={s.outHead}>{t.out_listed_head}</div>
+                <div className={s.outText}>{fill(t.out_listed_text_tpl, { d: horse.current_day })}</div>
+                <Link href="/market" className={s.outCta}>{t.out_manage}</Link>
+              </div>
+            ) : mode === 'BURNED' ? (
+              <div className={`${s.outcome} ${s.outBurned}`}>
+                <div className={s.outHead}>{t.out_burned_head}</div>
+                <div className={s.outText}>{fill(t.out_burned_text_tpl, { d: horse.current_day })}</div>
+              </div>
+            ) : mode === 'DAY7_CLEARED' ? (
+              <div className={`${s.outcome} ${s.outGold}`}>
+                <div className={s.outHead}>{t.out_cleared_head}</div>
+                <div className={s.outText}>{t.out_cleared_text}</div>
+              </div>
+            ) : (
+              <div className={`${s.outcome} ${s.outGold}`}>
+                <div className={s.outHead}>{t.out_memorial_head}</div>
+                <div className={s.outText}>{t.out_memorial_text}</div>
+              </div>
+            )}
+
+            {/* E 文脈: 価値ラダー / 育成者クレジット / PROVENANCE */}
+            <div className={s.v3sec}>
+              <V3SecTag letter="E" bg="rgba(255,255,255,.05)" color="var(--faint)" title="文脈" />
+              <ValueLadder horse={horse} mode={mode} t={t} />
+              {horse.breeder_credits && horse.breeder_credits.length > 0 ? (
+                <div className={s.breeders}>
+                  <div className={s.secLabel}>{t.breeders_sec}</div>
+                  <div className={s.histBox}>
+                    {horse.breeder_credits.map((b, i) => (
+                      <div key={i} className={`${s.breederRow} ${b.is_you ? s.breederYou : ''}`}>
+                        <span className={s.breederName}>{b.is_you ? t.breeders_you : (b.breeder ?? '—')}</span>
+                        <span className={s.breederPct}>{fill(t.breeders_pct_tpl, { p: b.pct })}</span>
+                        <span className={s.breederDelta}>+{b.delta.toFixed(1)}</span>
+                        {b.item_bonus > 0 ? <span className={s.breederItem}>{fill(t.breeders_item_tpl, { v: b.item_bonus.toFixed(1) })}</span> : null}
+                      </div>
+                    ))}
+                  </div>
+                  <div className={s.histNote}>{t.breeders_note}</div>
+                </div>
+              ) : null}
+              <details className={s.provDetails}>
+                <summary className={`${s.secLabel} ${s.secLabelDim} ${s.provSummary}`}>{t.prov_sec}</summary>
+                <div className={s.prov}>
+                  <div className={s.provRow}><span className={s.provK}>DNA HASH</span><span className={s.provV}>{short(horse.dna_hash)} (mod {horse.dna_modifier})</span></div>
+                  <div className={s.provRow}><span className={s.provK}>MINT SEED</span><span className={s.provV}>{short(horse.mint_seed_hash)}</span></div>
+                  <div className={s.provRow}><span className={s.provK}>GEN VERSION</span><span className={s.provV}>{horse.horse_generation_version}</span></div>
+                  <div className={s.provNote}>{t.prov_note}</div>
+                </div>
+              </details>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={s.wrap}>
