@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  aggregateVerdictV3,
   conditionGroupLabelV3,
   readAxisV3,
   readFormV3,
+  runMatchCountV3,
+  runMatchFlagsV3,
   runPerformanceV3,
   type FormRunV3,
 } from '../src/index.js';
@@ -88,5 +91,54 @@ describe('条件名ラベル(6条件・§2)', () => {
     expect(conditionGroupLabelV3('track', -1)).toBe('良馬場');
     expect(conditionGroupLabelV3('surface', 1)).toBe('芝');
     expect(conditionGroupLabelV3('surface', -1)).toBe('ダート');
+  });
+});
+
+describe('表示層の確定仕様 — 一致フラグ / 総合判定(デザインから委譲・§6)', () => {
+  const tonight = { weather: 'RAIN' as const, track: 'SOFT' as const, surface: 'TURF' as const };
+
+  it('runMatchFlagsV3: 各軸で今夜と同じ側かを返す', () => {
+    // 嵐(雨側)・不良(道悪側)・芝 は 今夜(雨・道悪・芝)と全軸一致
+    const f = runMatchFlagsV3({ weather: 'STORM', track: 'HEAVY', surface: 'TURF', rank: 1, entrants: 30 }, tonight);
+    expect(f).toEqual({ weather: true, track: true, surface: true });
+    // 晴(晴側)・高速(良側)・ダート は 全軸不一致
+    const g = runMatchFlagsV3({ weather: 'SUNNY', track: 'FAST', surface: 'DIRT', rank: 1, entrants: 30 }, tonight);
+    expect(g).toEqual({ weather: false, track: false, surface: false });
+  });
+
+  it('runMatchCountV3: 一致軸数(2以上で根拠行)', () => {
+    expect(runMatchCountV3({ weather: 'STORM', track: 'HEAVY', surface: 'TURF', rank: 1, entrants: 30 }, tonight)).toBe(3);
+    expect(runMatchCountV3({ weather: 'RAIN', track: 'FAST', surface: 'DIRT', rank: 1, entrants: 30 }, tonight)).toBe(1);
+    expect(runMatchCountV3({ weather: 'SUNNY', track: 'FAST', surface: 'DIRT', rank: 1, entrants: 30 }, tonight)).toBe(0);
+  });
+
+  it('aggregateVerdictV3: strong2軸以上→得意 / weak2軸以上→苦手 / 全unknown→まだ読めない', () => {
+    const mk = (h: 'strong' | 'weak' | 'even' | 'unknown') => ({
+      axis: 'weather' as const, pole: 1 as const, matched: [], performance: null, hint: h,
+    });
+    const strong = aggregateVerdictV3({ weather: mk('strong'), track: mk('strong'), surface: mk('even') });
+    expect(strong.cls).toBe('strong');
+    expect(strong.head).toBe('今夜は得意そうだ');
+    expect(strong.mark).toBe('◎');
+    expect(strong.strongAxes).toHaveLength(2);
+
+    const weak = aggregateVerdictV3({ weather: mk('weak'), track: mk('weak'), surface: mk('strong') });
+    expect(weak.cls).toBe('weak');
+    expect(weak.head).toBe('今夜は苦手そう');
+
+    const unknown = aggregateVerdictV3({ weather: mk('unknown'), track: mk('unknown'), surface: mk('unknown') });
+    expect(unknown.cls).toBe('unknown');
+    expect(unknown.mark).toBe('—');
+
+    // 拮抗(strong1/weak1/even1)は五分に倒す・断定しない(R1)
+    const even = aggregateVerdictV3({ weather: mk('strong'), track: mk('weak'), surface: mk('even') });
+    expect(even.cls).toBe('even');
+  });
+
+  it('道悪巧者の馬柱で総合判定が strong(得意)になる(統合)', () => {
+    const reading = readFormV3(mudLover, { weather: 'RAIN', track: 'SOFT', surface: 'TURF' });
+    const v = aggregateVerdictV3(reading);
+    expect(['strong', 'even']).toContain(v.cls); // 少なくとも苦手ではない
+    expect(v.mark).not.toBe('▲');
   });
 });

@@ -101,3 +101,70 @@ export function conditionGroupLabelV3(axis: ConditionAxisV3, pole: -1 | 1): stri
 }
 
 export const CONDITION_AXES_ORDER_V3 = CONDITION_AXES_V3;
+
+/* ---------------------------------------------------------------------------
+ * 表示層(馬柱パネル)が必要とする2つの確定仕様(デザイン側から委譲・§6):
+ *   ① 過去走ごとの「今夜の予報と同じ側か」の各軸フラグ(2軸以上一致=根拠行の強調)
+ *   ② 3軸ヒントの総合判定(今夜は得意そうだ/五分か/苦手そう/まだ読めない)
+ * どちらもロジックはここが正・デザインは表示だけ。
+ * ------------------------------------------------------------------------- */
+
+/** 1走が、今夜の予報と各軸で同じ側だったか(true=一致)。 */
+export function runMatchFlagsV3(
+  run: FormRunV3,
+  forecast: { weather: Weather; track: TrackCondition; surface: Surface },
+): Record<ConditionAxisV3, boolean> {
+  return {
+    weather: conditionPoleV3('weather', run.weather) === conditionPoleV3('weather', forecast.weather),
+    track: conditionPoleV3('track', run.track) === conditionPoleV3('track', forecast.track),
+    surface: conditionPoleV3('surface', run.surface) === conditionPoleV3('surface', forecast.surface),
+  };
+}
+
+/** 1走の一致軸数(0〜3)。2以上で「読解の根拠行」として強調(§6)。 */
+export function runMatchCountV3(
+  run: FormRunV3,
+  forecast: { weather: Weather; track: TrackCondition; surface: Surface },
+): number {
+  const f = runMatchFlagsV3(run, forecast);
+  return (f.weather ? 1 : 0) + (f.track ? 1 : 0) + (f.surface ? 1 : 0);
+}
+
+export interface VerdictV3 {
+  cls: FormHintV3;
+  /** 記号(◎=得意 / △=五分 / ▲=苦手そう / —=まだ読めない)。 */
+  mark: string;
+  /** 見出し。 */
+  head: string;
+  /** 得意/苦手と読めた軸(sub文言の材料・表示側が条件名に変換)。 */
+  strongAxes: ConditionAxisV3[];
+  weakAxes: ConditionAxisV3[];
+}
+
+const VERDICT_MARK: Record<FormHintV3, string> = { strong: '◎', even: '△', weak: '▲', unknown: '—' };
+const VERDICT_HEAD: Record<FormHintV3, string> = {
+  strong: '今夜は得意そうだ',
+  even: '今夜は五分か',
+  weak: '今夜は苦手そう',
+  unknown: 'まだ読めない',
+};
+
+/**
+ * 3軸ヒントの総合判定(確定仕様)。断定しない曖昧語のまま集約する(R1)。
+ *   全軸 unknown → unknown / strong が2軸以上 → strong / weak が2軸以上 → weak / それ以外 → even
+ * (strong と weak が拮抗する場合は even = 「五分か」に倒す)
+ */
+export function aggregateVerdictV3(reading: Record<ConditionAxisV3, AxisReadingV3>): VerdictV3 {
+  const axes = CONDITION_AXES_V3;
+  const strongAxes = axes.filter((a) => reading[a].hint === 'strong');
+  const weakAxes = axes.filter((a) => reading[a].hint === 'weak');
+  const known = axes.filter((a) => reading[a].hint !== 'unknown');
+
+  let cls: FormHintV3;
+  if (known.length === 0) cls = 'unknown';
+  else if (strongAxes.length >= 2 && strongAxes.length > weakAxes.length) cls = 'strong';
+  else if (weakAxes.length >= 2 && weakAxes.length > strongAxes.length) cls = 'weak';
+  else cls = 'even';
+
+  return { cls, mark: VERDICT_MARK[cls], head: VERDICT_HEAD[cls], strongAxes: [...strongAxes], weakAxes: [...weakAxes] };
+}

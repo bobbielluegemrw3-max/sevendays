@@ -862,3 +862,100 @@
 @media (prefers-reduced-motion: reduce) {
   .rx, .rxCard, .rxArtUp::after, .rxOn .rxSpark i { transition: none; animation: none !important; }
   .rxPop { opacity: 1; } }
+
+
+/* ===== 馬柱(成績表)+予報パネル・デザイン側handoff 2026-07-23(FORM_TABLE_DESIGN_BRIEF) ===== */
+/* =========================================================================
+   Seven Days Derby — 馬柱（成績表）＋予報パネル リデザイン
+   ドロップイン CSS: horse-detail.module.css の馬柱パネル用ブロック
+   正典: Form Table Composition.html（同梱・単体で動く）
+   -------------------------------------------------------------------------
+   構図（上→下）: ①今夜の予報=問い / ②馬柱=材料 / ③読解=答え
+   ・予報一致走(2軸以上)を表内で緑ハイライト＝読解の根拠。非一致は薄く残す
+   ・読解は「総合判定」を最大見出し、3軸内訳を控えめに
+   ・色: 得意=緑 / 苦手そう=マゼンタ / 五分=グレー / まだ読めない=破線
+     ★赤(#ff5c5c等)は BURN・危険専用。得意・強さには使わない
+   ・アイコン枠は Manus発注エンブレムの差し込み用に確保（.condIco/.axIco）
+   ・CSS Modules: 子孫リテラルclassは :global(.x)。表示切替は詳細度を1段上げる
+   ・prefers-reduced-motion 尊重
+   ========================================================================= */
+
+.form{border:1px solid var(--border);border-radius:16px;background:var(--panel);overflow:hidden;position:relative;isolation:isolate}
+
+/* header */
+.fHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:14px 15px 12px;
+  background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);border-bottom:1px solid var(--border-soft,rgba(255,255,255,.055))}
+.fKana{font-family:var(--font-display);font-weight:800;font-size:16px;letter-spacing:.01em;color:var(--text);line-height:1.15}
+.fEn{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;color:var(--faint);margin-top:3px}
+.fTv{text-align:right;flex:none}
+.fTvNum{font-family:var(--font-display);font-weight:900;font-size:22px;line-height:1;color:var(--cyan);font-variant-numeric:tabular-nums}
+.fTvCap{font-family:var(--font-mono);font-size:7.5px;letter-spacing:.14em;color:var(--faint);margin-top:3px}
+.fType{display:inline-block;margin-top:5px;font-family:var(--font-mono);font-size:8px;letter-spacing:.1em;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:2px 6px}
+
+/* ①今夜の予報 = 問い */
+.fcast{padding:12px 15px;background:linear-gradient(100deg,rgba(0,234,255,.09),rgba(0,234,255,.02));border-bottom:1px solid var(--border-soft,rgba(255,255,255,.055))}
+.fcTitle{font-family:var(--font-display);font-size:9px;letter-spacing:.18em;color:var(--cyan);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.fcHit{margin-left:auto;color:var(--faint);letter-spacing:.08em;font-family:var(--font-mono);font-size:8px}
+.fcRow{display:flex;gap:8px}
+.cond{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.02)}
+/* アイコン枠: Manusエンブレム差し込み(24-26px)。今は絵文字/CSS図形の仮置き */
+.condIco{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;border:1px dashed rgba(255,255,255,.18)}
+.condVal{font-family:var(--font-sans);font-weight:700;font-size:12px;color:var(--text)}
+.condAxis{font-family:var(--font-mono);font-size:7.5px;letter-spacing:.1em;color:var(--faint)}
+
+/* ②馬柱 = 材料 */
+.fTableWrap{padding:10px 8px 4px}
+.fTblCap{font-family:var(--font-display);font-size:8.5px;letter-spacing:.16em;color:var(--muted);padding:4px 7px 8px;display:flex;align-items:center;gap:6px}
+.fTblCap .leg{margin-left:auto;font-family:var(--font-mono);font-size:8px;color:var(--faint);letter-spacing:.04em;display:flex;align-items:center;gap:5px}
+.fTblCap .leg i{width:9px;height:9px;border-radius:2px;background:rgba(53,208,127,.35);border:1px solid var(--good-dim,rgba(53,208,127,.5));display:inline-block}
+.ftbl{width:100%;border-collapse:collapse;font-family:var(--font-mono)}
+.ftbl th{font-size:8px;letter-spacing:.12em;color:var(--faint);font-weight:500;text-align:center;padding:4px 5px;border-bottom:1px solid var(--border)}
+.ftbl th.rk,.ftbl td.rk{text-align:right;padding-right:9px}
+.ftbl td{font-size:11px;color:var(--muted);text-align:center;padding:7px 5px;border-bottom:1px solid var(--border-soft,rgba(255,255,255,.055))}
+.ftbl tr:last-child td{border-bottom:none}
+.ftbl .wx{font-size:11px}
+.ftbl .rk b{color:var(--text);font-size:13px;font-weight:600}
+.ftbl .rk .den{color:var(--faint);font-size:9px}
+.ftbl td .tick{color:var(--good);font-size:9px;margin-left:2px}
+/* 予報一致走ハイライト(=根拠行)。詳細度を1段上げて後続に負けない */
+.ftbl tr.match td{background:linear-gradient(90deg,rgba(53,208,127,.14),rgba(53,208,127,.03));color:var(--text)}
+.ftbl tr.match td.rk b{color:var(--good)}
+.ftbl tr.match td:first-child{box-shadow:inset 3px 0 0 var(--good)}
+.ftbl tr.dim td{opacity:.5}
+
+/* ③読解 = 答え */
+.read{padding:12px 15px 15px;border-top:1px solid var(--border);background:linear-gradient(180deg,rgba(255,255,255,.015),transparent)}
+.readTitle{font-family:var(--font-display);font-size:8.5px;letter-spacing:.16em;color:var(--muted);margin-bottom:10px}
+.verdict{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:12px;margin-bottom:10px;
+  border:1px solid var(--good-dim,rgba(53,208,127,.5));background:linear-gradient(100deg,rgba(53,208,127,.14),rgba(53,208,127,.03))}
+.verdict.weak{border-color:rgba(255,143,228,.4);background:linear-gradient(100deg,rgba(255,45,196,.12),rgba(255,45,196,.02))}
+.verdict.even{border-color:var(--border);background:rgba(255,255,255,.03)}
+.verdict.unknown{border-color:rgba(143,138,194,.35);background:repeating-linear-gradient(135deg,rgba(255,255,255,.02) 0 7px,transparent 7px 14px)}
+.vMark{font-family:var(--font-display);font-weight:900;font-size:26px;line-height:1;width:34px;text-align:center;flex:none}
+.verdict.strong .vMark{color:var(--good)} .verdict.weak .vMark{color:var(--magenta-soft)}
+.verdict.even .vMark{color:var(--muted)} .verdict.unknown .vMark{color:var(--faint)}
+.vText{min-width:0}
+.vHead{font-family:var(--font-sans);font-weight:900;font-size:15px;line-height:1.2;color:var(--text)}
+.verdict.strong .vHead{color:var(--good)} .verdict.weak .vHead{color:var(--magenta-soft)}
+.vSub{font-family:var(--font-mono);font-size:8.5px;color:var(--muted);margin-top:3px;letter-spacing:.04em}
+.axes{display:flex;flex-direction:column;gap:6px}
+.axis{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:9px;background:rgba(255,255,255,.025);border:1px solid var(--border-soft,rgba(255,255,255,.055))}
+.axIco{width:24px;height:24px;border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;border:1px dashed rgba(255,255,255,.16)}
+.axName{font-family:var(--font-sans);font-weight:700;font-size:11px;color:var(--text);white-space:nowrap}
+.axRuns{font-family:var(--font-mono);font-size:9.5px;color:var(--muted);margin-left:2px}
+.axRuns .hi{color:var(--good);font-weight:600}
+.axHint{margin-left:auto;font-family:var(--font-mono);font-size:9px;font-weight:600;letter-spacing:.06em;white-space:nowrap;padding:3px 8px;border-radius:999px;border:1px solid transparent}
+.axHint.strong{color:var(--good);border-color:var(--good-dim,rgba(53,208,127,.5));background:rgba(53,208,127,.1)}
+.axHint.weak{color:var(--magenta-soft);border-color:rgba(255,143,228,.4);background:rgba(255,45,196,.08)}
+.axHint.even{color:var(--muted);border-color:var(--border)}
+.axHint.unknown{color:var(--faint);border-color:rgba(143,138,194,.3)}
+
+/* 新馬(まだ読めない) */
+.rookieNote{font-family:var(--font-mono);font-size:9.5px;color:var(--muted);line-height:1.7;padding:8px 2px 0}
+.rookieNote b{color:var(--cyan)}
+.futureRail{display:flex;gap:4px;margin-top:9px}
+.futureRail span{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.08)}
+.futureRail span.on{background:var(--cyan)}
+
+/* CSS Modules は純粋セレクタ必須(* は不可)。パネル配下にスコープ(§6 の :global 注意)。 */
+@media(prefers-reduced-motion:reduce){.form *{transition:none!important}}
