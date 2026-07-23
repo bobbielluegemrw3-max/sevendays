@@ -40,6 +40,15 @@ export interface FormPanelData {
   isRookie: boolean;
 }
 
+// 条件の意味色(レースページ DailyDerbyStage / MyDerbyRecord と同一。§3-1)。
+// ★赤(#ff5c5c)は BURN/危険専用。馬場「不良(HEAVY)」は赤ではなく濃い琥珀 #d87b3a。
+const COND_COLOR: Record<string, string> = {
+  晴: '#ffd97a', 曇: '#aab4c8', 雨: '#6fc3ff', 嵐: '#c78cff',
+  高速: '#00eaff', 良: '#35d07f', 良馬場: '#35d07f', 道悪: '#e6b24a', 稍重: '#e6b24a', 重: '#e6b24a', 不良: '#d87b3a',
+  芝: '#58d68d', ダート: '#d8a05a',
+};
+const condColor = (v: string): string => COND_COLOR[v] ?? 'var(--text)';
+
 // 6条件エンブレム(Manus納品・public/conditions/emblem_*.webp)。具体条件→6グループへ写像。
 const EMBLEM: Record<string, string> = {
   雨: 'rain', 嵐: 'rain', 晴: 'sun', 曇: 'sun',
@@ -61,27 +70,29 @@ function Emblem({ value, className }: { value: string; className: string | undef
   return <span className={className}>{src ? <img src={src} alt="" /> : (ICO_FALLBACK[value] ?? '?')}</span>;
 }
 
-function CondCell({ value, axis }: { value: string; axis: string }) {
+function CondCell({ value, axis, v2 }: { value: string; axis: string; v2?: boolean }) {
   return (
     <div className={s.cond}>
-      <Emblem value={value} className={s.condIco} />
-      <div className={s.condVal}>{value}</div>
+      {v2 ? null : <Emblem value={value} className={s.condIco} />}
+      <div className={s.condVal} style={v2 ? { color: condColor(value), fontWeight: 800 } : undefined}>{value}</div>
       <div className={s.condAxis}>{axis}</div>
     </div>
   );
 }
 
-function RunRow({ r }: { r: FormPanelRun }) {
+function RunRow({ r, v2 }: { r: FormPanelRun; v2?: boolean }) {
   const matched = Object.values(r.match).filter(Boolean).length;
   const isMatch = matched >= 2; // 2軸以上一致=読解の根拠行として強調
   const cls = isMatch ? s.match : matched === 0 ? s.dim : '';
+  const cc = (v: string) => (v2 ? { color: condColor(v), fontWeight: 700 } : undefined);
   return (
     <tr className={cls}>
       <td className={s.wx}>
-        <Emblem value={r.weather} className={s.wxIco} /> {r.weather}
+        {v2 ? null : <><Emblem value={r.weather} className={s.wxIco} /> </>}
+        <span style={cc(r.weather)}>{r.weather}</span>
       </td>
-      <td>{r.ground}</td>
-      <td>{r.course}</td>
+      <td><span style={cc(r.ground)}>{r.ground}</span></td>
+      <td><span style={cc(r.course)}>{r.course}</span></td>
       <td className={s.rk}>
         <b>{r.rank}</b>
         <span className={s.den}>/{r.entrants}</span>
@@ -91,12 +102,12 @@ function RunRow({ r }: { r: FormPanelRun }) {
   );
 }
 
-function AxisRow({ a }: { a: FormPanelAxisRead }) {
+function AxisRow({ a, v2 }: { a: FormPanelAxisRead; v2?: boolean }) {
   return (
     <div className={s.axis}>
-      <Emblem value={a.name} className={s.axIco} />
+      {v2 ? null : <Emblem value={a.name} className={s.axIco} />}
       <div>
-        <div className={s.axName}>「{a.name}」</div>
+        <div className={s.axName} style={v2 ? { color: condColor(a.name) } : undefined}>「{a.name}」</div>
         <div className={s.axRuns}>
           {a.runs.length
             ? a.runs.map((x, i) => (
@@ -113,10 +124,11 @@ function AxisRow({ a }: { a: FormPanelAxisRead }) {
   );
 }
 
-export function FormPanel({ d }: { d: FormPanelData }) {
+export function FormPanel({ d, variant = 'v1' }: { d: FormPanelData; variant?: 'v1' | 'v2' }) {
   const fc = d.forecast;
+  const v2 = variant === 'v2';
   return (
-    <div className={s.form}>
+    <div className={v2 ? `${s.form} ${s.formV2}` : s.form}>
       <div className={s.fHead}>
         <div>
           <div className={s.fKana}>{d.kana}</div>
@@ -132,12 +144,12 @@ export function FormPanel({ d }: { d: FormPanelData }) {
       {/* ① 今夜の予報 = 問い */}
       <div className={s.fcast}>
         <div className={s.fcTitle}>
-          今夜の予報 — 問い<span className={s.fcHit}>的中率70% · 目安</span>
+          {v2 ? '今夜の予報' : '今夜の予報 — 問い'}<span className={s.fcHit}>的中率70% · 目安</span>
         </div>
         <div className={s.fcRow}>
-          <CondCell value={fc.weather} axis="天候" />
-          <CondCell value={fc.ground} axis="馬場" />
-          <CondCell value={fc.course} axis="コース" />
+          <CondCell value={fc.weather} axis="天候" v2={v2} />
+          <CondCell value={fc.ground} axis="馬場" v2={v2} />
+          <CondCell value={fc.course} axis="コース" v2={v2} />
         </div>
       </div>
 
@@ -161,7 +173,7 @@ export function FormPanel({ d }: { d: FormPanelData }) {
           </thead>
           <tbody>
             {d.runs.map((r, i) => (
-              <RunRow key={i} r={r} />
+              <RunRow key={i} r={r} v2={v2} />
             ))}
           </tbody>
         </table>
@@ -169,7 +181,7 @@ export function FormPanel({ d }: { d: FormPanelData }) {
 
       {/* ③ 読解 = 答え */}
       <div className={s.read}>
-        <div className={s.readTitle}>読解 — 答え</div>
+        <div className={s.readTitle}>{v2 ? 'レース予想板' : '読解 — 答え'}</div>
         <div className={`${s.verdict} ${s[d.verdict.cls]}`}>
           <div className={s.vMark}>{d.verdict.mark}</div>
           <div className={s.vText}>
@@ -179,7 +191,7 @@ export function FormPanel({ d }: { d: FormPanelData }) {
         </div>
         <div className={s.axes}>
           {d.reads.map((a) => (
-            <AxisRow key={a.axis} a={a} />
+            <AxisRow key={a.axis} a={a} v2={v2} />
           ))}
         </div>
         {d.isRookie && (

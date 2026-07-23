@@ -963,3 +963,16 @@
 
 /* CSS Modules は純粋セレクタ必須(* は不可)。パネル配下にスコープ(§6 の :global 注意)。 */
 @media(prefers-reduced-motion:reduce){.form *{transition:none!important}}
+
+/* =========================================================================
+   馬柱 v2(§3・レースページと統一) — .formV2 スコープの表示差分のみ。
+   v1(既定・本番)は一切変えない。適用は <FormPanel variant="v2"/> の時だけ。
+   ②緑の使い過ぎ解消: 予報一致走の緑ベタ塗り → シアンの左アクセント＋淡い地。
+   ========================================================================= */
+.formV2 .ftbl tr.match td{background:linear-gradient(90deg,rgba(0,234,255,.08),transparent);color:var(--text)}
+.formV2 .ftbl tr.match td.rk b{color:var(--cyan)}
+.formV2 .ftbl tr.match td:first-child{box-shadow:inset 3px 0 0 var(--cyan)}
+.formV2 .ftbl td .tick{color:var(--cyan)}
+.formV2 .fTblCap .leg i{background:rgba(0,234,255,.35);border:1px solid var(--border,rgba(255,255,255,.12))}
+/* strong の根拠走ハイライトもシアンへ(得意=緑ベタの緩和・示唆ピルは据え置き) */
+.formV2 .axRuns .hi{color:var(--cyan)}

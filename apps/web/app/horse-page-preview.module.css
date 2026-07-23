@@ -15,9 +15,45 @@
   color:var(--hpp-text);font-family:var(--font-sans,'Space Grotesk',system-ui,sans-serif);
 }
 .stageWrap{display:flex;justify-content:center;padding:26px 16px 90px}
-.page{width:100%;max-width:560px;transition:max-width .2s}
-.page.mobile{max-width:390px}
+.page{width:100%;max-width:1180px;transition:max-width .2s}
+.page.mobile{max-width:430px}
 .block{margin:0 0 14px;position:relative}
+
+/* ===== MASTHEAD + 2カラム構図(新デザイナーV2ハンドオフ) ===== */
+.mast{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:4px 2px 14px;border-bottom:1px solid var(--hpp-border-soft);margin-bottom:18px}
+.mastTitleRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mastTitle{font-family:var(--font-display);font-weight:800;font-size:24px;letter-spacing:.01em;color:var(--hpp-text);line-height:1.1}
+.mastEn{font-family:var(--font-mono);font-size:10px;color:var(--hpp-faint);letter-spacing:.12em;margin-top:4px}
+.badge{font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;border-radius:6px;padding:3px 8px;border:1px solid var(--hpp-border);color:var(--hpp-muted);white-space:nowrap}
+.badgeType{color:var(--hpp-cyan);border-color:rgba(0,234,255,.3)}
+.badgeActive{color:var(--hpp-good);border-color:var(--hpp-good-dim);background:rgba(53,208,127,.08)}
+.badgeListed{color:var(--hpp-gold-bright);border-color:rgba(242,228,191,.4);background:rgba(242,228,191,.07)}
+.badgeGrail{color:#20180a;background:linear-gradient(180deg,var(--hpp-gold-bright),var(--hpp-gold));border:none}
+.mastR{text-align:right;flex:none}
+.mastValK{font-family:var(--font-mono);font-size:8px;letter-spacing:.16em;color:var(--hpp-faint)}
+.mastVal{font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--hpp-gold);font-variant-numeric:tabular-nums;margin-top:2px}
+.mastVal small{font-size:11px;color:var(--hpp-muted);margin-left:4px;font-weight:500}
+
+.mainGrid{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+.mainGrid>*{min-width:0}
+.artCol{min-width:0}
+.artCol .hero{margin-bottom:0}
+.rightRail{display:flex;flex-direction:column;gap:16px;min-width:0}
+.sec{display:flex;flex-direction:column;gap:9px}
+@media(min-width:980px){
+  .page:not(.mobile) .mainGrid{grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr)}
+  .page:not(.mobile) .mainGridReadOnly{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .page:not(.mobile) .artCol{position:sticky;top:20px}
+}
+
+/* ③ 今夜の条件ドライバーバー(予報→調教→アイテムを直結) */
+.tonightBar{border:1px solid rgba(53,208,127,.4);border-radius:14px;padding:12px 15px;background:linear-gradient(100deg,rgba(0,234,255,.08),rgba(255,45,196,.05))}
+.tonightRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tonightK{font-family:var(--font-display);font-weight:800;font-size:11px;letter-spacing:.1em;color:var(--hpp-text)}
+.tonightHit{font-family:var(--font-mono);font-size:8px;color:var(--hpp-faint)}
+.tonightConds{display:flex;gap:14px;align-items:baseline;margin-left:auto;flex-wrap:wrap}
+.tonightCond{display:inline-flex;align-items:baseline;gap:5px;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--hpp-faint)}
+.tonightCond b{font-family:var(--font-sans);font-weight:800;font-size:13px}
 .blkTag{display:flex;align-items:center;gap:9px;margin:0 0 9px;font-family:var(--font-display);font-size:10px;letter-spacing:.16em}
 .blkTag .n{width:19px;height:19px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex:none}
 .blkTag .read,.blkTag .train{background:rgba(0,234,255,.16);color:var(--hpp-cyan);border:1px solid rgba(0,234,255,.4)}
@@ -46,6 +82,16 @@
 .fxLayer{position:absolute;inset:0;pointer-events:none;z-index:8;overflow:hidden}
 .burst{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);opacity:0;font-family:var(--font-display);font-weight:900;font-size:26px;letter-spacing:.04em;text-align:center;white-space:nowrap;text-shadow:0 0 24px currentColor}
 .burst small{display:block;font-family:var(--font-mono);font-size:9.5px;font-weight:500;letter-spacing:.08em;color:var(--hpp-muted);text-shadow:none;margin-top:5px}
+
+/* ④ 手応え演出: 金オーラ一閃＋光スイープ(赤不使用)。安っぽい文字ポップは廃止。 */
+.auraHost{position:relative}
+.auraHost.flash::before{content:"";position:absolute;inset:0;z-index:9;pointer-events:none;border-radius:18px;
+  box-shadow:0 0 0 0 rgba(242,228,191,0);animation:hppAura .82s ease-out}
+.auraHost.flashMag.flash::before{animation:hppAuraMag .82s ease-out}
+@keyframes hppAura{0%{box-shadow:inset 0 0 0 0 rgba(242,228,191,0)}26%{box-shadow:inset 0 0 70px rgba(242,228,191,.5),0 0 40px -6px rgba(242,228,191,.5)}100%{box-shadow:inset 0 0 0 0 rgba(242,228,191,0)}}
+@keyframes hppAuraMag{0%{box-shadow:inset 0 0 0 0 rgba(255,45,196,0)}26%{box-shadow:inset 0 0 70px rgba(255,45,196,.42),0 0 40px -6px rgba(255,45,196,.5)}100%{box-shadow:inset 0 0 0 0 rgba(255,45,196,0)}}
+.tvNum.bump{animation:hppBump .5s cubic-bezier(.2,.9,.25,1)}
+@keyframes hppBump{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
 
 .idBar{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:16px 16px 4px}
 .tvNum{font-family:var(--font-display);font-weight:900;font-size:46px;line-height:.9;font-variant-numeric:tabular-nums}
