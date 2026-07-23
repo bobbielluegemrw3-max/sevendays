@@ -40,17 +40,31 @@ export interface FormPanelData {
   isRookie: boolean;
 }
 
-// アイコンは後で Manus エンブレムに差し替え。今は絵文字の仮置き(枠 .condIco/.axIco は確保済み)。
-const ICO: Record<string, string> = {
+// 6条件エンブレム(Manus納品・public/conditions/emblem_*.webp)。具体条件→6グループへ写像。
+const EMBLEM: Record<string, string> = {
+  雨: 'rain', 嵐: 'rain', 晴: 'sun', 曇: 'sun',
+  道悪: 'mud', 稍重: 'mud', 不良: 'mud',
+  良馬場: 'firm', 良: 'firm', 高速: 'firm', 芝: 'turf', ダート: 'dirt',
+};
+// 絵文字フォールバック(万一エンブレム未対応の語が来た時)。
+const ICO_FALLBACK: Record<string, string> = {
   雨: '🌧', 嵐: '🌧', 晴: '☀', 曇: '☀', 道悪: '🟤', 稍重: '🟤', 不良: '🟤',
   良馬場: '🟩', 良: '🟩', 高速: '🟩', 芝: '🌱', ダート: '🟫',
 };
-const icoOf = (k: string) => ICO[k] ?? '?';
+function emblemSrc(k: string): string | null {
+  const c = EMBLEM[k];
+  return c ? `/conditions/emblem_${c}.webp` : null;
+}
+/** エンブレム枠(条件アイコン)。画像があれば埋め、無ければ絵文字。枠サイズはCSS(26/24px)。 */
+function Emblem({ value, className }: { value: string; className: string | undefined }) {
+  const src = emblemSrc(value);
+  return <span className={className}>{src ? <img src={src} alt="" /> : (ICO_FALLBACK[value] ?? '?')}</span>;
+}
 
 function CondCell({ value, axis }: { value: string; axis: string }) {
   return (
     <div className={s.cond}>
-      <div className={s.condIco}>{icoOf(value)}</div>
+      <Emblem value={value} className={s.condIco} />
       <div className={s.condVal}>{value}</div>
       <div className={s.condAxis}>{axis}</div>
     </div>
@@ -64,7 +78,7 @@ function RunRow({ r }: { r: FormPanelRun }) {
   return (
     <tr className={cls}>
       <td className={s.wx}>
-        {icoOf(r.weather)} {r.weather}
+        <Emblem value={r.weather} className={s.wxIco} /> {r.weather}
       </td>
       <td>{r.ground}</td>
       <td>{r.course}</td>
@@ -80,7 +94,7 @@ function RunRow({ r }: { r: FormPanelRun }) {
 function AxisRow({ a }: { a: FormPanelAxisRead }) {
   return (
     <div className={s.axis}>
-      <div className={s.axIco}>{icoOf(a.name)}</div>
+      <Emblem value={a.name} className={s.axIco} />
       <div>
         <div className={s.axName}>「{a.name}」</div>
         <div className={s.axRuns}>
