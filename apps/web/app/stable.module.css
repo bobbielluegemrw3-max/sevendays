@@ -175,19 +175,6 @@
   text-decoration: none; color: inherit; transition: border-color 0.15s ease, transform 0.15s ease;
 }
 .hcard:hover { border-color: var(--border-strong); }
-/* 今夜 RISK(STABLE_CARDS_SPEC 2026-07-22) — カード枠線は「未調教=マゼンタ」等の
-   機能色を担っているので触らない。警告はリング(::after)として重ねる。
-   インラインの box-shadow(ティア発光)とも衝突しない */
-.riskCard { position: relative; }
-/* 警告は「塗りの左帯」1つだけ(2026-07-22b)。
-   左帯・角フラグ・点滅リングの3つを重ねたら、ただの騒がしいカードになった。
-   枠でなく塗りなので、未調教のマゼンタ枠とは質的に違って読める。
-   くすみフィルタの外(=.hcard側)なので、弱くて危ない馬でも警告は沈まない */
-.riskCard::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; z-index: 2;
-  border-radius: 16px 0 0 16px; pointer-events: none;
-  background: linear-gradient(180deg, #ff5a4a, #d4180c);
-}
 .hcard.untrained {
   border-color: rgba(255, 45, 196, 0.45);
   background: linear-gradient(160deg, rgba(255, 45, 196, 0.07), transparent 62%);

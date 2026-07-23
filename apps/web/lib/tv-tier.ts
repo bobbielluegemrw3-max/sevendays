@@ -170,13 +170,6 @@ export function tvFrameStyle(value: number | null | undefined): CSSProperties | 
  * **見た目の強弱だけを総合値の連続関数**にする。これで隣り合う馬が必ず違う。
  * 基準域は実分布に合わせて 45〜85。
  * ------------------------------------------------------------------------- */
-const MOOD_LO = 45;
-const MOOD_HI = 85;
-function moodT(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(1, (value - MOOD_LO) / (MOOD_HI - MOOD_LO)));
-}
-
 /**
  * カードのグロー(box-shadowのみ)。枠線色は触らない — 厩舎カードの枠線は
  * 「未調教=マゼンタ」等の機能色を担っているため、ティアは発光でだけ語る。
@@ -194,27 +187,6 @@ export function tvCardGlowStyle(value: number | null | undefined): CSSProperties
   return {
     boxShadow: `0 0 ${blur.toFixed(1)}px rgba(${t.rgb},${alpha}), 0 0 0 1px rgba(${t.rgb},${ring}), inset 0 0 ${(blur * 1.2).toFixed(1)}px rgba(${t.rgb},${(Number(alpha) * 0.3).toFixed(3)})`,
   };
-}
-
-/**
- * カードの気分(STABLE_CARDS_SPEC 2026-07-22)。
- * 強い側を明るくすると厩舎グリッドが眩しくなるので、感情の振れ幅は
- * **暗い側を沈めて**作る。STEEL/IRON だけ わずかに減彩・減光し、
- * 「くすんだ厩舎 = 鍛えなきゃ」を出す。GOLD/SILVER/BRONZE は触らない。
- * 強度は控えめから始める(戻すより足す方が安全)。
- */
-export function tvCardMoodStyle(value: number | null | undefined): CSSProperties | undefined {
-  if (value === null || value === undefined || !Number.isFinite(value)) return undefined;
-  // ティアの階段ではなく総合値の連続関数。45=くすみ最大 / 85=最も鮮やか。
-  // 50.2 と 53.3 と 55.7 が、隣に並んだときに必ず違って見えることが目的
-  // 2026-07-22b: 床を 0.32/0.76 まで落としたら、弱い馬の絵が灰色の塊になり
-  // 「渋い」ではなく「壊れている/無効化されている」に見えた(オーナー実機)。
-  // 絵は潰さない。弱さは「カードが光らない」ことと数字の金属色で語り、
-  // 絵のトーンはあくまで補助にとどめる
-  const t = moodT(value);
-  const sat = (0.78 + 0.37 * t).toFixed(3);   // 45→0.78 / 65→0.97 / 85→1.15
-  const bri = (0.90 + 0.16 * t).toFixed(3);   // 45→0.90 / 65→0.98 / 85→1.06
-  return { filter: `saturate(${sat}) brightness(${bri})` };
 }
 
 /** 馬アートの内側リムライト(ヒーロー表示用・控えめ)。 */
