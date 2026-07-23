@@ -12,6 +12,8 @@
   --hpp-cyan:#00eaff;--hpp-magenta:#ff2dc4;--hpp-magenta-soft:#ff8fe4;
   --hpp-gold:#c9a86a;--hpp-gold-bright:#f2e4bf;--hpp-good:#35d07f;--hpp-good-dim:rgba(53,208,127,.5);
   --c-rain:#5aa8ff;--c-sun:#ffcf5a;--c-mud:#c69a6a;--c-turf-g:#8fd6a8;--c-turf:#57d08a;--c-dirt:#d0a878;
+  /* 正典インラインstyleが参照するトークンの補完(globals.cssに無いもの) */
+  --border-soft:rgba(255,255,255,.055);--good-dim:rgba(53,208,127,.5);
   color:var(--hpp-text);font-family:var(--font-sans,'Space Grotesk',system-ui,sans-serif);
 }
 .stageWrap{display:flex;justify-content:center;padding:26px 16px 90px}

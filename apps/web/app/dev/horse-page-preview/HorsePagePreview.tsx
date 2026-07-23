@@ -2,23 +2,20 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { Surface, TrackCondition, Weather } from '@sevendays/domain';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { deriveNftLook } from '@/lib/nft-visual';
-import { FormPanel } from '@/components/FormPanel';
-import { buildFormPanelData, type FormPanelSource } from '@/lib/form-panel-data';
 import s from '../../horse-page-preview.module.css';
 
 /* ============================================================================
  * /dev/horse-page-preview — 馬個別ページ 再デザイン(新デザイナーV2ハンドオフ)
  *
- * ★C/D(調教・調教アイテム・レースアイテム)は同梱正典 Horse Page Composition.html を
- *   そのまま写経(構造・インラインstyle・状態機械を一致)。推測での改変は入れない。
- *   - C 調教: STEP① メニュー選択→確認→確定 / STEP② 調教アイテムは①確定までロック
- *   - D レース: 今夜3条件を展開(弱中強)＋保険2点＋<details>で他条件を畳む
- *   - 手応え: TOTALメダルのカウントアップ＋金オーラ＋装着アニメ(sddAttach/sddSweep/sddPop)
- * A アート/B 馬柱(FormPanel variant="v2")は既存資産を2カラムに配置。
- * データ/API/canvasには触らない。R1: 生値なし・+デルタは演出用の代表値(確定+3/装着+1/装備+2)。
+ * ★同梱正典 Horse Page Composition.html を全体そのまま写経(4状態×PC/モバイル)。
+ *   マストヘッド / A アート / B 馬柱 / ③C/D 備える / E 文脈 を構造・インラインstyle・
+ *   状態機械まで一致させる。推測での改変はしない。
+ *   - アートだけは静的PNGでなく実 NftHorseArt(canvas・変更禁止部品)を埋め込む。
+ *   - Decision(2026-07-23): アイテムはレース直前まで何度でも差し替え自由(調教本体はA案)。
+ * 本番結線時: B は実 FormPanel(variant="v2")＋実データ、C/D は実V3パネルに置換。
+ * R1: 生値なし・+デルタは演出用の代表値(確定+3/装着+1/装備+2)。
  * ========================================================================== */
 
 type StateKey = 'active' | 'rookie' | 'grail' | 'listed';
@@ -39,66 +36,105 @@ function css(text: string): CSSProperties {
   return o;
 }
 
-interface RunLite { weather: Weather; track: TrackCondition; surface: Surface; rank: number; entrants: number; }
-interface Case {
-  kana: string; en: string; dna: string; tv: number; type: string;
-  day: number; value: number; cond: number; fat: number;
-  band: 'safe' | 'mid'; bandText: string; group: string; shield: number;
-  grail?: boolean; listed?: boolean; rookie?: boolean;
-  forecast: { weather: Weather; track: TrackCondition; surface: Surface };
-  runs: RunLite[]; breeder: string;
+interface RunRow { weather: string; ground: string; course: string; rank: number; entrants: number; m: number; }
+interface ReadRow { name: string; runsText: string; hint: 'strong' | 'weak' | 'even' | 'unknown'; label: string; }
+interface Breeder { name: string; pct: number; delta: string; you: boolean; }
+interface Horse {
+  kana: string; en: string; type: string; rarity: string; rarKey: string;
+  day: number; total: number | null; dna: string; dnaText: string; seedText: string;
+  statusLabel: string; statusKey: 'active' | 'listed'; groupLabel: string;
+  forecast: { axis: string; val: string }[];
+  runs: RunRow[]; reads: ReadRow[];
+  verdict: { cls: 'strong' | 'weak' | 'even' | 'unknown'; mark: string; head: string; sub: string };
+  band: { text: string; note: string; key: 'safe' } | null;
+  isRookie?: boolean; isGrail?: boolean; isListed?: boolean;
+  breeders: Breeder[];
 }
 
-const CASES: Record<StateKey, Case> = {
+// ---- 正典データ(canonical.html HORSES より写経) --------------------------
+const HORSES: Record<StateKey, Horse> = {
   active: {
-    kana: 'クリムゾン ノヴァ', en: 'Crimson Nova', dna: 'seed-crimson-nova-01', tv: 72, type: 'BALANCED',
-    day: 3, value: 137.5, cond: 62, fat: 38, band: 'safe', bandText: 'LV帯内 4位/12頭 · 安全圏', group: '出走中 · 3/12', shield: 2,
-    forecast: { weather: 'RAIN', track: 'SOFT', surface: 'TURF' },
+    kana: 'テンペスト', en: 'TEMPEST', type: 'バランス', rarity: 'RARE', rarKey: 'RARE',
+    day: 4, total: 74, dna: 'seed-tempest-9f2c', dnaText: '0x9f2c…7a41 (mod 12)', seedText: '0x51be…c9d0',
+    statusLabel: '出走中', statusKey: 'active', groupLabel: '出走中',
+    forecast: [{ axis: '天候', val: '雨' }, { axis: '馬場', val: '道悪' }, { axis: 'コース', val: '芝' }],
     runs: [
-      { weather: 'STORM', track: 'SOFT', surface: 'TURF', rank: 3, entrants: 38 },
-      { weather: 'RAIN', track: 'HEAVY', surface: 'TURF', rank: 2, entrants: 40 },
-      { weather: 'SUNNY', track: 'FAST', surface: 'DIRT', rank: 22, entrants: 38 },
-      { weather: 'RAIN', track: 'SOFT', surface: 'DIRT', rank: 5, entrants: 36 },
-      { weather: 'CLOUDY', track: 'GOOD', surface: 'TURF', rank: 14, entrants: 38 },
+      { weather: '晴', ground: '良', course: 'ダート', rank: 14, entrants: 1800, m: 0 },
+      { weather: '雨', ground: '稍重', course: '芝', rank: 3, entrants: 2400, m: 3 },
+      { weather: '曇', ground: '不良', course: '芝', rank: 9, entrants: 2100, m: 2 },
+      { weather: '雨', ground: '高速', course: 'ダート', rank: 11, entrants: 1950, m: 1 },
+      { weather: '晴', ground: '良', course: '芝', rank: 16, entrants: 2200, m: 1 },
     ],
-    breeder: '育成者 st***@gmail.com · 貢献 34% · 売却後も名誉として記録',
+    reads: [
+      { name: '道悪', runsText: '3位 · 9位', hint: 'strong', label: '得意そうだ' },
+      { name: '芝', runsText: '3位 · 9位', hint: 'strong', label: '得意そうだ' },
+      { name: '雨', runsText: '3位 · 11位', hint: 'even', label: '五分か' },
+    ],
+    verdict: { cls: 'strong', mark: '◎', head: '今夜は狙える', sub: '道悪・芝 が今夜と噛み合っている' },
+    band: { text: '今夜の想定 320 / 2,400 位', note: '安全圏', key: 'safe' },
+    breeders: [{ name: 'あなた', pct: 64, delta: '8.4', you: true }, { name: 'nao***', pct: 36, delta: '4.7', you: false }],
   },
   rookie: {
-    kana: 'オニキス ドーン', en: 'Onyx Dawn', dna: 'seed-onyx-dawn-01', tv: 58, type: 'POWER',
-    day: 0, value: 100, cond: 70, fat: 10, band: 'mid', bandText: 'LV帯内 —（初出走）· 目安なし', group: '出走中 · 8/12', shield: 0, rookie: true,
-    forecast: { weather: 'RAIN', track: 'HEAVY', surface: 'DIRT' },
-    runs: [{ weather: 'SUNNY', track: 'GOOD', surface: 'DIRT', rank: 16, entrants: 38 }],
-    breeder: '育成者 あなた · 貢献 100% · この馬の最初の走りはこれから',
+    kana: 'ノヴァ', en: 'NOVA', type: 'バランス', rarity: 'UNCOMMON', rarKey: 'UNCOMMON',
+    day: 1, total: null, dna: 'seed-nova-3a11', dnaText: '0x3a11…0fe2 (mod 4)', seedText: '0x77ac…1b90',
+    statusLabel: '新馬', statusKey: 'active', groupLabel: '新馬',
+    forecast: [{ axis: '天候', val: '雨' }, { axis: '馬場', val: '道悪' }, { axis: 'コース', val: '芝' }],
+    runs: [],
+    reads: [
+      { name: '雨', runsText: 'まだ走っていない', hint: 'unknown', label: 'まだ読めない' },
+      { name: '道悪', runsText: 'まだ走っていない', hint: 'unknown', label: 'まだ読めない' },
+      { name: '芝', runsText: 'まだ走っていない', hint: 'unknown', label: 'まだ読めない' },
+    ],
+    verdict: { cls: 'unknown', mark: '？', head: '適性は謎', sub: '走らせて暴け' },
+    band: null, isRookie: true,
+    breeders: [{ name: 'あなた', pct: 100, delta: '0.0', you: true }],
   },
   grail: {
-    kana: 'サクレッド ゲイル', en: 'Sacred Gale', dna: 'seed-sacred-gale-01', tv: 93, type: 'SPRINTER',
-    day: 5, value: 170.0, cond: 85, fat: 22, band: 'safe', bandText: 'LV帯内 1位/9頭 · 安全圏', group: 'チャンピオン候補 · 1/3', shield: 3, grail: true,
-    forecast: { weather: 'SUNNY', track: 'GOOD', surface: 'TURF' },
+    kana: 'オーレリアス', en: 'AURELIUS', type: 'スピード', rarity: 'LEGENDARY', rarKey: 'LEGENDARY',
+    day: 5, total: 93, dna: 'seed-aurelius-f0e1', dnaText: '0xf0e1…9c3b (mod 21)', seedText: '0x0ab2…44ff',
+    statusLabel: '聖杯', statusKey: 'active', groupLabel: '出走中',
+    forecast: [{ axis: '天候', val: '雨' }, { axis: '馬場', val: '道悪' }, { axis: 'コース', val: '芝' }],
     runs: [
-      { weather: 'SUNNY', track: 'GOOD', surface: 'TURF', rank: 1, entrants: 40 },
-      { weather: 'CLOUDY', track: 'FAST', surface: 'TURF', rank: 1, entrants: 38 },
-      { weather: 'SUNNY', track: 'GOOD', surface: 'DIRT', rank: 3, entrants: 36 },
-      { weather: 'RAIN', track: 'HEAVY', surface: 'TURF', rank: 8, entrants: 38 },
-      { weather: 'SUNNY', track: 'FAST', surface: 'TURF', rank: 2, entrants: 40 },
+      { weather: '雨', ground: '不良', course: '芝', rank: 1, entrants: 2600, m: 3 },
+      { weather: '曇', ground: '稍重', course: '芝', rank: 2, entrants: 2450, m: 2 },
+      { weather: '雨', ground: '不良', course: '芝', rank: 1, entrants: 2300, m: 3 },
+      { weather: '晴', ground: '良', course: '芝', rank: 4, entrants: 2100, m: 1 },
+      { weather: '雨', ground: '稍重', course: 'ダート', rank: 3, entrants: 2000, m: 2 },
     ],
-    breeder: '育成者 ka***@gmail.com · 貢献 51% · 伝説の馬を育てた栄誉',
+    reads: [
+      { name: '道悪', runsText: '1位 · 2位', hint: 'strong', label: '得意そうだ' },
+      { name: '雨', runsText: '1位 · 3位', hint: 'strong', label: '得意そうだ' },
+      { name: '芝', runsText: '1位 · 4位', hint: 'even', label: '五分か' },
+    ],
+    verdict: { cls: 'strong', mark: '◎', head: '今夜は聖杯級', sub: '道悪・雨 が今夜と噛み合っている' },
+    band: { text: '今夜の想定 12 / 2,600 位', note: '安全圏', key: 'safe' }, isGrail: true,
+    breeders: [{ name: 'あなた', pct: 78, delta: '21.6', you: true }, { name: 'kei***', pct: 22, delta: '6.1', you: false }],
   },
   listed: {
-    kana: 'エメラルド ゲイル', en: 'Emerald Gale', dna: 'seed-emerald-gale-01', tv: 78, type: 'SPRINTER',
-    day: 2, value: 123.65, cond: 60, fat: 30, band: 'mid', bandText: '出品中 · 今夜は走らない', group: '出品中 · 2/5', shield: 0, listed: true,
-    forecast: { weather: 'SUNNY', track: 'GOOD', surface: 'TURF' },
+    kana: 'ゼファー', en: 'ZEPHYR', type: 'スタミナ', rarity: 'EPIC', rarKey: 'EPIC',
+    day: 3, total: 68, dna: 'seed-zephyr-22dd', dnaText: '0x22dd…54a1 (mod 9)', seedText: '0x9cd0…7e33',
+    statusLabel: '出品中', statusKey: 'listed', groupLabel: '出品中',
+    forecast: [{ axis: '天候', val: '雨' }, { axis: '馬場', val: '道悪' }, { axis: 'コース', val: '芝' }],
     runs: [
-      { weather: 'SUNNY', track: 'GOOD', surface: 'TURF', rank: 1, entrants: 40 },
-      { weather: 'CLOUDY', track: 'FAST', surface: 'TURF', rank: 4, entrants: 38 },
-      { weather: 'RAIN', track: 'HEAVY', surface: 'TURF', rank: 19, entrants: 38 },
-      { weather: 'SUNNY', track: 'GOOD', surface: 'DIRT', rank: 12, entrants: 36 },
-      { weather: 'SUNNY', track: 'FAST', surface: 'TURF', rank: 2, entrants: 40 },
+      { weather: '曇', ground: '良', course: '芝', rank: 5, entrants: 2200, m: 1 },
+      { weather: '晴', ground: '高速', course: '芝', rank: 7, entrants: 2050, m: 1 },
+      { weather: '雨', ground: '不良', course: 'ダート', rank: 19, entrants: 1900, m: 2 },
+      { weather: '晴', ground: '良', course: '芝', rank: 6, entrants: 2150, m: 1 },
     ],
-    breeder: '育成者 em***@gmail.com · 貢献 42%',
+    reads: [
+      { name: '芝', runsText: '5位 · 6位', hint: 'strong', label: '得意そうだ' },
+      { name: '道悪', runsText: '19位', hint: 'weak', label: '苦手そう' },
+      { name: '雨', runsText: '19位', hint: 'even', label: '五分か' },
+    ],
+    verdict: { cls: 'even', mark: '○', head: '条件次第', sub: '芝は手堅い。道悪は苦しいかも' },
+    band: null, isListed: true,
+    breeders: [{ name: 'あなた', pct: 100, delta: '5.9', you: true }],
   },
 };
+const ORDER: StateKey[] = ['active', 'rookie', 'grail', 'listed'];
+const PRICE = ['100.00', '110.00', '121.00', '133.10', '146.41', '161.05', '177.16'];
 
-// ---- 正典データ(canonical.html より写経) --------------------------------
+// ---- 条件・アイテム(canonical 写経) --------------------------------------
 const EMBLEM: Record<string, string> = {
   雨: 'rain', 嵐: 'rain', 晴: 'sun', 曇: 'sun', 道悪: 'mud', 稍重: 'mud', 不良: 'mud',
   良馬場: 'firm', 良: 'firm', 高速: 'firm', 芝: 'turf', ダート: 'dirt',
@@ -113,65 +149,68 @@ const COND_COLOR: Record<string, string> = {
 };
 const condColor = (v: string) => COND_COLOR[v] || 'var(--text)';
 const MENUS = [
-  { key: 'hill', name: '坂路', cond: '道悪' },
-  { key: 'pool', name: '水泳', cond: '雨' },
-  { key: 'wood', name: 'ウッド', cond: '芝' },
-  { key: 'gate', name: 'ゲート', cond: '良馬場' },
-  { key: 'spar', name: '併せ馬', cond: 'ダート' },
-  { key: 'rest', name: '調整', cond: '晴' },
+  { key: 'hill', name: '坂路', cond: '道悪' }, { key: 'pool', name: '水泳', cond: '雨' },
+  { key: 'wood', name: 'ウッド', cond: '芝' }, { key: 'gate', name: 'ゲート', cond: '良馬場' },
+  { key: 'spar', name: '併せ馬', cond: 'ダート' }, { key: 'rest', name: '調整', cond: '晴' },
 ];
 const TRAIN_ITEMS = [
-  { key: 'feed_s', name: '強化フード 小', kind: '強化 +小' },
-  { key: 'feed_m', name: '強化フード 中', kind: '強化 +中' },
-  { key: 'feed_l', name: '強化フード 大', kind: '強化 +大' },
-  { key: 'feed_xl', name: '強化フード 特大', kind: '強化 +特大' },
-  { key: 'shield_1', name: '星霜の砂 ×1', kind: '減衰よけ 1走' },
-  { key: 'shield_3', name: '星霜の砂 ×3', kind: '減衰よけ 3走' },
+  { key: 'feed_s', name: '強化フード 小', kind: '強化 +小' }, { key: 'feed_m', name: '強化フード 中', kind: '強化 +中' },
+  { key: 'feed_l', name: '強化フード 大', kind: '強化 +大' }, { key: 'feed_xl', name: '強化フード 特大', kind: '強化 +特大' },
+  { key: 'shield_1', name: '星霜の砂 ×1', kind: '減衰よけ 1走' }, { key: 'shield_3', name: '星霜の砂 ×3', kind: '減衰よけ 3走' },
 ];
-const STRENGTHS = [
-  { s: 'weak', label: '弱' },
-  { s: 'mid', label: '中' },
-  { s: 'strong', label: '強' },
-];
+const STRENGTHS = [{ s: 'weak', label: '弱' }, { s: 'mid', label: '中' }, { s: 'strong', label: '強' }];
 const condToKey: Record<string, string> = { 雨: 'rain_cape', 道悪: 'mud_shoes', 芝: 'turf_shoes' };
 const INS = [
   { key: 'full_ready_std', name: '完全装備', note: '3条件を標準で底上げ' },
   { key: 'full_ready_max', name: '野営一式', note: '3条件を最大で底上げ' },
 ];
-const PRICE = [100, 111.2, 123.65, 137.5, 152.9, 170.0, 177.16];
-const tierClass = (tv: number) => (tv >= 90 ? s.tGold : tv >= 70 ? s.tCyan : s.tSteel);
 
-function srcOf(c: Case): FormPanelSource {
-  return {
-    kana: c.kana, en: c.en, totalValue: c.tv, horseType: c.type,
-    runs: c.runs.map((r) => ({ weather: r.weather, track: r.track, surface: r.surface, rank: r.rank, entrants: r.entrants })),
-    forecast: c.forecast,
+// ---- style helpers(canonical 写経) ---------------------------------------
+function rarStyle(k: string): string {
+  const base = 'display:inline-flex;align-items:center;white-space:nowrap;padding:3px 9px;border-radius:6px;font-family:var(--font-display);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border:1px solid transparent;';
+  const map: Record<string, string> = {
+    COMMON: 'color:#c3ccd8;border-color:#8a92a0;background:rgba(130,140,160,.14);',
+    UNCOMMON: 'color:var(--good-soft);border-color:var(--good);background:rgba(53,208,127,.15);',
+    RARE: 'color:#a9f6ff;border-color:var(--cyan);background:rgba(0,234,255,.16);',
+    EPIC: 'color:var(--magenta-soft);border-color:var(--magenta);background:rgba(255,45,196,.16);',
+    LEGENDARY: 'color:#0a0813;border-color:transparent;background:linear-gradient(92deg,var(--gold),#f7eccb);',
   };
+  return base + (map[k] || map.COMMON);
 }
-/** 今夜の予報(色分けテキスト用の {axis,val} 配列)。 */
-function forecastOf(c: Case): { axis: string; val: string }[] {
-  const w = ['RAIN', 'STORM'].includes(c.forecast.weather) ? (c.forecast.weather === 'STORM' ? '嵐' : '雨') : (c.forecast.weather === 'CLOUDY' ? '曇' : '晴');
-  const g = ['SOFT', 'HEAVY'].includes(c.forecast.track) ? (c.forecast.track === 'HEAVY' ? '不良' : '道悪') : (c.forecast.track === 'FAST' ? '高速' : '良馬場');
-  const co = c.forecast.surface === 'TURF' ? '芝' : 'ダート';
-  return [{ axis: '天候', val: w }, { axis: '馬場', val: g }, { axis: 'コース', val: co }];
+function statusStyle(k: string): string {
+  const base = 'display:inline-flex;align-items:center;white-space:nowrap;padding:3px 9px;border-radius:6px;font-family:var(--font-display);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid transparent;';
+  if (k === 'listed') return base + 'color:var(--warn);border-color:rgba(230,178,74,.5);background:rgba(230,178,74,.1);';
+  return base + 'color:var(--cyan);border-color:rgba(0,234,255,.4);background:rgba(0,234,255,.08);';
 }
-function statusBadge(k: StateKey): { label: string; cls: string } {
-  if (k === 'grail') return { label: '聖杯 90+', cls: s.badgeGrail! };
-  if (k === 'listed') return { label: '出品中', cls: s.badgeListed! };
-  if (k === 'rookie') return { label: '新馬', cls: s.badgeActive! };
-  return { label: '出走中', cls: s.badgeActive! };
+function hintStyle(hint: string): string {
+  const base = 'margin-left:auto;font-family:var(--font-mono);font-size:9px;font-weight:600;letter-spacing:.06em;white-space:nowrap;padding:3px 8px;border-radius:999px;border:1px solid transparent;';
+  if (hint === 'strong') return base + 'color:var(--good);border-color:var(--good-dim);background:rgba(53,208,127,.1);';
+  if (hint === 'weak') return base + 'color:var(--magenta-soft);border-color:rgba(255,143,228,.4);background:rgba(255,45,196,.08);';
+  if (hint === 'even') return base + 'color:var(--muted);border-color:var(--border);';
+  return base + 'color:var(--faint);border-color:rgba(143,138,194,.3);';
 }
+function verdictStyle(cls: string): string {
+  const base = 'display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:12px;margin-bottom:10px;border:1px solid transparent;';
+  if (cls === 'strong') return base + 'border-color:var(--good-dim);background:linear-gradient(100deg,rgba(53,208,127,.14),rgba(53,208,127,.03));';
+  if (cls === 'weak') return base + 'border-color:rgba(255,143,228,.4);background:linear-gradient(100deg,rgba(255,45,196,.12),rgba(255,45,196,.02));';
+  if (cls === 'even') return base + 'border-color:var(--border);background:rgba(255,255,255,.03);';
+  return base + 'border-color:rgba(143,138,194,.35);background:repeating-linear-gradient(135deg,rgba(255,255,255,.02) 0 7px,transparent 7px 14px);';
+}
+const verdictMarkColor = (cls: string) => cls === 'strong' ? 'var(--good)' : cls === 'weak' ? 'var(--magenta-soft)' : cls === 'even' ? 'var(--muted)' : 'var(--faint)';
+const verdictHeadColor = (cls: string) => cls === 'strong' ? 'var(--good)' : cls === 'weak' ? 'var(--magenta-soft)' : 'var(--text)';
 
 export function HorsePagePreview() {
-  const [state, setState] = useState<StateKey>('active');
+  const [stateKey, setStateKey] = useState<StateKey>('active');
   const [vp, setVp] = useState<Vp>('pc');
-  const c = CASES[state];
-  const forecast = forecastOf(c);
-  const showPrepare = !c.rookie && !c.listed;
-  const runsTonight = !c.listed;
-  const badge = statusBadge(state);
+  const h = HORSES[stateKey];
+  const isListed = !!h.isListed;
+  const isRookie = !!h.isRookie;
+  const isGrail = !!h.isGrail;
+  const isActive = !isRookie && !isListed; // C/D を出す(出走中・聖杯)
+  const runsTonight = !isListed;
+  const isMobile = vp === 'mobile';
 
-  // 正典と同じ状態機械
+  // 状態機械(正典) + アイテム差し替え(Decision 2026-07-23)
   const [trainPhase, setTrainPhase] = useState<'pick' | 'confirm' | 'done'>('pick');
   const [itemPhase, setItemPhase] = useState<'locked' | 'pick' | 'attached' | 'skipped'>('locked');
   const [menus, setMenus] = useState<string[]>([]);
@@ -180,11 +219,11 @@ export function HorsePagePreview() {
   const [raceKey, setRaceKey] = useState('');
   const [raceApplied, setRaceApplied] = useState<string | null>(null);
   const [raceEditing, setRaceEditing] = useState(false);
-  const [displayTotal, setDisplayTotal] = useState(c.tv);
+  const [displayTotal, setDisplayTotal] = useState(h.total ?? 0);
   const [auraOn, setAuraOn] = useState(false);
 
-  const dispRef = useRef(c.tv);
-  const targetRef = useRef(c.tv);
+  const dispRef = useRef(h.total ?? 0);
+  const targetRef = useRef(h.total ?? 0);
   const rafRef = useRef<number | null>(null);
   const auraTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reduce = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
@@ -192,12 +231,12 @@ export function HorsePagePreview() {
   useEffect(() => {
     setTrainPhase('pick'); setItemPhase('locked'); setMenus([]); setTrainItemKey('');
     setAttachedKey(null); setRaceKey(''); setRaceApplied(null); setRaceEditing(false);
-    setDisplayTotal(c.tv); setAuraOn(false);
-    dispRef.current = c.tv; targetRef.current = c.tv;
-  }, [state, c.tv]);
+    const base = h.total ?? 0;
+    setDisplayTotal(base); setAuraOn(false); dispRef.current = base; targetRef.current = base;
+  }, [stateKey, h.total]);
 
-  // TOTALは派生値(確定+3 / 調教アイテム+1 / レースアイテム+2)。差し替え・取り外しで増減を追従。
-  const targetTotal = c.tv + (trainPhase === 'done' ? 3 : 0) + (attachedKey ? 1 : 0) + (raceApplied ? 2 : 0);
+  const baseTotal = h.total ?? 0;
+  const targetTotal = baseTotal + (trainPhase === 'done' ? 3 : 0) + (attachedKey ? 1 : 0) + (raceApplied ? 2 : 0);
   useEffect(() => {
     if (targetTotal === targetRef.current) return;
     const increased = targetTotal > targetRef.current;
@@ -219,13 +258,12 @@ export function HorsePagePreview() {
     rafRef.current = requestAnimationFrame(step);
   }, [targetTotal]);
 
-  // ---- handlers(正典 resetInteractions / toggleMenu ... より写経) ----
+  // ---- handlers ----
   function toggleMenu(key: string) {
     if (trainPhase !== 'pick') return;
     setMenus((prev) => {
       const m = prev.slice();
-      if (m.length >= 2) { const idx = m.indexOf(key); if (idx >= 0) m.splice(idx, 1); else return prev; }
-      else m.push(key);
+      if (m.length >= 2) { const idx = m.indexOf(key); if (idx >= 0) m.splice(idx, 1); else return prev; } else m.push(key);
       return m;
     });
   }
@@ -235,7 +273,6 @@ export function HorsePagePreview() {
   const confirmTraining = () => { setTrainPhase('done'); setItemPhase('pick'); };
   const selectTrainItem = (key: string) => setTrainItemKey(key);
   const attachTrainItem = () => { if (!trainItemKey) return; setAttachedKey(trainItemKey); setItemPhase('attached'); };
-  // ★アイテムはレース直前まで何度でも差し替え/取り外し自由(Decision・オーナー2026-07-23)
   const swapTrainItem = () => { setTrainItemKey(attachedKey ?? ''); setItemPhase('pick'); };
   const removeTrainItem = () => { setAttachedKey(null); setTrainItemKey(''); setItemPhase('pick'); };
   const skipTrainItem = () => { setAttachedKey(null); setTrainItemKey(''); setItemPhase('skipped'); };
@@ -245,41 +282,46 @@ export function HorsePagePreview() {
   const swapRace = () => { setRaceEditing(true); setRaceKey(raceApplied ?? ''); };
   const cancelRace = () => { setRaceApplied(null); setRaceEditing(false); setRaceKey(''); };
 
-  // ---- computed(正典 renderVals より写経) ----
+  // ---- computed(renderVals 写経) ----
+  const value = PRICE[h.day]; const valueLabel = isListed ? '出品価格' : '現在価値';
+  const heroFrameStyle = 'border-radius:18px;padding:1px;box-shadow:0 18px 40px -18px rgba(0,0,0,.7);height:100%;'
+    + (isGrail ? 'background:conic-gradient(from 140deg,#5a4a1e,#f2e4bf,#fff6da,var(--gold-bright),#f2e4bf,#c9a86a,#5a4a1e);'
+              : 'background:conic-gradient(from 140deg,#3a2f18,var(--gold),#f2e4bf,var(--cyan),var(--magenta),var(--gold),#3a2f18);');
+  const totalColor = isGrail ? 'var(--gold-bright)' : ((h.total ?? 0) >= 85 ? 'var(--gold-bright)' : (h.total ?? 0) >= 70 ? '#a9f6ff' : 'var(--text)');
+  const totalStyle = `font-family:var(--font-display);font-weight:900;font-size:38px;line-height:1;color:${totalColor};` + (auraOn ? 'text-shadow:0 0 18px rgba(242,228,191,.7);' : '');
+  const pips = Array.from({ length: 7 }, (_, idx) => {
+    const i = idx + 1; let bg = 'rgba(255,255,255,.1)';
+    if (i <= h.day) bg = 'var(--cyan)'; if (i === h.day + 1 && runsTonight) bg = 'var(--magenta)';
+    const extra = (i === h.day + 1 && runsTonight) ? 'box-shadow:0 0 7px var(--magenta);' : '';
+    return `flex:1;height:6px;border-radius:2px;background:${bg};${extra}`;
+  });
+  const bandColor = h.band && h.band.key === 'safe' ? '#35d07f' : 'var(--muted)';
+  const bandStyle = `font-family:var(--font-mono);font-size:11px;margin-top:9px;letter-spacing:.04em;color:${bandColor};`;
+  const cellBase = 'font-size:11px;text-align:center;padding:7px 5px;border-bottom:1px solid var(--border-soft);';
+  const formTvStyle = `font-family:var(--font-display);font-weight:900;font-size:22px;line-height:1;color:${h.total == null ? 'var(--faint)' : 'var(--cyan)'};font-variant-numeric:tabular-nums;`;
+
   const numOn = 'width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:11px;color:#04141a;background:var(--cyan);flex:none;';
   const numDone = 'width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:11px;color:var(--good);background:rgba(53,208,127,.15);border:1px solid var(--good-dim);flex:none;';
   const numLock = 'width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:11px;color:var(--faint);background:rgba(255,255,255,.05);border:1px solid var(--border);flex:none;';
-
-  const trainDone = trainPhase === 'done';
-  const trainConfirming = trainPhase === 'confirm';
-  const trainPicking = trainPhase === 'pick';
+  const trainDone = trainPhase === 'done'; const trainConfirming = trainPhase === 'confirm'; const trainPicking = trainPhase === 'pick';
   const step1NumStyle = trainDone ? numDone : numOn;
   const step1Title = trainDone ? '① 調教を確定した' : '① 調教を確定する';
-
-  const itemAttached = itemPhase === 'attached';
-  const itemSkipped = itemPhase === 'skipped';
-  const itemPicking = itemPhase === 'pick';
-  const itemLocked = itemPhase === 'locked';
+  const itemAttached = itemPhase === 'attached'; const itemSkipped = itemPhase === 'skipped'; const itemPicking = itemPhase === 'pick'; const itemLocked = itemPhase === 'locked';
   const step2NumStyle = (itemAttached || itemSkipped) ? numDone : (itemPicking ? numOn : numLock);
   const step2Title = itemAttached ? '② 調教アイテムを装着した' : itemSkipped ? '② 調教アイテム — 見送り' : '② 調教アイテムで上乗せする';
   const step2TitleColor = itemLocked ? 'var(--faint)' : 'var(--text)';
 
   const menuCards = MENUS.map((m) => {
-    const count = menus.filter((x) => x === m.key).length;
-    const on = count > 0;
+    const count = menus.filter((x) => x === m.key).length; const on = count > 0;
     const style = 'appearance:none;text-align:left;cursor:pointer;display:flex;flex-direction:column;border-radius:11px;padding:8px;color:inherit;transition:border-color .15s;'
-      + (on ? 'border:1px solid var(--cyan);box-shadow:0 0 0 2px rgba(0,234,255,.25);background:rgba(0,234,255,.06);'
-            : 'border:1px solid var(--border);background:rgba(10,8,22,.5);');
+      + (on ? 'border:1px solid var(--cyan);box-shadow:0 0 0 2px rgba(0,234,255,.25);background:rgba(0,234,255,.06);' : 'border:1px solid var(--border);background:rgba(10,8,22,.5);');
     return { ...m, img: MENU(m.key), count, style };
   });
   const pickedChips = menus.map((k, i) => ({ label: MENUS.find((x) => x.key === k)!.name, i }));
-
   const submitDisabled = menus.length === 0;
   const submitBtnStyle = 'appearance:none;border-radius:11px;padding:9px 16px;font-family:var(--font-display);font-weight:700;font-size:12px;letter-spacing:.04em;cursor:pointer;border:none;'
-    + (submitDisabled ? 'color:var(--faint);background:rgba(255,255,255,.05);cursor:not-allowed;'
-                      : 'color:#04141a;background:linear-gradient(100deg,var(--cyan),#5ff5ff 55%,var(--cyan));box-shadow:0 10px 24px -8px rgba(0,234,255,.7);');
+    + (submitDisabled ? 'color:var(--faint);background:rgba(255,255,255,.05);cursor:not-allowed;' : 'color:#04141a;background:linear-gradient(100deg,var(--cyan),#5ff5ff 55%,var(--cyan));box-shadow:0 10px 24px -8px rgba(0,234,255,.7);');
   const submitBtnLabel = submitDisabled ? 'メニューを選ぶ' : `確認へ進む（${menus.length}/2）`;
-
   const trainItemCards = TRAIN_ITEMS.map((it) => {
     const on = trainItemKey === it.key;
     const style = 'appearance:none;text-align:left;cursor:pointer;display:flex;flex-direction:column;border-radius:10px;padding:7px;color:inherit;'
@@ -287,19 +329,18 @@ export function HorsePagePreview() {
     return { ...it, img: ITEM(it.key), style };
   });
   const selTrain = TRAIN_ITEMS.find((x) => x.key === trainItemKey);
+  const editingTrainItem = itemPicking && !!attachedKey;
   const trainItemHint = selTrain ? `${selTrain.kind} — 確定済みの調教へ1個だけ上乗せ` : 'カードを選ぶと効果が出ます。';
   const attachBtnStyle = 'appearance:none;border-radius:11px;padding:9px 16px;font-family:var(--font-display);font-weight:700;font-size:12px;cursor:pointer;border:none;'
     + (trainItemKey ? 'color:#04141a;background:linear-gradient(100deg,var(--cyan),#5ff5ff);box-shadow:0 10px 24px -8px rgba(0,234,255,.7);' : 'color:var(--faint);background:rgba(255,255,255,.05);cursor:not-allowed;');
-  const editingTrainItem = itemPicking && !!attachedKey;
   const attachBtnLabel = selTrain ? (editingTrainItem && selTrain.key !== attachedKey ? `${selTrain.name}に差し替える` : `${selTrain.name}を購入して装着`) : 'アイテムを選ぶ';
   const attachedItem = attachedKey ? TRAIN_ITEMS.find((x) => x.key === attachedKey) : null;
 
-  const tonightConds = forecast.map((f) => f.val).filter((v) => condToKey[v]);
+  const tonightConds = h.forecast.map((f) => f.val).filter((v) => condToKey[v]);
   const raceGroups = tonightConds.map((cond) => {
     const base = condToKey[cond]!;
     const items = STRENGTHS.map((st) => {
-      const key = `${base}_${st.s}`;
-      const on = raceKey === key;
+      const key = `${base}_${st.s}`; const on = raceKey === key;
       const style = 'appearance:none;text-align:center;cursor:pointer;display:flex;flex-direction:column;border-radius:10px;padding:7px;color:inherit;'
         + (on ? 'border:1px solid var(--magenta);box-shadow:0 0 0 2px rgba(255,45,196,.28);background:rgba(255,45,196,.08);' : 'border:1px solid var(--border);background:rgba(10,8,22,.5);');
       return { img: ITEM(key), strengthLabel: st.label, key, style };
@@ -312,11 +353,7 @@ export function HorsePagePreview() {
       + (on ? 'border:1px solid var(--gold);box-shadow:0 0 0 2px rgba(201,168,106,.28);background:rgba(201,168,106,.08);' : 'border:1px solid var(--border);background:rgba(10,8,22,.5);');
     return { ...it, img: ITEM(it.key), style };
   });
-  const otherConds = [
-    { label: '晴', ico: ICO('晴') },
-    { label: '良馬場', ico: ICO('良馬場') },
-    { label: 'ダート', ico: ICO('ダート') },
-  ];
+  const otherConds = [{ label: '晴', ico: ICO('晴') }, { label: '良馬場', ico: ICO('良馬場') }, { label: 'ダート', ico: ICO('ダート') }];
   const raceSelName = (() => {
     if (!raceKey) return '';
     const ins = INS.find((x) => x.key === raceKey); if (ins) return ins.name;
@@ -337,106 +374,232 @@ export function HorsePagePreview() {
     return { name: `${cond || ''} ${sl}`, img: ITEM(raceApplied) };
   })() : null;
 
+  const ladder = Array.from({ length: 7 }, (_, i) => {
+    const price = PRICE[i]!; const hgt = Math.max(24, Math.round((Number(price) / 200) * 100));
+    let bar = 'background:rgba(255,255,255,.06);';
+    if (i < h.day) bar = 'background:linear-gradient(180deg,rgba(0,234,255,.5),rgba(0,234,255,.12));';
+    else if (i === h.day) bar = 'background:linear-gradient(180deg,var(--magenta),rgba(255,45,196,.25));box-shadow:0 0 12px rgba(255,45,196,.5);';
+    else if (i === h.day + 1 && runsTonight) bar = 'background:linear-gradient(180deg,var(--cyan),rgba(0,234,255,.3));box-shadow:0 0 12px rgba(0,234,255,.5);';
+    return { price, day: `Day${i}`, barStyle: `width:100%;border-radius:4px 4px 0 0;height:${hgt}%;${bar}` };
+  });
+  ladder.push({ price: '200', day: '走破', barStyle: 'width:100%;border-radius:4px 4px 0 0;height:100%;background:linear-gradient(180deg,var(--gold-bright),var(--gold));box-shadow:0 0 14px rgba(201,168,106,.55);' });
+  const ladderNextLabel = h.day >= 6 ? '走破報酬' : '生存で'; const ladderNextVal = h.day >= 6 ? '200' : PRICE[h.day + 1];
+  const look = deriveNftLook(h.dna, h.en);
+
+  const outerStyle = `display:flex;justify-content:center;padding:${isMobile ? '22px 12px 0' : '22px 22px 0'};`;
+  const frameStyle = isMobile
+    ? 'width:390px;max-width:100%;display:flex;flex-direction:column;gap:14px;border:1px solid var(--border);border-radius:26px;padding:16px 14px 26px;background:rgba(8,6,17,.4);box-shadow:0 30px 80px -30px rgba(0,0,0,.8);'
+    : 'width:100%;max-width:1180px;display:flex;flex-direction:column;gap:16px;';
+  const mainGridStyle = isMobile ? 'display:flex;flex-direction:column;gap:16px;'
+    : isActive ? 'display:grid;grid-template-columns:minmax(0,0.84fr) minmax(0,1.16fr);gap:18px;align-items:start;'
+    : 'display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start;';
+  const artColStyle = !isMobile ? 'position:sticky;top:20px;' : '';
+
   return (
     <div className={s.wrap}>
-      {/* 状態/ビューポート切替(プレビュー用ツールバー) */}
+      {/* プレビュー用ツールバー */}
       <div style={{ position: 'sticky', top: 0, zIndex: 50, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', padding: '12px 20px', background: 'rgba(8,6,16,.86)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--hpp-border)' }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 12, letterSpacing: '.16em', color: 'var(--hpp-gold)' }}>馬個別ページ 再デザインV2(正典どおり・PC2カラム)</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 12, letterSpacing: '.16em', color: 'var(--hpp-gold)' }}>馬個別ページ 再デザインV2(正典を全体写経)</span>
         <div style={{ display: 'flex', gap: 6 }}>
-          {(['active', 'rookie', 'grail', 'listed'] as StateKey[]).map((k) => (
-            <button key={k} onClick={() => setState(k)}
-              style={{ fontSize: 10, padding: '6px 11px', borderRadius: 7, cursor: 'pointer', border: '1px solid var(--hpp-border)', background: state === k ? 'rgba(201,168,106,.22)' : 'none', color: state === k ? 'var(--hpp-gold-bright)' : 'var(--hpp-muted)' }}>
-              {k === 'active' ? '出走中' : k === 'rookie' ? '新馬' : k === 'grail' ? '聖杯90+' : '出品中'}
-            </button>
+          {ORDER.map((k) => (
+            <button key={k} onClick={() => setStateKey(k)} style={{ fontSize: 10, padding: '6px 11px', borderRadius: 7, cursor: 'pointer', border: '1px solid var(--hpp-border)', background: stateKey === k ? 'rgba(201,168,106,.22)' : 'none', color: stateKey === k ? 'var(--hpp-gold-bright)' : 'var(--hpp-muted)' }}>{HORSES[k].statusLabel}</button>
           ))}
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           {(['pc', 'mobile'] as Vp[]).map((k) => (
-            <button key={k} onClick={() => setVp(k)}
-              style={{ fontSize: 10, padding: '6px 11px', borderRadius: 7, cursor: 'pointer', border: '1px solid var(--hpp-border)', background: vp === k ? 'rgba(255,255,255,.1)' : 'none', color: vp === k ? 'var(--hpp-text)' : 'var(--hpp-muted)' }}>
-              {k === 'pc' ? 'PC' : 'モバイル430'}
-            </button>
+            <button key={k} onClick={() => setVp(k)} style={{ fontSize: 10, padding: '6px 11px', borderRadius: 7, cursor: 'pointer', border: '1px solid var(--hpp-border)', background: vp === k ? 'rgba(255,255,255,.1)' : 'none', color: vp === k ? 'var(--hpp-text)' : 'var(--hpp-muted)' }}>{k === 'pc' ? 'PC' : 'モバイル390'}</button>
           ))}
         </div>
-        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--hpp-faint)' }}>C/Dは正典HTMLを写経 · 手応え=TOTALカウントアップ＋金オーラ＋装着アニメ</span>
+        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--hpp-faint)' }}>正典HTMLを写経 · アートは実NftHorseArt · アイテムはレース直前まで差し替え自由</span>
       </div>
 
-      <div className={s.stageWrap}>
-        <div className={`${s.page} ${vp === 'mobile' ? s.mobile : ''}`}>
+      <div style={css(outerStyle)}>
+        <div style={css(frameStyle)}>
+          <a href="#" onClick={(e) => e.preventDefault()} style={css('font-family:var(--font-display);font-size:10px;letter-spacing:.14em;color:var(--muted)')}>‹ 厩舎へ</a>
 
-          {/* ===== MASTHEAD(全幅) ===== */}
-          <div className={s.mast}>
-            <div>
-              <div className={s.mastTitleRow}>
-                <span className={s.mastTitle}>{c.kana}</span>
-                <span className={`${s.badge} ${s.badgeType}`}>{c.type}</span>
-                <span className={`${s.badge} ${badge.cls}`}>{badge.label}</span>
-                {c.shield ? <span className={s.badge} style={{ color: 'var(--hpp-cyan)', borderColor: 'rgba(0,234,255,.3)' }}>SHIELD ×{c.shield}</span> : null}
+          {/* MASTHEAD */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap', marginTop: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
+                <span style={css('font-family:var(--font-display);font-weight:800;font-size:27px;letter-spacing:.01em;color:var(--text)')}>{h.kana}</span>
+                <span style={css('display:inline-flex;align-items:center;white-space:nowrap;padding:3px 9px;border-radius:6px;font-family:var(--font-display);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border:1px solid rgba(0,234,255,.28);background:rgba(0,234,255,.06);')}>{h.type}</span>
+                <span style={css(statusStyle(h.statusKey))}>{h.statusLabel}</span>
+                <span style={css(rarStyle(h.rarKey))}>{h.rarity}</span>
               </div>
-              <div className={s.mastEn}>{c.en.toUpperCase()} · LV.{c.day}/7</div>
+              <div style={css('font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;color:var(--faint);margin-top:6px')}>{h.en} · LV.{h.day}/7</div>
             </div>
-            <div className={s.mastR}>
-              <div className={s.mastValK}>{c.listed ? '出品価格' : '現在価値'}</div>
-              <div className={s.mastVal}>{c.value.toFixed(2)}<small>USDT</small></div>
+            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+              <div style={css('font-family:var(--font-mono);font-size:9.5px;letter-spacing:.12em;color:var(--muted)')}>{valueLabel}</div>
+              <div style={css(`font-family:var(--font-display);font-weight:800;font-size:30px;line-height:1;color:${isListed ? 'var(--warn)' : 'var(--gold-bright)'};`)}>{value}<small style={css('font-family:var(--font-mono);font-weight:400;font-size:12px;color:var(--muted);margin-left:6px')}>USDT</small></div>
             </div>
           </div>
 
-          {/* ===== MAIN GRID: A アート | B〜E ===== */}
-          <div className={`${s.mainGrid} ${showPrepare ? '' : s.mainGridReadOnly}`}>
+          {/* MAIN GRID */}
+          <div style={css(mainGridStyle)}>
 
-            {/* ---- A 誰の馬か(アートカード・sticky) ---- */}
-            <div className={s.artCol}>
-              <div className={`${s.hero} ${c.grail ? s.grail : ''} ${tierClass(c.tv)} ${s.auraHost} ${auraOn ? s.flash : ''}`}>
-                <div className={s.artStage} style={{ height: vp === 'mobile' ? 340 : 420 }}>
-                  {c.grail ? <div className={s.grailTag}>★ LEGENDARY · 総合値90+</div> : null}
-                  <div className={s.pagerInfo}>{c.group}</div>
-                  <div className={`${s.pager} ${s.prev}`} title="前の馬へ">‹</div>
-                  <div className={`${s.pager} ${s.next}`} title="次の馬へ">›</div>
-                  <div className={s.artZoom}>
-                    <NftHorseArt look={deriveNftLook(c.dna, c.en)} />
+            {/* ===== A · 誰の馬か(HERO ART) ===== */}
+            <div style={css(artColStyle)}>
+              <div style={css(heroFrameStyle)}>
+                <div style={{ borderRadius: 17, background: 'linear-gradient(180deg,#12101d,#0a0813)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <div style={{ position: 'relative', background: 'radial-gradient(90% 80% at 50% 42%,rgba(0,234,255,.07),transparent 70%)', height: isMobile ? 320 : 380, display: 'flex' }}>
+                    {isGrail ? <span aria-hidden="true" style={css('position:absolute;inset:-30%;z-index:0;pointer-events:none;background:conic-gradient(from 0deg,transparent,rgba(242,228,191,.16),transparent 30%,rgba(0,234,255,.12),transparent 55%,rgba(255,45,196,.12),transparent 80%,rgba(242,228,191,.16));animation:sddGrailSpin 14s linear infinite')} /> : null}
+
+                    <div className={s.artZoom} style={{ zIndex: 1 }}><NftHorseArt look={look} /></div>
+
+                    {auraOn ? (
+                      <>
+                        <span aria-hidden="true" style={css('position:absolute;inset:8px;border-radius:14px;pointer-events:none;z-index:4;animation:sddAura 1.6s ease-out')} />
+                        <span aria-hidden="true" style={css('position:absolute;inset:0;z-index:4;pointer-events:none;mix-blend-mode:color-dodge;background:linear-gradient(112deg,transparent 42%,rgba(242,228,191,.85) 50%,transparent 58%);background-size:260% 100%;animation:sddSweep 1.1s ease-out')} />
+                      </>
+                    ) : null}
+                    {isGrail ? <span title="聖杯" style={css('position:absolute;top:12px;right:14px;z-index:5;color:#ffd977;font-size:26px;line-height:1;text-shadow:0 0 14px #ffcf4bdd,0 0 4px #fff;pointer-events:none')}>★</span> : null}
+
+                    <div style={css('position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,19,0) 46%,rgba(10,8,19,.92) 96%);pointer-events:none')} />
+
+                    <a href="#" onClick={(e) => { e.preventDefault(); setStateKey(ORDER[(ORDER.indexOf(stateKey) - 1 + ORDER.length) % ORDER.length]!); }} title="前の馬へ" style={css('position:absolute;left:8px;top:50%;transform:translateY(-50%);z-index:6;width:40px;height:58px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:30px;color:var(--text);background:rgba(10,8,19,.55);border:1px solid rgba(255,255,255,.14);border-radius:12px;backdrop-filter:blur(6px);text-decoration:none')}>‹</a>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setStateKey(ORDER[(ORDER.indexOf(stateKey) + 1) % ORDER.length]!); }} title="次の馬へ" style={css('position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:6;width:40px;height:58px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:30px;color:var(--text);background:rgba(10,8,19,.55);border:1px solid rgba(255,255,255,.14);border-radius:12px;backdrop-filter:blur(6px);text-decoration:none')}>›</a>
+                    <div style={css('position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:6;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;color:var(--muted);background:rgba(10,8,19,.5);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:2px 11px;white-space:nowrap')}>{h.groupLabel} · {ORDER.indexOf(stateKey) + 1} / 4</div>
+
+                    <div style={{ position: 'absolute', left: 16, right: 16, bottom: 13, zIndex: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', rowGap: 6, textShadow: '0 2px 10px rgba(5,4,9,.85)' }}>
+                      <div>
+                        <div style={css('font-family:var(--font-mono);font-size:9.5px;color:var(--muted);letter-spacing:.08em')}>{h.en}</div>
+                        <div style={css('font-family:var(--font-display);font-weight:800;font-size:15px;color:var(--text);letter-spacing:.02em')}>{h.type}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flex: 'none' }}>
+                        {h.total != null ? (
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={css('font-family:var(--font-display);font-size:8.5px;color:var(--faint);letter-spacing:.14em')}>TOTAL</div>
+                            <div style={css(totalStyle)}>{Math.round(displayTotal)}</div>
+                          </div>
+                        ) : null}
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={css('font-family:var(--font-display);font-size:8.5px;color:var(--faint);letter-spacing:.14em')}>DAY</div>
+                          <div style={css('font-family:var(--font-display);font-weight:800;font-size:26px;color:var(--cyan);line-height:1')}>{h.day}<small style={css('font-size:13px;color:var(--faint)')}>/7</small></div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className={s.idBar}>
-                  <div><div className={s.tvNum} style={auraOn ? { textShadow: '0 0 18px rgba(242,228,191,.7)' } : undefined}>{Math.round(displayTotal)}</div><div className={s.tvCap}>総合値 TOTAL</div></div>
-                  <div><div className={s.kana}>{c.kana}</div><div className={s.en}>{c.en}</div><span className={s.type}>{c.type}</span></div>
-                  <div className={s.tvVal}>現在価値 {c.value.toFixed(2)} USDT</div>
-                </div>
-                <div className={s.dayRail}>
-                  <span className={s.lv}>LV.{c.day}/7</span>
-                  <div className={s.pips}>{Array.from({ length: 7 }, (_, i) => <span key={i} className={i <= c.day ? s.on : (i === c.day + 1 && runsTonight ? s.spark : '')} />)}</div>
-                </div>
-                <div className={s.vitals}>
-                  <div className={s.vital}>
-                    <div className={s.vTop}><span className={s.vName}>CONDITION 調子</span><span className={s.vNum}>{c.cond}</span></div>
-                    <div className={`${s.vbar} ${s.cond}`}><i style={{ width: `${c.cond}%` }} /></div>
+
+                  <div style={{ padding: '13px 16px 15px' }}>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {pips.map((p, i) => <span key={i} style={css(p)} />)}
+                    </div>
+                    {h.band ? <div style={css(bandStyle)}>{h.band.text}<span style={css('color:var(--faint);font-size:.92em')}> — {h.band.note}</span></div> : null}
                   </div>
-                  <div className={s.vital}>
-                    <div className={s.vTop}><span className={s.vName}>FATIGUE 疲労</span><span className={s.vNum}>{c.fat}</span></div>
-                    <div className={`${s.vbar} ${s.fat}`}><i style={{ width: `${c.fat}%` }} /></div>
-                  </div>
-                </div>
-                <div className={s.bandRow}>
-                  <span className={`${s.chip} ${c.band === 'safe' ? s.safe : s.mid}`}>{c.bandText}</span>
-                  {c.shield ? <span className={`${s.chip} ${s.shield}`}>SHIELD ×{c.shield}</span> : null}
                 </div>
               </div>
             </div>
 
-            {/* ---- 右レール: B 読む → ③/C/D 備える → E 文脈 ---- */}
-            <div className={s.rightRail}>
+            {/* ===== RIGHT RAIL: B 読む → C/D 備える → E 文脈 ===== */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
 
-              {/* B 読む(馬柱・承認済み A案 = variant="v2") */}
-              <div className={s.sec}>
-                <div className={s.blkTag}><span className={`${s.n} ${s.read}`}>B</span><span className={s.t}>読む — 馬柱</span><span className={s.s}>予報 × 成績 × レース予想板</span></div>
-                <FormPanel d={buildFormPanelData(srcOf(c))} variant="v2" />
+              {/* section tag B */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <span style={css('font-family:var(--font-display);font-weight:800;font-size:11px;letter-spacing:.06em;color:#04141a;background:var(--cyan);border-radius:5px;padding:2px 7px')}>B</span>
+                <span style={css('font-family:var(--font-display);font-size:12px;letter-spacing:.14em;color:var(--text)')}>読む — 馬柱</span>
+                <span style={css('font-family:var(--font-jp);font-size:11px;color:var(--faint)')}>予報 × 成績 × 読解</span>
               </div>
 
-              {c.listed ? (
-                <div className={s.listedNote}>■ この馬は<b style={{ color: 'var(--hpp-gold-bright)' }}>出品中</b>です。今夜は走りません（調教・レースアイテムは非表示）。上の馬柱は<b style={{ color: 'var(--hpp-gold-bright)' }}>買い手の目利き材料</b>として表示しています。</div>
-              ) : c.rookie ? (
-                <div className={s.listedNote}>■ この馬は<b style={{ color: 'var(--hpp-cyan)' }}>新馬</b>です。適性はまだ謎——<b style={{ color: 'var(--hpp-cyan)' }}>走らせて暴け</b>。走ったぶんだけ馬柱に読みが増えます。</div>
-              ) : (
-                /* ===== 備える(出走中/聖杯のみ・正典どおり写経) ===== */
+              {/* ===== 馬柱パネル(A案・色分けテキスト) ===== */}
+              <div style={css('border:1px solid var(--border);border-radius:16px;background:var(--panel);overflow:hidden;position:relative')}>
+                <div style={css('display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:14px 15px 12px;background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);border-bottom:1px solid var(--border-soft)')}>
+                  <div>
+                    <div style={css('font-family:var(--font-display);font-weight:800;font-size:16px;letter-spacing:.01em;color:var(--text);line-height:1.15')}>{h.kana}</div>
+                    <div style={css('font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;color:var(--faint);margin-top:3px')}>{h.en}</div>
+                    <span style={css('display:inline-block;margin-top:5px;white-space:nowrap;font-family:var(--font-mono);font-size:8px;letter-spacing:.1em;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:2px 6px')}>{h.type}</span>
+                  </div>
+                  <div style={{ textAlign: 'right', flex: 'none' }}>
+                    <div style={css(formTvStyle)}>{h.total == null ? '—' : String(h.total)}</div>
+                    <div style={css('font-family:var(--font-mono);font-size:7.5px;letter-spacing:.14em;color:var(--faint);margin-top:3px')}>総合値</div>
+                  </div>
+                </div>
+
+                {/* ① 今夜の予報 */}
+                <div style={css('padding:12px 15px;background:linear-gradient(100deg,rgba(0,234,255,.09),rgba(0,234,255,.02));border-bottom:1px solid var(--border-soft)')}>
+                  <div style={css('font-family:var(--font-display);font-size:9px;letter-spacing:.18em;color:var(--cyan);margin-bottom:9px;display:flex;align-items:center;gap:7px')}>今夜の予報<span style={css('margin-left:auto;color:var(--faint);letter-spacing:.08em;font-family:var(--font-mono);font-size:8px')}>的中率70% · 目安</span></div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
+                    {h.forecast.map((cc) => (
+                      <span key={cc.axis} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+                        <span style={css('font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;color:var(--faint)')}>{cc.axis}</span>
+                        <b style={css(`font-family:var(--font-sans);font-weight:800;font-size:16px;color:${condColor(cc.val)};`)}>{cc.val}</b>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ② 馬柱 = 材料 */}
+                <div style={{ padding: '10px 8px 4px' }}>
+                  <div style={css('font-family:var(--font-display);font-size:8.5px;letter-spacing:.16em;color:var(--muted);padding:4px 7px 8px;display:flex;align-items:center;gap:6px')}>成績表 — 推理の材料（直近{h.runs.length}走）<span style={css('margin-left:auto;font-family:var(--font-mono);font-size:8px;color:var(--faint);letter-spacing:.04em;display:flex;align-items:center;gap:5px')}><i style={css('width:9px;height:9px;border-radius:2px;background:rgba(0,234,255,.35);border:1px solid var(--border-strong);display:inline-block')} />予報に一致した走</span></div>
+                  {h.runs.length > 0 ? (
+                    <table style={css('width:100%;border-collapse:collapse;font-family:var(--font-mono)')}>
+                      <thead>
+                        <tr>
+                          {['天候', '馬場', 'コース'].map((th) => <th key={th} style={css('font-size:8px;letter-spacing:.12em;color:var(--faint);font-weight:500;text-align:center;padding:4px 5px;border-bottom:1px solid var(--border)')}>{th}</th>)}
+                          <th style={css('font-size:8px;letter-spacing:.12em;color:var(--faint);font-weight:500;text-align:right;padding:4px 9px 4px 5px;border-bottom:1px solid var(--border)')}>着順</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {h.runs.map((r, i) => {
+                          const hi = r.m >= 2; const dim = r.m === 0;
+                          const trStyle = hi ? 'background:linear-gradient(90deg,rgba(0,234,255,.08),transparent);' : dim ? 'opacity:.5;' : '';
+                          return (
+                            <tr key={i} style={css(trStyle)}>
+                              <td style={css(cellBase + 'font-weight:600;color:' + condColor(r.weather) + ';' + (hi ? 'box-shadow:inset 3px 0 0 var(--cyan);' : ''))}>{r.weather}</td>
+                              <td style={css(cellBase + 'font-weight:600;color:' + condColor(r.ground) + ';')}>{r.ground}</td>
+                              <td style={css(cellBase + 'font-weight:600;color:' + condColor(r.course) + ';')}>{r.course}</td>
+                              <td style={css(cellBase + 'text-align:right;padding-right:9px;')}><b style={css('font-size:13px;font-weight:600;color:' + (hi ? 'var(--cyan)' : 'var(--text)') + ';')}>{r.rank}</b><span style={css('color:var(--faint);font-size:9px')}>/{r.entrants}</span>{hi ? <span style={css('color:var(--cyan);font-size:9px;margin-left:3px')}>◂根拠</span> : null}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  ) : null}
+                  {isRookie ? <div style={css('padding:6px 7px 2px;font-family:var(--font-mono);font-size:11px;color:var(--faint);line-height:1.7')}>まだ走っていない。<span style={css('color:var(--cyan)')}>走らせて</span>適性を暴く。</div> : null}
+                </div>
+
+                {/* ③ レース予想板 */}
+                <div style={css('padding:12px 15px 15px;border-top:1px solid var(--border);background:linear-gradient(180deg,rgba(255,255,255,.015),transparent)')}>
+                  <div style={css('font-family:var(--font-display);font-size:8.5px;letter-spacing:.16em;color:var(--muted);margin-bottom:10px')}>レース予想板</div>
+                  <div style={css(verdictStyle(h.verdict.cls))}>
+                    <div style={css(`font-family:var(--font-display);font-weight:900;font-size:26px;line-height:1;width:34px;text-align:center;flex:none;color:${verdictMarkColor(h.verdict.cls)};`)}>{h.verdict.mark}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={css(`font-family:var(--font-sans);font-weight:900;font-size:15px;line-height:1.2;color:${verdictHeadColor(h.verdict.cls)};`)}>{h.verdict.head}</div>
+                      <div style={css('font-family:var(--font-mono);font-size:8.5px;color:var(--muted);margin-top:3px;letter-spacing:.04em')}>{h.verdict.sub}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {h.reads.map((a) => (
+                      <div key={a.name} style={css('display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:9px;background:rgba(255,255,255,.025);border:1px solid var(--border-soft)')}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={css(`font-family:var(--font-sans);font-weight:800;font-size:12px;color:${condColor(a.name)};white-space:nowrap`)}>「{a.name}」</div>
+                          <div style={css('font-family:var(--font-mono);font-size:9.5px;color:var(--muted)')}>{a.runsText}</div>
+                        </div>
+                        <div style={css(hintStyle(a.hint))}>{a.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {isRookie ? (
+                    <>
+                      <div style={css('font-family:var(--font-mono);font-size:9.5px;color:var(--muted);line-height:1.7;padding:9px 2px 0')}>走ったぶんだけ、この馬の得意が<b style={css('color:var(--cyan)')}>読めてくる</b>。今は材料が少ない＝これからの推理枠。</div>
+                      <div style={{ display: 'flex', gap: 4, marginTop: 9 }}>
+                        <span style={css('flex:1;height:3px;border-radius:2px;background:var(--cyan)')} />
+                        {[0, 1, 2, 3].map((i) => <span key={i} style={css('flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.08)')} />)}
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* ===== 出品中バナー ===== */}
+              {isListed ? (
+                <div style={css('border:1px solid rgba(230,178,74,.35);border-radius:16px;padding:16px 18px;background:linear-gradient(150deg,rgba(230,178,74,.08),transparent 72%)')}>
+                  <div style={css('font-family:var(--font-display);font-weight:800;font-size:16px;color:var(--warn)')}>出品中 — 今夜は走りません</div>
+                  <div style={css('font-size:12.5px;color:#c3ccd8;line-height:1.7;margin-top:6px')}>この馬はマーケットに出ています。上の馬柱は<b style={css('color:var(--gold-bright)')}>買い手の目利き材料</b>。調教・レースアイテムは非表示です。</div>
+                </div>
+              ) : null}
+
+              {/* ===== 備える(出走中・聖杯のみ) ===== */}
+              {isActive ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
                   {/* ③ 今夜の条件ドライバーバー */}
@@ -446,10 +609,10 @@ export function HorsePagePreview() {
                       <span style={css('font-family:var(--font-mono);font-size:8px;color:var(--faint);letter-spacing:.06em')}>予報 70% · 目安</span>
                       <div style={{ flex: 1 }} />
                       <div style={{ display: 'flex', gap: 14, alignItems: 'baseline' }}>
-                        {forecast.map((cc) => (
+                        {h.forecast.map((cc) => (
                           <span key={cc.axis} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5 }}>
                             <span style={css('font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;color:var(--faint)')}>{cc.axis}</span>
-                            <b style={css(`font-family:var(--font-sans);font-weight:800;font-size:12px;color:${condColor(cc.val)}`)}>{cc.val}</b>
+                            <b style={css(`font-family:var(--font-sans);font-weight:800;font-size:12px;color:${condColor(cc.val)};`)}>{cc.val}</b>
                           </span>
                         ))}
                       </div>
@@ -465,8 +628,7 @@ export function HorsePagePreview() {
 
                   {/* ===== C 調教パネル(cyan) ===== */}
                   <div style={css('border:1px solid rgba(0,234,255,.4);border-radius:16px;padding:15px 17px;background:linear-gradient(150deg,rgba(0,234,255,.10),transparent 70%);display:flex;flex-direction:column;gap:14px')}>
-
-                    {/* STEP 1 メニュー */}
+                    {/* STEP 1 */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={css(step1NumStyle)}>1</span>
@@ -476,13 +638,11 @@ export function HorsePagePreview() {
                       {trainDone ? (
                         <div style={css('display:flex;flex-direction:column;gap:8px;border:1px solid var(--border-strong);border-radius:12px;padding:12px;background:rgba(10,8,22,.6)')}>
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {pickedChips.map((m, i) => (
-                              <span key={i} style={css('font-family:var(--font-mono);font-size:11px;color:var(--text);border:1px solid var(--border);border-radius:999px;padding:2px 10px;background:rgba(10,8,22,.5)')}>{m.label}</span>
-                            ))}
+                            {pickedChips.map((m, i) => <span key={i} style={css('font-family:var(--font-mono);font-size:11px;color:var(--text);border:1px solid var(--border);border-radius:999px;padding:2px 10px;background:rgba(10,8,22,.5)')}>{m.label}</span>)}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                             <span style={css('font-family:var(--font-display);font-weight:800;font-size:15px;color:var(--good)')}>手応えあり</span>
-                            <span style={css('font-family:var(--font-mono);font-size:10px;color:var(--muted)')}>総合値が {c.tv} → <b style={{ color: 'var(--good)' }}>{Math.round(displayTotal)}</b> に上がった</span>
+                            <span style={css('font-family:var(--font-mono);font-size:10px;color:var(--muted)')}>総合値が {h.total} → <b style={{ color: 'var(--good)' }}>{Math.round(displayTotal)}</b> に上がった</span>
                           </div>
                           <div style={css('font-family:var(--font-jp);font-size:10.5px;color:var(--muted)')}>このサイクルの調教は確定。次のレースへ持ち越します。</div>
                         </div>
@@ -492,9 +652,7 @@ export function HorsePagePreview() {
                         <div style={css('display:flex;flex-direction:column;gap:10px;min-height:300px;border:1px solid var(--border-strong);border-radius:12px;padding:14px;background:rgba(10,8,22,.6)')}>
                           <div style={css('font-family:var(--font-display);font-weight:700;font-size:13px;color:var(--text)')}>この内容で確定しますか？</div>
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {pickedChips.map((m, i) => (
-                              <span key={i} style={css('font-family:var(--font-mono);font-size:11px;color:var(--text);border:1px solid var(--border);border-radius:999px;padding:2px 10px;background:rgba(10,8,22,.5)')}>{m.label}</span>
-                            ))}
+                            {pickedChips.map((m, i) => <span key={i} style={css('font-family:var(--font-mono);font-size:11px;color:var(--text);border:1px solid var(--border);border-radius:999px;padding:2px 10px;background:rgba(10,8,22,.5)')}>{m.label}</span>)}
                           </div>
                           <div style={css('font-family:var(--font-jp);font-size:11px;color:var(--cyan);border:1px dashed rgba(0,234,255,.4);border-radius:9px;padding:7px 10px;background:rgba(0,234,255,.05)')}>確定後このサイクルは変更できません。</div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -520,9 +678,7 @@ export function HorsePagePreview() {
                             ))}
                           </div>
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: 24 }}>
-                            {pickedChips.map((m) => (
-                              <button key={m.i} type="button" onClick={() => removeMenuAt(m.i)} style={css('font-family:var(--font-mono);font-size:11px;color:var(--cyan);cursor:pointer;border:1px solid rgba(0,234,255,.35);border-radius:999px;padding:2px 9px;background:rgba(0,234,255,.06)')}>{m.label} ✕</button>
-                            ))}
+                            {pickedChips.map((m) => <button key={m.i} type="button" onClick={() => removeMenuAt(m.i)} style={css('font-family:var(--font-mono);font-size:11px;color:var(--cyan);cursor:pointer;border:1px solid rgba(0,234,255,.35);border-radius:999px;padding:2px 9px;background:rgba(0,234,255,.06)')}>{m.label} ✕</button>)}
                           </div>
                           <button type="button" onClick={startConfirm} style={css(submitBtnStyle)}>{submitBtnLabel}</button>
                         </>
@@ -555,9 +711,7 @@ export function HorsePagePreview() {
                         </div>
                       ) : null}
 
-                      {itemLocked ? (
-                        <div style={css('font-family:var(--font-jp);font-size:11px;color:var(--faint)')}>まず①の調教を確定してください。</div>
-                      ) : null}
+                      {itemLocked ? <div style={css('font-family:var(--font-jp);font-size:11px;color:var(--faint)')}>まず①の調教を確定してください。</div> : null}
 
                       {itemPicking ? (
                         <>
@@ -593,7 +747,6 @@ export function HorsePagePreview() {
 
                   {/* ===== D レースアイテム棚(magenta) ===== */}
                   <div style={css('border:1px solid rgba(255,45,196,.4);border-radius:16px;padding:15px 17px;background:linear-gradient(150deg,rgba(255,45,196,.09),transparent 70%);display:flex;flex-direction:column;gap:14px')}>
-
                     {raceApplied && !raceEditing && appliedRace ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                         <div style={css('position:relative;display:flex;align-items:center;gap:11px;min-height:120px;border:1px solid rgba(255,45,196,.45);border-radius:12px;padding:14px;background:rgba(255,45,196,.06);overflow:hidden;animation:sddAttachMag .55s cubic-bezier(.15,1.4,.4,1)')}>
@@ -612,8 +765,6 @@ export function HorsePagePreview() {
                     ) : (
                       <>
                         <div style={css('font-family:var(--font-jp);font-size:11px;color:var(--muted)')}>予報（的中率70%）を読んで次のレースに備える。的中なら適性が上限側へ、<b style={{ color: 'var(--magenta-soft)' }}>外れたら下限側へ下がる</b>。</div>
-
-                        {/* tonight condition groups */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                           {raceGroups.map((g) => (
                             <div key={g.label}>
@@ -632,8 +783,6 @@ export function HorsePagePreview() {
                             </div>
                           ))}
                         </div>
-
-                        {/* insurance */}
                         <div style={css('border-top:1px solid var(--border-soft);padding-top:12px')}>
                           <div style={css('font-family:var(--font-display);font-size:10px;letter-spacing:.12em;color:var(--gold);margin-bottom:7px')}>保険 — どの条件でも底上げ</div>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 7 }}>
@@ -648,11 +797,8 @@ export function HorsePagePreview() {
                             ))}
                           </div>
                         </div>
-
                         <div style={css('font-family:var(--font-mono);font-size:10px;color:var(--muted);min-height:1.1rem')}>{raceHint}</div>
                         <button type="button" onClick={applyRace} style={css(raceApplyBtnStyle)}>{raceApplyBtnLabel}</button>
-
-                        {/* other conditions collapsed */}
                         <details style={css('border-top:1px solid var(--border-soft);padding-top:10px')}>
                           <summary style={css('cursor:pointer;list-style:none;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;color:var(--faint)')}>他の条件（晴・良馬場・ダート）に備える ▸</summary>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
@@ -671,36 +817,59 @@ export function HorsePagePreview() {
                     )}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* ===== E 文脈(畳む) ===== */}
-              <div className={s.sec}>
-                <div className={s.blkTag}><span className={`${s.n} ${s.ctx}`}>E</span><span className={s.t}>文脈</span><span className={s.s}>今夜の判断に不要なものは畳む</span></div>
-                <Fold title="価値ラダー — 7日間の価格と走破" open>
-                  <div className={s.ladder}>
-                    {PRICE.map((p, i) => (
-                      <div key={i} className={`${s.d} ${i === c.day ? s.on : ''} ${i === 6 ? s.win : ''}`}><div className={s.dl}>LV.{i}</div><div className={s.dv}>{p}</div></div>
-                    ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <span style={css('font-family:var(--font-display);font-weight:800;font-size:11px;letter-spacing:.06em;color:var(--faint);background:rgba(255,255,255,.05);border-radius:5px;padding:2px 7px')}>E</span>
+                  <span style={css('font-family:var(--font-display);font-size:12px;letter-spacing:.14em;color:var(--muted)')}>文脈</span>
+                </div>
+
+                <details style={css('border:1px solid var(--border);border-radius:14px;background:linear-gradient(180deg,rgba(20,18,34,0),var(--panel))')} open>
+                  <summary style={css('cursor:pointer;list-style:none;padding:12px 15px;font-family:var(--font-display);font-size:10.5px;letter-spacing:.1em;color:var(--muted)')}>価値ラダー — 7日で上がる階段 ▸</summary>
+                  <div style={{ padding: '0 16px 15px' }}>
+                    <div style={css('font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:12px')}>現在 <b style={css('font-family:var(--font-display);font-size:14px;color:var(--gold-bright)')}>{value}</b> USDT<span style={css('color:var(--faint)')}> → </span><span style={css('color:var(--cyan)')}>{ladderNextLabel}</span> <b style={css('font-family:var(--font-display);font-size:14px;color:var(--cyan)')}>{ladderNextVal}</b> USDT</div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 120 }}>
+                      {ladder.map((b, i) => (
+                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 4, height: '100%', minWidth: 0 }}>
+                          <div style={css('font-family:var(--font-mono);font-size:8px;color:var(--faint);white-space:nowrap')}>{b.price}</div>
+                          <div style={css(b.barStyle)} />
+                          <div style={css('font-family:var(--font-mono);font-size:8px;color:var(--muted);white-space:nowrap')}>{b.day}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={css('font-family:var(--font-mono);font-size:9px;color:#4a4668;margin-top:10px;line-height:1.55')}>Day7 を走破すれば買い戻し 200 USDT（チャンピオン報酬）。数字は価格表（PRICE_TABLE_V1）の実値。</div>
                   </div>
-                  <div className={s.credLine} style={{ marginTop: 9 }}>7日走り切ると <b>200 USDT で買い戻し</b>＋記念NFT。表の値は各LVの現在価値（PRICE_TABLE_V1）。</div>
-                </Fold>
-                <Fold title="育成者クレジット"><div className={s.credLine}>{c.breeder}</div></Fold>
-                <Fold title="PROVENANCE — 検証情報"><div className={s.prov}><b>DNA</b> {c.dna}… · <b>SEED</b> 0x7d3e…2b · <b>世代</b> G2 · 決定論生成（誰でも再現・検証可能）</div></Fold>
+                </details>
+
+                <details style={css('border:1px solid var(--border);border-radius:14px;background:linear-gradient(180deg,rgba(20,18,34,0),var(--panel))')}>
+                  <summary style={css('cursor:pointer;list-style:none;padding:12px 15px;font-family:var(--font-display);font-size:10.5px;letter-spacing:.1em;color:var(--muted)')}>育成者クレジット — 誰が育てたか ▸</summary>
+                  <div style={{ padding: '0 15px 14px' }}>
+                    {h.breeders.map((b, i) => (
+                      <div key={i} style={css('display:flex;align-items:baseline;gap:10px;padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;border-radius:6px;' + (b.you ? 'background:rgba(53,208,127,.06);' : ''))}>
+                        <span style={css(`flex:1;font-family:var(--font-jp);color:${b.you ? '#35d07f' : 'var(--text)'};font-weight:${b.you ? '700' : '400'}`)}>{b.name}</span>
+                        <span style={css('font-family:var(--font-mono);color:var(--gold-bright);font-weight:700')}>{b.pct}%</span>
+                        <span style={css('font-family:var(--font-mono);color:var(--muted)')}>+{b.delta}</span>
+                      </div>
+                    ))}
+                    <div style={css('font-family:var(--font-mono);font-size:9px;color:#4a4668;margin-top:8px')}>所有権が移っても残る恒久記録。</div>
+                  </div>
+                </details>
+
+                <details style={css('border:1px solid var(--border);border-radius:14px;background:linear-gradient(180deg,rgba(20,18,34,0),#0f0d1a)')}>
+                  <summary style={css('cursor:pointer;list-style:none;padding:12px 15px;font-family:var(--font-display);font-size:10.5px;letter-spacing:.1em;color:var(--faint)')}>PROVENANCE — 検証情報 ▸</summary>
+                  <div style={{ padding: '0 16px 14px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'baseline' }}><span style={css('font-family:var(--font-mono);font-size:10px;color:var(--faint)')}>DNA HASH</span><span style={css('font-family:var(--font-mono);font-size:10.5px;color:var(--muted);word-break:break-all;text-align:right')}>{h.dnaText}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'baseline', borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: 9 }}><span style={css('font-family:var(--font-mono);font-size:10px;color:var(--faint)')}>MINT SEED</span><span style={css('font-family:var(--font-mono);font-size:10.5px;color:var(--muted);word-break:break-all;text-align:right')}>{h.seedText}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'baseline', borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: 9 }}><span style={css('font-family:var(--font-mono);font-size:10px;color:var(--faint)')}>GEN VERSION</span><span style={css('font-family:var(--font-mono);font-size:10.5px;color:var(--muted)')}>v3.0</span></div>
+                  </div>
+                </details>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Fold({ title, open, children }: { title: string; open?: boolean; children: React.ReactNode }) {
-  const [o, setO] = useState(!!open);
-  return (
-    <div className={`${s.fold} ${o ? s.open : ''}`}>
-      <div className={s.foldHead} onClick={() => setO((v) => !v)}>{title}<span className={s.arw}>›</span></div>
-      <div className={s.foldBody}>{children}</div>
     </div>
   );
 }
