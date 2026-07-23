@@ -1,0 +1,481 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import type { Surface, TrackCondition, Weather } from '@sevendays/domain';
+import { NftHorseArt } from '@/components/NftHorseArt';
+import { deriveNftLook } from '@/lib/nft-visual';
+import { FormPanel } from '@/components/FormPanel';
+import { buildFormPanelData, type FormPanelSource } from '@/lib/form-panel-data';
+import s from '../../horse-page-preview.module.css';
+
+/* ============================================================================
+ * /dev/horse-page-preview — 馬個別ページ 案3(縦長ポートレート)＋反応FX
+ *
+ * デザイン側 handoff「Horse Page 3c Integrated.html」の忠実移植(プレビュー)。
+ * ★オーナー判断: デザイナーの「クリックで自動スクロール(revealHero)」は不採用。
+ *   代わりに既存の「中央反応」思想 — アートが視界外なら画面中央に反応をポップし、
+ *   スクロール位置を一切動かさない。アートが視界内なら従来どおりアート上でFX。
+ *
+ * 馬柱(B)は承認済みの実 FormPanel を埋め込む。アートは実 NftHorseArt、
+ * メニュー/アイテム/条件は Manus実画像。canvas・データ・APIには触らない。
+ * ========================================================================== */
+
+type StateKey = 'active' | 'rookie' | 'grail' | 'listed';
+type Vp = 'pc' | 'mobile';
+
+interface RunLite {
+  weather: Weather;
+  track: TrackCondition;
+  surface: Surface;
+  rank: number;
+  entrants: number;
+}
+interface Case {
+  kana: string;
+  en: string;
+  dna: string;
+  tv: number;
+  type: string;
+  day: number;
+  value: number;
+  cond: number;
+  fat: number;
+  band: 'safe' | 'mid';
+  bandText: string;
+  group: string;
+  shield: number;
+  grail?: boolean;
+  listed?: boolean;
+  forecast: { weather: Weather; track: TrackCondition; surface: Surface };
+  runs: RunLite[];
+  breeder: string;
+}
+
+const CASES: Record<StateKey, Case> = {
+  active: {
+    kana: 'クリムゾン ノヴァ', en: 'Crimson Nova', dna: 'seed-crimson-nova-01', tv: 72, type: 'BALANCED',
+    day: 3, value: 137.5, cond: 62, fat: 38, band: 'safe', bandText: 'LV帯内 4位/12頭 · 安全圏', group: '出走中 · 3/12', shield: 2,
+    forecast: { weather: 'RAIN', track: 'SOFT', surface: 'TURF' },
+    runs: [
+      { weather: 'STORM', track: 'SOFT', surface: 'TURF', rank: 3, entrants: 38 },
+      { weather: 'RAIN', track: 'HEAVY', surface: 'TURF', rank: 2, entrants: 40 },
+      { weather: 'SUNNY', track: 'FAST', surface: 'DIRT', rank: 22, entrants: 38 },
+      { weather: 'RAIN', track: 'SOFT', surface: 'DIRT', rank: 5, entrants: 36 },
+      { weather: 'CLOUDY', track: 'GOOD', surface: 'TURF', rank: 14, entrants: 38 },
+    ],
+    breeder: '育成者 st***@gmail.com · 貢献 34% · 売却後も名誉として記録',
+  },
+  rookie: {
+    kana: 'オニキス ドーン', en: 'Onyx Dawn', dna: 'seed-onyx-dawn-01', tv: 58, type: 'POWER',
+    day: 0, value: 100, cond: 70, fat: 10, band: 'mid', bandText: 'LV帯内 —（初出走）· 目安なし', group: '出走中 · 8/12', shield: 0,
+    forecast: { weather: 'RAIN', track: 'HEAVY', surface: 'DIRT' },
+    runs: [{ weather: 'SUNNY', track: 'GOOD', surface: 'DIRT', rank: 16, entrants: 38 }],
+    breeder: '育成者 あなた · 貢献 100% · この馬の最初の走りはこれから',
+  },
+  grail: {
+    kana: 'サクレッド ゲイル', en: 'Sacred Gale', dna: 'seed-sacred-gale-01', tv: 93, type: 'SPRINTER',
+    day: 5, value: 170.0, cond: 85, fat: 22, band: 'safe', bandText: 'LV帯内 1位/9頭 · 安全圏', group: 'チャンピオン候補 · 1/3', shield: 3, grail: true,
+    forecast: { weather: 'SUNNY', track: 'GOOD', surface: 'TURF' },
+    runs: [
+      { weather: 'SUNNY', track: 'GOOD', surface: 'TURF', rank: 1, entrants: 40 },
+      { weather: 'CLOUDY', track: 'FAST', surface: 'TURF', rank: 1, entrants: 38 },
+      { weather: 'SUNNY', track: 'GOOD', surface: 'DIRT', rank: 3, entrants: 36 },
+      { weather: 'RAIN', track: 'HEAVY', surface: 'TURF', rank: 8, entrants: 38 },
+      { weather: 'SUNNY', track: 'FAST', surface: 'TURF', rank: 2, entrants: 40 },
+    ],
+    breeder: '育成者 ka***@gmail.com · 貢献 51% · 伝説の馬を育てた栄誉',
+  },
+  listed: {
+    kana: 'エメラルド ゲイル', en: 'Emerald Gale', dna: 'seed-emerald-gale-01', tv: 78, type: 'SPRINTER',
+    day: 2, value: 123.65, cond: 60, fat: 30, band: 'mid', bandText: '出品中 · 今夜は走らない', group: '出品中 · 2/5', shield: 0, listed: true,
+    forecast: { weather: 'SUNNY', track: 'GOOD', surface: 'TURF' },
+    runs: [
+      { weather: 'SUNNY', track: 'GOOD', surface: 'TURF', rank: 1, entrants: 40 },
+      { weather: 'CLOUDY', track: 'FAST', surface: 'TURF', rank: 4, entrants: 38 },
+      { weather: 'RAIN', track: 'HEAVY', surface: 'TURF', rank: 19, entrants: 38 },
+      { weather: 'SUNNY', track: 'GOOD', surface: 'DIRT', rank: 12, entrants: 36 },
+      { weather: 'SUNNY', track: 'FAST', surface: 'TURF', rank: 2, entrants: 40 },
+    ],
+    breeder: '育成者 em***@gmail.com · 貢献 42%',
+  },
+};
+
+// メニュー6(実画像) — キー/条件/画像
+const MENUS = [
+  { key: 'hill', name: '坂路', cond: '道悪', img: 'menu_hill' },
+  { key: 'pool', name: '水泳', cond: '雨', img: 'menu_pool' },
+  { key: 'wood', name: 'ウッド', cond: '芝', img: 'menu_wood' },
+  { key: 'gate', name: 'ゲート', cond: '良馬場', img: 'menu_gate' },
+  { key: 'spar', name: '併せ馬', cond: 'ダート', img: 'menu_spar' },
+  { key: 'rest', name: '調整', cond: '晴', img: 'menu_rest' },
+] as const;
+const COND_COLOR: Record<string, string> = {
+  雨: 'var(--c-rain)', 晴: 'var(--c-sun)', 道悪: 'var(--c-mud)', 良馬場: 'var(--c-turf-g)', 芝: 'var(--c-turf)', ダート: 'var(--c-dirt)',
+};
+// 6条件エンブレム
+const EMBLEM: Record<string, string> = { 雨: 'rain', 晴: 'sun', 道悪: 'mud', 良馬場: 'firm', 芝: 'turf', ダート: 'dirt', 保険: 'sun' };
+const emb = (c: string) => `/conditions/emblem_${EMBLEM[c] ?? 'rain'}.webp`;
+
+// 調教アイテム(強化ラダー・実画像)
+const FEEDS = [
+  { key: 'feed_s', name: '強化 S', meta: '総合+小/外れ−' },
+  { key: 'feed_m', name: '強化 M', meta: '総合+中/外れ−' },
+  { key: 'feed_l', name: '強化 L', meta: '総合+大/外れ−1.5' },
+  { key: 'feed_xl', name: '強化 XL', meta: '総合+特大/外れ−3' },
+] as const;
+
+// レースアイテム(6条件×3段＋保険・実画像)
+const TIERS = [['弱', 'weak'], ['中', 'mid'], ['強', 'strong']] as const;
+const RACE_GROUPS = [
+  { cond: '雨', name: '雨の備え', base: 'rain_cape', label: '雨のケープ' },
+  { cond: '晴', name: '晴の備え', base: 'sun_hat', label: '日よけ帽' },
+  { cond: '道悪', name: '道悪の備え', base: 'mud_shoes', label: '泥よけ蹄鉄' },
+  { cond: '良馬場', name: '良馬場の備え', base: 'speed_shoes', label: '快速蹄鉄' },
+  { cond: '芝', name: '芝の備え', base: 'turf_shoes', label: '芝蹄鉄' },
+  { cond: 'ダート', name: 'ダートの備え', base: 'dirt_shoes', label: '砂蹄鉄' },
+] as const;
+const PRICE = [100, 111.2, 123.65, 137.5, 152.9, 170.0, 177.16];
+const tierClass = (tv: number) => (tv >= 90 ? s.tGold : tv >= 70 ? s.tCyan : s.tSteel);
+
+function srcOf(c: Case): FormPanelSource {
+  return {
+    kana: c.kana, en: c.en, totalValue: c.tv, horseType: c.type,
+    runs: c.runs.map((r) => ({ weather: r.weather, track: r.track, surface: r.surface, rank: r.rank, entrants: r.entrants })),
+    forecast: c.forecast,
+  };
+}
+/** 今夜の予報の3条件(グループ名)。 */
+function tonightConds(c: Case): string[] {
+  const g = (axis: 'weather' | 'track' | 'surface', v: string) => {
+    if (axis === 'weather') return ['RAIN', 'STORM'].includes(v) ? '雨' : '晴';
+    if (axis === 'track') return ['SOFT', 'HEAVY'].includes(v) ? '道悪' : '良馬場';
+    return v === 'TURF' ? '芝' : 'ダート';
+  };
+  return [g('weather', c.forecast.weather), g('track', c.forecast.track), g('surface', c.forecast.surface)];
+}
+
+export function HorsePagePreview() {
+  const [state, setState] = useState<StateKey>('active');
+  const [vp, setVp] = useState<Vp>('pc');
+  const c = CASES[state];
+  const tonight = tonightConds(c);
+
+  // ライブ状態(調教/アイテム)
+  const [menu, setMenu] = useState<Set<number>>(new Set());
+  const [feed, setFeed] = useState<number | null>(null);
+  const [race, setRace] = useState<string | null>(null);
+  const [trained, setTrained] = useState(false);
+  const [cond, setCond] = useState(c.cond);
+  const [fat, setFat] = useState(c.fat);
+  const [condD, setCondD] = useState<number | null>(null);
+  const [fatD, setFatD] = useState<number | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
+  const [centerRx, setCenterRx] = useState<{ word: string; sub: string; kind: 'train' | 'race' } | null>(null);
+
+  const heroRef = useRef<HTMLDivElement>(null);
+  const fxRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef<HTMLDivElement>(null);
+  const rxTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 状態切替でライブをリセット
+  useEffect(() => {
+    setMenu(new Set()); setFeed(null); setRace(null); setTrained(false);
+    setCond(c.cond); setFat(c.fat); setCondD(null); setFatD(null); setCollapsed({});
+    setCenterRx(null);
+  }, [state, c.cond, c.fat]);
+
+  const reduce = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const heroInView = () => {
+    const el = heroRef.current;
+    if (!el) return true;
+    const t = el.getBoundingClientRect().top;
+    return t > -20 && t < 120;
+  };
+
+  // ★中央反応 or アート上FX(自動スクロールはしない)
+  function showReaction(word: string, sub: string, kind: 'train' | 'race') {
+    if (heroInView() && fxRef.current && !reduce()) {
+      // アートが視界内 → アート上でFX
+      spawnShock(fxRef.current, kind === 'race' ? '#ff2dc4' : '#00eaff');
+      spawnAura(fxRef.current, kind === 'race' ? '#ff2dc4' : '#00eaff');
+      spawnSparks(fxRef.current, kind === 'race' ? '#ff2dc4' : '#00eaff');
+      if (kind === 'train') burst(fxRef.current, word, '#00eaff', sub);
+      if (zoomRef.current) {
+        zoomRef.current.style.transform = 'scale(1.08)';
+        setTimeout(() => { if (zoomRef.current) zoomRef.current.style.transform = 'scale(1)'; }, 260);
+      }
+    } else {
+      // アートが視界外 → 画面中央にポップ(スクロールしない)
+      setCenterRx({ word, sub, kind });
+      if (rxTimer.current) clearTimeout(rxTimer.current);
+      rxTimer.current = setTimeout(() => setCenterRx(null), reduce() ? 900 : 1500);
+    }
+  }
+
+  function confirmTraining() {
+    if (trained || menu.size === 0) return;
+    const condUp = 6 + Math.round(Math.random() * 6);
+    const fatUp = 8 + Math.round(Math.random() * 8);
+    const words = ['手応えあり', '食いつきがいい', 'いい伸び', '充実の追い切り'];
+    const word = words[Math.floor(Math.random() * words.length)]!;
+    setCond((v) => Math.min(100, v + condUp));
+    setFat((v) => Math.min(100, v + fatUp));
+    setCondD(condUp); setFatD(fatUp);
+    setTimeout(() => { setCondD(null); setFatD(null); }, 1900);
+    setTrained(true);
+    showReaction(word, `CONDITION +${condUp} · 疲労 +${fatUp}`, 'train');
+  }
+
+  function toggleRace(key: string, cond: string) {
+    if (race === key) { setRace(null); return; }
+    setRace(key);
+    showReaction('装着', `${cond}の備えをこの夜に賭ける`, 'race');
+  }
+
+  const menuNames = [...menu].map((i) => MENUS[i]!.name);
+  const feedName = feed !== null ? FEEDS[feed]!.name : null;
+  const armed = menu.size > 0 && !trained;
+
+  return (
+    <div className={s.wrap}>
+      {/* 状態/ビューポート切替(プレビュー用ツールバー) */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 50, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', padding: '12px 20px', background: 'rgba(8,6,16,.86)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--hpp-border)' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 12, letterSpacing: '.16em', color: 'var(--hpp-gold)' }}>馬個別ページ 案3 ＋ 反応FX(中央反応方式・自動スクロールなし)</span>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(['active', 'rookie', 'grail', 'listed'] as StateKey[]).map((k) => (
+            <button key={k} onClick={() => setState(k)}
+              style={{ fontSize: 10, padding: '6px 11px', borderRadius: 7, cursor: 'pointer', border: '1px solid var(--hpp-border)', background: state === k ? 'rgba(201,168,106,.22)' : 'none', color: state === k ? 'var(--hpp-gold-bright)' : 'var(--hpp-muted)' }}>
+              {k === 'active' ? '出走中' : k === 'rookie' ? '新馬' : k === 'grail' ? '聖杯90+' : '出品中'}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(['pc', 'mobile'] as Vp[]).map((k) => (
+            <button key={k} onClick={() => setVp(k)}
+              style={{ fontSize: 10, padding: '6px 11px', borderRadius: 7, cursor: 'pointer', border: '1px solid var(--hpp-border)', background: vp === k ? 'rgba(255,255,255,.1)' : 'none', color: vp === k ? 'var(--hpp-text)' : 'var(--hpp-muted)' }}>
+              {k === 'pc' ? 'PC' : 'モバイル390'}
+            </button>
+          ))}
+        </div>
+        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--hpp-faint)' }}>調教確定/アイテム装着 → アートが視界外なら画面中央に反応(スクロールしない)</span>
+      </div>
+
+      <div className={s.stageWrap}>
+        <div className={`${s.page} ${vp === 'mobile' ? s.mobile : ''}`}>
+          {/* ===== A ヒーロー ===== */}
+          <div className={s.block}>
+            <div ref={heroRef} className={`${s.hero} ${c.grail ? s.grail : ''} ${tierClass(c.tv)}`}>
+              <div className={s.artStage} style={{ height: vp === 'mobile' ? 340 : 430 }}>
+                {c.grail ? <div className={s.grailTag}>★ LEGENDARY · 総合値90+</div> : null}
+                <div className={s.pagerInfo}>{c.group}</div>
+                <div className={`${s.pager} ${s.prev}`}>‹</div>
+                <div className={`${s.pager} ${s.next}`}>›</div>
+                <div className={`${s.socket} ${race ? s.filled : ''}`}>
+                  <div className={s.sk}>{race ? <img src={`/items/${race}.webp`} alt="" /> : '＋'}</div>
+                  <div className={s.skCap}>{race ? '装着中' : '装着枠'}</div>
+                </div>
+                <div ref={zoomRef} className={s.artZoom}>
+                  <NftHorseArt look={deriveNftLook(c.dna, c.en)} />
+                </div>
+                <div ref={fxRef} className={s.fxLayer} />
+              </div>
+              <div className={s.idBar}>
+                <div><div className={s.tvNum}>{c.tv}</div><div className={s.tvCap}>総合値 TOTAL</div></div>
+                <div><div className={s.kana}>{c.kana}</div><div className={s.en}>{c.en}</div><span className={s.type}>{c.type}</span></div>
+                <div className={s.tvVal}>現在価値 {c.value.toFixed(2)} USDT</div>
+              </div>
+              <div className={s.dayRail}>
+                <span className={s.lv}>LV.{c.day}/7</span>
+                <div className={s.pips}>{Array.from({ length: 7 }, (_, i) => <span key={i} className={i <= c.day ? s.on : ''} />)}</div>
+              </div>
+              <div className={s.vitals}>
+                <div className={s.vital}>
+                  <div className={s.vTop}><span className={s.vName}>CONDITION 調子</span><span><span className={s.vNum}>{cond}</span><span className={`${s.vD} ${s.up}`} style={{ opacity: condD ? 1 : 0 }}>+{condD}</span></span></div>
+                  <div className={`${s.vbar} ${s.cond}`}><i style={{ width: `${cond}%` }} /></div>
+                </div>
+                <div className={s.vital}>
+                  <div className={s.vTop}><span className={s.vName}>FATIGUE 疲労</span><span><span className={s.vNum}>{fat}</span><span className={`${s.vD} ${s.down}`} style={{ opacity: fatD ? 1 : 0 }}>+{fatD}</span></span></div>
+                  <div className={`${s.vbar} ${s.fat}`}><i style={{ width: `${fat}%` }} /></div>
+                </div>
+              </div>
+              <div className={s.bandRow}>
+                <span className={`${s.chip} ${c.band === 'safe' ? s.safe : s.mid}`}>{c.bandText}</span>
+                {c.shield ? <span className={`${s.chip} ${s.shield}`}>SHIELD ×{c.shield}</span> : null}
+              </div>
+            </div>
+          </div>
+
+          {/* ===== B 読む(馬柱・承認済み FormPanel) ===== */}
+          <div className={s.block}>
+            <div className={s.blkTag}><span className={`${s.n} ${s.read}`}>B</span><span className={s.t}>読む — 馬柱（予報×成績×読解）</span><span className={s.s}>今夜の条件で走れるか</span></div>
+            <FormPanel d={buildFormPanelData(srcOf(c))} />
+          </div>
+
+          {c.listed ? (
+            <div className={s.block}>
+              <div className={s.listedNote}>■ この馬は<b style={{ color: 'var(--hpp-gold-bright)' }}>出品中</b>です。今夜は走りません（調教・レースアイテムは非表示）。上の馬柱は<b style={{ color: 'var(--hpp-gold-bright)' }}>買い手の目利き材料</b>として表示しています。</div>
+            </div>
+          ) : (
+            <>
+              {/* ===== C 備える① 調教(青) ===== */}
+              <div className={s.block}>
+                <div className={s.blkTag}><span className={`${s.n} ${s.train}`}>C</span><span className={s.t}>備える① — 調教する</span><span className={s.s}>読んだ条件に"備える"／青=強くする</span></div>
+                <div className={`${s.card} ${s.train}`}>
+                  <div className={s.plan}>
+                    <div className={s.pLine}>今夜=<b>{tonight.join(' · ')}</b>／{menuNames.length ? <>メニュー <b>{menuNames.join('＋')}</b></> : 'メニュー未選択'}{feedName ? <>／アイテム <b>{feedName}</b></> : null}</div>
+                    <div className={s.pHint}>{armed ? 'この作戦で調教します。クリックで確定' : '噛み合う条件のメニュー（光った枠）を選ぶと確定ボタンが起動します'}</div>
+                  </div>
+                  <div className={s.menuGrid}>
+                    {MENUS.map((m, i) => {
+                      const on = menu.has(i);
+                      const isT = tonight.some((t) => m.cond === t);
+                      return (
+                        <div key={m.key} className={`${s.menu} ${on ? s.on : ''} ${isT ? s.tonight : ''}`}
+                          onClick={() => { if (trained) return; setMenu((prev) => { const n = new Set(prev); if (n.has(i)) n.delete(i); else if (n.size < 2) n.add(i); return n; }); }}>
+                          <div className={s.mThumb}><img src={`/menus/${m.img}.webp`} alt="" /></div>
+                          <div className={s.mPick}>✓</div>
+                          <div className={s.mName}>{m.name}</div>
+                          <div className={s.mCond} style={{ color: COND_COLOR[m.cond] }}>〔{m.cond}〕</div>
+                          {isT ? <div className={s.mTonight}>今夜</div> : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className={s.trainFoot}>
+                    <span className={s.pickState}>メニューを2つまで選ぶ <b>{menu.size}/2</b></span>
+                    <button className={`${s.cta} ${armed ? s.armed : ''}`} disabled={!armed} onClick={confirmTraining}>
+                      <span className={s.charge} />
+                      <span>{trained ? '今日は調教済み' : armed ? '調教を確定' : 'メニューを選ぶ'}</span>
+                      <span className={s.sub}>{trained ? 'また明日' : armed ? `${menuNames.join('＋')}${feedName ? ' ＋' + feedName : ''} で強くする` : '— 選択待ち'}</span>
+                    </button>
+                  </div>
+                  <div className={s.subH}><span className={s.dot} />調教アイテムを添付 — 強くする（任意・購入して装着）</div>
+                  <div className={s.itemRow}>
+                    {FEEDS.map((f, i) => (
+                      <div key={f.key} className={`${s.pill} ${feed === i ? s.on : ''}`} onClick={() => { if (trained) return; setFeed(feed === i ? null : i); }}>
+                        <div className={s.pThumb}><img src={`/items/${f.key}.webp`} alt="" /></div>
+                        <div className={s.pName}>{f.name}</div>
+                        <div className={s.pMeta}>{f.meta}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ===== D 備える② レースアイテム(赤) ===== */}
+              <div className={s.block}>
+                <div className={s.blkTag}><span className={`${s.n} ${s.race}`}>D</span><span className={s.t}>備える② — 今夜に賭ける</span><span className={s.s}>赤=今夜の予報に合わせて装備</span></div>
+                <div className={`${s.card} ${s.race}`}>
+                  {[...RACE_GROUPS].sort((a, b) => (tonight.includes(a.cond) ? 0 : 1) - (tonight.includes(b.cond) ? 0 : 1)).map((g, gi) => {
+                    const isT = tonight.includes(g.cond);
+                    const col = collapsed[gi] ?? !isT;
+                    return (
+                      <div key={g.base} className={`${s.grp} ${isT ? s.tonight : ''} ${col ? s.collapsed : ''}`}>
+                        <div className={s.grpHead} onClick={() => setCollapsed((p) => ({ ...p, [gi]: !(p[gi] ?? !isT) }))}>
+                          <div className={s.grpIco}><img src={emb(g.cond)} alt="" /></div>
+                          <span className={s.grpName}>{g.name}</span>
+                          {isT ? <span className={s.grpTonight}>今夜の条件</span> : null}
+                          <span className={s.grpCue}>{col ? '＋ 開く' : isT ? '噛み合えば本命' : '保険'}</span>
+                        </div>
+                        <div className={s.grpBody}>
+                          {TIERS.map(([jp, key]) => {
+                            const itemKey = `${g.base}_${key}`;
+                            return (
+                              <div key={itemKey} className={`${s.raceItem} ${race === itemKey ? s.on : ''}`} onClick={() => toggleRace(itemKey, g.cond)}>
+                                <div className={s.riThumb}><img src={`/items/${itemKey}.webp`} alt="" /></div>
+                                <div className={s.riName}>{g.label} {jp}</div>
+                                <div className={s.riTier}>{key === 'weak' ? 'ベーシック' : key === 'mid' ? 'スタンダード' : 'プレミアム'}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {/* 保険(全天候) */}
+                  <div className={s.grp}>
+                    <div className={s.grpHead}><div className={s.grpIco}>🛡</div><span className={s.grpName}>保険（万全の備え）</span><span className={s.grpCue}>外れなし</span></div>
+                    <div className={s.grpBody}>
+                      {[['full_ready_std', '万全の備え'], ['full_ready_max', '万全の備え・極']].map(([k, nm]) => (
+                        <div key={k} className={`${s.raceItem} ${race === k ? s.on : ''}`} onClick={() => toggleRace(k!, '全天候')}>
+                          <div className={s.riThumb}><img src={`/items/${k}.webp`} alt="" /></div>
+                          <div className={s.riName}>{nm}</div>
+                          <div className={s.riTier}>保険</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ===== E 文脈(畳む) ===== */}
+          <div className={s.block}>
+            <div className={s.blkTag}><span className={`${s.n} ${s.ctx}`}>E</span><span className={s.t}>文脈</span><span className={s.s}>今夜の判断に不要なものは畳む</span></div>
+            <Fold title="価値ラダー — 7日間の価格と走破" open>
+              <div className={s.ladder}>
+                {PRICE.map((p, i) => (
+                  <div key={i} className={`${s.d} ${i === c.day ? s.on : ''} ${i === 6 ? s.win : ''}`}><div className={s.dl}>LV.{i}</div><div className={s.dv}>{p}</div></div>
+                ))}
+              </div>
+              <div className={s.credLine} style={{ marginTop: 9 }}>7日走り切ると <b>200 USDT で買い戻し</b>＋記念NFT。表の値は各LVの現在価値（PRICE_TABLE_V1）。</div>
+            </Fold>
+            <Fold title="育成者クレジット"><div className={s.credLine}>{c.breeder}</div></Fold>
+            <Fold title="PROVENANCE — 検証情報"><div className={s.prov}><b>DNA</b> {c.dna}… · <b>SEED</b> 0x7d3e…2b · <b>世代</b> G2 · 決定論生成（誰でも再現・検証可能）</div></Fold>
+          </div>
+        </div>
+      </div>
+
+      {/* ★中央反応(スクロールしない) */}
+      {centerRx ? (
+        <div className={`${s.centerRx} ${centerRx.kind === 'race' ? s.race : ''}`}>
+          <div className={s.centerRxWord}>{centerRx.word}</div>
+          <div className={s.centerRxSub}>{centerRx.sub}</div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function Fold({ title, open, children }: { title: string; open?: boolean; children: React.ReactNode }) {
+  const [o, setO] = useState(!!open);
+  return (
+    <div className={`${s.fold} ${o ? s.open : ''}`}>
+      <div className={s.foldHead} onClick={() => setO((v) => !v)}>{title}<span className={s.arw}>›</span></div>
+      <div className={s.foldBody}>{children}</div>
+    </div>
+  );
+}
+
+/* ===== FX(アート上・視界内のときだけ) — Web Animations API ===== */
+function spawnShock(fx: HTMLElement, color: string) {
+  const el = document.createElement('div');
+  el.style.cssText = `position:absolute;left:50%;top:56%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;border:3px solid ${color}`;
+  fx.appendChild(el);
+  el.animate([{ width: '40px', height: '40px', margin: '-20px 0 0 -20px', opacity: 0.9, borderWidth: '4px' }, { width: '360px', height: '360px', margin: '-180px 0 0 -180px', opacity: 0, borderWidth: '1px' }], { duration: 640, easing: 'cubic-bezier(.1,.7,.3,1)' }).onfinish = () => el.remove();
+}
+function spawnAura(fx: HTMLElement, color: string) {
+  const el = document.createElement('div');
+  el.style.cssText = `position:absolute;left:50%;top:56%;width:200px;height:200px;margin:-100px 0 0 -100px;border-radius:50%;filter:blur(6px);background:radial-gradient(circle,${color}44,transparent 62%)`;
+  fx.appendChild(el);
+  el.animate([{ opacity: 0, transform: 'scale(.6)' }, { opacity: 0.9, transform: 'scale(1.1)' }, { opacity: 0, transform: 'scale(1.35)' }], { duration: 620, easing: 'ease-out' }).onfinish = () => el.remove();
+}
+function spawnSparks(fx: HTMLElement, color: string, count = 16) {
+  for (let i = 0; i < count; i++) {
+    const sp = document.createElement('div');
+    sp.style.cssText = `position:absolute;width:6px;height:6px;border-radius:50%;background:${color};left:50%;top:56%;box-shadow:0 0 8px 2px ${color}`;
+    fx.appendChild(sp);
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
+    const dist = 90 + Math.random() * 140;
+    sp.animate([{ opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }, { opacity: 0, transform: `translate(calc(-50% + ${Math.cos(ang) * dist}px),calc(-50% + ${Math.sin(ang) * dist}px)) scale(.3)` }], { duration: 500 + Math.random() * 350, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => sp.remove();
+  }
+}
+function burst(fx: HTMLElement, word: string, color: string, sub: string) {
+  const el = document.createElement('div');
+  el.className = s.burst!;
+  el.style.color = color; el.style.textShadow = `0 0 24px ${color}bb`;
+  el.innerHTML = `${word}<small>${sub}</small>`;
+  fx.appendChild(el);
+  el.animate([{ opacity: 0, transform: 'translate(-50%,-50%) scale(.6)' }, { opacity: 1, transform: 'translate(-50%,-50%) scale(1.05)' }, { opacity: 1, transform: 'translate(-50%,-58%) scale(1)' }, { opacity: 0, transform: 'translate(-50%,-72%) scale(1)' }], { duration: 1500, easing: 'ease-out' }).onfinish = () => el.remove();
+}
