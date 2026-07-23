@@ -179,33 +179,45 @@ export function HorsePagePreview() {
   const [attachedKey, setAttachedKey] = useState<string | null>(null);
   const [raceKey, setRaceKey] = useState('');
   const [raceApplied, setRaceApplied] = useState<string | null>(null);
+  const [raceEditing, setRaceEditing] = useState(false);
   const [displayTotal, setDisplayTotal] = useState(c.tv);
   const [auraOn, setAuraOn] = useState(false);
 
-  const tvRaf = useRef<number | null>(null);
+  const dispRef = useRef(c.tv);
+  const targetRef = useRef(c.tv);
+  const rafRef = useRef<number | null>(null);
   const auraTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reduce = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
 
   useEffect(() => {
     setTrainPhase('pick'); setItemPhase('locked'); setMenus([]); setTrainItemKey('');
-    setAttachedKey(null); setRaceKey(''); setRaceApplied(null); setDisplayTotal(c.tv); setAuraOn(false);
+    setAttachedKey(null); setRaceKey(''); setRaceApplied(null); setRaceEditing(false);
+    setDisplayTotal(c.tv); setAuraOn(false);
+    dispRef.current = c.tv; targetRef.current = c.tv;
   }, [state, c.tv]);
 
-  const reduce = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
-  function countUp(before: number, target: number, dur: number) {
-    if (typeof window === 'undefined' || reduce()) { setDisplayTotal(target); return; }
-    setAuraOn(true);
-    const start = performance.now();
+  // TOTALは派生値(確定+3 / 調教アイテム+1 / レースアイテム+2)。差し替え・取り外しで増減を追従。
+  const targetTotal = c.tv + (trainPhase === 'done' ? 3 : 0) + (attachedKey ? 1 : 0) + (raceApplied ? 2 : 0);
+  useEffect(() => {
+    if (targetTotal === targetRef.current) return;
+    const increased = targetTotal > targetRef.current;
+    targetRef.current = targetTotal;
+    if (increased) {
+      setAuraOn(true);
+      if (auraTimer.current) clearTimeout(auraTimer.current);
+      auraTimer.current = setTimeout(() => setAuraOn(false), 1200);
+    }
+    const from = dispRef.current; const target = targetTotal;
+    if (typeof window === 'undefined' || reduce()) { dispRef.current = target; setDisplayTotal(target); return; }
+    const start = performance.now(); const dur = increased ? 800 : 450;
     const step = (t: number) => {
-      const p = Math.min(1, (t - start) / dur);
-      const e = 1 - Math.pow(1 - p, 3);
-      setDisplayTotal(Math.round(before + (target - before) * e));
-      if (p < 1) tvRaf.current = requestAnimationFrame(step);
+      const p = Math.min(1, (t - start) / dur); const e = 1 - Math.pow(1 - p, 3);
+      const val = from + (target - from) * e; dispRef.current = val; setDisplayTotal(Math.round(val));
+      if (p < 1) rafRef.current = requestAnimationFrame(step); else { dispRef.current = target; setDisplayTotal(target); }
     };
-    if (tvRaf.current) cancelAnimationFrame(tvRaf.current);
-    tvRaf.current = requestAnimationFrame(step);
-    if (auraTimer.current) clearTimeout(auraTimer.current);
-    auraTimer.current = setTimeout(() => setAuraOn(false), dur + 850);
-  }
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(step);
+  }, [targetTotal]);
 
   // ---- handlers(正典 resetInteractions / toggleMenu ... より写経) ----
   function toggleMenu(key: string) {
@@ -220,28 +232,18 @@ export function HorsePagePreview() {
   const removeMenuAt = (i: number) => setMenus((prev) => { const m = prev.slice(); m.splice(i, 1); return m; });
   const startConfirm = () => { if (menus.length === 0) return; setTrainPhase('confirm'); };
   const cancelConfirm = () => setTrainPhase('pick');
-  function confirmTraining() {
-    const before = c.tv; const target = before + 3;
-    setTrainPhase('done'); setItemPhase('pick');
-    countUp(before, target, 850);
-  }
+  const confirmTraining = () => { setTrainPhase('done'); setItemPhase('pick'); };
   const selectTrainItem = (key: string) => setTrainItemKey(key);
-  function attachTrainItem() {
-    if (!trainItemKey) return;
-    const before = displayTotal; const target = before + 1;
-    setAttachedKey(trainItemKey); setItemPhase('attached');
-    countUp(before, target, 650);
-  }
-  const skipTrainItem = () => { setItemPhase('skipped'); setTrainItemKey(''); };
+  const attachTrainItem = () => { if (!trainItemKey) return; setAttachedKey(trainItemKey); setItemPhase('attached'); };
+  // ★アイテムはレース直前まで何度でも差し替え/取り外し自由(Decision・オーナー2026-07-23)
+  const swapTrainItem = () => { setTrainItemKey(attachedKey ?? ''); setItemPhase('pick'); };
+  const removeTrainItem = () => { setAttachedKey(null); setTrainItemKey(''); setItemPhase('pick'); };
+  const skipTrainItem = () => { setAttachedKey(null); setTrainItemKey(''); setItemPhase('skipped'); };
   const unskipTrainItem = () => setItemPhase('pick');
   const selectRace = (key: string) => setRaceKey(key);
-  function applyRace() {
-    if (!raceKey) return;
-    const before = displayTotal; const target = before + 2;
-    setRaceApplied(raceKey);
-    countUp(before, target, 650);
-  }
-  const cancelRace = () => { setRaceApplied(null); setRaceKey(''); };
+  const applyRace = () => { if (!raceKey) return; setRaceApplied(raceKey); setRaceEditing(false); };
+  const swapRace = () => { setRaceEditing(true); setRaceKey(raceApplied ?? ''); };
+  const cancelRace = () => { setRaceApplied(null); setRaceEditing(false); setRaceKey(''); };
 
   // ---- computed(正典 renderVals より写経) ----
   const numOn = 'width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:11px;color:#04141a;background:var(--cyan);flex:none;';
@@ -288,7 +290,8 @@ export function HorsePagePreview() {
   const trainItemHint = selTrain ? `${selTrain.kind} — 確定済みの調教へ1個だけ上乗せ` : 'カードを選ぶと効果が出ます。';
   const attachBtnStyle = 'appearance:none;border-radius:11px;padding:9px 16px;font-family:var(--font-display);font-weight:700;font-size:12px;cursor:pointer;border:none;'
     + (trainItemKey ? 'color:#04141a;background:linear-gradient(100deg,var(--cyan),#5ff5ff);box-shadow:0 10px 24px -8px rgba(0,234,255,.7);' : 'color:var(--faint);background:rgba(255,255,255,.05);cursor:not-allowed;');
-  const attachBtnLabel = selTrain ? `${selTrain.name}を購入して装着` : 'アイテムを選ぶ';
+  const editingTrainItem = itemPicking && !!attachedKey;
+  const attachBtnLabel = selTrain ? (editingTrainItem && selTrain.key !== attachedKey ? `${selTrain.name}に差し替える` : `${selTrain.name}を購入して装着`) : 'アイテムを選ぶ';
   const attachedItem = attachedKey ? TRAIN_ITEMS.find((x) => x.key === attachedKey) : null;
 
   const tonightConds = forecast.map((f) => f.val).filter((v) => condToKey[v]);
@@ -325,7 +328,7 @@ export function HorsePagePreview() {
   const raceHint = raceKey ? `${raceSelName} を装備 — 的中で上限側 / 外れは下限側` : '今夜の条件のアイテムから選ぶ。横スクロールなし。';
   const raceApplyBtnStyle = 'appearance:none;border-radius:11px;padding:9px 16px;font-family:var(--font-display);font-weight:700;font-size:12px;cursor:pointer;border:none;'
     + (raceKey ? 'color:#fff;background:linear-gradient(100deg,var(--magenta),#ff6bd6);box-shadow:0 10px 24px -8px rgba(255,45,196,.6);' : 'color:var(--faint);background:rgba(255,255,255,.05);cursor:not-allowed;');
-  const raceApplyBtnLabel = raceKey ? `${raceSelName}を購入して装備` : 'アイテムを選ぶ';
+  const raceApplyBtnLabel = raceKey ? (raceEditing ? `${raceSelName}に差し替える` : `${raceSelName}を購入して装備`) : 'アイテムを選ぶ';
   const appliedRace = raceApplied ? (() => {
     const ins = INS.find((x) => x.key === raceApplied); if (ins) return { name: ins.name, img: ITEM(ins.key) };
     const parts = raceApplied.split('_'); const st = parts.pop()!;
@@ -535,12 +538,20 @@ export function HorsePagePreview() {
                       </div>
 
                       {itemAttached && attachedItem ? (
-                        <div style={css('position:relative;display:flex;align-items:center;gap:10px;border:1px solid rgba(53,208,127,.4);border-radius:11px;padding:9px 11px;background:rgba(53,208,127,.06);overflow:hidden;animation:sddAttach .55s cubic-bezier(.15,1.4,.4,1)')}>
-                          <span aria-hidden="true" style={css('position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(112deg,transparent 42%,rgba(157,255,196,.7) 50%,transparent 58%);background-size:260% 100%;animation:sddSweep 1s ease-out')} />
-                          <img src={ITEM(attachedItem.key)} alt="" style={css('width:34px;height:34px;border-radius:7px;object-fit:cover;animation:sddPop .5s cubic-bezier(.15,1.5,.4,1)')} />
-                          <span style={css('font-family:var(--font-jp);font-size:12px;color:var(--text)')}>{attachedItem.name} を装着</span>
-                          <span style={{ flex: 1 }} />
-                          <span style={css('font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--good)')}>上乗せ済み</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                          <div style={css('position:relative;display:flex;align-items:center;gap:10px;border:1px solid rgba(53,208,127,.4);border-radius:11px;padding:9px 11px;background:rgba(53,208,127,.06);overflow:hidden;animation:sddAttach .55s cubic-bezier(.15,1.4,.4,1)')}>
+                            <span aria-hidden="true" style={css('position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(112deg,transparent 42%,rgba(157,255,196,.7) 50%,transparent 58%);background-size:260% 100%;animation:sddSweep 1s ease-out')} />
+                            <img src={ITEM(attachedItem.key)} alt="" style={css('width:34px;height:34px;border-radius:7px;object-fit:cover;animation:sddPop .5s cubic-bezier(.15,1.5,.4,1)')} />
+                            <span style={css('font-family:var(--font-jp);font-size:12px;color:var(--text)')}>{attachedItem.name} を装着</span>
+                            <span style={{ flex: 1 }} />
+                            <span style={css('font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--good)')}>上乗せ済み</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <a href="#" onClick={(e) => { e.preventDefault(); swapTrainItem(); }} style={css('font-family:var(--font-display);font-size:10.5px;color:var(--cyan)')}>別のに差し替える</a>
+                            <a href="#" onClick={(e) => { e.preventDefault(); removeTrainItem(); }} style={css('font-family:var(--font-display);font-size:10.5px;color:var(--muted)')}>取り外す</a>
+                            <span style={{ flex: 1 }} />
+                            <span style={css('font-family:var(--font-mono);font-size:8.5px;color:var(--faint)')}>レース直前まで何度でも差し替え可</span>
+                          </div>
                         </div>
                       ) : null}
 
@@ -583,16 +594,20 @@ export function HorsePagePreview() {
                   {/* ===== D レースアイテム棚(magenta) ===== */}
                   <div style={css('border:1px solid rgba(255,45,196,.4);border-radius:16px;padding:15px 17px;background:linear-gradient(150deg,rgba(255,45,196,.09),transparent 70%);display:flex;flex-direction:column;gap:14px')}>
 
-                    {appliedRace ? (
-                      <div style={css('position:relative;display:flex;align-items:center;gap:11px;min-height:120px;border:1px solid rgba(255,45,196,.45);border-radius:12px;padding:14px;background:rgba(255,45,196,.06);overflow:hidden;animation:sddAttachMag .55s cubic-bezier(.15,1.4,.4,1)')}>
-                        <span aria-hidden="true" style={css('position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(112deg,transparent 42%,rgba(255,143,228,.7) 50%,transparent 58%);background-size:260% 100%;animation:sddSweep 1s ease-out')} />
-                        <img src={appliedRace.img} alt="" style={css('width:48px;height:48px;border-radius:8px;object-fit:cover;animation:sddPop .5s cubic-bezier(.15,1.5,.4,1)')} />
-                        <div style={{ minWidth: 0 }}>
-                          <span style={css('font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--magenta-soft);border:1px solid var(--magenta);border-radius:5px;padding:2px 7px')}>装備予定</span>
-                          <b style={css('display:block;margin-top:6px;font-family:var(--font-jp);font-size:14px;color:var(--text)')}>{appliedRace.name}</b>
+                    {raceApplied && !raceEditing && appliedRace ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                        <div style={css('position:relative;display:flex;align-items:center;gap:11px;min-height:120px;border:1px solid rgba(255,45,196,.45);border-radius:12px;padding:14px;background:rgba(255,45,196,.06);overflow:hidden;animation:sddAttachMag .55s cubic-bezier(.15,1.4,.4,1)')}>
+                          <span aria-hidden="true" style={css('position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(112deg,transparent 42%,rgba(255,143,228,.7) 50%,transparent 58%);background-size:260% 100%;animation:sddSweep 1s ease-out')} />
+                          <img src={appliedRace.img} alt="" style={css('width:48px;height:48px;border-radius:8px;object-fit:cover;animation:sddPop .5s cubic-bezier(.15,1.5,.4,1)')} />
+                          <div style={{ minWidth: 0 }}>
+                            <span style={css('font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--magenta-soft);border:1px solid var(--magenta);border-radius:5px;padding:2px 7px')}>装備予定</span>
+                            <b style={css('display:block;margin-top:6px;font-family:var(--font-jp);font-size:14px;color:var(--text)')}>{appliedRace.name}</b>
+                          </div>
+                          <span style={{ flex: 1 }} />
+                          <button type="button" onClick={swapRace} style={css('appearance:none;background:rgba(255,45,196,.1);color:var(--magenta-soft);border:1px solid rgba(255,45,196,.5);border-radius:9px;padding:6px 12px;font-family:var(--font-display);font-size:10.5px;cursor:pointer;align-self:flex-start')}>差し替える</button>
+                          <button type="button" onClick={cancelRace} style={css('appearance:none;background:transparent;color:var(--muted);border:1px dashed var(--border);border-radius:9px;padding:6px 12px;font-family:var(--font-display);font-size:10.5px;cursor:pointer;align-self:flex-start')}>取消</button>
                         </div>
-                        <span style={{ flex: 1 }} />
-                        <button type="button" onClick={cancelRace} style={css('appearance:none;background:rgba(255,45,196,.1);color:var(--magenta-soft);border:1px solid rgba(255,45,196,.5);border-radius:9px;padding:6px 12px;font-family:var(--font-display);font-size:10.5px;cursor:pointer;align-self:flex-start')}>取消</button>
+                        <span style={css('font-family:var(--font-mono);font-size:8.5px;color:var(--faint)')}>レース直前まで何度でも差し替え可。凍結時に確定・課金します。</span>
                       </div>
                     ) : (
                       <>
