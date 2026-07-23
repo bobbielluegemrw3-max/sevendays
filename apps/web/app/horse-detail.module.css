@@ -62,7 +62,9 @@
    馬アート列が数十pxまで潰れる事故の再発防止 */
 .heroRow > * { min-width: 0; }
 @media (min-width: 980px) {
-  .heroRow { grid-template-columns: 1.08fr 0.92fr; align-items: start; }
+  /* 馬個別ページ刷新(HORSE_PAGE_LAYOUT_SPEC §3): A大ヒーロー = アート全幅・横並びをやめる。
+     調教(C/D)はヒーロー・馬柱の下へ回す(読む→備えるの縦順)。 */
+  .heroRow { grid-template-columns: 1fr; align-items: start; }
   /* 馬カードは自然高のまま画面に追従(2026-07-20 オーナー選択: スティッキー案)。
      旧: stretch で右カラム(アイテム列で伸長)に合わせて引き伸ばされ、
      アート下に大きな空洞ができていた。top はトップナビ(sticky ≈52px)ぶん。 */

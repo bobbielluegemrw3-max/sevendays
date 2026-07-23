@@ -415,6 +415,105 @@ export function HorseDetailView({
     listing: horse.listing,
   });
 
+  // ── 馬個別ページ フル刷新(HORSE_PAGE_LAYOUT_SPEC)— 読む→備える の縦順に再配置。
+  //   A 大ヒーロー → B 読む(馬柱/戦績) → C/D 備える(調教・アイテム) → E 畳む(価値/能力/検証)。
+  //   構図は全版共通・中身は版で入れ替わる(馬柱⇔戦績 / V3⇔V2フォーム)。
+  // B: 読む — V3は馬柱パネル、それ以外は従来の戦績(§3「畳んだ戦績を推理の材料に開き直す」)。
+  const readBlock = formSrc ? (
+    <FormPanel d={buildFormPanelData(formSrc)} />
+  ) : history.length > 0 ? (
+    <div>
+      <div className={s.secLabel}>{t.hist_sec}</div>
+      <div className={s.histBox}>
+        <HistRow r={history[history.length - 1]!} n={history.length} horseType={horse.horse_type} t={t} tc={tc} />
+      </div>
+      {history.length > 1 ? (
+        <details className={s.histDetails}>
+          <summary className={s.histSummary}>{fill(t.hist_more_tpl, { n: history.length - 1 })}</summary>
+          <div className={s.histBox}>
+            {history.slice(0, -1).map((r, i) => (
+              <HistRow key={r.batch_date} r={r} n={i + 1} horseType={horse.horse_type} t={t} tc={tc} />
+            ))}
+          </div>
+        </details>
+      ) : null}
+      <div className={s.histNote}>{t.hist_note}</div>
+    </div>
+  ) : (
+    <div>
+      <div className={s.secLabel}>{t.hist_sec}</div>
+      <div className={s.histEmpty}>{t.hist_empty}</div>
+    </div>
+  );
+  // C/D: 備える — 調教(2メニュー＋🔵)＋アイテム。出品中/結末では別カードへ切替。
+  const actionBlock = (
+    <div className={s.action}>
+      {isActive ? (
+        <div className={s.trainCard}>
+          <div className={s.trainTop}>
+            <span className={s.trainTitle}>{t.train_title}</span>
+            <span className={s.freeTag}>{t.free_tag}</span>
+          </div>
+          {horse.engine_v2 ? null : <div className={s.trainDesc}>{t.train_desc}</div>}
+          <div className={s.trainForm}>
+            {horse.engine_v2 ? (
+              <TrainingFormV2
+                horseId={horse.id}
+                confirmed={horse.training_v2 ?? null}
+                lv={horse.current_day}
+                totalValue={horse.total_value ?? null}
+                desc={t.train_desc}
+                t={t}
+                itemsCopy={itemsCopy}
+              />
+            ) : (
+              <TrainingForm
+                horseId={horse.id}
+                horseType={horse.horse_type}
+                fatigue={Number(horse.fatigue)}
+                trained={horse.trained_for_next_race === true}
+                currentTraining={horse.tonight_training ?? null}
+                uncollected={uncollected}
+                t={t}
+              />
+            )}
+            {horse.engine_v2 ? (
+              <ItemPrepPanelV3 horseId={horse.id} t={t} itemsCopy={itemsCopy} />
+            ) : (
+              <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} t={t} />
+            )}
+          </div>
+          <div className={s.trainNote}>{t.train_note}</div>
+          <HorseReserveControl horseId={horse.id} reserved={horse.reserved ?? false} t={t} />
+          {horse.listing === null ? (
+            <HorseTransferForm horseId={horse.id} horseName={horse.name} t={t} />
+          ) : null}
+        </div>
+      ) : mode === 'LISTED' ? (
+        <div className={`${s.outcome} ${s.outListed}`}>
+          <div className={s.outHead}>{t.out_listed_head}</div>
+          <div className={s.outText}>{fill(t.out_listed_text_tpl, { d: horse.current_day })}</div>
+          <Link href="/market" className={s.outCta}>{t.out_manage}</Link>
+        </div>
+      ) : mode === 'BURNED' ? (
+        <div className={`${s.outcome} ${s.outBurned}`}>
+          <div className={s.outHead}>{t.out_burned_head}</div>
+          <div className={s.outText}>{fill(t.out_burned_text_tpl, { d: horse.current_day })}</div>
+        </div>
+      ) : mode === 'DAY7_CLEARED' ? (
+        <div className={`${s.outcome} ${s.outGold}`}>
+          <div className={s.outHead}>{t.out_cleared_head}</div>
+          <div className={s.outText}>{t.out_cleared_text}</div>
+        </div>
+      ) : (
+        <div className={`${s.outcome} ${s.outGold}`}>
+          <div className={s.outHead}>{t.out_memorial_head}</div>
+          <div className={s.outText}>{t.out_memorial_text}</div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className={s.wrap}>
       <Link href="/horses" className={s.crumb}>{t.crumb}</Link>
@@ -524,77 +623,15 @@ export function HorseDetailView({
           </div>
         </div>
 
-        <div className={s.action}>
-          {isActive ? (
-            <div className={s.trainCard}>
-              <div className={s.trainTop}>
-                <span className={s.trainTitle}>{t.train_title}</span>
-                <span className={s.freeTag}>{t.free_tag}</span>
-              </div>
-              {/* V2は手順UI(案B・2026-07-20): 長い説明は①の「?」に畳むのでここには出さない */}
-              {horse.engine_v2 ? null : <div className={s.trainDesc}>{t.train_desc}</div>}
-              <div className={s.trainForm}>
-                {horse.engine_v2 ? (
-                  <TrainingFormV2
-                    horseId={horse.id}
-                    confirmed={horse.training_v2 ?? null}
-                    lv={horse.current_day}
-                    totalValue={horse.total_value ?? null}
-                    desc={t.train_desc}
-                    t={t}
-                    itemsCopy={itemsCopy}
-                  />
-                ) : (
-                  <TrainingForm
-                    horseId={horse.id}
-                    horseType={horse.horse_type}
-                    fatigue={Number(horse.fatigue)}
-                    trained={horse.trained_for_next_race === true}
-                    currentTraining={horse.tonight_training ?? null}
-                    uncollected={uncollected}
-                    t={t}
-                  />
-                )}
-                {horse.engine_v2 ? (
-                  <ItemPrepPanelV3 horseId={horse.id} t={t} itemsCopy={itemsCopy} />
-                ) : (
-                  <ItemBoostPanel horseId={horse.id} currentDay={horse.current_day} t={t} />
-                )}
-              </div>
-              <div className={s.trainNote}>{t.train_note}</div>
-              {/* 施策C(FUN_V3): 1頭非売指定。ACTIVE馬に表示(出品状態に依らない)。 */}
-              <HorseReserveControl horseId={horse.id} reserved={horse.reserved ?? false} t={t} />
-              {/* 馬の転送(Decision 094): ACTIVEかつ出品中でない馬のみ */}
-              {horse.listing === null ? (
-                <HorseTransferForm horseId={horse.id} horseName={horse.name} t={t} />
-              ) : null}
-            </div>
-          ) : mode === 'LISTED' ? (
-            <div className={`${s.outcome} ${s.outListed}`}>
-              <div className={s.outHead}>{t.out_listed_head}</div>
-              <div className={s.outText}>{fill(t.out_listed_text_tpl, { d: horse.current_day })}</div>
-              <Link href="/market" className={s.outCta}>{t.out_manage}</Link>
-            </div>
-          ) : mode === 'BURNED' ? (
-            <div className={`${s.outcome} ${s.outBurned}`}>
-              <div className={s.outHead}>{t.out_burned_head}</div>
-              <div className={s.outText}>{fill(t.out_burned_text_tpl, { d: horse.current_day })}</div>
-            </div>
-          ) : mode === 'DAY7_CLEARED' ? (
-            <div className={`${s.outcome} ${s.outGold}`}>
-              <div className={s.outHead}>{t.out_cleared_head}</div>
-              <div className={s.outText}>{t.out_cleared_text}</div>
-            </div>
-          ) : (
-            <div className={`${s.outcome} ${s.outGold}`}>
-              <div className={s.outHead}>{t.out_memorial_head}</div>
-              <div className={s.outText}>{t.out_memorial_text}</div>
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* VALUE LADDER */}
+      {/* B: 読む — アートの直下に馬柱(§3 絶対条件: 間に何も挟まない=スクロール最小で推理へ) */}
+      {readBlock}
+
+      {/* C/D: 備える — 調教(2メニュー＋🔵)＋アイテム。C/Dの棚は別handoffで刷新予定 */}
+      {actionBlock}
+
+      {/* E(畳む側): 価値ラダー(金の文脈・読む→備えるの判断ではない) */}
       <ValueLadder horse={horse} mode={mode} t={t} />
 
       {/* LOWER ROW: (V1のみ)状態と能力 | 戦績 */}
@@ -602,73 +639,41 @@ export function HorseDetailView({
           Tier 2-1: V2では「存在しないステータスの説明」カードを撤去した。
           無いものを説明するために画面の半分を使っていた。調教の仕組みは
           調教パネル①の「?」に既に畳んである。 */}
-      <div className={`${s.lowRow} ${horse.engine_v2 ? s.lowRowSingle : ''}`}>
-        {horse.engine_v2 ? null : (
-        <div>
-          <div className={s.secLabel}>{t.vit_sec}</div>
-          <div className={s.vitals}>
-            <div className={`${s.mini} ${s.miniCond}`}>
-              <div className={s.miniK}>{t.cond_k}</div>
-              <div className={s.miniRow}>
-                <span className={s.miniNum}>{stat(horse.condition)}</span>
-                <span className={s.track}><span className={s.fillCyan} style={{ width: `${pct(horse.condition)}%` }} /></span>
+      {/* E: 状態と能力(V1のみ — V2/V3は総合値に内包。馬柱は B へ移動済み) */}
+      {!horse.engine_v2 && !horse.engine_v3 ? (
+        <div className={`${s.lowRow} ${s.lowRowSingle}`}>
+          <div>
+            <div className={s.secLabel}>{t.vit_sec}</div>
+            <div className={s.vitals}>
+              <div className={`${s.mini} ${s.miniCond}`}>
+                <div className={s.miniK}>{t.cond_k}</div>
+                <div className={s.miniRow}>
+                  <span className={s.miniNum}>{stat(horse.condition)}</span>
+                  <span className={s.track}><span className={s.fillCyan} style={{ width: `${pct(horse.condition)}%` }} /></span>
+                </div>
+              </div>
+              <div className={`${s.mini} ${s.miniFtg}`} title={t.ftg_tip}>
+                <div className={s.miniK}>{t.ftg_k}</div>
+                <div className={s.miniRow}>
+                  <span className={s.miniNum}>{stat(horse.fatigue)}</span>
+                  <span className={s.track}><span className={s.fillMag} style={{ width: `${pct(horse.fatigue)}%` }} /></span>
+                </div>
               </div>
             </div>
-            <div
-              className={`${s.mini} ${s.miniFtg}`}
-              title={t.ftg_tip}
-            >
-              <div className={s.miniK}>{t.ftg_k}</div>
-              <div className={s.miniRow}>
-                <span className={s.miniNum}>{stat(horse.fatigue)}</span>
-                <span className={s.track}><span className={s.fillMag} style={{ width: `${pct(horse.fatigue)}%` }} /></span>
-              </div>
+            <div className={s.abilityBox}>
+              {abilities.map(([key, val]) => (
+                <div key={key} className={s.abRow}>
+                  <span className={s.abLabel}>{abLabel[key] ?? key}</span>
+                  <span className={s.track}>
+                    <span className={s.fillCyan} style={{ width: `${Math.max(3, Math.min(100, (Number(val) / ABILITY_MAX) * 100))}%` }} />
+                  </span>
+                  <span className={s.abVal}>{val}</span>
+                </div>
+              ))}
             </div>
-          </div>
-          <div className={s.abilityBox}>
-            {abilities.map(([key, val]) => (
-              <div key={key} className={s.abRow}>
-                <span className={s.abLabel}>{abLabel[key] ?? key}</span>
-                <span className={s.track}>
-                  <span className={s.fillCyan} style={{ width: `${Math.max(3, Math.min(100, (Number(val) / ABILITY_MAX) * 100))}%` }} />
-                </span>
-                <span className={s.abVal}>{val}</span>
-              </div>
-            ))}
           </div>
         </div>
-        )}
-
-        {/* V3: 馬柱パネル(§3「畳んだ戦績を推理の材料に開き直す」)。V3休眠中は従来の戦績。 */}
-        {formSrc ? (
-          <FormPanel d={buildFormPanelData(formSrc)} />
-        ) : history.length > 0 ? (
-          <div>
-            <div className={s.secLabel}>{t.hist_sec}</div>
-            {/* Tier 2-1: 既定は直近1戦だけ。過去は畳む(18個の数字 → 6個)。
-                読まれていたのは常に最後の1行で、その上に何戦分も積んでいた。 */}
-            <div className={s.histBox}>
-              <HistRow r={history[history.length - 1]!} n={history.length} horseType={horse.horse_type} t={t} tc={tc} />
-            </div>
-            {history.length > 1 ? (
-              <details className={s.histDetails}>
-                <summary className={s.histSummary}>{fill(t.hist_more_tpl, { n: history.length - 1 })}</summary>
-                <div className={s.histBox}>
-                  {history.slice(0, -1).map((r, i) => (
-                    <HistRow key={r.batch_date} r={r} n={i + 1} horseType={horse.horse_type} t={t} tc={tc} />
-                  ))}
-                </div>
-              </details>
-            ) : null}
-            <div className={s.histNote}>{t.hist_note}</div>
-          </div>
-        ) : (
-          <div>
-            <div className={s.secLabel}>{t.hist_sec}</div>
-            <div className={s.histEmpty}>{t.hist_empty}</div>
-          </div>
-        )}
-      </div>
+      ) : null}
 
       {/* 施策D(FUN_V3): 育成者クレジット — 誰が育てたか(名誉)。売った後も残る。 */}
       {horse.breeder_credits && horse.breeder_credits.length > 0 ? (
