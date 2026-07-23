@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  MENU_CONDITION_V3,
   TRAINING_COMBO_SIZE_V2,
   TRAINING_MENUS_V2,
   type TrainingMenuV2,
@@ -72,6 +73,11 @@ function slotLabel(slot: string, t: AppDict['horse']): string {
   return slot === 'MORNING' ? t.tv2_slot_morning : t.tv2_slot_night;
 }
 
+/** V3構図: メニューが備える条件の意味色(FormPanel v2 / レースページと一致)。 */
+const V3_MENU_COND_COLOR: Record<string, string> = {
+  道悪: '#e6b24a', 雨: '#6fc3ff', 芝: '#58d68d', 良馬場: '#35d07f', ダート: '#d8a05a', '晴＋回復': '#ffd97a',
+};
+
 export function TrainingFormV2({
   horseId,
   t,
@@ -81,6 +87,7 @@ export function TrainingFormV2({
   totalValue = null,
   desc,
   preview = false,
+  variant = 'v2',
 }: {
   horseId: string;
   t: AppDict['horse'];
@@ -95,6 +102,8 @@ export function TrainingFormV2({
   /** 調教のルール説明(手順UIでは①の「?」に畳む・2026-07-20 案B)。 */
   desc?: string;
   preview?: boolean;
+  /** 'v3' で STEP① のメニューカードを画像＋条件表示に(engine_v3 の新構図・既定 v2 は不変)。 */
+  variant?: 'v2' | 'v3';
 }) {
   const router = useRouter();
   const [menus, setMenus] = useState<TrainingMenuV2[]>([]);
@@ -347,16 +356,36 @@ export function TrainingFormV2({
               {TRAINING_MENUS_V2.map((spec) => {
                 const n = countOf(spec.key);
                 const isRest = spec.key === 'REST';
+                const onToggle = () => {
+                  if (!full) setMenus([...menus, spec.key]);
+                  else if (n > 0) setMenus(menus.filter((m) => m !== spec.key));
+                };
+                if (variant === 'v3') {
+                  const cond = MENU_CONDITION_V3[spec.key].prepares;
+                  return (
+                    <button
+                      key={spec.key}
+                      type="button"
+                      className={`${s.tCard} ${s.tCardV3} ${n > 0 ? s.tCardOn : ''}`}
+                      aria-pressed={n > 0}
+                      onClick={onToggle}
+                    >
+                      <span className={s.tCardImg}>
+                        <img src={`/menus/menu_${spec.key.toLowerCase()}.webp`} alt="" />
+                        {n > 0 ? <span className={s.tCardCount}>{n}</span> : null}
+                      </span>
+                      <span className={s.tCardK}>{menuLabel(spec.key, t)}</span>
+                      <span className={s.tCardCond} style={{ color: V3_MENU_COND_COLOR[cond] ?? 'var(--muted)' }}>〔{cond}〕</span>
+                    </button>
+                  );
+                }
                 return (
                   <button
                     key={spec.key}
                     type="button"
                     className={`${s.tCard} ${n > 0 ? s.tCardOn : ''}`}
                     aria-pressed={n > 0}
-                    onClick={() => {
-                      if (!full) setMenus([...menus, spec.key]);
-                      else if (n > 0) setMenus(menus.filter((m) => m !== spec.key));
-                    }}
+                    onClick={onToggle}
                   >
                     <span className={s.tCardK}>
                       {menuLabel(spec.key, t)}

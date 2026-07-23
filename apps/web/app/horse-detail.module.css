@@ -991,3 +991,10 @@
 }
 .v3rail{display:flex;flex-direction:column;gap:16px;min-width:0}
 .v3sec{display:flex;flex-direction:column;gap:9px}
+/* V3 調教メニューカード(画像＋条件・engine_v3 の TrainingFormV2 variant="v3" のみ) */
+.tCard.tCardV3{align-items:stretch;text-align:left;gap:6px;padding:8px}
+.tCardImg{position:relative;width:100%;aspect-ratio:16/10;border-radius:8px;overflow:hidden;background:rgba(0,0,0,.35);display:block}
+.tCardImg img{width:100%;height:100%;object-fit:cover;display:block}
+.tCardCount{position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:10px;color:#04141a;background:var(--cyan)}
+.tCardV3 .tCardK{font-family:var(--font-display);font-weight:700;font-size:11px;color:var(--text)}
+.tCardCond{font-family:var(--font-mono);font-size:9px;letter-spacing:.04em}

@@ -585,7 +585,7 @@ export function HorseDetailView({
                 <div className={s.v3sec}>
                   <V3SecTag letter="C" bg="var(--cyan)" color="#04141a" title="備える① 調教" sub={t.free_tag} />
                   <div className={s.trainCard}>
-                    <TrainingFormV2 horseId={horse.id} confirmed={horse.training_v2 ?? null} lv={horse.current_day} totalValue={horse.total_value ?? null} desc={t.train_desc} t={t} itemsCopy={itemsCopy} />
+                    <TrainingFormV2 horseId={horse.id} confirmed={horse.training_v2 ?? null} lv={horse.current_day} totalValue={horse.total_value ?? null} desc={t.train_desc} t={t} itemsCopy={itemsCopy} variant="v3" />
                     <HorseReserveControl horseId={horse.id} reserved={horse.reserved ?? false} t={t} />
                     {horse.listing === null ? <HorseTransferForm horseId={horse.id} horseName={horse.name} t={t} /> : null}
                   </div>
