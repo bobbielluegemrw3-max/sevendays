@@ -401,3 +401,26 @@ code { background: var(--bg); border: 1px solid var(--border); border-radius: 5p
 @media (max-width: 767px) {
   input, select, textarea { font-size: 16px !important; }
 }
+
+/* ============================================================
+   馬個別ページ再デザインV2(handoff正典)のアイテム装着演出キーフレーム。
+   /dev/horse-page-preview のインラインstyle(animation:sdd*)から参照。
+   グローバル名が必要(CSS Modulesはkeyframe名をスコープするため)。
+   ============================================================ */
+@keyframes sddAura {
+  0% { box-shadow: 0 0 0 0 rgba(201,168,106,0), inset 0 0 0 0 rgba(201,168,106,0); }
+  26% { box-shadow: 0 0 44px 6px rgba(242,228,191,.55), inset 0 0 60px rgba(242,228,191,.4); }
+  100% { box-shadow: 0 0 0 0 rgba(201,168,106,0), inset 0 0 0 0 rgba(201,168,106,0); }
+}
+@keyframes sddSweep { 0% { opacity: 0; background-position: 135% 0; } 20% { opacity: 1; } 100% { opacity: 0; background-position: -40% 0; } }
+@keyframes sddPop { 0% { transform: scale(.6); opacity: 0; } 55% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes sddAttach {
+  0% { transform: translateY(8px) scale(.96); opacity: 0; box-shadow: 0 0 0 0 rgba(53,208,127,0); }
+  45% { transform: translateY(0) scale(1); opacity: 1; box-shadow: 0 0 26px 2px rgba(53,208,127,.45); }
+  100% { box-shadow: 0 0 0 0 rgba(53,208,127,0); }
+}
+@keyframes sddAttachMag {
+  0% { transform: translateY(8px) scale(.96); opacity: 0; box-shadow: 0 0 0 0 rgba(255,45,196,0); }
+  45% { transform: translateY(0) scale(1); opacity: 1; box-shadow: 0 0 26px 2px rgba(255,45,196,.45); }
+  100% { box-shadow: 0 0 0 0 rgba(255,45,196,0); }
+}
