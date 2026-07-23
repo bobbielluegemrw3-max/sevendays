@@ -159,7 +159,15 @@ const TRAIN_ITEMS = [
   { key: 'shield_1', name: '星霜の砂 ×1', kind: '減衰よけ 1走' }, { key: 'shield_3', name: '星霜の砂 ×3', kind: '減衰よけ 3走' },
 ];
 const STRENGTHS = [{ s: 'weak', label: '弱' }, { s: 'mid', label: '中' }, { s: 'strong', label: '強' }];
-const condToKey: Record<string, string> = { 雨: 'rain_cape', 道悪: 'mud_shoes', 芝: 'turf_shoes' };
+// 6条件 → レースアイテムのベースキー(全条件を map)。
+const condToKey: Record<string, string> = {
+  雨: 'rain_cape', 晴: 'sun_hat', 道悪: 'mud_shoes', 良馬場: 'speed_shoes', 芝: 'turf_shoes', ダート: 'dirt_shoes',
+};
+// 生ラベル(TRACK_JA/WEATHER_JA = 稍重/不良/高速/良/嵐/曇 等)→ 6条件の群ラベルへ正規化。
+// ★これが無いと、結線時に実データが生ラベルを渡したとき tonightConds が空 → D棚が無言で壊れる(レビュー指摘)。
+const NORMALIZE_COND: Record<string, string> = { 嵐: '雨', 曇: '晴', 稍重: '道悪', 不良: '道悪', 高速: '良馬場', 良: '良馬場' };
+const normCond = (v: string) => NORMALIZE_COND[v] ?? v;
+const ALL_CONDS = ['雨', '晴', '道悪', '良馬場', '芝', 'ダート'];
 const INS = [
   { key: 'full_ready_std', name: '完全装備', note: '3条件を標準で底上げ' },
   { key: 'full_ready_max', name: '野営一式', note: '3条件を最大で底上げ' },
@@ -226,7 +234,17 @@ export function HorsePagePreview() {
   const targetRef = useRef(h.total ?? 0);
   const rafRef = useRef<number | null>(null);
   const auraTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reduce = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  // reduced-motion: 値は即時反映し、オーラ/光スイープ/装着ポップ等の演出は止める(依頼書§4)。
+  const [prefersReduce, setPrefersReduce] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-reduced-motion:reduce)');
+    const on = () => setPrefersReduce(mq.matches);
+    on(); mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  /** reduced-motion のときインライン animation を空にする(モジュールCSSでは拾えないため JS で外す)。 */
+  const anim = (spec: string) => (prefersReduce ? '' : spec);
 
   useEffect(() => {
     setTrainPhase('pick'); setItemPhase('locked'); setMenus([]); setTrainItemKey('');
@@ -241,13 +259,14 @@ export function HorsePagePreview() {
     if (targetTotal === targetRef.current) return;
     const increased = targetTotal > targetRef.current;
     targetRef.current = targetTotal;
+    const from = dispRef.current; const target = targetTotal;
+    // reduced-motion / SSR: 値だけ即時反映し、オーラも count-up も出さない
+    if (typeof window === 'undefined' || prefersReduce) { dispRef.current = target; setDisplayTotal(target); return; }
     if (increased) {
       setAuraOn(true);
       if (auraTimer.current) clearTimeout(auraTimer.current);
       auraTimer.current = setTimeout(() => setAuraOn(false), 1200);
     }
-    const from = dispRef.current; const target = targetTotal;
-    if (typeof window === 'undefined' || reduce()) { dispRef.current = target; setDisplayTotal(target); return; }
     const start = performance.now(); const dur = increased ? 800 : 450;
     const step = (t: number) => {
       const p = Math.min(1, (t - start) / dur); const e = 1 - Math.pow(1 - p, 3);
@@ -336,7 +355,7 @@ export function HorsePagePreview() {
   const attachBtnLabel = selTrain ? (editingTrainItem && selTrain.key !== attachedKey ? `${selTrain.name}に差し替える` : `${selTrain.name}を購入して装着`) : 'アイテムを選ぶ';
   const attachedItem = attachedKey ? TRAIN_ITEMS.find((x) => x.key === attachedKey) : null;
 
-  const tonightConds = h.forecast.map((f) => f.val).filter((v) => condToKey[v]);
+  const tonightConds = h.forecast.map((f) => normCond(f.val)).filter((v) => condToKey[v]);
   const raceGroups = tonightConds.map((cond) => {
     const base = condToKey[cond]!;
     const items = STRENGTHS.map((st) => {
@@ -353,7 +372,8 @@ export function HorsePagePreview() {
       + (on ? 'border:1px solid var(--gold);box-shadow:0 0 0 2px rgba(201,168,106,.28);background:rgba(201,168,106,.08);' : 'border:1px solid var(--border);background:rgba(10,8,22,.5);');
     return { ...it, img: ITEM(it.key), style };
   });
-  const otherConds = [{ label: '晴', ico: ICO('晴') }, { label: '良馬場', ico: ICO('良馬場') }, { label: 'ダート', ico: ICO('ダート') }];
+  // 今夜の3条件以外を畳む(予報駆動)。生ラベルでも normCond 済みなので取りこぼさない。
+  const otherConds = ALL_CONDS.filter((cc) => !tonightConds.includes(cc)).map((cc) => ({ label: cc, ico: ICO(cc) }));
   const raceSelName = (() => {
     if (!raceKey) return '';
     const ins = INS.find((x) => x.key === raceKey); if (ins) return ins.name;
@@ -442,7 +462,7 @@ export function HorsePagePreview() {
               <div style={css(heroFrameStyle)}>
                 <div style={{ borderRadius: 17, background: 'linear-gradient(180deg,#12101d,#0a0813)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
                   <div style={{ position: 'relative', background: 'radial-gradient(90% 80% at 50% 42%,rgba(0,234,255,.07),transparent 70%)', height: isMobile ? 320 : 380, display: 'flex' }}>
-                    {isGrail ? <span aria-hidden="true" style={css('position:absolute;inset:-30%;z-index:0;pointer-events:none;background:conic-gradient(from 0deg,transparent,rgba(242,228,191,.16),transparent 30%,rgba(0,234,255,.12),transparent 55%,rgba(255,45,196,.12),transparent 80%,rgba(242,228,191,.16));animation:sddGrailSpin 14s linear infinite')} /> : null}
+                    {isGrail ? <span aria-hidden="true" style={css('position:absolute;inset:-30%;z-index:0;pointer-events:none;background:conic-gradient(from 0deg,transparent,rgba(242,228,191,.16),transparent 30%,rgba(0,234,255,.12),transparent 55%,rgba(255,45,196,.12),transparent 80%,rgba(242,228,191,.16));' + anim('animation:sddGrailSpin 14s linear infinite'))} /> : null}
 
                     <div className={s.artZoom} style={{ zIndex: 1 }}><NftHorseArt look={look} /></div>
 
@@ -695,9 +715,9 @@ export function HorsePagePreview() {
 
                       {itemAttached && attachedItem ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                          <div style={css('position:relative;display:flex;align-items:center;gap:10px;border:1px solid rgba(53,208,127,.4);border-radius:11px;padding:9px 11px;background:rgba(53,208,127,.06);overflow:hidden;animation:sddAttach .55s cubic-bezier(.15,1.4,.4,1)')}>
-                            <span aria-hidden="true" style={css('position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(112deg,transparent 42%,rgba(157,255,196,.7) 50%,transparent 58%);background-size:260% 100%;animation:sddSweep 1s ease-out')} />
-                            <img src={ITEM(attachedItem.key)} alt="" style={css('width:34px;height:34px;border-radius:7px;object-fit:cover;animation:sddPop .5s cubic-bezier(.15,1.5,.4,1)')} />
+                          <div style={css('position:relative;display:flex;align-items:center;gap:10px;border:1px solid rgba(53,208,127,.4);border-radius:11px;padding:9px 11px;background:rgba(53,208,127,.06);overflow:hidden;' + anim('animation:sddAttach .55s cubic-bezier(.15,1.4,.4,1)'))}>
+                            <span aria-hidden="true" style={css('position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(112deg,transparent 42%,rgba(157,255,196,.7) 50%,transparent 58%);background-size:260% 100%;' + anim('animation:sddSweep 1s ease-out'))} />
+                            <img src={ITEM(attachedItem.key)} alt="" style={css('width:34px;height:34px;border-radius:7px;object-fit:cover;' + anim('animation:sddPop .5s cubic-bezier(.15,1.5,.4,1)'))} />
                             <span style={css('font-family:var(--font-jp);font-size:12px;color:var(--text)')}>{attachedItem.name} を装着</span>
                             <span style={{ flex: 1 }} />
                             <span style={css('font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--good)')}>上乗せ済み</span>
@@ -749,9 +769,9 @@ export function HorsePagePreview() {
                   <div style={css('border:1px solid rgba(255,45,196,.4);border-radius:16px;padding:15px 17px;background:linear-gradient(150deg,rgba(255,45,196,.09),transparent 70%);display:flex;flex-direction:column;gap:14px')}>
                     {raceApplied && !raceEditing && appliedRace ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                        <div style={css('position:relative;display:flex;align-items:center;gap:11px;min-height:120px;border:1px solid rgba(255,45,196,.45);border-radius:12px;padding:14px;background:rgba(255,45,196,.06);overflow:hidden;animation:sddAttachMag .55s cubic-bezier(.15,1.4,.4,1)')}>
-                          <span aria-hidden="true" style={css('position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(112deg,transparent 42%,rgba(255,143,228,.7) 50%,transparent 58%);background-size:260% 100%;animation:sddSweep 1s ease-out')} />
-                          <img src={appliedRace.img} alt="" style={css('width:48px;height:48px;border-radius:8px;object-fit:cover;animation:sddPop .5s cubic-bezier(.15,1.5,.4,1)')} />
+                        <div style={css('position:relative;display:flex;align-items:center;gap:11px;min-height:120px;border:1px solid rgba(255,45,196,.45);border-radius:12px;padding:14px;background:rgba(255,45,196,.06);overflow:hidden;' + anim('animation:sddAttachMag .55s cubic-bezier(.15,1.4,.4,1)'))}>
+                          <span aria-hidden="true" style={css('position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(112deg,transparent 42%,rgba(255,143,228,.7) 50%,transparent 58%);background-size:260% 100%;' + anim('animation:sddSweep 1s ease-out'))} />
+                          <img src={appliedRace.img} alt="" style={css('width:48px;height:48px;border-radius:8px;object-fit:cover;' + anim('animation:sddPop .5s cubic-bezier(.15,1.5,.4,1)'))} />
                           <div style={{ minWidth: 0 }}>
                             <span style={css('font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--magenta-soft);border:1px solid var(--magenta);border-radius:5px;padding:2px 7px')}>装備予定</span>
                             <b style={css('display:block;margin-top:6px;font-family:var(--font-jp);font-size:14px;color:var(--text)')}>{appliedRace.name}</b>
@@ -800,7 +820,7 @@ export function HorsePagePreview() {
                         <div style={css('font-family:var(--font-mono);font-size:10px;color:var(--muted);min-height:1.1rem')}>{raceHint}</div>
                         <button type="button" onClick={applyRace} style={css(raceApplyBtnStyle)}>{raceApplyBtnLabel}</button>
                         <details style={css('border-top:1px solid var(--border-soft);padding-top:10px')}>
-                          <summary style={css('cursor:pointer;list-style:none;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;color:var(--faint)')}>他の条件（晴・良馬場・ダート）に備える ▸</summary>
+                          <summary style={css('cursor:pointer;list-style:none;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;color:var(--faint)')}>他の条件（{otherConds.map((o) => o.label).join('・')}）に備える ▸</summary>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                             {otherConds.map((o) => (
                               <div key={o.label} style={css('display:flex;align-items:center;gap:9px;padding:7px 9px;border:1px solid var(--border-soft);border-radius:9px;background:rgba(255,255,255,.02)')}>
