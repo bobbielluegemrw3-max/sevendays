@@ -7,6 +7,7 @@ import {
   RACE_ENGINE_V3_VERSION,
   composeConditionPrepV3,
   deriveAptitudeV3,
+  raceItemEdgeV4,
   type RaceConditionsV3,
   type TrainingMenuV3,
 } from '@sevendays/domain';
@@ -64,6 +65,21 @@ async function addTrainingV3(horseId: string, userId: string, batchDate: string,
      values ($1, $2, $3, $3, 'NIGHT', $4, $5, 0, 0, $6)`,
     [horseId, userId, batchDate, menus, JSON.stringify(menus.map((m) => ({ menu: m, roll: 0 }))), menus.includes('REST')],
   );
+}
+
+/** V4 レースアイテムを1つ装着(item_catalog シード後なので FK が通る)。 */
+async function addRaceItemV4(horseId: string, userId: string, batchDate: string, itemKey: string, price: number): Promise<void> {
+  const unit = await client.query<{ id: string }>(
+    `insert into user_items (user_id, item_key, unit_price, source) values ($1, $2, $3, 'PURCHASE') returning id`,
+    [userId, itemKey, price],
+  );
+  await client.query(
+    `insert into item_usages
+       (user_item_id, horse_id, user_id, item_key, unit_price, effective_race_date, slot, usage_kind)
+     values ($1, $2, $3, $4, $5, $6, 'NIGHT', 'RACE')`,
+    [unit.rows[0]!.id, horseId, userId, itemKey, price, batchDate],
+  );
+  await client.query(`update user_items set status = 'APPLIED' where id = $1`, [unit.rows[0]!.id]);
 }
 
 let raceDateCounter = 0;
@@ -182,6 +198,36 @@ describe('engine V3 wiring — 適性+調教でcondition_prepを作る', () => {
     const owner = await newUser();
     await newHorseV3(owner, 'SPRINTER', null, 'no-tv-dna');
     await expect(createParticipantSnapshots(client, snapshotInput(setup))).rejects.toThrow(/V3_TOTAL_VALUE_MISSING/);
+  });
+
+  it('folds a V4 race item (加算方式) into condition_prep — DB結線(item_catalog シード後)', async () => {
+    const setup = await buildRaceV3();
+    const owner = await newUser();
+    const dna = '7777aaaa8888bbbb';
+    const menus: TrainingMenuV3[] = ['HILL', 'WOOD'];
+    const horse = await newHorseV3(owner, 'SPRINTER', 60, dna);
+    await addTrainingV3(horse, owner, setup.batchDate, menus);
+    // 芝蹄鉄・強(surface+ に備える)を装着
+    await addRaceItemV4(horse, owner, setup.batchDate, 'turf_shoes_strong', 8);
+
+    await createParticipantSnapshots(client, snapshotInput(setup));
+
+    // ★ prep はアイテムの加算値込みのドメイン合成と一致(item_usages 経由で結線)
+    const itemEdge = raceItemEdgeV4('turf_shoes_strong', setup.conds);
+    const expected = round2(
+      composeConditionPrepV3({ apt: deriveAptitudeV3(dna), menus, itemEdge, conditions: setup.conds }),
+    );
+    const snap = await snapshotOf(setup.raceId, horse);
+    expect(Number(snap.condition_prep_modifier)).toBe(expected);
+    expect(Number(snap.condition_prep_modifier)).toBeGreaterThanOrEqual(CONDITION_PREP_RANGE_V3.min);
+    expect(Number(snap.condition_prep_modifier)).toBeLessThanOrEqual(CONDITION_PREP_RANGE_V3.max);
+
+    // アイテムはこのレースへ SNAPSHOTTED に遷移(V2と同じ規則)
+    const usage = await client.query<{ status: string }>(
+      `select status from item_usages where horse_id = $1 and effective_race_date = $2`,
+      [horse, setup.batchDate],
+    );
+    expect(usage.rows[0]!.status).toBe('SNAPSHOTTED');
   });
 
   it('gives different individual horses different prep on the same night (適性は個体別)', async () => {

@@ -144,39 +144,41 @@ const INSURANCE_ITEMS: ItemDefinitionV4[] = [
  * ★聖杯制約(§15): 毎走使っても実効ゲインが GRAIL_ITEM_EFFECTIVE_GAIN_PER_RACE_V3(+4)に
  *   収まるよう、上位ラダーは値を抑える(黄金/秘伝の+4〜6は不採用)。90+到達率≈1.5%。
  */
+// ★キーは既存 item_catalog(V1/082/V3 稼働中)と衝突しない V4 独自体系(§0-3 の教訓)。
+//   表示名は自由(衝突不可はキーのみ)。ladder=feed_*、shield=shield_*。
 const TRAINING_ITEMS: ItemDefinitionV4[] = [
   {
-    key: 'highland_hay', nameJa: '高原の干し草〔強化・小〕', nameEn: 'Highland Hay',
+    key: 'feed_s', nameJa: '高原の干し草〔強化・小〕', nameEn: 'Highland Hay',
     itemClass: 'TRAINING', tier: 'S', conditionTag: '強化・小', price: '2',
     effect: { kind: 'GROWTH', min: 1.0, max: 2.0 },
     descriptionJa: '総合値の伸び +1.0〜2.0。入口の強化。',
   },
   {
-    key: 'carrot_cube', nameJa: 'にんじんキューブ〔強化・中〕', nameEn: 'Carrot Cube',
+    key: 'feed_m', nameJa: 'にんじんキューブ〔強化・中〕', nameEn: 'Carrot Cube',
     itemClass: 'TRAINING', tier: 'M', conditionTag: '強化・中', price: '4',
     effect: { kind: 'GROWTH', min: 2.0, max: 3.0 },
     descriptionJa: '総合値の伸び +2.0〜3.0。',
   },
   {
-    key: 'secret_feed', nameJa: '秘伝の飼い葉〔強化・大〕', nameEn: 'Secret Feed',
+    key: 'feed_l', nameJa: '秘伝の飼い葉〔強化・大〕', nameEn: 'Secret Feed',
     itemClass: 'TRAINING', tier: 'L', conditionTag: '強化・大', price: '6',
     effect: { kind: 'GROWTH', min: 2.5, max: 3.5 },
     descriptionJa: '総合値の伸び +2.5〜3.5。よく育てた馬の主力(聖杯 throttle 内)。',
   },
   {
-    key: 'golden_feed', nameJa: '黄金の飼い葉〔強化・特大〕', nameEn: 'Golden Feed',
+    key: 'feed_xl', nameJa: '黄金の飼い葉〔強化・特大〕', nameEn: 'Golden Feed',
     itemClass: 'TRAINING', tier: 'XL', conditionTag: '強化・特大', price: '10',
     effect: { kind: 'GROWTH', min: 3.0, max: 4.0 },
     descriptionJa: '総合値の伸び +3.0〜4.0。90+の聖杯を狙う一手(毎走の実効は+4に収まる)。',
   },
   {
-    key: 'aeon_sand', nameJa: '星霜の砂〔減衰よけ・1走〕', nameEn: 'Aeon Sand',
+    key: 'shield_1', nameJa: '星霜の砂〔減衰よけ・1走〕', nameEn: 'Aeon Sand',
     itemClass: 'TRAINING', tier: 'GUARD', conditionTag: '減衰よけ・1走', price: '3',
     effect: { kind: 'DECAY_SHIELD', races: 1 },
     descriptionJa: '減衰を1レース無効(RESTのいらない手入れ)。',
   },
   {
-    key: 'long_rest', nameJa: '長期の休養〔減衰よけ・3走〕', nameEn: 'Long Rest',
+    key: 'shield_3', nameJa: '長期の休養〔減衰よけ・3走〕', nameEn: 'Long Rest',
     itemClass: 'TRAINING', tier: 'GUARD', conditionTag: '減衰よけ・3走', price: '6',
     effect: { kind: 'DECAY_SHIELD', races: 3 },
     descriptionJa: '減衰を3レース無効。長い守り。',
