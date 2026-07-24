@@ -49,11 +49,11 @@ export function RaceDetailView({
         <div className={s.verifyRows}>
           <div className={s.vRow}>
             <span className={s.vK}>シードハッシュ(事前コミット)</span>
-            <span className={s.vV}>{race.seed_hash}</span>
+            <span className={s.vV} title={race.seed_hash}>{race.seed_hash.length > 24 ? `${race.seed_hash.slice(0, 12)}…${race.seed_hash.slice(-8)}` : race.seed_hash}</span>
           </div>
           <div className={s.vRow}>
             <span className={s.vK}>公開シード(レース後)</span>
-            <span className={s.vV}>{race.revealed_seed ?? '未公開(レース前)'}</span>
+            <span className={s.vV} title={race.revealed_seed ?? undefined}>{race.revealed_seed ? (race.revealed_seed.length > 24 ? `${race.revealed_seed.slice(0, 12)}…${race.revealed_seed.slice(-8)}` : race.revealed_seed) : '未公開(レース前)'}</span>
           </div>
         </div>
         <div className={s.verifyNote}>

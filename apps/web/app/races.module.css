@@ -8,24 +8,6 @@
 .wrap { display: flex; flex-direction: column; gap: 16px; }
 .h1 { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: 0.02em; color: var(--text); }
 
-/* ---- 今夜のレース(upcoming) ---------------------------------------------- */
-.tonight {
-  border: 1px solid rgba(0, 234, 255, 0.34); border-radius: 16px; padding: 18px 20px;
-  background: linear-gradient(180deg, rgba(0, 234, 255, 0.1), rgba(255, 45, 196, 0.05));
-}
-.tonightTop { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-.tonightLabel { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.22em; color: var(--cyan); }
-.tonightLive { font-family: var(--font-mono); font-size: 10.5px; color: var(--cyan); }
-.tonightLive .dot { animation: sdd-pulse 1.6s infinite; }
-@keyframes sdd-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-.tonightBody { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
-.timer {
-  font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 7vw, 40px); line-height: 1;
-  color: var(--cyan); font-variant-numeric: tabular-nums; text-shadow: 0 0 22px rgba(0, 234, 255, 0.5);
-}
-.tonightSub { color: var(--muted); font-size: 12px; margin-top: 6px; }
-.tonightNote { text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--faint); line-height: 1.7; }
-.tonightNote b { color: var(--magenta-soft); }
 
 /* ---- レースリスト --------------------------------------------------------- */
 .secLabel { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.2em; color: var(--muted); margin-bottom: 11px; }
@@ -110,7 +92,6 @@
 }
 .stCompleted { color: var(--good); border-color: rgba(53, 208, 127, 0.4); background: rgba(53, 208, 127, 0.08); }
 .stOpen { color: var(--cyan); border-color: rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.08); }
-.stOther { color: var(--muted); border-color: var(--border); background: rgba(255, 255, 255, 0.04); }
 
 @media (max-width: 560px) {
   .search { flex-basis: 100%; }
@@ -151,21 +132,11 @@
   background: linear-gradient(92deg, var(--gold, #c9a86a), var(--gold-bright, #f2e4bf)); }
 .recBadgeCyan { color: var(--cyan); border: 1px solid rgba(0, 234, 255, 0.4); background: rgba(0, 234, 255, 0.08); }
 .recBadgeMint { color: var(--magenta-soft); border: 1px solid rgba(255, 45, 196, 0.4); background: rgba(255, 45, 196, 0.07); }
-
-/* グループ見出し(SHOW REDESIGN ⑥: DAY7走破·n / 生存·n / BURN·n / P2P売買·n / 新規発行·n) */
-.recGroup { margin-bottom: 12px; }
-.recGroupK { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.14em; color: var(--muted);
-  margin: 0 0 7px; display: flex; align-items: center; gap: 8px; }
-.recGroupN { color: var(--gold, #c9a86a); }
-.recGroup .recRow { margin-bottom: 6px; }
-
-/* ============================================================================
-   APPEND to apps/web/app/races.module.css
-   「あなたのレース記録」Racing Diary リデザイン(2026-07-10 見やすさ改善)。
-   旧ブロック「あなたのレース記録(2026-07-10・審判演出の記録版)」の
-   .recNav / .recSelect は不要になったので削除してよい(recRow〜recBadge* は残す — 行の見た目で使用)。
-   トークンは globals.css の :root。モバイルファースト・横スクロール禁止。
-   ============================================================================ */
+/* DAY7走破=金の帯 / BURN=赤の帯(NightResultsList の .recDay7 / .recBurn 行装飾。以前は未定義だった) */
+.recDay7 { border-color: rgba(201, 168, 106, 0.45);
+  background: linear-gradient(100deg, rgba(242, 228, 191, 0.06), rgba(255, 255, 255, 0.015)); }
+.recBurn { border-color: rgba(255, 92, 92, 0.3);
+  background: linear-gradient(100deg, rgba(255, 92, 92, 0.05), rgba(255, 255, 255, 0.015)); }
 
 .recStack { display: flex; flex-direction: column; gap: 14px; }
 

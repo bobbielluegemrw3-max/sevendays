@@ -35,8 +35,6 @@ const TYPE_COLOR: Record<string, string> = {
   LUCK: '#c9a86a',
 };
 
-/** ⑨台帳カレンダーの雰囲気(記録なし日=素・記録あり=on・7日毎=gold)。 */
-const CAL_OFF_DAYS = new Set([3, 9, 16, 24, 26]);
 
 function CheckIcon() {
   return (
@@ -748,10 +746,11 @@ export function Landing({
               <span>DAY 01 — 28</span>
             </div>
             <div className={s.calGrid}>
+              {/* 景表法(RACE_PAGE_BELOW_MONITOR_SPEC §2-G): 偽の on/off/gold を撤去。
+                  レースは毎日開催なので全日を on に(7日毎=金は「7日走破サイクル」の実概念)。 */}
               {Array.from({ length: 28 }, (_, idx) => {
                 const day = idx + 1;
-                const cls =
-                  day % 7 === 0 ? `${s.calCell} ${s.gold}` : CAL_OFF_DAYS.has(day) ? s.calCell : `${s.calCell} ${s.on}`;
+                const cls = day % 7 === 0 ? `${s.calCell} ${s.gold}` : `${s.calCell} ${s.on}`;
                 return (
                   <div key={day} className={cls}>
                     {day}

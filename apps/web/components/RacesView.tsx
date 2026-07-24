@@ -24,7 +24,7 @@ export function RacesView({ races }: { races: Race[] }) {
 
   return (
     <div className={s.wrap}>
-      <div className={s.h1}>レース</div>
+      {/* h1「レース」はモニター上の "The Daily Derby" と二重見出しのため撤去(RACE_PAGE_BELOW_MONITOR_SPEC §2-C) */}
 
       {/* あなたのレース記録(日付で遡れる審判アーカイブ) */}
       <MyDerbyRecord />
