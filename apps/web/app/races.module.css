@@ -222,3 +222,37 @@
 .digestFes { margin-left: 8px; font-family: var(--font-display); font-weight: 800; font-size: 11.5px;
   background: linear-gradient(92deg, #f6ecd2, var(--gold-bright, #f2e4bf));
   -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* ============================================================================
+   道A(RACE_PAGE_BELOW_MONITOR_SPEC): ①次のレース / ③台帳(独立) / ④記録(格下げ)
+   ============================================================================ */
+/* ① 次のレース(下部トップの橋渡し) */
+.nextRace { border: 1px solid rgba(0, 234, 255, 0.34); border-radius: 16px; padding: 16px 18px;
+  background: linear-gradient(120deg, rgba(0, 234, 255, 0.1), rgba(255, 45, 196, 0.04));
+  display: flex; flex-direction: column; gap: 12px; }
+.nrTop { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.nrK { font-family: var(--font-display); font-size: 10px; letter-spacing: 0.2em; color: var(--cyan); }
+.nrTimer { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 6vw, 36px); line-height: 1;
+  color: var(--cyan); font-variant-numeric: tabular-nums; text-shadow: 0 0 20px rgba(0, 234, 255, 0.45); }
+.nrBody { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.nrCount { font-family: var(--font-jp); font-size: 13px; color: var(--text); }
+.nrCount b { color: var(--cyan); font-family: var(--font-display); font-size: 16px; margin: 0 2px; }
+.nrCta { font-family: var(--font-display); font-weight: 700; font-size: 12px; letter-spacing: 0.04em; white-space: nowrap;
+  color: #04141a; background: linear-gradient(100deg, var(--cyan), #5ff5ff); border-radius: 10px; padding: 8px 15px;
+  text-decoration: none; box-shadow: 0 8px 20px -8px rgba(0, 234, 255, 0.6); }
+
+/* ③ 台帳(独立カード・レース行に偽装しない) */
+.ledgerCard { display: flex; align-items: center; gap: 12px; text-decoration: none;
+  border: 1px solid rgba(201, 168, 106, 0.35); border-radius: 14px; padding: 13px 16px;
+  background: linear-gradient(150deg, rgba(201, 168, 106, 0.08), transparent 72%); }
+.ledgerCardMain { flex: 1; min-width: 0; }
+.ledgerCardK { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.14em; color: var(--gold-bright, #f2e4bf); }
+.ledgerCardT { font-family: var(--font-jp); font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
+
+/* ④ あなたの記録(格下げ=折りたたみ・日記) */
+.diaryFold { border: 1px solid var(--border); border-radius: 14px; background: rgba(255, 255, 255, 0.012); }
+.diarySummary { cursor: pointer; list-style: none; padding: 13px 16px;
+  font-family: var(--font-display); font-size: 11px; letter-spacing: 0.1em; color: var(--muted); }
+.diarySummary::-webkit-details-marker { display: none; }
+.diaryFold[open] .diarySummary { border-bottom: 1px solid var(--border); }
+.diaryBody { padding: 14px 15px 16px; }

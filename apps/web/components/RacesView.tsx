@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { MyDerbyRecord } from '@/components/daily-derby/MyDerbyRecord';
+import { NextRaceCard } from '@/components/NextRaceCard';
 import s from '../app/races.module.css';
 
 /* ============================================================================
@@ -24,24 +25,16 @@ export function RacesView({ races }: { races: Race[] }) {
 
   return (
     <div className={s.wrap}>
-      {/* h1「レース」はモニター上の "The Daily Derby" と二重見出しのため撤去(RACE_PAGE_BELOW_MONITOR_SPEC §2-C) */}
+      {/* h1「レース」はモニター上の "The Daily Derby" と二重見出しのため撤去(§2-C)。
+          道A(RACE_PAGE_BELOW_MONITOR_SPEC): 過去日記(カレンダー)を主役から降ろし、
+          縦順を ①次のレース → ②過去の結果 → ③台帳(独立) → ④あなたの記録(格下げ) に。 */}
 
-      {/* あなたのレース記録(日付で遡れる審判アーカイブ) */}
-      <MyDerbyRecord />
+      {/* ① 次のレース(次への橋渡し・下部トップ) */}
+      <NextRaceCard />
 
-      {/* 透明性台帳への導線(全ユーザーの毎晩の全記録・CSV) */}
-      <Link href="/ledger" className={s.raceRow}>
-        <div className={s.raceDate}>
-          <div className={s.raceMd}>台帳</div>
-          <div className={s.raceYear}>LEDGER</div>
-        </div>
-        <div className={s.raceParts}>毎レースの全記録(生存・BURN・売買)を公開 · CSVダウンロード可</div>
-        <span className={s.raceGo}>開く →</span>
-      </Link>
-
-      {/* 確定したレース(全体・検証ページへ) */}
+      {/* ② 過去の結果を見る(確定レース一覧 → 検証ページ) */}
       <div>
-        <div className={s.secLabel}>確定したレース · FINALIZED</div>
+        <div className={s.secLabel}>過去の結果 · FINALIZED</div>
         {completed.length > 0 ? (
           <div className={s.list}>
             {completed.map((r) => {
@@ -65,6 +58,23 @@ export function RacesView({ races }: { races: Race[] }) {
           <div className={s.empty}>確定したレースはまだありません。</div>
         )}
       </div>
+
+      {/* ③ 透明性台帳(独立カード・レース行に偽装しない) */}
+      <Link href="/ledger" className={s.ledgerCard}>
+        <div className={s.ledgerCardMain}>
+          <div className={s.ledgerCardK}>透明性台帳 · LEDGER</div>
+          <div className={s.ledgerCardT}>毎レースの全記録(生存・BURN・売買)を公開 · CSVダウンロード可 · commit-reveal 検証</div>
+        </div>
+        <span className={s.raceGo}>開く →</span>
+      </Link>
+
+      {/* ④ あなたのレース記録(格下げ=既定は畳む・日記として最下段へ) */}
+      <details className={s.diaryFold}>
+        <summary className={s.diarySummary}>あなたのレース記録 — カレンダー・その夜の日記 ▸</summary>
+        <div className={s.diaryBody}>
+          <MyDerbyRecord />
+        </div>
+      </details>
     </div>
   );
 }
