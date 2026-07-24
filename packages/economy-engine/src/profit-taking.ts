@@ -29,6 +29,8 @@ export interface EligibleHorse {
   currentDay: number;
   lastListedAtMs: number | null;
   tiebreak: number;
+  /** 総合値 0-100(null=未設定)。自動出品価格のバンド化(FUN_V3 §4)に使う。 */
+  totalValue: number | null;
 }
 
 export interface SelectionInput {
@@ -61,11 +63,13 @@ export async function selectProfitTakingListings(
     owner_user_id: string;
     current_day: number;
     last_listed_at: string | null;
+    total_value: string | null;
   }>(
     // 施策C (FUN_V3): users.reserved_horse_id が指す「非売指定の1頭」は選定から
     // 除外する(is distinct from = ポインタ null なら除外しない)。除外はここだけ
     // に閉じ、レース・BURN・価格には影響しない。
-    `select h.id, h.owner_user_id, h.current_day, h.last_listed_at::text as last_listed_at
+    `select h.id, h.owner_user_id, h.current_day, h.last_listed_at::text as last_listed_at,
+            h.total_value::text as total_value
      from horses h
      join user_trade_settings uts on uts.user_id = h.owner_user_id and uts.auto_list = true
      join users u on u.id = h.owner_user_id
@@ -82,6 +86,7 @@ export async function selectProfitTakingListings(
     ownerUserId: h.owner_user_id,
     currentDay: h.current_day,
     lastListedAtMs: h.last_listed_at ? new Date(h.last_listed_at).getTime() : null,
+    totalValue: h.total_value === null ? null : Number(h.total_value),
     tiebreak: deterministicScore(
       input.batchRunId,
       h.id,

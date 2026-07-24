@@ -1,9 +1,5 @@
 import { Money } from '@sevendays/shared';
-import {
-  PRICE_BAND_WIDTH_V1,
-  PRICE_BAND_TV_FLOOR,
-  PRICE_BAND_TV_CAP,
-} from '@sevendays/domain';
+import { bandedPriceStr } from '@sevendays/domain';
 import { PolicyError } from './policies.js';
 
 /** price_tables.policy_json shape (seeded as price_table_v1.0). */
@@ -50,16 +46,6 @@ export function getPrice(
   if (ladder === undefined) {
     throw new PolicyError('POLICY_INVALID', `No price for day ${currentDay} (0-6 only)`);
   }
-  const width = PRICE_BAND_WIDTH_V1[currentDay];
-  if (totalValue === undefined || totalValue === null || width === undefined || width === '0.00') {
-    return Money.of(ladder); // 階段(後方互換・Day0/Day6・未設定)
-  }
-  const tvPct = Math.max(
-    0,
-    Math.min(1, (totalValue - PRICE_BAND_TV_FLOOR) / (PRICE_BAND_TV_CAP - PRICE_BAND_TV_FLOOR)),
-  );
-  const banded = Number(ladder) * (1 + Number(width) * tvPct);
-  // float ノイズ(121×1.20=145.1999…)を 8dp 丸めで吸収してから 2dp 切り捨て(plan §4 表と一致)。
-  const floored2 = Math.floor(Math.round(banded * 1e8) / 1e6) / 100;
-  return Money.of(floored2.toFixed(2));
+  // バンド計算は domain の純関数に集約(getPrice / 手動出品で式を1本化)。
+  return Money.of(bandedPriceStr(ladder, currentDay, totalValue ?? null));
 }

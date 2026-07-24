@@ -370,15 +370,16 @@ describe('assignment execution', () => {
       horseIds.push(horseId);
     }
 
-    // 予算 280 = 2頭ぶん(266.20)+端数。Day0ミントは無効化してP2P選定だけを見る。
+    // 予算 320: バンド価格(Day3 tv80=150.84/tv60=141.97)でも STABLE が高tv2頭を取れる額。
+    // Day0ミントは無効化してP2P選定だけを見る。4頭全消費で次テストへ漏らさない。
     const stableBuyer = await newUser();
     await fund(stableBuyer, '400');
-    const stable = await createOrUpdatePoolSession(client, { userId: stableBuyer, amount: '280', idempotencyKey: randomUUID() });
+    const stable = await createOrUpdatePoolSession(client, { userId: stableBuyer, amount: '320', idempotencyKey: randomUUID() });
     await client.query(`update purchase_sessions set purchase_policy = 'STABLE' where id = $1`, [stable.sessionId]);
 
     const qtyBuyer = await newUser();
     await fund(qtyBuyer, '400');
-    const qty = await createOrUpdatePoolSession(client, { userId: qtyBuyer, amount: '280', idempotencyKey: randomUUID() });
+    const qty = await createOrUpdatePoolSession(client, { userId: qtyBuyer, amount: '320', idempotencyKey: randomUUID() });
     await client.query(`update purchase_sessions set purchase_policy = 'QUANTITY' where id = $1`, [qty.sessionId]);
 
     await lockSessionsIntoBatch(client, batch);

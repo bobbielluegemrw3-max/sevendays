@@ -139,7 +139,7 @@ export async function executeAssignment(
         buyer.purchasePolicy,
       );
       for (const horse of ordered) {
-        const price = getPrice(input.priceTable, horse.currentDay);
+        const price = getPrice(input.priceTable, horse.currentDay, horse.totalValue);
         if (price.gt(remaining)) break; // 最初に買えない馬で打ち切り(次の買い手へ)
         consumed.add(horse.horseId);
         await client.query(
@@ -203,7 +203,7 @@ export async function executeAssignment(
       )[0];
       if (horse) {
         consumed.add(horse.horseId);
-        const price = getPrice(input.priceTable, horse.currentDay);
+        const price = getPrice(input.priceTable, horse.currentDay, horse.totalValue);
         await client.query(
           `insert into ownership_assignments
              (batch_run_id, purchase_session_id, market_listing_id, horse_id, buyer_user_id, seller_user_id, assigned_price)

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { batchDateFor } from '@sevendays/shared';
-import { PRICE_TABLE_V1 } from '@sevendays/domain';
+import { PRICE_TABLE_V1, bandedPriceStr } from '@sevendays/domain';
 import { getMarketplaceState, manualMarketTiebreakScore } from '@sevendays/settlement-engine';
 import { ApiError } from '../errors.js';
 import { totalValueV0 } from '@sevendays/race-engine';
@@ -44,10 +44,11 @@ export function registerMarketEndpoints(registry: ApiRegistry): void {
         current_day: number;
         last_manual_market_action_date: string | null;
         gifted_at: string | null;
+        total_value: string | null;
       }>(
         `select owner_user_id, status::text as status, current_day,
                 last_manual_market_action_date::text as last_manual_market_action_date,
-                gifted_at::text as gifted_at
+                gifted_at::text as gifted_at, total_value::text as total_value
          from horses where id = $1`,
         [input.horse_id],
       );
@@ -75,7 +76,12 @@ export function registerMarketEndpoints(registry: ApiRegistry): void {
         throw new ApiError('MARKET_ALREADY_LISTED', 'This horse is already listed');
       }
 
-      const price = PRICE_TABLE_V1[h.current_day]!;
+      // 手放し=手動出品の価格もバンド化(FUN_V3 §4・売値/現在価値=バンド §5-2)。
+      const price = bandedPriceStr(
+        PRICE_TABLE_V1[h.current_day]!,
+        h.current_day,
+        h.total_value === null ? null : Number(h.total_value),
+      );
       const listedAtIso = new Date().toISOString();
       const inserted = await ctx.client.query<{ id: string; listed_at: string }>(
         `insert into market_listings

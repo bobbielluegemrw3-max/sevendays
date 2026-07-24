@@ -24,7 +24,7 @@ export async function createMarketListings(
 ): Promise<number> {
   let created = 0;
   for (const horse of input.selection) {
-    const price = getPrice(input.priceTable, horse.currentDay);
+    const price = getPrice(input.priceTable, horse.currentDay, horse.totalValue);
     const inserted = await client.query<{ id: string }>(
       `insert into market_listings
          (horse_id, seller_user_id, listing_price, current_day, batch_run_id, deterministic_market_tiebreak_score)

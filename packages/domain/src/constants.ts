@@ -47,6 +47,28 @@ export const PRICE_BAND_WIDTH_V1: Readonly<Record<number, string>> = {
 export const PRICE_BAND_TV_FLOOR = 40;
 export const PRICE_BAND_TV_CAP = 85;
 
+/**
+ * バンド価格の 2dp 文字列を返す純関数(getPrice と手動出品 market.ts で共有・式の単一ソース)。
+ * ladderStr=階段価格。totalValue=null / Day0・Day7 / Day6(width 0)は階段そのまま(後方互換)。
+ * banded = 階段 × (1 + width_day × tvPct)・tvPct=clamp((tv−FLOOR)/(CAP−FLOOR),0,1)。
+ * 価格は 2dp 切り捨て(8dp 丸めで float ノイズ吸収・plan §4 表と一致・上限≤177.16<200)。
+ * ★total_value + Day のみの純関数(field相対でない)=割当決定論・母集団中立を保つ。
+ */
+export function bandedPriceStr(
+  ladderStr: string,
+  currentDay: number,
+  totalValue: number | null,
+): string {
+  const width = PRICE_BAND_WIDTH_V1[currentDay];
+  if (totalValue === null || width === undefined || width === '0.00') return ladderStr;
+  const tvPct = Math.max(
+    0,
+    Math.min(1, (totalValue - PRICE_BAND_TV_FLOOR) / (PRICE_BAND_TV_CAP - PRICE_BAND_TV_FLOOR)),
+  );
+  const banded = Number(ladderStr) * (1 + Number(width) * tvPct);
+  return (Math.floor(Math.round(banded * 1e8) / 1e6) / 100).toFixed(2);
+}
+
 /** Purchase Session lock amount = max assignable price = Day6 price (05_SETTLEMENT_ENGINE.md). */
 export const PURCHASE_LOCK_AMOUNT = '177.16';
 
