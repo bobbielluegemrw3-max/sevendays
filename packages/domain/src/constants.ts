@@ -23,6 +23,30 @@ export const PRICE_TABLE_V1: Readonly<Record<number, string>> = {
 
 export const DAY0_MINT_PRICE = '100.00';
 
+// ---------------------------------------------------------------------------
+// Variable price band v1 (FUN_V3_PLAN.md §4 施策A) — 変動価格。
+// 下限=階段(PRICE_TABLE_V1) + total_value に応じ上方向のみ加算・Day先細り。
+// バンド上限(tv=CAP)は全日 ≤ 177.16 < 買戻し200(天井維持・ロック不変)。Day6は+0%固定。
+// ---------------------------------------------------------------------------
+
+/** Day別バンド幅(上振れのみ)。Day0/Day7は対象外、Day6は固定0%。 */
+export const PRICE_BAND_WIDTH_V1: Readonly<Record<number, string>> = {
+  1: '0.25',
+  2: '0.20',
+  3: '0.15',
+  4: '0.10',
+  5: '0.05',
+  6: '0.00',
+};
+/**
+ * total_value → プレミアムの相対位置アンカー。
+ * FLOOR(=従来の階段価格・プレミアム0) … CAP(=バンド最大・softcap)。
+ * ★FUN_V3 §4 は「総合値の相対位置」とだけ規定 → この 40/85 アンカーは実データ範囲
+ *   (mint 40-75・softcap 85)に基づく実装決定。レビュー側の [CODE] 再照合対象。
+ */
+export const PRICE_BAND_TV_FLOOR = 40;
+export const PRICE_BAND_TV_CAP = 85;
+
 /** Purchase Session lock amount = max assignable price = Day6 price (05_SETTLEMENT_ENGINE.md). */
 export const PURCHASE_LOCK_AMOUNT = '177.16';
 

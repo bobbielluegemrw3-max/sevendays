@@ -1,4 +1,9 @@
 import { Money } from '@sevendays/shared';
+import {
+  PRICE_BAND_WIDTH_V1,
+  PRICE_BAND_TV_FLOOR,
+  PRICE_BAND_TV_CAP,
+} from '@sevendays/domain';
 import { PolicyError } from './policies.js';
 
 /** price_tables.policy_json shape (seeded as price_table_v1.0). */
@@ -24,11 +29,37 @@ export function validatePriceTable(policy: PriceTablePolicy): void {
   }
 }
 
-/** P2P assignment price is always price_table[current_day] (02_BUSINESS_MODEL.md). */
-export function getPrice(policy: PriceTablePolicy, currentDay: number): Money {
-  const price = policy.prices[String(currentDay)];
-  if (price === undefined) {
+/**
+ * P2P assignment price (02_BUSINESS_MODEL.md ＋ FUN_V3 §4 変動価格).
+ *
+ * `totalValue` 未指定(または Day0/Day6 のバンド幅0)＝従来の階段価格 policy.prices[day]。
+ * `totalValue` 指定＝バンド価格: 階段 × (1 + width_day × tvPct)。
+ *   tvPct = clamp((totalValue − FLOOR) / (CAP − FLOOR), 0, 1)  ・下限=階段, 上限≤177.16<200。
+ * 価格は 2dp 切り捨て(plan §4 表と一致: Day3 tv=CAP → 133.10×1.15=153.06)。
+ *
+ * ★式は total_value + Day のみの純関数(field相対でない)＝割当は決定論・母集団中立を保つ。
+ *   price は 2dp 確定値でありバランス累積ではないので、比率計算に Number を用いてよい
+ *   (「Money は float 禁止」は残高の累積の話。ここは価格の導出＋2dp確定)。
+ */
+export function getPrice(
+  policy: PriceTablePolicy,
+  currentDay: number,
+  totalValue?: number | null,
+): Money {
+  const ladder = policy.prices[String(currentDay)];
+  if (ladder === undefined) {
     throw new PolicyError('POLICY_INVALID', `No price for day ${currentDay} (0-6 only)`);
   }
-  return Money.of(price);
+  const width = PRICE_BAND_WIDTH_V1[currentDay];
+  if (totalValue === undefined || totalValue === null || width === undefined || width === '0.00') {
+    return Money.of(ladder); // 階段(後方互換・Day0/Day6・未設定)
+  }
+  const tvPct = Math.max(
+    0,
+    Math.min(1, (totalValue - PRICE_BAND_TV_FLOOR) / (PRICE_BAND_TV_CAP - PRICE_BAND_TV_FLOOR)),
+  );
+  const banded = Number(ladder) * (1 + Number(width) * tvPct);
+  // float ノイズ(121×1.20=145.1999…)を 8dp 丸めで吸収してから 2dp 切り捨て(plan §4 表と一致)。
+  const floored2 = Math.floor(Math.round(banded * 1e8) / 1e6) / 100;
+  return Money.of(floored2.toFixed(2));
 }

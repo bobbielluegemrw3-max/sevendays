@@ -90,6 +90,27 @@ describe('price table policy', () => {
     expect(getPrice(policy, 0).toFixed8()).toBe('100.00000000');
     expect(getPrice(policy, 3).toFixed8()).toBe('133.10000000');
     expect(getPrice(policy, 6).toFixed8()).toBe('177.16000000');
+    // total_value 未指定=従来の階段(後方互換)
+    expect(getPrice(policy, 3, null).toFixed8()).toBe('133.10000000');
+  });
+
+  it('variable price band (FUN_V3 §4): floor=ladder, cap≤177.16, matches plan table', async () => {
+    const { policy } = await loadActivePolicy<PriceTablePolicy>(client, 'price_tables');
+    // tv=FLOOR(40) → プレミアム0 = 従来の階段価格。
+    expect(getPrice(policy, 1, 40).toFixed8()).toBe('110.00000000');
+    expect(getPrice(policy, 3, 40).toFixed8()).toBe('133.10000000');
+    // tv=CAP(85) → バンド最大(plan §4 表と一致・全日 ≤177.16<買戻し200)。
+    expect(getPrice(policy, 1, 85).toFixed8()).toBe('137.50000000'); // 110×1.25
+    expect(getPrice(policy, 2, 85).toFixed8()).toBe('145.20000000'); // 121×1.20
+    expect(getPrice(policy, 3, 85).toFixed8()).toBe('153.06000000'); // 133.10×1.15 floor
+    expect(getPrice(policy, 4, 85).toFixed8()).toBe('161.05000000'); // 146.41×1.10 floor
+    expect(getPrice(policy, 5, 85).toFixed8()).toBe('169.10000000'); // 161.05×1.05 floor
+    expect(getPrice(policy, 6, 85).toFixed8()).toBe('177.16000000'); // Day6 固定(+0%)
+    // tv > CAP はクランプ(バンド最大)・tv < FLOOR はクランプ(階段)。
+    expect(getPrice(policy, 3, 100).toFixed8()).toBe('153.06000000');
+    expect(getPrice(policy, 3, 10).toFixed8()).toBe('133.10000000');
+    // 中間 tv=62.5 (相対位置0.5) → Day3 は 133.10×(1+0.15×0.5)=143.08(floor)。
+    expect(getPrice(policy, 3, 62.5).toFixed8()).toBe('143.08000000');
   });
 
   it('rejects day 7 (buyback, not a P2P price) and invalid tables', () => {
