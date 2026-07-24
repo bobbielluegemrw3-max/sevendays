@@ -40,11 +40,13 @@ function nextSlotV2(): { ja: string; time: string } {
     : { ja: 'ナイターレース', time: '夜20:00' };
 }
 import { BandRaceAct } from '@/components/daily-derby/BandRaceAct';
+import { ReachFxLayer, type ReachFxState } from '@/components/daily-derby/ReachFxLayer';
 import { SettlementAct } from '@/components/daily-derby/SettlementAct';
 import { type HarvestRow, type SettlementInput } from '@/lib/settlement-act';
 import {
   ACT_TOTAL as BAND_ACT_TOTAL,
   ACT_VERDICT_AT as BAND_ACT_VERDICT_AT,
+  bandRaceFrame,
   buildBandRace,
   selectFeaturedBand,
   type BandRaceInput,
@@ -1411,6 +1413,8 @@ function LogPhase({
   onSettlementRow: (row: HarvestRow) => void;
 }) {
   const lang = useLang();
+  // リーチ演出FX(canvasオーバーレイ)への状態橋渡し。毎フレーム最新値を ref で読む(再描画しない)。
+  const fxRef = useRef<ReachFxState>({ active: false, phase: '', danger: 0, fate: null });
   // 正典のなめらかなログの流れ: ショー時計(1秒刻み)を60fpsに補間して描画する
   const elapsed = useShowClock(propElapsed);
   // 2026-07-14: 行数は当夜の実件数でキャップ(案①「件数だけ実数」の結線)。
@@ -1424,6 +1428,16 @@ function LogPhase({
      act の尺(32秒)は LOGS_FROM(30) → MARKET_OPEN(62) にちょうど収まる。 */
   const bandElapsed = elapsed - LOGS_FROM;
   const bandRacing = bandModel !== null && bandElapsed < BAND_ACT_TOTAL;
+  // リーチ演出FX の状態を帯フレームから算出(元の盤 BandRaceAct は不変・上に薄く重ねるだけ)。
+  const bandFrame = bandRacing && bandModel ? bandRaceFrame(bandModel, bandElapsed) : null;
+  fxRef.current = bandFrame
+    ? {
+        active: true,
+        phase: bandFrame.phase === 'VERDICT' && bandFrame.showFate ? 'payoff' : bandFrame.phase.toLowerCase(),
+        danger: bandFrame.myRank != null && bandFrame.lineRank ? Math.max(0, Math.min(1, bandFrame.myRank / bandFrame.lineRank)) : 0,
+        fate: bandFrame.myFate,
+      }
+    : { active: false, phase: '', danger: 0, fate: null };
   /* 施策G 後半: 62秒以降は SETTLEMENT 幕。
      LIST/BID/MATCH/MINT/MLM/ITEM のダミー行はここで完全に描画されなくなる
      (LOG_SECTIONS 自体はレガシー経路とテストのために残す)。 */
@@ -1448,8 +1462,9 @@ function LogPhase({
             />
           </div>
         ) : bandRacing ? (
-          <div className={s.logStreamBand}>
+          <div className={s.logStreamBand} style={{ position: 'relative' }}>
             <BandRaceAct model={bandModel} elapsed={bandElapsed} />
+            <ReachFxLayer stateRef={fxRef} />
           </div>
         ) : rollcall ? (
           runners.length > 0 ? (
