@@ -64,6 +64,8 @@ const TIER_RGB_V: [number, number, number][] = [
   [120, 150, 186], // 3 期待低
   [64, 104, 150], //  4 期待薄
 ];
+/** 開示ステップ音(オーナー支給・期待tierごと)。ゆっくり段階的に開示される各行で1回ずつ「ピ」。 */
+const REVEAL_SOUND = ['revealTier0', 'revealTier1', 'revealTier2', 'revealTier3', 'revealTier4'] as const;
 import { tvNumStyle } from '@/lib/tv-tier';
 import { useLang } from '@/components/LangProvider';
 import { horseDisplayName } from '@/lib/horse-name';
@@ -295,6 +297,13 @@ export function DailyDerbyStage({
            そのまま鳴らすと静かな決算で浮く)。毎回鳴らすと馬房が騒がしくなる。 */
         whinnySoft: { src: '/sounds/horse-whinny.mp3', volume: 0.6 },
         finale: { src: '/sounds/finale.mp3' },
+        /* リーチ演出: 帯レースの開示が「ゆっくり段階的」になる幕(LINE)で、各ステップに
+           鳴らす「ピ」。期待tier(激アツ〜期待薄)ごとに音色が違う(オーナー支給 2026-07-24)。 */
+        revealTier0: { src: '/sounds/reveal-tier0.wav', volume: 0.8 },
+        revealTier1: { src: '/sounds/reveal-tier1.wav', volume: 0.8 },
+        revealTier2: { src: '/sounds/reveal-tier2.wav', volume: 0.8 },
+        revealTier3: { src: '/sounds/reveal-tier3.wav', volume: 0.8 },
+        revealTier4: { src: '/sounds/reveal-tier4.wav', volume: 0.8 },
       }) satisfies Record<string, { src: string; loop?: boolean; volume?: number }>,
     [fanfareSrc, hoofbeatsSrc],
   );
@@ -326,6 +335,15 @@ export function DailyDerbyStage({
       });
     },
     [soundOn, failed, getAudio],
+  );
+
+  // リーチ演出: 開示ステップ音(期待tierごとの「ピ」)。LogPhase から各ステップで呼ぶ。
+  const playRevealBeep = useCallback(
+    (tierIdx: number) => {
+      const key = REVEAL_SOUND[Math.max(0, Math.min(4, tierIdx))];
+      if (key) playOneShot(key);
+    },
+    [playOneShot],
   );
 
   /* 審判キューの再生: 先頭を表示→表示時間後に次へ(空になったら閉じる)。
@@ -825,6 +843,7 @@ export function DailyDerbyStage({
             onSettlementRow={onSettlementRow}
             completeAt={completeAt}
             replay={replay}
+            playRevealBeep={playRevealBeep}
           />
         ) : (
           <PersonalOrDone
@@ -1148,6 +1167,7 @@ function LiveShow({
   onSettlementRow,
   completeAt,
   replay = false,
+  playRevealBeep,
 }: {
   elapsed: number;
   counts: DerbyCounts;
@@ -1162,6 +1182,7 @@ function LiveShow({
   onSettlementRow: (row: HarvestRow) => void;
   completeAt: number;
   replay?: boolean;
+  playRevealBeep: (tierIdx: number) => void;
 }) {
   if (elapsed >= completeAt) {
     return (
@@ -1185,6 +1206,7 @@ function LiveShow({
         bandModel={bandModel}
         settlement={settlement}
         onSettlementRow={onSettlementRow}
+        playRevealBeep={playRevealBeep}
       />
     );
   }
@@ -1409,6 +1431,7 @@ function LogPhase({
   bandModel,
   settlement,
   onSettlementRow,
+  playRevealBeep,
 }: {
   elapsed: number;
   counts: DerbyCounts;
@@ -1420,6 +1443,7 @@ function LogPhase({
   bandModel: BandRaceModel | null;
   settlement: SettlementInput;
   onSettlementRow: (row: HarvestRow) => void;
+  playRevealBeep: (tierIdx: number) => void;
 }) {
   const lang = useLang();
   // リーチ演出FX(canvasオーバーレイ)への状態橋渡し。毎フレーム最新値を ref で読む(再描画しない)。
@@ -1462,6 +1486,16 @@ function LogPhase({
     if (!payoffReady) { frozeRef.current = false; if (frozen) setFrozen(false); }
     return undefined;
   }, [payoffReady, freezeMs, frozen]);
+  /* 開示ステップ音: 前半(REVEAL・88%を一気)は無音、後半 LINE 幕で残りを一段ずつ出し切る
+     瞬間に tier の「ピ」を1回ずつ鳴らす(オーナー指示A・ゆっくりの段階開示に視覚同期)。 */
+  const lineRevealed = bandFrame?.phase === 'LINE' ? bandFrame.revealed : 0;
+  const prevRevealedRef = useRef(0);
+  useEffect(() => {
+    if (bandFrame?.phase === 'LINE' && lineRevealed > prevRevealedRef.current) {
+      playRevealBeep(tierIdx);
+    }
+    prevRevealedRef.current = bandFrame?.phase === 'LINE' ? lineRevealed : 0;
+  }, [lineRevealed, bandFrame?.phase, playRevealBeep, tierIdx]);
   fxRef.current = bandFrame
     ? {
         active: true,
