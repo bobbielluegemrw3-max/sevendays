@@ -1415,6 +1415,9 @@ function LogPhase({
   const lang = useLang();
   // リーチ演出FX(canvasオーバーレイ)への状態橋渡し。毎フレーム最新値を ref で読む(再描画しない)。
   const fxRef = useRef<ReachFxState>({ active: false, phase: '', danger: 0, fate: null });
+  // フリーズ(寸止めの一撃): 近差の決着直前に短く画面を止める。尺内(VERDICT幕)に収める演出のみ。
+  const [frozen, setFrozen] = useState(false);
+  const frozeRef = useRef(false);
   // 正典のなめらかなログの流れ: ショー時計(1秒刻み)を60fpsに補間して描画する
   const elapsed = useShowClock(propElapsed);
   // 2026-07-14: 行数は当夜の実件数でキャップ(案①「件数だけ実数」の結線)。
@@ -1430,14 +1433,32 @@ function LogPhase({
   const bandRacing = bandModel !== null && bandElapsed < BAND_ACT_TOTAL;
   // リーチ演出FX の状態を帯フレームから算出(元の盤 BandRaceAct は不変・上に薄く重ねるだけ)。
   const bandFrame = bandRacing && bandModel ? bandRaceFrame(bandModel, bandElapsed) : null;
+  const payoffReady = !!(bandFrame && bandFrame.phase === 'VERDICT' && bandFrame.showFate);
+  // 近差(±1.2点未満)= 寸止めの緊張 → フリーズ対象。点差は実データ(final_score差)。
+  const closeCall = !!(bandFrame && bandFrame.margin != null && bandFrame.margin < 1.2);
+  // 決着の瞬間に、近差なら短くフリーズ(650ms)→ 解けて破裂。尺内・順序の作り話はしない。
+  useEffect(() => {
+    if (payoffReady && closeCall && !frozeRef.current) {
+      frozeRef.current = true;
+      setFrozen(true);
+      const id = setTimeout(() => setFrozen(false), 650);
+      return () => clearTimeout(id);
+    }
+    if (!payoffReady) { frozeRef.current = false; if (frozen) setFrozen(false); }
+    return undefined;
+  }, [payoffReady, closeCall, frozen]);
   fxRef.current = bandFrame
     ? {
         active: true,
-        phase: bandFrame.phase === 'VERDICT' && bandFrame.showFate ? 'payoff' : bandFrame.phase.toLowerCase(),
+        phase: frozen ? 'freeze' : payoffReady ? 'payoff' : bandFrame.phase.toLowerCase(),
         danger: bandFrame.myRank != null && bandFrame.lineRank ? Math.max(0, Math.min(1, bandFrame.myRank / bandFrame.lineRank)) : 0,
         fate: bandFrame.myFate,
+        frozen,
       }
     : { active: false, phase: '', danger: 0, fate: null };
+  // 盤フィルタ(元の盤は不変・ラップの filter だけ): フリーズ=無彩化 / 決着=暗転。
+  const bandFilter = frozen ? 'grayscale(.85) contrast(1.12) brightness(.82)' : payoffReady ? 'brightness(.6) saturate(.82)' : 'none';
+  const cineH = frozen || payoffReady ? '9%' : '0%';
   /* 施策G 後半: 62秒以降は SETTLEMENT 幕。
      LIST/BID/MATCH/MINT/MLM/ITEM のダミー行はここで完全に描画されなくなる
      (LOG_SECTIONS 自体はレガシー経路とテストのために残す)。 */
@@ -1462,9 +1483,14 @@ function LogPhase({
             />
           </div>
         ) : bandRacing ? (
-          <div className={s.logStreamBand} style={{ position: 'relative' }}>
-            <BandRaceAct model={bandModel} elapsed={bandElapsed} />
+          <div className={s.logStreamBand} style={{ position: 'relative', overflow: 'hidden' }}>
+            {/* 元の盤(BandRaceAct)は不変。ラップの filter でフリーズ=無彩/決着=暗転だけ重ねる。 */}
+            <div style={{ filter: bandFilter, transition: 'filter .4s ease' }}>
+              <BandRaceAct model={bandModel} elapsed={bandElapsed} />
+            </div>
             <ReachFxLayer stateRef={fxRef} />
+            <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: cineH, background: '#000', zIndex: 3, pointerEvents: 'none', transition: `height ${frozen ? '.12s' : '.5s'} cubic-bezier(.6,0,.2,1)` }} />
+            <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: cineH, background: '#000', zIndex: 3, pointerEvents: 'none', transition: `height ${frozen ? '.12s' : '.5s'} cubic-bezier(.6,0,.2,1)` }} />
           </div>
         ) : rollcall ? (
           runners.length > 0 ? (
