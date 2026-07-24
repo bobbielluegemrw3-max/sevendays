@@ -35,6 +35,7 @@ export default async function MarketPage() {
     <MarketPlaceView
       data={place}
       myHorses={horses.horses}
+      walletAvailable={wallet.available}
       reserveSlot={
         <>
           {engineV2 ? (
