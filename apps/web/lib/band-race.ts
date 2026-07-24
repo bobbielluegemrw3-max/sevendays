@@ -67,6 +67,8 @@ export interface BandEntry {
   burned: boolean;
   /** 自分の馬。所有者は他人のぶんを一切参照しない(ADR-007)。 */
   mine?: boolean;
+  /** レース前の総合値(0-100)。リーチ演出の「期待」tier に使う(自分の馬のみ意味を持つ)。 */
+  total_value?: number | null;
 }
 
 /** 1つのLV帯の確定結果。entries は順不同で渡してよい(内部でスコア降順に整列)。 */
@@ -229,6 +231,8 @@ export interface BandRaceFrame {
   showFate: boolean;
   /** 生死確定後のライン馬とのスコア差(±)。 */
   margin: number | null;
+  /** 自分の馬のレース前総合値(0-100)。リーチ演出の期待tier用。null=出走なし/未取得。 */
+  myTotalValue: number | null;
   /** カメラ窓(上位数頭 + 自分の前後 + ライン付近)。 */
   rows: readonly BandRow[];
 }
@@ -318,6 +322,7 @@ export function bandRaceFrame(model: BandRaceModel, elapsed: number): BandRaceFr
     myFate,
     showFate: myFate !== null && phase === 'VERDICT',
     margin,
+    myTotalValue: myIndex !== null ? (entries[myIndex]!.total_value ?? null) : null,
     rows: cameraRows(model, shown, myShown, settled),
   };
 }

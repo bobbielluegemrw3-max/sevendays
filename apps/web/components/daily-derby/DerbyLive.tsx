@@ -56,7 +56,7 @@ interface BandsResponse {
     burns: number;
     /** 上限超過の帯は順位表を出さない — 呼び出し側は従来の濁流へ退避する。 */
     truncated: boolean;
-    entries: { horse_id: string; name: string; score: number; burned: boolean }[];
+    entries: { horse_id: string; name: string; score: number; burned: boolean; total_value: number | null }[];
   }[];
   my_horse_ids: string[];
 }
@@ -160,6 +160,7 @@ export function DerbyLive() {
               score: e.score,
               burned: e.burned,
               mine: mine.has(e.horse_id),
+              total_value: e.total_value,
             })),
           })),
       );

@@ -55,6 +55,15 @@ import {
 import { deriveNftLook } from '@/lib/nft-visual';
 import { DailyDerbyFailureState } from '@/components/daily-derby/DailyDerbyFailureState';
 import s from '../../app/daily-derby.module.css';
+
+/** リーチ演出「期待tier」のキーライト色(モック TIERS 準拠・激アツ〜期待薄)。 */
+const TIER_RGB_V: [number, number, number][] = [
+  [255, 214, 140], // 0 激アツ
+  [233, 181, 88], //  1 あつい
+  [205, 212, 235], // 2 普通
+  [120, 150, 186], // 3 期待低
+  [64, 104, 150], //  4 期待薄
+];
 import { tvNumStyle } from '@/lib/tv-tier';
 import { useLang } from '@/components/LangProvider';
 import { horseDisplayName } from '@/lib/horse-name';
@@ -1434,19 +1443,25 @@ function LogPhase({
   // リーチ演出FX の状態を帯フレームから算出(元の盤 BandRaceAct は不変・上に薄く重ねるだけ)。
   const bandFrame = bandRacing && bandModel ? bandRaceFrame(bandModel, bandElapsed) : null;
   const payoffReady = !!(bandFrame && bandFrame.phase === 'VERDICT' && bandFrame.showFate);
-  // 近差(±1.2点未満)= 寸止めの緊張 → フリーズ対象。点差は実データ(final_score差)。
-  const closeCall = !!(bandFrame && bandFrame.margin != null && bandFrame.margin < 1.2);
-  // 決着の瞬間に、近差なら短くフリーズ(650ms)→ 解けて破裂。尺内・順序の作り話はしない。
+  // 期待tier(レース前総合値・実データ)→ 裏切りの深さ level。level>=2(期待と逆)でフリーズ。
+  const tv = bandFrame?.myTotalValue ?? null;
+  const tierIdx = tv == null ? 2 : tv >= 78 ? 0 : tv >= 66 ? 1 : tv >= 55 ? 2 : tv >= 45 ? 3 : 4;
+  const surviveFate = bandFrame?.myFate === 'SAFE';
+  // level: 0=期待どおり … 4=最大の裏切り(激アツBURN / 大逆転)。
+  const betrayLevel = bandFrame?.myFate ? (surviveFate ? tierIdx : 4 - tierIdx) : 0;
+  // freezeMs: §0-5準拠(通常0.5〜1.0s)。7秒暗黒(tier5)は32秒帯尺に収まらないので上限1.0s。
+  const freezeMs = betrayLevel >= 4 ? 1000 : betrayLevel === 3 ? 720 : betrayLevel === 2 ? 520 : 0;
+  // 決着の瞬間、期待と逆(裏切り)なら短くフリーズ→解けて破裂。尺内・順序の作り話はしない。
   useEffect(() => {
-    if (payoffReady && closeCall && !frozeRef.current) {
+    if (payoffReady && freezeMs > 0 && !frozeRef.current) {
       frozeRef.current = true;
       setFrozen(true);
-      const id = setTimeout(() => setFrozen(false), 650);
+      const id = setTimeout(() => setFrozen(false), freezeMs);
       return () => clearTimeout(id);
     }
     if (!payoffReady) { frozeRef.current = false; if (frozen) setFrozen(false); }
     return undefined;
-  }, [payoffReady, closeCall, frozen]);
+  }, [payoffReady, freezeMs, frozen]);
   fxRef.current = bandFrame
     ? {
         active: true,
@@ -1454,6 +1469,7 @@ function LogPhase({
         danger: bandFrame.myRank != null && bandFrame.lineRank ? Math.max(0, Math.min(1, bandFrame.myRank / bandFrame.lineRank)) : 0,
         fate: bandFrame.myFate,
         frozen,
+        tierRgb: TIER_RGB_V[tierIdx]!,
       }
     : { active: false, phase: '', danger: 0, fate: null };
   // 盤フィルタ(元の盤は不変・ラップの filter だけ): フリーズ=無彩化 / 決着=暗転。

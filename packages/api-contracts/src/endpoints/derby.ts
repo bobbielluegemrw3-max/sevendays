@@ -1046,7 +1046,8 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
       if (!bandCache || bandCache.raceId !== raceRow.id) {
         const all = await ctx.client.query<BandEntryRow & { day: number }>(
           `select s.current_day as day, rr.horse_id, h.name,
-                  rr.final_score::float8 as score, rr.is_burned as burned
+                  rr.final_score::float8 as score, rr.is_burned as burned,
+                  s.total_value::float8 as total_value
            from race_results rr
            join race_participant_snapshots s
              on s.race_id = rr.race_id and s.horse_id = rr.horse_id
@@ -1058,7 +1059,7 @@ export function registerDerbyEndpoints(registry: ApiRegistry): void {
         const bands = new Map<number, BandEntryRow[]>();
         for (const row of all.rows) {
           const list = bands.get(row.day) ?? [];
-          list.push({ horse_id: row.horse_id, name: row.name, score: row.score, burned: row.burned });
+          list.push({ horse_id: row.horse_id, name: row.name, score: row.score, burned: row.burned, total_value: row.total_value ?? null });
           bands.set(row.day, list);
         }
         bandCache = { raceId: raceRow.id, bands };
@@ -1118,4 +1119,6 @@ interface BandEntryRow {
   name: string;
   score: number;
   burned: boolean;
+  /** レース前の総合値(0-100・凍結済スナップショット)。リーチ演出の「期待」tier に使う。 */
+  total_value: number | null;
 }

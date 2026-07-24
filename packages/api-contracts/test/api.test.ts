@@ -568,8 +568,8 @@ describe('race transparency and admin surface after a real production day', () =
     expect(bandsBody.my_horse_ids.length).toBeGreaterThanOrEqual(1);
     const ids = new Set(band.entries.map((e) => e.horse_id));
     expect(bandsBody.my_horse_ids.some((id) => ids.has(id))).toBe(true);
-    // 所有者は一切返さない(ADR-007)
-    expect(Object.keys(band.entries[0]!).sort()).toEqual(['burned', 'horse_id', 'name', 'score']);
+    // 所有者は一切返さない(ADR-007)。total_value はレース前総合値(リーチ演出の期待tier用・所有者情報ではない)。
+    expect(Object.keys(band.entries[0]!).sort()).toEqual(['burned', 'horse_id', 'name', 'score', 'total_value']);
     /* 出走馬を持たない観戦者(この日の買い手はミント馬なのでまだ走っていない)にも
        帯は1つ出る — 見るものが無い夜を作らない。ただし自分の馬はゼロ。 */
     const spectator = await call('GET', '/api/v1/daily-derby/bands/latest', asUser(buyer));
