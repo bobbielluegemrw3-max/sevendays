@@ -1451,6 +1451,16 @@ function LogPhase({
   // フリーズ(寸止めの一撃): 近差の決着直前に短く画面を止める。尺内(VERDICT幕)に収める演出のみ。
   const [frozen, setFrozen] = useState(false);
   const frozeRef = useRef(false);
+  // reduced-motion: フリーズ(間)も演出扱いで抜く。SSR安全に mount 後に確定(初期 false)。
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduce(mq.matches);
+    const on = () => setReduce(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
   // 正典のなめらかなログの流れ: ショー時計(1秒刻み)を60fpsに補間して描画する
   const elapsed = useShowClock(propElapsed);
   // 2026-07-14: 行数は当夜の実件数でキャップ(案①「件数だけ実数」の結線)。
@@ -1467,14 +1477,15 @@ function LogPhase({
   // リーチ演出FX の状態を帯フレームから算出(元の盤 BandRaceAct は不変・上に薄く重ねるだけ)。
   const bandFrame = bandRacing && bandModel ? bandRaceFrame(bandModel, bandElapsed) : null;
   const payoffReady = !!(bandFrame && bandFrame.phase === 'VERDICT' && bandFrame.showFate);
-  // 期待tier(レース前総合値・実データ)→ 裏切りの深さ level。level>=2(期待と逆)でフリーズ。
+  // 期待tier(レース前総合値・実データ)→ 裏切りの深さ level。level>=3(本物の裏切り)でフリーズ。
   const tv = bandFrame?.myTotalValue ?? null;
   const tierIdx = tv == null ? 2 : tv >= 78 ? 0 : tv >= 66 ? 1 : tv >= 55 ? 2 : tv >= 45 ? 3 : 4;
   const surviveFate = bandFrame?.myFate === 'SAFE';
   // level: 0=期待どおり … 4=最大の裏切り(激アツBURN / 大逆転)。
   const betrayLevel = bandFrame?.myFate ? (surviveFate ? tierIdx : 4 - tierIdx) : 0;
   // freezeMs: §0-5準拠(通常0.5〜1.0s)。7秒暗黒(tier5)は32秒帯尺に収まらないので上限1.0s。
-  const freezeMs = betrayLevel >= 4 ? 1000 : betrayLevel === 3 ? 720 : betrayLevel === 2 ? 520 : 0;
+  // reduced-motion=0(間も抜く)。フリーズは本物の裏切り(level>=3)のみ=普通(50/50・level2)は止めない。
+  const freezeMs = reduce ? 0 : betrayLevel >= 4 ? 1000 : betrayLevel === 3 ? 720 : 0;
   // 決着の瞬間、期待と逆(裏切り)なら短くフリーズ→解けて破裂。尺内・順序の作り話はしない。
   useEffect(() => {
     if (payoffReady && freezeMs > 0 && !frozeRef.current) {
