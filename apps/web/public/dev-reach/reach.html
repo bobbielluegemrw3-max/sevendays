@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="ext-resource-dependency" content="/horses/nft/v5_full.png">
+<style>
+  :root{
+    --bg:#050409;--panel:#0b0912;--border:rgba(255,255,255,.09);--border-strong:rgba(0,234,255,.28);
+    --text:#eae7ff;--muted:#8f8ac2;--faint:#5a5580;
+    --cyan:#00eaff;--magenta:#ff2dc4;--gold:#c9a86a;--gold-bright:#f2e4bf;--good:#35d07f;--bad:#ff5c5c;
+    --font-display:'Orbitron',system-ui,sans-serif;--font-sans:'Space Grotesk','Zen Kaku Gothic New',system-ui,sans-serif;
+    --font-jp:'Zen Kaku Gothic New',system-ui,sans-serif;--font-mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--text);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;background:#000}
+  ::selection{background:rgba(0,234,255,.28)}
+  @keyframes rowIn{0%{opacity:0;transform:translateX(14px)}100%{opacity:1;transform:translateX(0)}}
+  @keyframes youPulse{0%,100%{box-shadow:0 0 0 1px rgba(242,228,191,.5),0 0 18px rgba(242,228,191,.25)}50%{box-shadow:0 0 0 1px rgba(242,228,191,.9),0 0 30px rgba(242,228,191,.5)}}
+  @keyframes nearMiss{0%,100%{box-shadow:0 0 0 1px rgba(255,92,92,.5),0 0 16px rgba(255,92,92,.35)}50%{box-shadow:0 0 0 1px rgba(255,92,92,1),0 0 34px rgba(255,92,92,.7)}}
+  @keyframes kMask{0%{clip-path:inset(0 50% 0 50%);opacity:0}55%{opacity:1}100%{clip-path:inset(0 0 0 0);opacity:1}}
+  @keyframes kRule{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+  @keyframes kUp{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
+  @keyframes floatUp{0%{opacity:0;transform:translateY(26px) scale(.9)}100%{opacity:1;transform:translateY(0) scale(1)}}
+  @keyframes rankKick{0%{transform:scale(1)}30%{transform:scale(1.22)}100%{transform:scale(1)}}
+  @media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important}}
+</style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;background:#000;font-family:var(--font-sans)">
+
+  <!-- ===================== 制御盤 ===================== -->
+  <aside style="width:284px;flex:none;border-right:1px solid var(--border);background:linear-gradient(180deg,#0b0912,#070610);padding:20px 16px;display:flex;flex-direction:column;gap:15px;position:sticky;top:0;height:100vh;overflow:auto">
+    <div style="display:inline-flex;align-items:center;gap:9px">
+      <span style="width:8px;height:20px;border-radius:2px;background:linear-gradient(180deg,var(--cyan),var(--magenta));box-shadow:0 0 14px rgba(0,234,255,.55)"></span>
+      <span style="display:flex;flex-direction:column;line-height:.92"><span style="font-family:var(--font-mono);font-size:7px;letter-spacing:.32em;color:var(--muted)">SEVEN DAYS DERBY</span><span style="font-family:var(--font-display);font-weight:800;font-size:13px;letter-spacing:.05em;color:var(--text)">VERDICT REACH</span></span>
+    </div>
+    <div style="font-family:var(--font-jp);font-size:10px;letter-spacing:.02em;color:var(--faint);line-height:1.8;border-left:2px solid var(--border);padding-left:10px">
+      レース前の<b style="color:var(--muted)">期待（空気）</b>と<b style="color:var(--muted)">決着</b>を選ぶ。他馬が開かれ<b style="color:var(--muted)">暫定順位が生存ラインへ落ちる</b>。期待と逆＝裏切りの時だけ<b style="color:var(--muted)">凍る</b>。ステージに「激アツ」等の文字は出さない — 色・光・間だけ。
+    </div>
+
+    <div>
+      <div style="font-family:var(--font-display);font-size:9px;letter-spacing:.18em;color:var(--muted);margin-bottom:8px">① レース前の期待</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <sc-for list="{{ tierBtns }}" as="t" hint-placeholder-count="5">
+          <button type="button" onClick="{{ t.onSelect }}" style="{{ t.style }}">
+            <span style="width:28px;height:28px;border-radius:8px;flex:none;background:{{ t.swatch }};box-shadow:{{ t.glow }}"></span>
+            <span style="text-align:left;min-width:0;flex:1">
+              <span style="display:block;font-family:var(--font-display);font-weight:700;font-size:12px;color:var(--text)">{{ t.jp }}</span>
+              <span style="display:block;font-family:var(--font-jp);font-size:9.5px;color:var(--muted)">{{ t.sub }}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-family:var(--font-display);font-size:9px;letter-spacing:.18em;color:var(--muted);margin-bottom:8px">② 決着</div>
+      <div style="display:flex;gap:6px">
+        <button type="button" onClick="{{ setSurvive }}" style="{{ surviveBtnStyle }}">SURVIVE</button>
+        <button type="button" onClick="{{ setBurn }}" style="{{ burnBtnStyle }}">BURN</button>
+      </div>
+    </div>
+
+    <button type="button" onClick="{{ play }}" style="appearance:none;border:none;border-radius:11px;padding:12px;cursor:pointer;font-family:var(--font-display);font-weight:800;font-size:14px;letter-spacing:.1em;color:#04141a;background:linear-gradient(100deg,var(--cyan),#5ff5ff);box-shadow:0 12px 26px -10px rgba(0,234,255,.7)">▶ PLAY</button>
+
+    <div style="border:1px solid var(--border);border-radius:12px;padding:11px 12px;background:rgba(255,255,255,.02);display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:var(--font-mono);font-size:9px;color:var(--faint);letter-spacing:.12em">判定</span><span style="{{ classStyle }}">{{ classLabel }}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-family:var(--font-mono);font-size:9px;color:var(--faint);letter-spacing:.12em">FREEZE</span><span style="font-family:var(--font-mono);font-size:10px;color:{{ freezeColor }}">{{ freezeText }}</span></div>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-family:var(--font-jp);font-size:10.5px;color:var(--muted)">
+      <input type="checkbox" onChange="{{ toggleReduce }}" checked="{{ reduce }}" style="width:15px;height:15px;accent-color:var(--cyan)">
+      reduced-motion（演出を抜き結果即出し）
+    </label>
+    <div style="margin-top:auto;font-family:var(--font-mono);font-size:8px;color:#3a3652;line-height:1.8">スコア・点差・LV は実データ。暫定順位は開示のたびに数字が動くカウンター。中間順位は作らない。</div>
+  </aside>
+
+  <!-- ===================== ステージ ===================== -->
+  <main style="flex:1;min-width:0;position:relative;overflow:hidden;background:#000">
+    <canvas data-cv style="position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0"></canvas>
+    <div style="{{ barTopStyle }}"></div>
+    <div style="{{ barBotStyle }}"></div>
+
+    <!-- 帯ボード -->
+    <div style="{{ boardWrapStyle }}">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:12px">
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:.3em;color:var(--faint)">BRACKET</span>
+          <span style="font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:.04em;color:var(--text)">LV.{{ day }}</span>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)"><b style="font-family:var(--font-display);font-size:15px;color:var(--text)">{{ total }}</b> RUN</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:#ff9a9a"><b style="font-family:var(--font-display);font-size:15px;color:var(--bad)">{{ burns }}</b> BURN</span>
+        </div>
+      </div>
+
+      <!-- YOUR SCORE (固定) + 暫定順位カウンター + 生存ライン -->
+      <div style="display:flex;align-items:stretch;gap:10px;margin-bottom:12px">
+        <div style="flex:none;border:1px solid rgba(242,228,191,.4);border-radius:11px;padding:9px 13px;background:linear-gradient(180deg,rgba(242,228,191,.08),transparent);display:flex;flex-direction:column;gap:2px">
+          <span style="font-family:var(--font-mono);font-size:8px;letter-spacing:.2em;color:var(--gold)">YOUR SCORE</span>
+          <span style="font-family:var(--font-display);font-weight:900;font-size:26px;line-height:1;color:var(--gold-bright);font-variant-numeric:tabular-nums">{{ myScoreText }}</span>
+        </div>
+        <div style="flex:1;min-width:0;border:1px solid var(--border);border-radius:11px;padding:9px 15px;background:rgba(255,255,255,.02);display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <span style="font-family:var(--font-mono);font-size:8px;letter-spacing:.2em;color:var(--muted)">{{ rankLabel }}</span>
+            <span style="display:flex;align-items:baseline;gap:4px">
+              <b key="r{{ rankKey }}" style="font-family:var(--font-display);font-weight:900;font-size:34px;line-height:1;color:{{ rankColor }};font-variant-numeric:tabular-nums;display:inline-block;animation:rankKick .28s ease-out">{{ rankText }}</b>
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--muted)">位</span>
+            </span>
+          </div>
+          <div style="text-align:right">
+            <span style="display:block;font-family:var(--font-mono);font-size:8px;letter-spacing:.14em;color:var(--faint)">SURVIVAL LINE</span>
+            <span style="font-family:var(--font-display);font-weight:800;font-size:20px;color:#ff9a9a;font-variant-numeric:tabular-nums">{{ lineRank }}<span style="font-family:var(--font-mono);font-size:11px;color:var(--faint)"> 位</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- リーダーボード窓 -->
+      <div style="{{ boardStyle }}">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="11">
+          <div style="{{ r.style }}">
+            <span style="width:34px;flex:none;font-family:var(--font-display);font-weight:700;font-size:13px;color:{{ r.rankColor }};text-align:right">{{ r.rankText }}</span>
+            <span style="flex:1;min-width:0;font-family:var(--font-jp);font-size:13px;color:{{ r.nameColor }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+            <span style="font-family:var(--font-mono);font-size:12px;color:{{ r.scoreColor }};font-variant-numeric:tabular-nums">{{ r.scoreText }}</span>
+            <sc-if value="{{ r.burned }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--font-display);font-size:8px;font-weight:700;letter-spacing:.08em;color:#fff;background:var(--bad);border-radius:4px;padding:2px 6px;flex:none">BURN</span></sc-if>
+            <sc-if value="{{ r.atLine }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--font-mono);font-size:8px;letter-spacing:.1em;color:#ff9a9a;flex:none">◂LINE</span></sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ showMargin }}" hint-placeholder-val="{{ false }}">
+        <div key="m{{ token }}" style="{{ marginBoxStyle }}">
+          <span style="display:flex;align-items:baseline;gap:9px;animation:kUp .5s ease-out both">
+            <span style="font-family:var(--font-mono);font-size:10px;letter-spacing:.22em;color:{{ marginColor }}">{{ marginVerb }}</span>
+            <b style="font-family:var(--font-display);font-weight:900;font-size:32px;color:{{ marginColor }};font-variant-numeric:tabular-nums">{{ marginText }}</b>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">PTS</span>
+          </span>
+          <sc-if value="{{ showGain }}" hint-placeholder-val="{{ false }}">
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--good);animation:kUp .5s ease-out .3s both">{{ gainFrom }} → <b>{{ gainTo }}</b> USDT · LV.{{ day }}→{{ dayNext }}</span>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- 馬の審判ペイオフ: 背景(帯ボード)は透けたまま、馬は正方形の枠で浮かび上がる -->
+    <sc-if value="{{ showVerdictText }}" hint-placeholder-val="{{ false }}">
+      <div key="v{{ token }}" style="position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+        <div style="{{ backdropStyle }}"></div>
+        <div style="position:relative;z-index:2;font-family:var(--font-mono);font-size:10px;letter-spacing:.5em;color:{{ kickerSubColor }};margin-bottom:14px;padding-left:.5em;animation:fadeIn .6s ease-out both">{{ kickerSub }}</div>
+        <div style="{{ frameStyle }}">
+          <div style="width:100%;height:100%;border-radius:19px;overflow:hidden;background:radial-gradient(80% 70% at 50% 42%,rgba(0,234,255,.06),#0a0813);display:flex;align-items:center;justify-content:center">
+            <img src="{{ art }}" alt="TEMPEST" style="{{ artImgStyle }}">
+          </div>
+        </div>
+        <div style="position:relative;z-index:2;display:inline-block;font-family:var(--font-display);font-weight:900;font-size:{{ kickerSize }};letter-spacing:.08em;color:{{ kickerColor }};text-shadow:0 0 34px {{ kickerGlow }};margin-top:18px;animation:kMask .7s cubic-bezier(.2,.9,.3,1) both">{{ kicker }}</div>
+        <div style="position:relative;z-index:2;font-family:var(--font-display);font-weight:800;font-size:15px;letter-spacing:.14em;color:var(--text);margin-top:9px;animation:kUp .5s ease-out .4s both">TEMPEST</div>
+        <sc-if value="{{ payoff }}" hint-placeholder-val="{{ false }}">
+          <div style="position:relative;z-index:2;font-family:var(--font-jp);font-weight:300;font-size:12.5px;letter-spacing:.04em;color:{{ payoffColor }};margin-top:9px;animation:kUp .6s ease-out .55s both">— {{ payoffText }}</div>
+        </sc-if>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:760}}">
+const ART='/horses/nft/v5_full.png';
+const GOLD=[255,213,120], GOLD_HEX='#ffd978', GOLDW='#f2e4bf', GREEN='#35d07f', RED=[255,70,52], RED_HEX='#ff6b5c';
+const PRICE=['100.00','110.00','121.00','133.10','146.41','161.05','177.16'];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const easeOut=t=>1-Math.pow(1-clamp(t,0,1),3);
+const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const rand=(a,b)=>a+Math.random()*(b-a);
+const mixh=(i,salt)=>{let h=(i+1)*2654435761+salt*40503;h=(h^(h>>>15))*2246822519;h=(h^(h>>>13))*3266489917;return (h^(h>>>16))>>>0;};
+
+const TOTAL=38, BURNS=4, DAY=4, LINE=TOTAL-BURNS; // 生存ライン=34位
+
+// 5段階の"空気"(色と光だけ・文字は出さない)
+const TIERS=[
+  { jp:'激アツ', sub:'強い・残りそう',  rgb:[255,214,140], swA:'#f2e4bf', swB:'#c9a86a' },
+  { jp:'あつい', sub:'たぶん残る',      rgb:[233,181,88],  swA:'#e6b24a', swB:'#8a6a24' },
+  { jp:'普通',   sub:'五分五分',        rgb:[205,212,235], swA:'#e7e7ff', swB:'#6f6a95' },
+  { jp:'期待低', sub:'たぶん消える',    rgb:[120,150,186], swA:'#8298bd', swB:'#3f4d68' },
+  { jp:'期待薄', sub:'弱い・消えそう',  rgb:[64,104,150],  swA:'#466a92', swB:'#20344a' },
+  { jp:'フリーズ', sub:'ほぼハズレ→3秒凍結→逆転', rgb:[30,44,72], swA:'#26364f', swB:'#05070c' },
+];
+// tier×outcome → 最終順位(ラインからの距離)。裏切りほどライン際=カウンターがギリギリまで迫る。
+function mineRankFor(tierIdx, survive){
+  const level = survive ? tierIdx : 4-tierIdx; // 0=期待どおり … 4=最大の裏切り
+  if(survive) return [LINE-16, LINE-11, LINE-7, LINE-3, LINE][level];   // level4(大逆転)=ライン上ぎりぎり
+  return [TOTAL, 37, 36, 35, 35][level];                                // level4(激アツBURN)=ライン直下35
+}
+function freezeFor(level){ return level<=1?0 : level===2?520 : level===3?720 : 1000; }
+
+function buildBand(mineRank){
+  const salt=991+DAY;
+  const entries=Array.from({length:TOTAL},(_,i)=>{ const h=mixh(i,salt); return { name:fname(h), score:Math.round((88-(i/(TOTAL-1))*53-((h%220)/100))*100)/100, burned:i>=LINE, mine:i===mineRank-1 }; });
+  entries.sort((a,b)=>b.score-a.score); entries.forEach((e,i)=>{ e.burned=i>=LINE; e.mine=i===mineRank-1; });
+  const myIndex=mineRank-1;
+  let order=entries.map((_,i)=>i).filter(i=>i!==myIndex);
+  for(let i=order.length-1;i>0;i--){ const j=mixh(i,salt)%(i+1); const t=order[i];order[i]=order[j];order[j]=t; }
+  const above=order.filter(i=>i<myIndex);
+  if(above.length){ const dec=above[above.length-1]; order=order.filter(i=>i!==dec); order.push(dec); } // 決定打を末尾へ
+  return { entries, myIndex, order };
+}
+const PRE=['Royal','Black','Azure','Neon','Iron','Lunar','Storm','Cosmic','Wild','Noble'];
+const SUF=['Thunder','Comet','Wolf','Frost','Meteor','Nova','Blade','Flame','Arrow','Bolt'];
+const fname=h=>`${PRE[h%PRE.length]} ${SUF[(h>>>8)%SUF.length]}`;
+
+class Component extends DCLogic {
+  state={ tierIdx:4, outcome:'survive', reduce:false, phase:'idle', revealed:0, frozen:false, token:0 };
+
+  componentDidMount(){
+    try{ if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) this.setState({reduce:true}); }catch(e){}
+    this.cv=document.querySelector('[data-cv]'); this.ctx=this.cv.getContext('2d');
+    this.dpr=Math.min(2,window.devicePixelRatio||1);
+    this.img=new Image(); this.imgOK=false; this.img.onload=()=>{this.imgOK=true;}; this.img.src=ART;
+    this.dust=Array.from({length:40},()=>({x:Math.random(),y:Math.random(),z:rand(.3,1),r:rand(.6,2),sp:rand(.02,.08)}));
+    this._timers=[]; this._resize=()=>this.resize(); window.addEventListener('resize',this._resize); this.resize();
+    this._raf=requestAnimationFrame(this.loop); setTimeout(()=>this.play(),450);
+  }
+  componentWillUnmount(){ cancelAnimationFrame(this._raf); window.removeEventListener('resize',this._resize); this._timers.forEach(clearTimeout); }
+  resize(){ const r=this.cv.getBoundingClientRect(); this.W=r.width; this.H=r.height; this.cv.width=Math.round(this.W*this.dpr); this.cv.height=Math.round(this.H*this.dpr); this.ctx.setTransform(this.dpr,0,0,this.dpr,0,0); }
+
+  cfg(){
+    const t5=this.state.tierIdx===5; // 「フリーズ」= 期待薄のさらに下。ほぼハズレの空気→7秒の暗黒凍結→いきなり決着(生存/BURN両対応)
+    const survive=this.state.outcome==='survive';
+    const level=t5?4:(survive?this.state.tierIdx:4-this.state.tierIdx);
+    return { survive, level, reversal:t5?true:level>=2, freezeMs:t5?7000:freezeFor(level), mineRank:t5?(survive?LINE:LINE+1):mineRankFor(this.state.tierIdx,survive), tier:TIERS[this.state.tierIdx], t5 }; }
+
+  // 5段階×決着ごとの「最終降下」の振付。gaps=クライマックス数手のテンポ(ms)。
+  //  CALM=順当/ SINK=覚悟/ BUILD=じりじり/ PINNED=ライン上で寸止め→凍結/ CASCADE=崩れの雪崩→凍結
+  climaxPlan(survive,level){
+    if(level<=1) return survive?{K:2,gaps:[240,300],hb:false}:{K:3,gaps:[300,340,360],hb:false};       // CALM / SINK
+    if(level===2) return {K:4,gaps:[320,460,620,760],hb:true};                                           // BUILD
+    if(survive)   return {K:5,gaps:[300,460,640,860,1050],hb:true};                                       // PINNED(大逆転)
+    return {K:6,gaps:[560,470,150,130,120,120],hb:true};                                                 // CASCADE(激アツBURN)
+  }
+  play(){
+    this._timers.forEach(clearTimeout); this._timers=[];
+    const c=this.cfg(); this.model=buildBand(c.mineRank); this._start=performance.now(); this._impact=0;
+    const token=this.state.token+1;
+    this.setState({ token, phase:'intro', revealed:0, frozen:false });
+    if(this.state.reduce){ this.setState({ phase:'verdict', revealed:this.model.order.length }); this._timers.push(setTimeout(()=>{this.setState({phase:'payoff'});this._impact=1;},60)); return; }
+    const T=(ms,fn)=>this._timers.push(setTimeout(fn,ms));
+    const R=this.model.order.length;
+    // 「フリーズ」= じりじり近づき→ライン際で急停止(短い間)→3秒凍結→スラムで生存。
+    const plan=c.t5 ? {K:5,gaps:[300,470,660,900,150],hb:true} : this.climaxPlan(c.survive,c.level);
+    const K=Math.min(plan.K,R); const bulk=R-K;
+    const canFreeze=c.freezeMs>0;
+    let t=1300; T(t,()=>this.setState({phase:'you'})); t+=1100; T(t,()=>this.setState({phase:'reveal'}));
+    // 前半: 場を埋める速い開示(順位は淡々と下がる)
+    for(let k=1;k<=bulk;k++){ const prog=k/Math.max(1,bulk); t+=Math.round(100+easeOut(prog)*190); const kk=k; T(t,()=>this.setState({revealed:kk})); }
+    // クライマックス: 振付どおりの間合いで1手ずつ。最後の決定打の直前に凍結(裏切り時)。
+    for(let j=0;j<K;j++){
+      const k=bulk+j+1; const last=k===R; const gap=plan.gaps[j] ?? 420; const kk=k;
+      if(last && canFreeze){
+        t+=Math.max(0,gap-140); T(t,()=>this.setState({phase:'freeze',frozen:true})); t+=c.freezeMs;
+        if(c.t5){ T(t,()=>{ this.setState({phase:'payoff',frozen:false,revealed:kk}); this._impact=0.9; }); } // 真っ暗7秒→ログ(緑)を挟まず、いきなり馬
+        else { T(t,()=>{ this.setState({phase:'reveal',frozen:false,revealed:kk}); this._impact=0.9; }); }
+      }
+      else { t+=gap; T(t,()=>this.setState({revealed:kk,phase:'reveal'})); }
+    }
+    if(!c.t5){
+      t+=520; T(t,()=>this.setState({phase:'line'}));
+      t+=760; T(t,()=>this.setState({phase:'verdict'}));
+      t+=1900; T(t,()=>{ this.setState({phase:'payoff'}); }); // ペイオフ開始で白フラッシュは焚かない(馬の前に模様が出ない)
+    }
+  }
+  selectTier(i){ this.setState({tierIdx:i}); setTimeout(()=>this.play(),30); }
+  setOutcome(o){ this.setState({outcome:o}); setTimeout(()=>this.play(),30); }
+  toggleReduce(e){ this.setState({reduce:e.target.checked}); setTimeout(()=>this.play(),30); }
+
+  frame(){
+    const m=this.model; if(!m) return null;
+    const {entries,myIndex,order}=m; const revealed=this.state.revealed;
+    const shown=new Set(order.slice(0,revealed)); shown.add(myIndex);
+    const settled=revealed>=order.length;
+    let above=0; for(const i of shown) if(i<myIndex) above++;
+    const myRank=(this.state.phase==='intro'||this.state.phase==='you')?null:above+1;
+    const myScore=entries[myIndex].score;
+    let fate=null,margin=null;
+    if(settled){ fate=entries[myIndex].burned?'BURN':'SAFE'; const o=entries[fate==='SAFE'?LINE:LINE-1]; if(o) margin=Math.round(Math.abs(myScore-o.score)*100)/100; }
+    return { entries,myIndex,shown,settled,myRank,myScore,fate,margin };
+  }
+
+  loop=(now)=>{ this._raf=requestAnimationFrame(this.loop); if(!this.ctx) return; try{ this.draw(now); }catch(e){ window.__vErr=String(e&&e.stack||e); } }
+  draw(now){
+    const ctx=this.ctx,W=this.W,H=this.H,ph=this.state.phase,frozen=this.state.frozen; if(!W) return;
+    const payoff=ph==='payoff'; const f=this.frame(); const c=this.cfg();
+    const danger=f&&f.myRank!=null?clamp(f.myRank/LINE,0,1):0;
+    ctx.clearRect(0,0,W,H);
+    // 空気 grade: tier色をベースに、ラインへ近づくほど赤へ寄る。payoffは決着色、freezeは無彩。
+    let key;
+    if(payoff) key=f&&f.fate==='SAFE'?GOLD:RED;
+    else if(frozen) key=[150,155,165];
+    else { const t=c.tier.rgb, d=danger*0.6; key=[Math.round(t[0]*(1-d)+255*d), Math.round(t[1]*(1-d)+70*d), Math.round(t[2]*(1-d)+52*d)]; }
+    const bg=ctx.createRadialGradient(W*0.5,H*0.44,40,W*0.5,H*0.5,Math.max(W,H)*0.8);
+    bg.addColorStop(0,rgba(key,payoff?0.17:0.11)); bg.addColorStop(1,'#040406'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    ctx.globalCompositeOperation='lighter';
+    for(const d of this.dust){ if(!frozen){ d.y-=d.sp*0.0011; if(d.y<0)d.y=1; } const a=0.05*d.z*(frozen?0.4:1); ctx.fillStyle=rgba(frozen?[160,165,175]:key,a); ctx.beginPath(); ctx.arc(d.x*W,d.y*H,d.r*d.z,0,6.28); ctx.fill(); }
+    ctx.globalCompositeOperation='source-over';
+    if(payoff){
+      // 馬は DOM の正方形枠。canvas は枠の背後の破裂光(衝撃波+火花)だけを描く。
+      const cx=W*0.5, cy=H*0.5; const bl=clamp((now-(this._payoffAt||(this._payoffAt=now)))/900,0,1); const survive=f&&f.fate==='SAFE'; const gc=survive?GOLD:RED;
+      // 馬(DOM枠)が浮上を始めてから光を焚く。bl<0.2 は何も描かない = 馬の前に模様が出ない。
+      if(bl>0.2){ const g=easeOut(clamp((bl-0.2)/0.8,0,1));
+        ctx.globalCompositeOperation='lighter';
+        const gr=ctx.createRadialGradient(cx,cy,10,cx,cy,Math.min(W,H)*0.44); gr.addColorStop(0,rgba(gc,0.3*g)); gr.addColorStop(1,rgba(gc,0)); ctx.fillStyle=gr; ctx.fillRect(0,0,W,H);
+        const r0=Math.min(W,H)*0.24; // 輪は枠の外側からのみ
+        ctx.strokeStyle=rgba(gc,(1-bl)*0.5); ctx.lineWidth=7*(1-bl)+1; ctx.beginPath(); ctx.arc(cx,cy,r0+g*Math.max(W,H)*0.4,0,6.28); ctx.stroke();
+        ctx.strokeStyle=rgba(gc,(1-bl)*0.24); ctx.lineWidth=3*(1-bl)+1; ctx.beginPath(); ctx.arc(cx,cy,r0+easeOut(clamp(bl*1.4,0,1))*Math.max(W,H)*0.5,0,6.28); ctx.stroke();
+        ctx.globalCompositeOperation='source-over'; }
+    } else this._payoffAt=0;
+    if(frozen){
+      if(!this._fz0) this._fz0=now;
+      if(c&&c.t5){ // 「フリーズ」= 4秒間ギリギリ真っ暗にして固まったと分からせる(イナズマ/走査線なし)
+        const fp=clamp((now-this._fz0)/420,0,1); ctx.fillStyle=rgba([0,0,0],0.995*fp); ctx.fillRect(0,0,W,H); ctx.fillStyle=rgba([0,0,0],0.985*fp); ctx.fillRect(0,0,W,H);
+      } else { // 通常のフリーズ: 無彩の走査(イナズマは削除)
+        ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle='#0a0d12'; ctx.fillRect(0,0,W,H); ctx.restore();
+        ctx.strokeStyle='rgba(210,225,245,1)'; for(let y=0;y<H;y+=3){ ctx.globalAlpha=0.04; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); } ctx.globalAlpha=1;
+      }
+    } else this._fz0=0;
+    if(this._impact>0.01){ ctx.fillStyle=rgba([255,255,255],this._impact*0.85); ctx.fillRect(0,0,W,H); this._impact*=0.74; }
+    const vg=ctx.createRadialGradient(W*0.5,H*0.46,H*0.22,W*0.5,H*0.5,Math.max(W,H)*0.72);
+    const vgA=frozen?0.85:payoff&&f&&f.fate==='BURN'?0.7:0.5+danger*0.22; vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,`rgba(2,2,5,${vgA})`); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+    ctx.save(); ctx.globalAlpha=frozen?0.05:0.03; const nn=Math.round(W*H/3200); for(let i=0;i<nn;i++){ const v=Math.random()*255|0; ctx.fillStyle=`rgb(${v},${v},${v})`; ctx.fillRect(Math.random()*W,Math.random()*H,1,1); } ctx.restore();
+  }
+
+  renderVals(){
+    const st=this.state, c=this.cfg(), f=this.frame();
+    const payoff=st.phase==='payoff';
+    const boardFade = st.phase==='idle'?'0':payoff?'0.9':'1';  // ペイオフ中も帯ボードは透けて見える
+    let rows=[], myRankNum=null, myScoreText='—', settled=false, fate=null, margin=null;
+    if(f){ settled=f.settled; fate=f.fate; margin=f.margin; myScoreText=f.myScore.toFixed(2); myRankNum=f.myRank;
+      const board=[]; for(let i=0;i<f.entries.length;i++) if(f.shown.has(i)) board.push(i);
+      const myPos=board.indexOf(f.myIndex); const want=new Set();
+      for(let p=0;p<Math.min(3,board.length);p++) want.add(p);
+      if(myPos>=0) for(let p=myPos-4;p<=myPos+4;p++) if(p>=0&&p<board.length) want.add(p);
+      for(let p=LINE-2;p<LINE+2;p++) if(p>=0&&p<board.length) want.add(p);
+      const pos=[...want].sort((a,b)=>a-b); let prev=-1;
+      const near = myRankNum!=null && !settled && (LINE-myRankNum)<=2 && myRankNum<=LINE; // 寸止め(近い)
+      for(const p of pos){
+        if(prev>=0&&p>prev+1) rows.push({gap:true,style:'text-align:center;color:var(--faint);font-size:11px;padding:2px 0;letter-spacing:.3em',rankText:'⋮',name:'',scoreText:'',rankColor:'var(--faint)',nameColor:'',scoreColor:'',burned:false,atLine:false});
+        const e=f.entries[board[p]]; const rank=p+1; const mine=e.mine; const doomed=settled&&e.burned; const atLine=rank===LINE;
+        const base='display:flex;align-items:center;gap:12px;padding:8px 13px;border-radius:9px;animation:rowIn .3s ease-out both;';
+        let bgc = mine ? (settled ? (fate==='SAFE'?'background:linear-gradient(90deg,rgba(53,208,127,.16),transparent);border:1px solid rgba(53,208,127,.5);':'background:linear-gradient(90deg,rgba(255,92,92,.16),transparent);border:1px solid rgba(255,92,92,.5);')
+                          : near ? 'background:linear-gradient(90deg,rgba(255,92,92,.12),rgba(242,228,191,.04));border:1px solid rgba(255,92,92,.5);animation:nearMiss .7s ease-in-out infinite;'
+                                 : 'background:linear-gradient(90deg,rgba(242,228,191,.14),rgba(242,228,191,.02));border:1px solid rgba(242,228,191,.4);animation:youPulse 1.4s ease-in-out infinite;')
+                     : doomed ? 'background:rgba(255,92,92,.06);border:1px solid rgba(255,92,92,.16);' : 'border:1px solid transparent;';
+        const lineEdge = atLine?'box-shadow:inset 0 -2px 0 rgba(255,92,92,.7);':'';
+        rows.push({ gap:false, style:base+bgc+lineEdge, rankText:String(rank), name:e.name, scoreText:e.score.toFixed(2),
+          rankColor: mine?'var(--gold-bright)':atLine?'#ff9a9a':'var(--muted)', nameColor: mine?'var(--gold-bright)':doomed?'#ff9a9a':'var(--text)',
+          scoreColor: mine?'var(--gold-bright)':'var(--muted)', burned:doomed, atLine });
+        prev=p;
+      }
+    }
+    const rankRatio = myRankNum==null?0:clamp(myRankNum/LINE,0,1);
+    const rankColor = settled?(fate==='SAFE'?'var(--good)':'var(--bad)'):myRankNum==null?'var(--faint)':rankRatio>=0.94?'var(--bad)':rankRatio>0.62?'#e6b24a':'var(--gold-bright)';
+    const rankText = myRankNum==null?'—':String(myRankNum);
+    const rankLabel = myRankNum==null?'YOUR SCORE LOCKED':settled?'FINAL RANK':'PROVISIONAL';
+
+    const survive=fate==='SAFE'; const expectSurvive=st.outcome==='survive';
+    const winCol = survive?GOLD_HEX:RED_HEX; // ペイオフ色は実際の決着に従う
+    const classLabel = c.t5?(survive?'超・大逆転（7秒暗黒凍結）':'奈落のBURN（7秒暗黒凍結）'):c.reversal?(expectSurvive?'大逆転（凍結）':'激アツBURN（凍結）'):(c.level===0?'期待どおり':'順当');
+    const classStyle=`font-family:var(--font-display);font-weight:800;font-size:12px;color:${c.reversal?winCol:'var(--muted)'}`;
+    const dayNext=DAY+1;
+
+    const seg='appearance:none;cursor:pointer;flex:1;border-radius:10px;padding:10px;font-family:var(--font-display);font-weight:700;font-size:12px;letter-spacing:.08em;border:1px solid ';
+    return {
+      tierBtns: TIERS.map((tr,i)=>{ const on=i===st.tierIdx;
+        return { jp:tr.jp, sub:tr.sub, swatch:`radial-gradient(circle at 38% 32%,${tr.swA},${tr.swB})`, glow:`0 0 14px ${tr.swA}77,inset 0 0 8px rgba(0,0,0,.3)`, onSelect:()=>this.selectTier(i),
+          style:`appearance:none;cursor:pointer;display:flex;align-items:center;gap:11px;padding:8px 9px;border-radius:12px;background:${on?'rgba(255,255,255,.055)':'transparent'};border:1px solid ${on?'var(--border-strong)':'var(--border)'}` }; }),
+      setSurvive:()=>this.setOutcome('survive'), setBurn:()=>this.setOutcome('burn'),
+      surviveBtnStyle: seg+(expectSurvive?'transparent;color:#04141a;background:linear-gradient(100deg,var(--good),#7be6a8)':'var(--border);color:var(--muted);background:transparent'),
+      burnBtnStyle: seg+(!expectSurvive?'transparent;color:#fff;background:linear-gradient(100deg,#ff5c5c,#ff8a6b)':'var(--border);color:var(--muted);background:transparent'),
+      play:()=>this.play(), toggleReduce:(e)=>this.toggleReduce(e), reduce:st.reduce,
+      classLabel, classStyle, freezeText:c.freezeMs?(c.freezeMs/1000).toFixed(1)+'s':'なし', freezeColor:c.freezeMs?'var(--cyan)':'var(--faint)',
+      token:st.token, day:DAY, total:TOTAL, burns:BURNS, lineRank:LINE,
+      myScoreText, rankText, rankColor, rankLabel, rankKey: (myRankNum==null?'x':myRankNum),
+      rows,
+      barTopStyle:`position:absolute;left:0;right:0;top:0;z-index:5;pointer-events:none;background:#000;height:${payoff||st.phase==='freeze'?'11%':'5%'};transition:height ${st.phase==='freeze'?'.12s':'.5s'} cubic-bezier(.6,0,.2,1)`,
+      barBotStyle:`position:absolute;left:0;right:0;bottom:0;z-index:5;pointer-events:none;background:#000;height:${payoff||st.phase==='freeze'?'11%':'5%'};transition:height ${st.phase==='freeze'?'.12s':'.5s'} cubic-bezier(.6,0,.2,1)`,
+      boardWrapStyle:`position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(${payoff?'0.96':'1'});width:min(92%,620px);z-index:3;opacity:${boardFade};filter:${st.phase==='freeze'?'grayscale(.85) contrast(1.15) brightness(.85)':payoff?'blur(2px) brightness(.42) saturate(.7)':'none'};transition:opacity .6s ease,transform .6s ease,filter .5s ease;pointer-events:none`,
+      boardStyle:'display:flex;flex-direction:column;gap:3px;border:1px solid var(--border);border-radius:14px;padding:10px;background:linear-gradient(180deg,rgba(11,9,18,.82),rgba(7,6,14,.9));backdrop-filter:blur(3px)',
+      showMargin: settled && (st.phase==='verdict'||st.phase==='line'),
+      marginBoxStyle:`margin-top:14px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:13px;border-radius:12px;border:1px solid ${survive?'rgba(53,208,127,.5)':'rgba(255,92,92,.5)'};background:${survive?'rgba(53,208,127,.08)':'rgba(255,92,92,.08)'}`,
+      marginColor: survive?GREEN:RED_HEX, marginText: margin!=null?margin.toFixed(2):'—', marginVerb: survive?'SURVIVED BY':'SHORT BY',
+      showGain: survive, gainFrom:PRICE[DAY], gainTo:dayNext>=7?'200.00':PRICE[dayNext], dayNext,
+      showVerdictText: payoff,
+      art:ART,
+      backdropStyle:'position:absolute;inset:0;z-index:1;background:radial-gradient(120% 90% at 50% 50%,rgba(4,4,9,.28),rgba(2,2,6,.68));animation:fadeIn .5s ease-out both',
+      frameStyle:`position:relative;z-index:2;width:min(44vh,340px);aspect-ratio:1/1;border-radius:20px;padding:1px;background:${survive?'conic-gradient(from 140deg,#5a4a1e,#f2e4bf,#fff6da,#f2e4bf,#c9a86a,#5a4a1e)':'conic-gradient(from 140deg,#3a1414,#ff6b5c,#ffb4a6,#ff6b5c,#7a1e14,#3a1414)'};box-shadow:0 0 60px ${survive?'rgba(242,228,191,.42)':'rgba(255,92,92,.42)'},0 24px 60px -20px rgba(0,0,0,.8);animation:floatUp .8s cubic-bezier(.2,.9,.3,1) both`,
+      artImgStyle:`width:100%;height:100%;object-fit:contain;padding:7%;filter:${survive?'brightness(1.12) saturate(1.2) drop-shadow(0 0 20px rgba(242,228,191,.5))':'grayscale(.4) sepia(.3) hue-rotate(-14deg) brightness(.7) drop-shadow(0 0 16px rgba(255,92,92,.4))'}`,
+      kicker: survive?'SURVIVED':'BURNED',
+      kickerSub: survive?(c.reversal?'CLUTCH · REVERSAL':'SURVIVED'):(c.reversal?'FROZEN · BURNED':'BURNED'),
+      kickerColor:winCol, kickerGlow:winCol+'99', kickerSubColor:survive?'var(--muted)':'#ff9a9a',
+      kickerSize:c.reversal?'54px':'44px', ruleW:c.reversal?'240px':'170px',
+      payoff:c.reversal, payoffText: survive?'道悪巧者が今夜化けた — 読みが的中':'芝が今夜は裏目に出た', payoffColor: survive?GREEN:'#ff9a9a',
+    };
+  }
+}
+</script>
+</body>
+</html>
