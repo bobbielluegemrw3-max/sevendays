@@ -80,7 +80,12 @@ export async function executeAssignment(
   let p2p = 0;
   let mints = 0;
   let assignedBuyers = 0;
-  let horseIndex = 0;
+  // 集合除去型(G-3): 前方カーソル horseIndex を「消費済み集合」に置き換える。
+  // 実行中はメモリの Set で消費を追い、クラッシュ再開時は buildHorseQueue の
+  // not exists(...batch_run_id) が永続の消費済み馬を除外するので Set は空から始めてよい。
+  // 方針なし(OMAKASE=現行キュー順)では「消費済みは常に前方の連続プレフィックス」なので
+  // 現行の前方カーソルとバイト同一に振る舞う(POOL は最初に買えない馬で break)。
+  const consumed = new Set<string>();
   let mintedThisBatch = await countBatchMints(client, input.batchRunId);
 
   for (const buyer of buyers) {
@@ -104,11 +109,13 @@ export async function executeAssignment(
       );
       let mintSeq = existing.filter((a) => a.market_listing_id === null).length;
 
-      while (horseIndex < horses.length) {
-        const horse = horses[horseIndex]!;
+      // 集合除去型: キュー順で未消費馬を走査し、買える馬を取得。最初に買えない馬で break
+      //（その馬は消費されず次の買い手に残る=Decision 103・現行の前方カーソルと同一挙動）。
+      for (const horse of horses) {
+        if (consumed.has(horse.horseId)) continue;
         const price = getPrice(input.priceTable, horse.currentDay);
-        if (price.gt(remaining)) break; // skipped — stays at the front for the next buyer
-        horseIndex += 1;
+        if (price.gt(remaining)) break; // 最初に買えない馬で打ち切り(次の買い手へ)
+        consumed.add(horse.horseId);
         await client.query(
           `insert into ownership_assignments
              (batch_run_id, purchase_session_id, market_listing_id, horse_id, buyer_user_id, seller_user_id, assigned_price)
@@ -163,9 +170,10 @@ export async function executeAssignment(
     let assignment = await loadAssignment(client, buyer.sessionId);
 
     if (!assignment) {
-      if (horseIndex < horses.length) {
-        const horse = horses[horseIndex]!;
-        horseIndex += 1;
+      // 集合除去型: キュー順で最初の未消費馬を取得(現行の horses[horseIndex] と同一)。
+      const horse = horses.find((h) => !consumed.has(h.horseId));
+      if (horse) {
+        consumed.add(horse.horseId);
         const price = getPrice(input.priceTable, horse.currentDay);
         await client.query(
           `insert into ownership_assignments
