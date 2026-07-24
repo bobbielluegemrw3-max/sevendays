@@ -25,6 +25,7 @@ import {
   executeReserveAllocations,
   marketTiebreakScore,
 } from '../src/index.js';
+import { manualMarketTiebreakScore } from '../src/assignment/tiebreak.js';
 
 let client: SqlClient;
 
@@ -65,6 +66,7 @@ async function newListedHorse(
   currentDay: number,
   batchRunId: string,
   listedAt: string,
+  source: 'SMART' | 'MANUAL' = 'SMART',
 ): Promise<{ horseId: string; listingId: string }> {
   const horse = await client.query<{ id: string }>(
     `insert into horses (owner_user_id, current_day, name, horse_type, rarity, dna_hash, dna_modifier,
@@ -79,13 +81,17 @@ async function newListedHorse(
     ],
   );
   const horseId = horse.rows[0]!.id;
+  // MANUAL(手放し)は batch_run_id null + 手動 tiebreak(制約 market_listings_source_batch)。
+  const isManual = source === 'MANUAL';
   const listing = await client.query<{ id: string }>(
     `insert into market_listings (horse_id, seller_user_id, listed_at, listing_price, current_day,
-                                  batch_run_id, deterministic_market_tiebreak_score)
-     values ($1, $2, $3, $4, $5, $6, $7) returning id`,
+                                  batch_run_id, deterministic_market_tiebreak_score, source)
+     values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`,
     [
       horseId, sellerId, listedAt, PRICE_TABLE.prices[String(currentDay)], currentDay,
-      batchRunId, marketTiebreakScore(batchRunId, horseId, ALGO),
+      isManual ? null : batchRunId,
+      isManual ? manualMarketTiebreakScore(horseId, listedAt) : marketTiebreakScore(batchRunId, horseId, ALGO),
+      source,
     ],
   );
   return { horseId, listingId: listing.rows[0]!.id };
@@ -316,6 +322,38 @@ describe('assignment execution', () => {
     });
     expect(rerun.p2pAssignments + rerun.day0Mints).toBe(0);
     expect(await getBalance(client, buyerAccounts.available)).toBe('66.90000000');
+  });
+
+  it('MANUAL listing (手放す): seller receives price minus the 5% release fee, source-derived (spec §4-3)', async () => {
+    const batch = await newBatch();
+    const seller = await newUser();
+    // 手放し=MANUAL 出品(batch_run_id null)。手数料は listing.source から 5% を導出。
+    await newListedHorse(seller, 3, batch, '2035-07-05T00:00:00Z', 'MANUAL'); // 133.10
+
+    const buyer = await newUser();
+    await fund(buyer, '200');
+    const session = await createPurchaseSession(client, { userId: buyer, idempotencyKey: randomUUID() });
+    await lockSessionsIntoBatch(client, batch);
+
+    const result = await executeAssignment(client, {
+      batchRunId: batch,
+      assignmentAlgorithmVersion: ALGO,
+      priceTable: PRICE_TABLE,
+      allowDay0Mint: false, // MANUAL 出品だけを割り当てさせる
+      dailyDay0MintLimit: 0,
+      horseGenerationVersion: GEN,
+    });
+    expect(result.p2pAssignments).toBe(1);
+
+    // 手放し=MANUAL → 5%: 133.10 × 0.95 = 126.445(SMART/自動は従来どおり 2%)。
+    const sellerAccounts = await ensureUserAccounts(client, seller);
+    expect(await getBalance(client, sellerAccounts.available)).toBe('126.44500000');
+
+    const ps = await client.query<{ status: string }>(
+      `select status::text as status from purchase_sessions where id = $1`,
+      [session.sessionId],
+    );
+    expect(ps.rows[0]!.status).toBe('ASSIGNED');
   });
 
   it('Day0 Mint fallback: verifiable commit-reveal mint, reserve allocation, refund 75.16', async () => {

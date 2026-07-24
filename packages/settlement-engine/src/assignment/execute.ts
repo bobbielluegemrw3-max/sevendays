@@ -4,6 +4,7 @@ import {
   DAY0_MINT_PRICE,
   DAY0_MINT_TOTAL_CHARGE,
   P2P_FEE_SPLIT_RATE,
+  PRE_RACE_RELEASE_FEE_SPLIT_RATE,
   renderNotification,
 } from '@sevendays/domain';
 import {
@@ -64,6 +65,9 @@ interface AssignmentRow {
   market_listing_id: string | null;
   seller_user_id: string | null;
   assigned_price: string;
+  // 出品種別(SMART/MANUAL)。手放し=MANUAL は 5% の別レートで精算(spec §4-3・レビュー回答④)。
+  // Day0 Mint / listing なしは null → 既定 2%。source が唯一の真実(pre_race_release 列は廃止)。
+  source: string | null;
 }
 
 export async function executeAssignment(
@@ -237,8 +241,11 @@ async function finishPoolSession(
 
 async function loadAssignment(client: SqlClient, sessionId: string): Promise<AssignmentRow | null> {
   const r = await client.query<AssignmentRow>(
-    `select id, horse_id, market_listing_id, seller_user_id, assigned_price::text as assigned_price
-     from ownership_assignments where purchase_session_id = $1`,
+    `select a.id, a.horse_id, a.market_listing_id, a.seller_user_id,
+            a.assigned_price::text as assigned_price, l.source
+     from ownership_assignments a
+     left join market_listings l on l.id = a.market_listing_id
+     where a.purchase_session_id = $1`,
     [sessionId],
   );
   return r.rows[0] ?? null;
@@ -247,8 +254,11 @@ async function loadAssignment(client: SqlClient, sessionId: string): Promise<Ass
 /** All assignments of a pool session, in stable order (Decision 103). */
 async function loadAssignments(client: SqlClient, sessionId: string): Promise<AssignmentRow[]> {
   const r = await client.query<AssignmentRow>(
-    `select id, horse_id, market_listing_id, seller_user_id, assigned_price::text as assigned_price
-     from ownership_assignments where purchase_session_id = $1 order by created_at, id`,
+    `select a.id, a.horse_id, a.market_listing_id, a.seller_user_id,
+            a.assigned_price::text as assigned_price, l.source
+     from ownership_assignments a
+     left join market_listings l on l.id = a.market_listing_id
+     where a.purchase_session_id = $1 order by a.created_at, a.id`,
     [sessionId],
   );
   return r.rows;
@@ -268,6 +278,10 @@ async function settleOneAssignment(
   keys: { settlementKey: string; notifSuffix: string },
 ): Promise<void> {
   const price = Money.of(assignment.assigned_price);
+  // 手数料レートは listing の source から導出(レビュー回答④): 手放し=MANUAL は 5%、
+  // 自動出品=SMART と listing なしは既存 2%。source が唯一の真実。
+  const feeSplitRate =
+    assignment.source === 'MANUAL' ? PRE_RACE_RELEASE_FEE_SPLIT_RATE : P2P_FEE_SPLIT_RATE;
 
   // 1. Ledger First.
   const settlement =
@@ -282,6 +296,7 @@ async function settleOneAssignment(
           buyerUserId,
           sellerUserId: assignment.seller_user_id,
           price,
+          feeSplitRate,
           idempotencyKey: keys.settlementKey,
           referenceType: 'ownership_assignment',
           referenceId: assignment.id,
@@ -336,9 +351,10 @@ async function settleOneAssignment(
   });
 
   // 売り手にも通知(HORSE_SOLD, Decision 086)— 従来は残高が増えるだけで
-  // 売れたことを知る術がなかった。手取り = 価格 − 2%(assignmentSettlementと同式)。
+  // 売れたことを知る術がなかった。手取り = 価格 − 手数料(assignmentSettlementと同式・
+  // MANUAL=5% / それ以外=2%)。
   if (assignment.seller_user_id !== null) {
-    const feeHalf = price.mulFloor(P2P_FEE_SPLIT_RATE);
+    const feeHalf = price.mulFloor(feeSplitRate);
     const proceeds = price.sub(feeHalf).sub(feeHalf);
     const soldRendered = renderNotification('HORSE_SOLD', {
       horse_name: horse.rows[0]?.name ?? '',
