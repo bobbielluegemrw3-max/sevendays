@@ -23,6 +23,7 @@ import {
   reconcile,
   postAdminAdjustment,
 } from '../src/index.js';
+import { PRE_RACE_RELEASE_FEE_SPLIT_RATE } from '@sevendays/domain';
 
 let client: SqlClient;
 
@@ -179,6 +180,37 @@ describe('purchase flow (05_SETTLEMENT_ENGINE.md)', () => {
     expect(Money.of(await getBalance(client, operating)).gte(Money.of('1.10'))).toBe(true);
     expect(Money.of(await getBalance(client, buyback)).gte(Money.of('1.10'))).toBe(true);
     // settlement clearing nets to zero
+    const clearing = await getPlatformAccountId(client, 'PLATFORM_SETTLEMENT_CLEARING');
+    expect(await getBalance(client, clearing)).toBe('0.00000000');
+  });
+
+  it('pre-race release fee (5%): assign at 133.10 -> seller +126.4450, split 3.3275/3.3275, clearing zero', async () => {
+    // MARKET_PAGE_IDENTITY_REVISION_SPEC.md §4-3 — release path passes the 5%
+    // split rate; only the fee changes, the money-flow shape is identical.
+    const buyer = await newUser();
+    const seller = await newUser();
+    await fundUser(buyer, '200');
+    await purchaseFundLock(client, {
+      userId: buyer,
+      amount: Money.of('133.10'),
+      idempotencyKey: randomUUID(),
+    });
+
+    await assignmentSettlement(client, {
+      buyerUserId: buyer,
+      sellerUserId: seller,
+      price: Money.of('133.10'),
+      feeSplitRate: PRE_RACE_RELEASE_FEE_SPLIT_RATE, // 2.5% each half = 5% total
+      idempotencyKey: randomUUID(),
+    });
+
+    const sellerAccounts = await ensureUserAccounts(client, seller);
+    // seller: 133.10 − 5% = 126.445; fee split 3.3275 / 3.3275.
+    expect(await getBalance(client, sellerAccounts.available)).toBe('126.44500000');
+    const operating = await getPlatformAccountId(client, 'PLATFORM_OPERATING_RESERVE');
+    const buyback = await getPlatformAccountId(client, 'PLATFORM_BUYBACK_RESERVE');
+    expect(Money.of(await getBalance(client, operating)).gte(Money.of('3.3275'))).toBe(true);
+    expect(Money.of(await getBalance(client, buyback)).gte(Money.of('3.3275'))).toBe(true);
     const clearing = await getPlatformAccountId(client, 'PLATFORM_SETTLEMENT_CLEARING');
     expect(await getBalance(client, clearing)).toBe('0.00000000');
   });

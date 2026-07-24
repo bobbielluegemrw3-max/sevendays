@@ -84,6 +84,21 @@ export const P2P_FEE_RATE = '0.02';
 export const P2P_FEE_SPLIT_RATE = '0.01';
 
 // ---------------------------------------------------------------------------
+// Pre-race "release" fee (MARKET_PAGE_IDENTITY_REVISION_SPEC.md §4-3, owner
+// decision 2026-07-24). A distinct, HIGHER seller-side fee for the pre-race
+// "手放す(release)" path ONLY — a behavioural deterrent that keeps aggregate
+// player EV inside the −11.2%±3pp band while staying solvency-neutral
+// (RACE_PRE_EXIT_DISPOSAL_SIM_REPORT.md §2). The automatic/manual P2P fee
+// (P2P_FEE_RATE, 2%) is UNCHANGED. Same fee-split rule as P2P: half to the
+// buyback reserve buffer, half to operating.
+// ---------------------------------------------------------------------------
+
+/** Pre-race release fee, seller-side, deducted from proceeds (5%). */
+export const PRE_RACE_RELEASE_FEE_RATE = '0.05';
+/** Half of the 5% release fee to buyback buffer, half to operating (2.5% each). */
+export const PRE_RACE_RELEASE_FEE_SPLIT_RATE = '0.025';
+
+// ---------------------------------------------------------------------------
 // Mint coverage gate v1.1 (Decision 069): Day0 minting is allowed only
 // while the buyback reserve covers the stop-scenario liability — every
 // in-flight horse's expected arrival value at the NORMAL burn rate with a

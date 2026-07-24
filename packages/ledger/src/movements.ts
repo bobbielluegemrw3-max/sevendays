@@ -86,21 +86,33 @@ export async function purchaseRefund(
 
 /**
  * P2P assignment settlement (Decision 069): the buyer pays the listed
- * price; the seller receives price minus the 2% platform fee, which is
- * split half to operating and half to the buyback reserve buffer. Routed
- * through settlement clearing (still nets to zero per transaction).
+ * price; the seller receives price minus the platform fee, which is split
+ * half to operating and half to the buyback reserve buffer. Routed through
+ * settlement clearing (still nets to zero per transaction).
+ *
+ * `feeSplitRate` defaults to the 2% P2P fee (P2P_FEE_SPLIT_RATE). The pre-race
+ * "release(手放す)" path passes PRE_RACE_RELEASE_FEE_SPLIT_RATE for the 5% fee
+ * (MARKET_PAGE_IDENTITY_REVISION_SPEC.md §4-3) — only the fee rate changes, the
+ * money-flow shape is identical. `proceeds = price − 2×feeHalf` always balances
+ * the transaction regardless of the rate, so no dust can unbalance it.
  */
 export async function assignmentSettlement(
   client: SqlClient,
-  args: Ref & { buyerUserId: string; sellerUserId: string; price: Money },
+  args: Ref & {
+    buyerUserId: string;
+    sellerUserId: string;
+    price: Money;
+    feeSplitRate?: string;
+  },
 ): Promise<PostedTransaction> {
   const buyerLocked = await getUserAccountId(client, args.buyerUserId, 'USER_LOCKED');
   const seller = await ensureUserAccounts(client, args.sellerUserId);
   const clearing = await getPlatformAccountId(client, 'PLATFORM_SETTLEMENT_CLEARING');
   const operating = await getPlatformAccountId(client, 'PLATFORM_OPERATING_RESERVE');
   const buyback = await getPlatformAccountId(client, 'PLATFORM_BUYBACK_RESERVE');
-  // Price-table prices have 2dp, so the 1% halves are exact (no rounding).
-  const feeHalf = args.price.mulFloor(P2P_FEE_SPLIT_RATE);
+  // Price-table prices have 2dp; the 1% (P2P) and 2.5% (release) halves are
+  // exact at 8dp, and proceeds absorbs any residue so the transaction balances.
+  const feeHalf = args.price.mulFloor(args.feeSplitRate ?? P2P_FEE_SPLIT_RATE);
   const proceeds = args.price.sub(feeHalf).sub(feeHalf);
   return postTransaction(client, {
     type: 'ASSIGNMENT_SETTLEMENT',
