@@ -984,11 +984,10 @@
    ========================================================================= */
 .v3grid{display:grid;grid-template-columns:1fr;gap:18px;align-items:start}
 .v3grid>*{min-width:0}
-/* アート枠の大きさを状態(0.84fr/1fr)に依らず一定に(2026-07-24 修正)。 */
-.v3artcol{max-width:500px}
+/* アート枠の大きさを状態に依らず一定に: グリッド比を全状態で 0.84/1.16 に固定
+   (以前は非ACTIVEを1fr/1frにしてアート列幅が変わっていた・2026-07-24 修正)。 */
 @media(min-width:980px){
-  .v3grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-  .v3grid.v3gridActive{grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr)}
+  .v3grid{grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr)}
   .v3artcol{position:sticky;top:20px}
 }
 .v3rail{display:flex;flex-direction:column;gap:16px;min-width:0}

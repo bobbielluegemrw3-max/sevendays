@@ -465,9 +465,23 @@ export function HorseDetailView({
           forecast={groupForecast}
           isActive={isActive}
           lvMode={isLvDisplayMode()}
-          bandText={horse.tonight_rank && horse.tonight_entrants
-            ? `${fill(ts.rank_tpl, { r: horse.tonight_rank, n: horse.tonight_entrants })} · ${horse.tonight_band === 'SAFE' ? ts.band_safe : horse.tonight_band === 'RISK' ? ts.band_risk : ts.band_mid} — ${ts.rank_note}`
-            : null}
+          footSlot={
+            horse.tonight_rank && horse.tonight_entrants ? (
+              <div className={`${s.rankLine} ${bandClsDetail(horse.tonight_band)}`} style={{ marginTop: 9 }}>
+                {fill(ts.rank_tpl, { r: horse.tonight_rank, n: horse.tonight_entrants })} ·{' '}
+                {horse.tonight_band === 'SAFE' ? ts.band_safe : horse.tonight_band === 'RISK' ? ts.band_risk : ts.band_mid}
+                <span className={s.rankNote}> — {ts.rank_note}</span>
+              </div>
+            ) : (
+              <div style={{ marginTop: 9, fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.04em', color: mode === 'BURNED' ? 'var(--magenta-soft)' : mode === 'DAY7_CLEARED' || mode === 'MEMORIALIZED' ? 'var(--gold-bright)' : 'var(--muted)' }}>
+                {mode === 'LISTED' ? '出品中 · 今夜は走りません'
+                  : mode === 'BURNED' ? `BURN · Day ${horse.current_day} で消滅`
+                  : mode === 'DAY7_CLEARED' ? 'Day7 走破 · チャンピオン達成'
+                  : mode === 'MEMORIALIZED' ? '記念 · 生涯の記録として保存'
+                  : '初出走へ — 走らせて適性を暴く'}
+              </div>
+            )
+          }
           markFlame={t.mark_flame}
           markMilestone={t.mark_milestone}
           pagerSlot={nav ? <HorsePager nav={nav} t={t} /> : null}

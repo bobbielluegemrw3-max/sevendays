@@ -77,7 +77,7 @@ export interface HorseV3Data {
 }
 
 export function HorseV3Grid({
-  horse, forecast, pagerSlot, isActive, lvMode, bandText, markFlame, markMilestone,
+  horse, forecast, pagerSlot, isActive, lvMode, footSlot, markFlame, markMilestone,
   formSlot, controlsSlot, contextSlot, outcomeSlot,
 }: {
   horse: HorseV3Data;
@@ -86,8 +86,8 @@ export function HorseV3Grid({
   pagerSlot?: ReactNode;
   isActive: boolean;
   lvMode: boolean;
-  /** 「今夜の想定 X / Y位 · 安全圏」等(サーバーで i18n 組み立て)。null=非表示。 */
-  bandText?: string | null;
+  /** アート下部の1行(順位バンド or 状態行)。常に何か出して空にしない。 */
+  footSlot: ReactNode;
   markFlame: string; markMilestone: string;
   formSlot: ReactNode;         // B 馬柱(FormPanel v2)
   controlsSlot?: ReactNode;    // 管理系(非売指定・転送)
@@ -255,12 +255,11 @@ export function HorseV3Grid({
     const ex = (i === horse.current_day + 1 && isActive) ? 'box-shadow:0 0 7px var(--magenta);' : '';
     return `flex:1;height:6px;border-radius:2px;background:${bg};${ex}`;
   });
-  const bandCls = horse.tonight_band === 'SAFE' ? s.bandSafe : horse.tonight_band === 'RISK' ? s.bandRisk : s.bandMid;
 
   const rootVars = { '--border-soft': 'rgba(255,255,255,.055)', '--good-dim': 'rgba(53,208,127,.5)' } as unknown as CSSProperties;
 
   return (
-    <div className={`${s.v3grid} ${isActive ? s.v3gridActive : ''}`} style={rootVars}>
+    <div className={s.v3grid} style={rootVars}>
       {/* ---- A ヒーロー(正典・聖杯発光・総合値カウントアップ連動) ---- */}
       <div className={s.v3artcol}>
         <div style={css(heroFrameStyle)}>
@@ -311,7 +310,7 @@ export function HorseV3Grid({
             </div>
             <div style={{ padding: '13px 16px 15px' }}>
               <div style={{ display: 'flex', gap: 4 }}>{pips.map((p, i) => <span key={i} style={css(p)} />)}</div>
-              {bandText ? <div className={`${s.rankLine} ${bandCls}`} style={{ marginTop: 9 }}>{bandText}</div> : null}
+              {footSlot}
             </div>
           </div>
         </div>
