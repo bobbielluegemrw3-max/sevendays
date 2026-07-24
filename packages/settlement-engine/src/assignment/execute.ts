@@ -22,7 +22,29 @@ import {
 import { acquisitionCost, realizedPnl } from '../economy/pnl.js';
 import type { PriceTablePolicy } from '@sevendays/economy-engine';
 import { getPrice } from '@sevendays/economy-engine';
-import { buildBuyerQueue, buildHorseQueue } from './queues.js';
+import { buildBuyerQueue, buildHorseQueue, type QueuedHorse, type PurchasePolicy } from './queues.js';
+
+/**
+ * 購入方針(FUN_V3 §4)による並べ替え。フィルタではなく純粋な並べ替え(除去なし)。
+ *   OMAKASE  = 現行のキュー順(恒等)=既存挙動とバイト同一
+ *   STABLE   = 総合値の高い順(質重視・育った馬を優先)
+ *   QUANTITY = 総合値の低い順(頭数重視・安い馬を優先。バンド価格は total_value 単調なので代理)
+ * ★決定論: 入力 horses は既に seed 由来の決定論順。同値・null は元のキュー順(添字)で確定する
+ *   純関数。DB collation/時刻/残高を混ぜない。除去に対して安定(再ソートで同じ残りを再現)。
+ */
+function orderForPolicy(horses: QueuedHorse[], policy: PurchasePolicy): QueuedHorse[] {
+  if (policy === 'OMAKASE') return horses; // 現行キュー順=バイト同一
+  const dir = policy === 'STABLE' ? -1 : 1; // STABLE=高い先 / QUANTITY=低い先
+  return horses
+    .map((h, i) => ({ h, i }))
+    .sort((a, b) => {
+      const av = a.h.totalValue ?? 0;
+      const bv = b.h.totalValue ?? 0;
+      if (av !== bv) return dir * (av - bv);
+      return a.i - b.i; // 元のキュー順(決定論の安定 tiebreak)
+    })
+    .map((x) => x.h);
+}
 
 /**
  * Batch Steps 25-27 — Execute Assignment (05_SETTLEMENT_ENGINE.md).
@@ -109,10 +131,14 @@ export async function executeAssignment(
       );
       let mintSeq = existing.filter((a) => a.market_listing_id === null).length;
 
-      // 集合除去型: キュー順で未消費馬を走査し、買える馬を取得。最初に買えない馬で break
-      //（その馬は消費されず次の買い手に残る=Decision 103・現行の前方カーソルと同一挙動）。
-      for (const horse of horses) {
-        if (consumed.has(horse.horseId)) continue;
+      // 集合除去型 + 購入方針: 未消費馬を方針で並べ替え、先頭から買える馬を取得。
+      // 最初に買えない馬で break（その馬は消費されず次の買い手に残る=Decision 103）。
+      // OMAKASE では方針ソートは恒等なので現行の前方カーソルとバイト同一。
+      const ordered = orderForPolicy(
+        horses.filter((h) => !consumed.has(h.horseId)),
+        buyer.purchasePolicy,
+      );
+      for (const horse of ordered) {
         const price = getPrice(input.priceTable, horse.currentDay);
         if (price.gt(remaining)) break; // 最初に買えない馬で打ち切り(次の買い手へ)
         consumed.add(horse.horseId);
@@ -170,8 +196,11 @@ export async function executeAssignment(
     let assignment = await loadAssignment(client, buyer.sessionId);
 
     if (!assignment) {
-      // 集合除去型: キュー順で最初の未消費馬を取得(現行の horses[horseIndex] と同一)。
-      const horse = horses.find((h) => !consumed.has(h.horseId));
+      // 集合除去型 + 方針: 未消費馬を方針で並べ替えた先頭を取得(OMAKASE=現行の先頭未消費馬)。
+      const horse = orderForPolicy(
+        horses.filter((h) => !consumed.has(h.horseId)),
+        buyer.purchasePolicy,
+      )[0];
       if (horse) {
         consumed.add(horse.horseId);
         const price = getPrice(input.priceTable, horse.currentDay);

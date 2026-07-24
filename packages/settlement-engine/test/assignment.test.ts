@@ -24,6 +24,7 @@ import {
   executeAssignment,
   executeReserveAllocations,
   marketTiebreakScore,
+  createOrUpdatePoolSession,
 } from '../src/index.js';
 import { manualMarketTiebreakScore } from '../src/assignment/tiebreak.js';
 
@@ -354,6 +355,63 @@ describe('assignment execution', () => {
       [session.sessionId],
     );
     expect(ps.rows[0]!.status).toBe('ASSIGNED');
+  });
+
+  it('purchase policy (G-3): STABLE takes high total_value, QUANTITY takes low; deterministic + idempotent', async () => {
+    await client.query(`update horses set status = 'BURNED' where status = 'ACTIVE'`);
+    const batch = await newBatch();
+    const seller = await newUser();
+    // 同日(Day3=133.10)・total_value のみ異なる4頭。方針が並び順を決める(価格は同一)。
+    const tvs = [80, 60, 40, 20];
+    const horseIds = [];
+    for (const tv of tvs) {
+      const { horseId } = await newListedHorse(seller, 3, batch, '2035-08-01T00:00:00Z');
+      await client.query(`update horses set total_value = $2 where id = $1`, [horseId, tv]);
+      horseIds.push(horseId);
+    }
+
+    // 予算 280 = 2頭ぶん(266.20)+端数。Day0ミントは無効化してP2P選定だけを見る。
+    const stableBuyer = await newUser();
+    await fund(stableBuyer, '400');
+    const stable = await createOrUpdatePoolSession(client, { userId: stableBuyer, amount: '280', idempotencyKey: randomUUID() });
+    await client.query(`update purchase_sessions set purchase_policy = 'STABLE' where id = $1`, [stable.sessionId]);
+
+    const qtyBuyer = await newUser();
+    await fund(qtyBuyer, '400');
+    const qty = await createOrUpdatePoolSession(client, { userId: qtyBuyer, amount: '280', idempotencyKey: randomUUID() });
+    await client.query(`update purchase_sessions set purchase_policy = 'QUANTITY' where id = $1`, [qty.sessionId]);
+
+    await lockSessionsIntoBatch(client, batch);
+    const run = () =>
+      executeAssignment(client, {
+        batchRunId: batch,
+        assignmentAlgorithmVersion: ALGO,
+        priceTable: PRICE_TABLE,
+        allowDay0Mint: false,
+        dailyDay0MintLimit: 0,
+        horseGenerationVersion: GEN,
+      });
+    const r1 = await run();
+    expect(r1.p2pAssignments).toBe(4); // 2頭 × 2買い手
+
+    const tvOf = async (sessionId: string): Promise<number[]> => {
+      const rows = await client.query<{ tv: number }>(
+        `select h.total_value::float8 as tv from ownership_assignments a
+         join horses h on h.id = a.horse_id where a.purchase_session_id = $1 order by tv desc`,
+        [sessionId],
+      );
+      return rows.rows.map((x) => x.tv);
+    };
+    // STABLE = 高total_value 2頭(80,60) / QUANTITY = 低total_value 2頭(40,20)。
+    expect(await tvOf(stable.sessionId)).toEqual([80, 60]);
+    expect(await tvOf(qty.sessionId)).toEqual([40, 20]);
+
+    // 冪等再実行(=クラッシュ再開の器): 消費済み集合を not exists から再導出し、方針の
+    // 再ソートが同じ残りを再現 → 何も新規割当しない・所有権も動かない(バイト同一)。
+    const r2 = await run();
+    expect(r2.p2pAssignments + r2.day0Mints).toBe(0);
+    expect(await tvOf(stable.sessionId)).toEqual([80, 60]);
+    expect(await tvOf(qty.sessionId)).toEqual([40, 20]);
   });
 
   it('Day0 Mint fallback: verifiable commit-reveal mint, reserve allocation, refund 75.16', async () => {

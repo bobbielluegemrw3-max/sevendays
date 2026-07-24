@@ -18,6 +18,8 @@ import { marketTiebreakScore, purchaseTiebreakScore } from './tiebreak.js';
  * comparison semantics are fixed by code, not by DB collation.
  */
 
+export type PurchasePolicy = 'STABLE' | 'OMAKASE' | 'QUANTITY';
+
 export interface QueuedHorse {
   listingId: string;
   horseId: string;
@@ -26,6 +28,8 @@ export interface QueuedHorse {
   listedAtMs: number;
   listingPrice: string;
   tiebreak: number;
+  /** 総合値 0-100(null=未設定)。購入方針ソート(STABLE/QUANTITY)に使う純関数入力。 */
+  totalValue: number | null;
 }
 
 export interface QueuedBuyer {
@@ -35,6 +39,8 @@ export interface QueuedBuyer {
   /** Decision 103: POOL sessions receive multiple horses up to their budget. */
   sessionMode: 'SINGLE' | 'POOL';
   tiebreak: number;
+  /** 購入方針(FUN_V3 §4)。既定 OMAKASE=現行のキュー順。 */
+  purchasePolicy: PurchasePolicy;
 }
 
 /** Batch Step 23 — Build Horse Queue from live listings (Day1-Day6 only). */
@@ -50,9 +56,11 @@ export async function buildHorseQueue(
     current_day: number;
     listed_at: string;
     listing_price: string;
+    total_value: string | null;
   }>(
     `select l.id, l.horse_id, l.seller_user_id, l.current_day,
-            l.listed_at::text as listed_at, l.listing_price::text as listing_price
+            l.listed_at::text as listed_at, l.listing_price::text as listing_price,
+            h.total_value::text as total_value
      from market_listings l
      join horses h on h.id = l.horse_id
      where l.status = 'LISTED' and h.status = 'ACTIVE'
@@ -71,6 +79,7 @@ export async function buildHorseQueue(
     listedAtMs: new Date(l.listed_at).getTime(),
     listingPrice: l.listing_price,
     tiebreak: marketTiebreakScore(batchRunId, l.horse_id, assignmentAlgorithmVersion),
+    totalValue: l.total_value === null ? null : Number(l.total_value),
   }));
   queue.sort((a, b) => {
     if (a.listedAtMs !== b.listedAtMs) return a.listedAtMs - b.listedAtMs;
@@ -92,8 +101,10 @@ export async function buildBuyerQueue(
     user_id: string;
     locked_amount: string;
     session_mode: 'SINGLE' | 'POOL';
+    purchase_policy: PurchasePolicy;
   }>(
-    `select id, user_id, locked_amount::text as locked_amount, session_mode::text as session_mode
+    `select id, user_id, locked_amount::text as locked_amount, session_mode::text as session_mode,
+            purchase_policy::text as purchase_policy
      from purchase_sessions
      where batch_run_id = $1 and status = 'PENDING_ASSIGNMENT'`,
     [batchRunId],
@@ -104,6 +115,7 @@ export async function buildBuyerQueue(
     lockedAmount: s.locked_amount,
     sessionMode: s.session_mode,
     tiebreak: purchaseTiebreakScore(batchRunId, s.id, assignmentAlgorithmVersion),
+    purchasePolicy: s.purchase_policy,
   }));
   // 予約時刻(createdAtMs)は並びに使わない — シード由来の決定論スコアのみで抽選。
   queue.sort((a, b) => {
