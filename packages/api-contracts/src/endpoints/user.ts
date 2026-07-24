@@ -1524,6 +1524,8 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         .string()
         .regex(/^\d{1,7}(\.\d{1,2})?$/, 'amount must be a positive USDT value')
         .optional(),
+      // Decision 103 / FUN_V3 §4: プール購入方針(質/おまかせ/量)。未指定=OMAKASE。
+      policy: z.enum(['STABLE', 'OMAKASE', 'QUANTITY']).optional(),
     }),
     handler: async (ctx, input) => {
       if (input.amount !== undefined) {
@@ -1539,6 +1541,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
           userId: ctx.userId,
           amount: input.amount,
           idempotencyKey: ctx.idempotencyKey!,
+          ...(input.policy ? { policy: input.policy } : {}),
         });
         return {
           purchase_session_id: pool.sessionId,

@@ -8,7 +8,7 @@ import { deriveNftLook } from '@/lib/nft-visual';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { localDateTime } from '@/lib/format-time';
 import { nextRaceInstant } from '@/lib/race-time';
-import { PRICE_TABLE_V1 } from '@sevendays/domain';
+import { PRICE_TABLE_V1, bandedPriceStr } from '@sevendays/domain';
 import s from '../app/market.module.css';
 import { TotalValue } from '@/components/ui/TotalValue';
 import d from '../app/support.module.css';
@@ -70,6 +70,8 @@ export interface ListableHorse {
   status: string;
   dna_hash: string;
   gifted_at?: string | null;
+  /** 総合値 0-100(null=非ACTIVE)。売値/現在価値のバンド化(§5-2)に使う。 */
+  total_value?: number | null;
 }
 export interface MarketPlaceData {
   shelf: ShelfItem[];
@@ -82,7 +84,10 @@ const RELEASE_FEE = 0.05;
 const CHAMP_DAY = 7;
 const fmt = (v: string | number): string =>
   Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const priceOf = (day: number): number => Number(PRICE_TABLE_V1[Math.max(0, Math.min(6, day))] ?? '0');
+const ladderOf = (day: number): number => Number(PRICE_TABLE_V1[Math.max(0, Math.min(6, day))] ?? '0');
+// §5-2: 売値/現在価値=バンド(基準ラダー + 育成プレミアム)。total_value に応じ上方向のみ。
+const bandPriceOf = (day: number, tv: number | null): number =>
+  Number(bandedPriceStr(PRICE_TABLE_V1[Math.max(0, Math.min(6, day))] ?? '0', day, tv));
 const receiveOf = (price: number): string => fmt(Math.floor(price * (1 - RELEASE_FEE) * 100) / 100);
 const raceLabel = (day: number): string => {
   const l = CHAMP_DAY - day;
@@ -335,7 +340,9 @@ export function MarketPlaceView({
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
             {listable.map((h) => {
-              const price = priceOf(h.current_day);
+              const tv = h.total_value ?? null;
+              const price = bandPriceOf(h.current_day, tv); // §5-2 売値=バンド
+              const premium = price - ladderOf(h.current_day); // 育成プレミアム(+X)
               const trackPct = `${Math.round((h.current_day / 6) * 100)}%`;
               return (
                 <div key={h.id} style={{ position: 'relative', border: '1px solid rgba(201,168,106,.32)', borderRadius: 'var(--radius)', background: 'linear-gradient(158deg,#1c1733 0%,var(--panel) 62%,#0c0a16 100%)', boxShadow: '0 30px 70px -42px #000,inset 0 1px 0 rgba(242,228,191,.13)', overflow: 'hidden' }}>
@@ -359,7 +366,7 @@ export function MarketPlaceView({
                         <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,.08)', overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: trackPct, background: 'linear-gradient(90deg,var(--gold),var(--gold-bright))', boxShadow: '0 0 10px rgba(242,228,191,.4)' }} />
                         </div>
-                        <div style={{ textAlign: 'center', marginTop: 9, font: '400 11px/1 var(--font-jp)', color: 'var(--muted)' }}>現在値 <b style={{ font: '800 15px/1 var(--font-display)', color: 'var(--text)' }}>{fmt(price)}</b> USDT（生存で +10% / 日）</div>
+                        <div style={{ textAlign: 'center', marginTop: 9, font: '400 11px/1 var(--font-jp)', color: 'var(--muted)' }}>現在値 <b style={{ font: '800 15px/1 var(--font-display)', color: 'var(--text)' }}>{fmt(price)}</b> USDT（生存で +10% / 日）{premium > 0 ? <span style={{ color: 'var(--gold-bright)', fontFamily: 'var(--font-mono)', fontSize: 10.5 }}> ・基準 {fmt(ladderOf(h.current_day))} ＋育成 +{fmt(premium)}</span> : null}</div>
                       </div>
                     </div>
                   </div>
@@ -413,7 +420,7 @@ export function MarketPlaceView({
             </div>
           </>
         )}
-        <p style={{ margin: '16px 0 0', font: '400 11.5px/1.75 var(--font-jp)', color: 'var(--faint)' }}>保証はありません。次の清算で買い手が付けば成約、付かなければ厩舎に戻せます（手放し中はレースに出走しません）。価格は当日のLV価格で固定・手数料 5%。出品操作は馬ごとに 1 日 1 回です。</p>
+        <p style={{ margin: '16px 0 0', font: '400 11.5px/1.75 var(--font-jp)', color: 'var(--faint)' }}>保証はありません。次の清算で買い手が付けば成約、付かなければ厩舎に戻せます（手放し中はレースに出走しません）。価格は当日の総合値に応じた価格（基準ラダー＋育成プレミアム）で固定・手数料 5%。出品操作は馬ごとに 1 日 1 回です。</p>
       </section>
 
       {/* ═══ ACT 3: 今夜／直近の清算 ═══ */}
@@ -456,7 +463,7 @@ export function MarketPlaceView({
               </div>
             </div>
             <div style={{ border: '1px solid rgba(230,178,74,.5)', background: 'rgba(230,178,74,.08)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', margin: '14px 0', font: '400 12.5px/1.75 var(--font-jp)', color: 'var(--warn)' }}>
-              手放すと <b>次のレースから出走しません</b>。次の清算で買い手が付けば <b style={{ color: 'var(--gold-bright)' }}>{receiveOf(priceOf(pick.current_day))} USDT</b> を受け取ります（手数料 5% 込み）。付かなければ厩舎に戻せます。出品操作は馬ごとに 1 日 1 回です。
+              手放すと <b>次のレースから出走しません</b>。次の清算で買い手が付けば <b style={{ color: 'var(--gold-bright)' }}>{receiveOf(bandPriceOf(pick.current_day, pick.total_value ?? null))} USDT</b> を受け取ります（手数料 5% 込み）。付かなければ厩舎に戻せます。出品操作は馬ごとに 1 日 1 回です。
             </div>
             <label className={d.confirmLabel} style={{ display: 'flex', alignItems: 'flex-start', gap: 11, cursor: 'pointer' }}>
               <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />

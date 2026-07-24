@@ -1,4 +1,4 @@
-import { PRICE_TABLE_V1 } from '@sevendays/domain';
+import { PRICE_TABLE_V1, bandedPriceStr } from '@sevendays/domain';
 import s from '../app/stable.module.css';
 
 /* ============================================================================
@@ -16,9 +16,10 @@ export function pct(raw: string): number {
   const n = Number(raw);
   return Number.isFinite(n) ? Math.max(6, Math.min(100, n)) : 60;
 }
-/** その馬の本日の P2P 価値 — 不変の価格テーブルから(Day0=100 → Day6=177.16)。 */
-export function horseValue(currentDay: number): string {
-  return PRICE_TABLE_V1[Math.max(0, Math.min(6, currentDay))] ?? PRICE_TABLE_V1[0]!;
+/** その馬の本日の P2P 価値 — 基準ラダー + 育成プレミアム(§5-2・total_value 指定時のみバンド)。 */
+export function horseValue(currentDay: number, totalValue: number | null = null): string {
+  const ladder = PRICE_TABLE_V1[Math.max(0, Math.min(6, currentDay))] ?? PRICE_TABLE_V1[0]!;
+  return bandedPriceStr(ladder, currentDay, totalValue);
 }
 export function rarClass(rarity: string): string {
   return s[`rar${RARITIES.includes(rarity) ? rarity : 'COMMON'}`]!;

@@ -20,6 +20,14 @@ import { ErrorLine } from '@/components/ui/ErrorLine';
  */
 
 const MIN = Number(POOL_PURCHASE_MIN_USDT);
+
+// 購入方針の選択肢(FUN_V3 §4)。§5-3/R1: リスクは定性のみ・BURN率や頭数の数値目安は出さない
+// (実測が揃うまで断定表示しない)。方向性(質重視/バランス/量重視)だけを言葉で伝える。
+const POLICY_OPTIONS: { key: 'STABLE' | 'OMAKASE' | 'QUANTITY'; title: string; sub: string }[] = [
+  { key: 'STABLE', title: '安定重視', sub: '育った馬（総合値が高い）を優先。じっくり狙う迎え方。' },
+  { key: 'OMAKASE', title: 'おまかせ', sub: '予算のまま自動で。育った馬も手頃な馬も混ざります。' },
+  { key: 'QUANTITY', title: '頭数重視', sub: '手頃な馬を優先。同じ予算でより多くの馬を迎えます。' },
+];
 const fmt = (v: number): string =>
   v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -41,6 +49,8 @@ export function PoolReservePanel({
   const maxAmount = Math.floor(availableNum + current);
 
   const [amount, setAmount] = useState<string>(pool ? String(current) : '');
+  // 購入方針(FUN_V3 §4)。§5-3: 頭数=実数・リスク=定性・BURN%は実測2週後まで出さない(R1)。
+  const [policy, setPolicy] = useState<'STABLE' | 'OMAKASE' | 'QUANTITY'>('OMAKASE');
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +72,7 @@ export function PoolReservePanel({
     const result = await apiFetch('/api/v1/purchase', {
       method: 'POST',
       idempotencyKey: crypto.randomUUID(),
-      body: { amount: String(parsed) },
+      body: { amount: String(parsed), policy },
     });
     setBusy(false);
     setConfirming(false);
@@ -139,6 +149,34 @@ export function PoolReservePanel({
             </button>
           );
         })}
+      </div>
+      {/* 購入方針(FUN_V3 §4)。§5-3: 頭数=実数(事前の数値目安は出さない)・リスク=定性・BURN%は2週後 */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <div style={{ font: '700 10.5px/1 var(--font-mono)', letterSpacing: '.12em', color: 'var(--faint)', textTransform: 'uppercase' }}>迎え方（購入方針）</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(148px,1fr))', gap: 7 }}>
+          {POLICY_OPTIONS.map((o) => {
+            const on = policy === o.key;
+            return (
+              <button
+                key={o.key}
+                type="button"
+                onClick={() => setPolicy(o.key)}
+                style={{
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '10px 12px',
+                  border: `1px solid ${on ? 'var(--cyan)' : 'var(--border)'}`,
+                  background: on ? 'rgba(0,234,255,.06)' : 'rgba(10,8,22,.5)',
+                  boxShadow: on ? '0 0 0 2px rgba(0,234,255,.25)' : 'none',
+                }}
+              >
+                <div style={{ font: '800 13px/1.2 var(--font-display)', letterSpacing: '.03em', color: on ? 'var(--cyan)' : 'var(--text)' }}>{o.title}</div>
+                <div style={{ marginTop: 4, font: '400 11px/1.5 var(--font-jp)', color: 'var(--muted)' }}>{o.sub}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
       <div className={s.poolRow}>
         <input

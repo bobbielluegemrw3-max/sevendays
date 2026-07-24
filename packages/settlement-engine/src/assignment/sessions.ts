@@ -140,9 +140,16 @@ export interface PoolSessionResult {
  */
 export async function createOrUpdatePoolSession(
   client: SqlClient,
-  input: { userId: string; amount: string; idempotencyKey: string },
+  input: {
+    userId: string;
+    amount: string;
+    idempotencyKey: string;
+    /** 購入方針(FUN_V3 §4)。未指定=OMAKASE(現行挙動)。 */
+    policy?: 'STABLE' | 'OMAKASE' | 'QUANTITY';
+  },
 ): Promise<PoolSessionResult> {
   const amount = Money.of(input.amount);
+  const policy = input.policy ?? 'OMAKASE';
   if (amount.lt(POOL_PURCHASE_MIN_USDT)) {
     throw new AssignmentError(
       'POOL_BUDGET_INVALID',
@@ -221,14 +228,20 @@ export async function createOrUpdatePoolSession(
           amount.toFixed8(),
         ]);
       }
+      // 金額変更時も方針を更新(締切前は自由に変更できる)。
+      await client.query(`update purchase_sessions set purchase_policy = $2 where id = $1`, [
+        sessionId,
+        policy,
+      ]);
       await client.query('commit');
       return { sessionId, alreadyExists: true, lockedAmount: amount.toFixed8() };
     }
 
     const session = await client.query<{ id: string }>(
-      `insert into purchase_sessions (user_id, locked_amount, funds_locked, idempotency_key, session_mode)
-       values ($1, $2, true, $3, 'POOL') returning id`,
-      [input.userId, amount.toFixed8(), input.idempotencyKey],
+      `insert into purchase_sessions
+         (user_id, locked_amount, funds_locked, idempotency_key, session_mode, purchase_policy)
+       values ($1, $2, true, $3, 'POOL', $4) returning id`,
+      [input.userId, amount.toFixed8(), input.idempotencyKey, policy],
     );
     const sessionId = session.rows[0]!.id;
     await postTransaction(

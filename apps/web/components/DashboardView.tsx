@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PRICE_TABLE_V1 } from '@sevendays/domain';
+import { PRICE_TABLE_V1, bandedPriceStr } from '@sevendays/domain';
 import { Countdown } from '@/components/Countdown';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { PwaSetupTile } from '@/components/PwaSetupTile';
@@ -80,9 +80,10 @@ function money(v: string): string {
 function num(n: number): string {
   return n.toLocaleString('en-US');
 }
-/** その馬の本日の P2P 価値 — 不変の価格テーブルから。 */
-function horseValue(currentDay: number): string {
-  return PRICE_TABLE_V1[Math.max(0, Math.min(6, currentDay))] ?? PRICE_TABLE_V1[0]!;
+/** その馬の本日の P2P 価値 — 基準ラダー + 育成プレミアム(§5-2・total_value 指定時のみバンド)。 */
+function horseValue(currentDay: number, totalValue: number | null = null): string {
+  const ladder = PRICE_TABLE_V1[Math.max(0, Math.min(6, currentDay))] ?? PRICE_TABLE_V1[0]!;
+  return bandedPriceStr(ladder, currentDay, totalValue);
 }
 /** dna_hash から決定論生成された HorseArt を厩舎用に描画。 */
 function StableArt({ horse }: { horse: DashHorse }) {
@@ -129,7 +130,7 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
   const active = horses.filter((h) => h.status === 'ACTIVE');
   const untrained = active.filter((h) => !h.trained_for_next_race);
   const activeBuybacks = buybacks.filter((b) => b.status !== 'COMPLETED');
-  const stableValue = active.reduce((sum, h) => sum + Number(horseValue(h.current_day)), 0);
+  const stableValue = active.reduce((sum, h) => sum + Number(horseValue(h.current_day, h.total_value ?? null)), 0);
 
   const survived = myResults.filter((r) => !r.is_burned);
   const burned = myResults.filter((r) => r.is_burned);

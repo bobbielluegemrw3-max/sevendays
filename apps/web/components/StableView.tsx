@@ -81,7 +81,7 @@ export function StableView({ data, lang = 'ja' }: { data: StableData; lang?: Lan
   const listed = active.filter((h) => h.listing === 'MANUAL');
   const champions = horses.filter((h) => h.status === 'DAY7_CLEARED' || h.status === 'MEMORIALIZED');
   const burned = horses.filter((h) => h.status === 'BURNED');
-  const stableValue = active.reduce((sum, h) => sum + Number(horseValue(h.current_day)), 0);
+  const stableValue = active.reduce((sum, h) => sum + Number(horseValue(h.current_day, h.total_value ?? null)), 0);
   const uncollectedTotal = racing.reduce((sum, h) => sum + uncollectedGain(h), 0);
   // 頭数サマリー(チャンピオン0頭のときは省略 — 従来と同じ)
   // C(誇り): 最高到達 Day は「まだチャンピオンなし」より前向きな到達目標として出す

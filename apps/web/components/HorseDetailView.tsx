@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { JSX } from 'react';
-import { PRICE_TABLE_V1, trainingModifierV1, type HorseType as DomainHorseType, type TrainingType as DomainTrainingType } from '@sevendays/domain';
+import { PRICE_TABLE_V1, bandedPriceStr, trainingModifierV1, type HorseType as DomainHorseType, type TrainingType as DomainTrainingType } from '@sevendays/domain';
 import { NftHorseArt } from '@/components/NftHorseArt';
 import { HorsePager, type PagerNav } from '@/components/HorsePager';
 import { TrainingForm } from '@/components/TrainingForm';
@@ -157,8 +157,11 @@ function score2(raw: string): string {
   const n = Number(raw);
   return Number.isFinite(n) ? n.toFixed(2) : raw;
 }
-function horseValue(currentDay: number): string {
-  return PRICE_TABLE_V1[Math.max(0, Math.min(6, currentDay))] ?? PRICE_TABLE_V1[0]!;
+// 現在価値=基準ラダー + 育成プレミアム(§5-2・total_value 指定時のみバンド)。
+// 価値ラダー推移(lad_now 等)は §5-2 で「基準ラダー」なので totalValue 未指定=ラダーのまま。
+function horseValue(currentDay: number, totalValue: number | null = null): string {
+  const ladder = PRICE_TABLE_V1[Math.max(0, Math.min(6, currentDay))] ?? PRICE_TABLE_V1[0]!;
+  return bandedPriceStr(ladder, currentDay, totalValue);
 }
 function short(hash: string, head = 6, tail = 4): string {
   if (!hash || hash.length <= head + tail + 1) return hash;
@@ -198,12 +201,12 @@ interface MastValue { k: string; v: string; unit: string; muted: boolean; }
 function mastValue(horse: HorseDetail, mode: Mode, t: TH): MastValue {
   const d = horse.current_day;
   switch (mode) {
-    case 'LISTED': return { k: t.k_listed, v: horseValue(d), unit: 'USDT', muted: false };
+    case 'LISTED': return { k: t.k_listed, v: horseValue(d, horse.total_value ?? null), unit: 'USDT', muted: false };
     case 'BURNED': return { k: t.k_outcome, v: t.v_burned, unit: '', muted: true };
     case 'DAY7_CLEARED': return { k: t.k_reward, v: CHAMPION_VALUE, unit: 'USDT', muted: false };
     case 'MEMORIALIZED': return { k: t.k_outcome, v: t.v_memorial, unit: '', muted: false };
     case 'ACTIVE':
-    default: return { k: t.k_value, v: horseValue(d), unit: 'USDT', muted: false };
+    default: return { k: t.k_value, v: horseValue(d, horse.total_value ?? null), unit: 'USDT', muted: false };
   }
 }
 
