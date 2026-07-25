@@ -1,18 +1,14 @@
 import { requireDevPreviewAccess } from '@/lib/dev-preview';
-import { ChampionView } from '@/components/champion/ChampionView';
-import { APP_COPY } from '@/lib/i18n';
+import { ChampionPreview } from './ChampionPreview';
 
-/** Dev-only visual preview of /champion (sample hall + rewards). 404 in prod. */
-export default async function ChampionPreview() {
+/**
+ * /champion 憧れリデザイン プレビュー — デザイナー正典 Champion.html の忠実写経(仕様書.md)。
+ * ①HERO(憧れの宣言) ②THE PAYOFF(4枚) ③HALL(空＝最初の王・架空なし/R1) ④LEAGUE(待ち遠しさ反転)。
+ * 既定は R1 準拠の空状態(hall/buybacks 空)。管理者のみ・それ以外404。
+ * 承認後に本番 ChampionView/ChampionHero へ結線(機構=buybacks/hall API 不変)。
+ * ★hero-loop.mp4 はCDN(リポジトリ外)のためプレビューではポスター静止画。本番で実映像。
+ */
+export default async function ChampionPreviewPage(): Promise<React.JSX.Element> {
   await requireDevPreviewAccess();
-  return (
-    <ChampionView
-      buybacks={[
-        { id: 'bb-1111111111111', horse_id: 'h-1', status: 'IN_PROGRESS', total_amount: '200.00', day7_clear_date: '2026-07-05', payments_paid: 3 },
-        { id: 'bb-2222222222222', horse_id: 'h-2', status: 'COMPLETED', total_amount: '200.00', day7_clear_date: '2026-06-20', payments_paid: 7 },
-      ]}
-      hall={[]}
-      t={APP_COPY.ja.champion}
-    />
-  );
+  return <ChampionPreview />;
 }
