@@ -453,6 +453,20 @@ describe('user flow through the API', () => {
     const wallet = await call('GET', '/api/v1/wallet', asUser(user));
     expect((wallet.body as { available: string }).available).toBe('20.00000000');
 
+    // B: 5分以内の連続出金は拒否(残高判定より前・連射防止)。
+    const tooSoon = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '10', to_address: '0x4444444444444444444444444444444444444444' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(tooSoon.status).toBe(429);
+    expect((tooSoon.body as { error: { code: string } }).error.code).toBe('WITHDRAWAL_TOO_FREQUENT');
+
+    // 間隔を空けた体にする(直近出金を10分前へ)と、次は通常どおり進む。
+    await client.query(
+      `update blockchain_withdrawals set created_at = now() - interval '10 minutes' where user_id = $1`,
+      [user],
+    );
+
     // insufficient balance surfaces the spec error code
     const broke = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
       body: { amount: '100', to_address: '0x4444444444444444444444444444444444444444' },
@@ -744,6 +758,12 @@ describe('large-withdrawal admin review (Decisions 060, 064)', () => {
       [wid],
     );
     expect(row.rows[0]!.status).toBe('LOCKED');
+
+    // B: big の直後だと5分間隔に阻まれるので、直近出金を10分前へ(間隔を空けた体)。
+    await client.query(
+      `update blockchain_withdrawals set created_at = now() - interval '10 minutes' where user_id = $1`,
+      [user],
+    );
 
     // Rejection refunds the full locked amount.
     const second = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {

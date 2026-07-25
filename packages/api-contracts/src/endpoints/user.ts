@@ -5,6 +5,7 @@ import {
   MIN_WITHDRAWAL_AMOUNT,
   DEPOSIT_CONFIRMATION_BLOCKS,
   WITHDRAWAL_NEW_ADDRESS_COOLING_HOURS,
+  WITHDRAWAL_MIN_INTERVAL_MINUTES,
   DEFAULT_CHAIN,
   TRAINING_TYPES,
   PURCHASE_MAX_PER_REQUEST,
@@ -310,6 +311,21 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         [`wdlock:${ctx.idempotencyKey}`],
       );
       if (existing.rows[0]) return existing.rows[0];
+
+      // B: 連射防止(5分以内の連続を拒否)。replay を返した後=新規リクエストのみ課す。
+      // 回数・日次総額の上限は無し(オーナー確定)。REJECTED は本人の責でないので除外。
+      const lastWd = await ctx.client.query<{ last_at: string | null }>(
+        `select max(created_at)::text as last_at from blockchain_withdrawals
+         where user_id = $1 and status <> 'REJECTED'`,
+        [ctx.userId],
+      );
+      const lastAt = lastWd.rows[0]?.last_at;
+      if (lastAt && Date.now() - new Date(lastAt).getTime() < WITHDRAWAL_MIN_INTERVAL_MINUTES * 60_000) {
+        throw new ApiError(
+          'WITHDRAWAL_TOO_FREQUENT',
+          `Please wait at least ${WITHDRAWAL_MIN_INTERVAL_MINUTES} minutes between withdrawals.`,
+        );
+      }
 
       // Ledger fund lock BEFORE any broadcast (01_CONSTITUTION.md).
       const lock = await withdrawalFundLock(ctx.client, {

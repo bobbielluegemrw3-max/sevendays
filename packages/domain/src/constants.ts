@@ -480,6 +480,15 @@ export const DEPOSIT_CONFIRMATION_BLOCKS = 128;
 export const MIN_WITHDRAWAL_AMOUNT = '10.00';
 /** Decision 060: withdrawals at/over this require dual-admin review. */
 export const WITHDRAWAL_ADMIN_REVIEW_THRESHOLD = '1000';
+/**
+ * B (WALLET_HARDENING §3, オーナー確定 2026-07-25): 出金の乱用制限。
+ * - 1000 超の単発 → 二人承認必須(WITHDRAWAL_ADMIN_REVIEW_THRESHOLD・>で判定)。
+ * - 1000 以下 → 自動出金。1日の回数制限は無し。
+ * - 連続する出金の間隔がこの分数未満なら拒否(連射防止のみ)。
+ * - それ以外の「明らかにおかしな動き」は拒否でなくフラグで管理者へ通知(§suspicious)。
+ * テスター期の値。公開/メインネットで残高が大きくなれば見直す。
+ */
+export const WITHDRAWAL_MIN_INTERVAL_MINUTES = 5;
 /** Decision 064: withdrawal API accepts at most 6 decimal places (USDT on-chain scale). */
 export const WITHDRAWAL_MAX_DECIMALS = 6;
 /**

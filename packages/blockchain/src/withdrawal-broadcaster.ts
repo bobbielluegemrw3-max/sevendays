@@ -38,7 +38,8 @@ export interface WithdrawalPolicy {
    */
   nativeUsdtRate: Money;
   /**
-   * Decision 060: route requests >= this to ADMIN_REVIEW.
+   * Decision 060 / WALLET_HARDENING B: route requests strictly ABOVE this to
+   * ADMIN_REVIEW (1000超→二人承認・1000以下→自動出金, オーナー確定 2026-07-25).
    * OMITTED (undefined) -> the domain default (1,000 USDT) applies, so a
    * misconfigured worker cannot silently disable the review. Explicit
    * null disables routing (tests / owner override only).
@@ -237,7 +238,7 @@ async function routeLargeWithdrawalsToReview(
 ): Promise<void> {
   const routed = await client.query<{ id: string }>(
     `update blockchain_withdrawals set status = 'ADMIN_REVIEW'
-     where chain_id = $1 and status = 'LOCKED' and requested_amount >= $2
+     where chain_id = $1 and status = 'LOCKED' and requested_amount > $2
        and review_approved_at is null
      returning id`,
     [config.chainId, threshold.toFixed8()],
@@ -308,7 +309,7 @@ async function broadcastLockedWithdrawals(
     `select id, user_id, to_address, requested_amount::text as requested_amount, net_amount::text as net_amount, tx_hash, raw_tx
      from blockchain_withdrawals
      where chain_id = $1 and status = 'LOCKED'
-       and ($2::numeric is null or requested_amount < $2::numeric or review_approved_at is not null)
+       and ($2::numeric is null or requested_amount <= $2::numeric or review_approved_at is not null)
      order by requested_at, id
      limit $3`,
     [config.chainId, reviewThreshold ? reviewThreshold.toFixed8() : null, policy.maxBroadcastsPerRun ?? 20],
