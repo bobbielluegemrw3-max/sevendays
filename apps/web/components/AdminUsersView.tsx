@@ -6,6 +6,7 @@ import { AppSelect } from '@/components/AppSelect';
 import { localDate, localDateTimeSec } from '@/lib/format-time';
 import s from '../app/admin.module.css';
 import { ErrorLine } from '@/components/ui/ErrorLine';
+import { tvChipStyle, tvNumStyle } from '@/lib/tv-tier';
 
 /* /admin/users — Ops Consoleリデザイン(2026-07-13ハンドオフ)。
  * 検索 → 表で走査 → 行クリックで台帳(dossier)を展開(最も作業が多い画面)。
@@ -25,7 +26,7 @@ interface Dossier {
     last_seen_at: string | null; online: boolean; last_sign_in_at: string | null;
     referrer_email: string | null; balance_available: string; balance_locked: string;
   };
-  horses: { id: string; name: string; status: string; current_day: number; rarity: string; horse_type: string; created_at: string }[];
+  horses: { id: string; name: string; status: string; current_day: number; total_value: number | null; horse_type: string; created_at: string }[];
   items: { item_key: string; status: string; count: number }[];
   item_usages: { item_key: string; effective_race_date: string; status: string; settled_outcome: string | null }[];
   direct_referrals: { id: string; email: string; created_at: string }[];
@@ -294,7 +295,7 @@ export function AdminUsersView() {
               <div className={`${s.tableWrap} ${s.scrollX}`}>
                 <table className={s.tbl}>
                   <thead>
-                    <tr><th>名前</th><th>状態</th><th className={s.tRight}>Day</th><th>レアリティ</th><th>type</th><th>取得</th></tr>
+                    <tr><th>名前</th><th>状態</th><th className={s.tRight}>Day</th><th className={s.tRight}>総合値</th><th>type</th><th>取得</th></tr>
                   </thead>
                   <tbody>
                     {dossier.horses.map((h) => (
@@ -306,7 +307,12 @@ export function AdminUsersView() {
                             : <span className={`${s.st} ${s.stNeutral}`}>{h.status}</span>}
                         </td>
                         <td className={s.num}>{h.current_day}</td>
-                        <td><span className={s.tag}>{h.rarity}</span></td>
+                        {/* M-3: 廃止レアリティ→プレイヤーが見る総合値(V2)。ティア色で表示。 */}
+                        <td className={s.num}>
+                          {h.total_value != null
+                            ? <span style={tvChipStyle(h.total_value)}><b style={tvNumStyle(h.total_value)}>{h.total_value.toFixed(1)}</b></span>
+                            : <span className={s.tag}>—</span>}
+                        </td>
                         <td className={s.mono}>{h.horse_type}</td>
                         <td className={s.date}>{ts(h.created_at)}</td>
                       </tr>

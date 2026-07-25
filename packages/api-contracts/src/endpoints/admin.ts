@@ -537,7 +537,8 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
         lastSignInAt = null;
       }
       const horses = await ctx.client.query(
-        `select id, name, status::text as status, current_day, rarity::text as rarity,
+        // M-3(ADMIN_IMPROVEMENT_BRIEF): 廃止レアリティでなく、プレイヤーが見る total_value(V2)を返す。
+        `select id, name, status::text as status, current_day, total_value::float8 as total_value,
                 horse_type::text as horse_type, created_at::text as created_at
          from horses where owner_user_id = $1
          order by created_at desc limit 50`,
