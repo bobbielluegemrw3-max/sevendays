@@ -37,6 +37,7 @@ export interface AppDict {
     guide: string;
     contact: string;
     logout: string;
+    docs: string;
   };
   dash: {
     result_label: string;
@@ -524,6 +525,7 @@ export interface AppDict {
     day_title: string; day_sub: string;
     verify_ok: string; verify_seal_k: string; verify_content_k: string; verify_hash_k: string; verify_foot: string;
     trades_fold_sub: string; trades_foot: string;
+    fairness_docs_link: string;
     dow: readonly [string, string, string, string, string, string, string];
     month_tpl: string; // 「{y}年{m}月」
     date_full_tpl: string; // 「{y}年{m}月{d}日」
@@ -769,7 +771,7 @@ export interface AppDict {
 
 const ja: AppDict = {
   common: { horses_unit: '頭', cases_unit: '件' },
-  nav: { notifications: '通知', account: 'アカウント', guide: '使い方', contact: 'お問い合わせ', logout: 'ログアウト' },
+  nav: { notifications: '通知', account: 'アカウント', guide: '使い方', contact: 'お問い合わせ', logout: 'ログアウト', docs: 'ドキュメント（英語）' },
   dash: {
     result_label: '昨夜の結果',
     result_label_tpl: '{date}の結果',
@@ -1245,6 +1247,7 @@ const ja: AppDict = {
     verify_ok: '✓ 一致', verify_seal_k: '封（レース前に公開）', verify_content_k: '中身（レース後に公開）',
     verify_hash_k: '中身をハッシュ計算した結果', verify_foot: '封（commit hash）はレース前に公開済みです。中身をハッシュ計算すると、封と一致します。',
     trades_fold_sub: '実際に成立した売買（匿名表示）', trades_foot: '買い手・売り手は匿名化して表示しています。全件は日次CSVに含まれます。',
+    fairness_docs_link: 'コミット・リビールの詳しい説明（英語）→',
     dow: ['日', '月', '火', '水', '木', '金', '土'],
     month_tpl: '{y}年{m}月',
     date_full_tpl: '{y}年{m}月{d}日',
@@ -1588,7 +1591,7 @@ const ja: AppDict = {
 
 const en: AppDict = {
   common: { horses_unit: ' horses', cases_unit: '' },
-  nav: { notifications: 'Notifications', account: 'Account', guide: 'Guide', contact: 'Contact', logout: 'Log out' },
+  nav: { notifications: 'Notifications', account: 'Account', guide: 'Guide', contact: 'Contact', logout: 'Log out', docs: 'Docs' },
   dash: {
     result_label: 'Last night’s result',
     result_label_tpl: 'Results — {date}',
@@ -2064,6 +2067,7 @@ const en: AppDict = {
     verify_ok: '✓ Match', verify_seal_k: 'Seal (published before the race)', verify_content_k: 'Contents (published after the race)',
     verify_hash_k: 'Hash of the contents', verify_foot: 'The seal (commit hash) was published before the race. Hashing the contents matches the seal.',
     trades_fold_sub: 'Actual settled trades (shown anonymized)', trades_foot: 'Buyers and sellers are shown anonymized. The full list is included in the daily CSV.',
+    fairness_docs_link: 'Full explanation of commit–reveal (English) →',
     dow: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
     month_tpl: '{m}/{y}',
     date_full_tpl: '{m}/{d}/{y}',
@@ -2407,7 +2411,7 @@ const en: AppDict = {
 
 const zh: AppDict = {
   common: { horses_unit: '匹', cases_unit: '件' },
-  nav: { notifications: '通知', account: '账户', guide: '使用方法', contact: '联系我们', logout: '退出登录' },
+  nav: { notifications: '通知', account: '账户', guide: '使用方法', contact: '联系我们', logout: '退出登录', docs: '文档（英语）' },
   dash: {
     result_label: '昨晚的结果',
     result_label_tpl: '{date}的结果',
@@ -2883,6 +2887,7 @@ const zh: AppDict = {
     verify_ok: '✓ 一致', verify_seal_k: '封（比赛前公开）', verify_content_k: '内容（比赛后公开）',
     verify_hash_k: '对内容哈希计算的结果', verify_foot: '封（commit hash）已在比赛前公开。对内容进行哈希计算后，与封一致。',
     trades_fold_sub: '实际成交的买卖（匿名显示）', trades_foot: '买方与卖方以匿名显示。全部记录包含在每日CSV中。',
+    fairness_docs_link: '承诺-揭示的详细说明（英语）→',
     dow: ['日', '一', '二', '三', '四', '五', '六'],
     month_tpl: '{y}年{m}月',
     date_full_tpl: '{y}年{m}月{d}日',
@@ -3226,7 +3231,7 @@ const zh: AppDict = {
 
 const ko: AppDict = {
   common: { horses_unit: '마리', cases_unit: '건' },
-  nav: { notifications: '알림', account: '계정', guide: '이용 방법', contact: '문의', logout: '로그아웃' },
+  nav: { notifications: '알림', account: '계정', guide: '이용 방법', contact: '문의', logout: '로그아웃', docs: '문서（영어）' },
   dash: {
     result_label: '어젯밤 결과',
     result_label_tpl: '{date} 결과',
@@ -3702,6 +3707,7 @@ const ko: AppDict = {
     verify_ok: '✓ 일치', verify_seal_k: '봉인(레이스 전 공개)', verify_content_k: '내용(레이스 후 공개)',
     verify_hash_k: '내용을 해시 계산한 결과', verify_foot: '봉인(commit hash)은 레이스 전에 공개되었습니다. 내용을 해시 계산하면 봉인과 일치합니다.',
     trades_fold_sub: '실제로 성립된 매매(익명 표시)', trades_foot: '구매자·판매자는 익명으로 표시됩니다. 전체는 일별 CSV에 포함됩니다.',
+    fairness_docs_link: '커밋-리빌 상세 설명(영어) →',
     dow: ['일', '월', '화', '수', '목', '금', '토'],
     month_tpl: '{y}년 {m}월',
     date_full_tpl: '{y}년 {m}월 {d}일',
@@ -4045,7 +4051,7 @@ const ko: AppDict = {
 
 const ms: AppDict = {
   common: { horses_unit: ' ekor', cases_unit: '' },
-  nav: { notifications: 'Notifikasi', account: 'Akaun', guide: 'Panduan', contact: 'Hubungi', logout: 'Log keluar' },
+  nav: { notifications: 'Notifikasi', account: 'Akaun', guide: 'Panduan', contact: 'Hubungi', logout: 'Log keluar', docs: 'Dokumen (Inggeris)' },
   dash: {
     result_label: 'Keputusan malam tadi',
     result_label_tpl: 'Keputusan {date}',
@@ -4521,6 +4527,7 @@ const ms: AppDict = {
     verify_ok: '✓ Sepadan', verify_seal_k: 'Meterai (diterbitkan sebelum perlumbaan)', verify_content_k: 'Kandungan (diterbitkan selepas perlumbaan)',
     verify_hash_k: 'Hasil hash kandungan', verify_foot: 'Meterai (commit hash) telah diterbitkan sebelum perlumbaan. Hash kandungan sepadan dengan meterai.',
     trades_fold_sub: 'Dagangan sebenar yang diselesaikan (dipaparkan tanpa nama)', trades_foot: 'Pembeli dan penjual dipaparkan tanpa nama. Senarai penuh disertakan dalam CSV harian.',
+    fairness_docs_link: 'Penjelasan penuh commit–reveal (Inggeris) →',
     dow: ['Ah', 'Is', 'Se', 'Ra', 'Kh', 'Ju', 'Sa'],
     month_tpl: '{m}/{y}',
     date_full_tpl: '{d}/{m}/{y}',

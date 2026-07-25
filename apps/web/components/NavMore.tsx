@@ -31,6 +31,7 @@ export interface NavMoreCopy {
   account: string;
   guide: string;
   contact: string;
+  docs: string;
 }
 
 const GAME_LINKS: Array<{ href: string; label: string }> = [
@@ -93,6 +94,8 @@ export function NavMore({ t, unread = 0 }: { t: NavMoreCopy; unread?: number }) 
           </Link>
           <Link href="/account" className="topnav-util" role="menuitem">{t.account}</Link>
           <Link href="/guide" className="topnav-util" role="menuitem">{t.guide}</Link>
+          {/* 開示ドキュメント(公平性/資金/リスク) — 発見性(FAIRNESS_SPEC ③)。開示内容は不変 */}
+          <Link href="/docs" className="topnav-util" role="menuitem">{t.docs}</Link>
           <Link href="/contact" className="topnav-util" role="menuitem">{t.contact}</Link>
         </div>
       ) : null}

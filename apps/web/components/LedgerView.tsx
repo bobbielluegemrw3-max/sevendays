@@ -190,7 +190,12 @@ export function LedgerView({ t }: { t: AppDict['ledger'] }) {
               <div key={i} className={s.crHowRow}><span className={s.crHowN}>{String(i + 1).padStart(2, '0')}</span><span className={s.crHowText}>{text}</span></div>
             ))}
           </div>
-          <div className={s.crHowFoot}>{t.cr_how_foot}</div>
+          <div className={s.crHowFoot}>
+            {t.cr_how_foot}
+            {' '}
+            {/* ④ 相互リンク: /docs/fairness(公平性の開示・英語)へ。開示内容は不変 */}
+            <Link href="/docs/fairness" style={{ color: 'var(--good-soft)' }}>{t.fairness_docs_link}</Link>
+          </div>
         </details>
       </section>
     </>

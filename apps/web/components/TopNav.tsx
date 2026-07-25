@@ -45,7 +45,7 @@ export function TopNav({ isAdmin = false, unread = 0, lang = 'ja', engineV2 = fa
       <span className="spacer" />
       <DerbyCountdown engineV2={engineV2} />
       <NavMore
-        t={{ notifications: t.notifications, account: t.account, guide: t.guide, contact: t.contact }}
+        t={{ notifications: t.notifications, account: t.account, guide: t.guide, contact: t.contact, docs: t.docs }}
         unread={unread}
       />
       <LanguageSwitcher current={lang} />
