@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { createTestDb } from '@sevendays/database';
 import { Money } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
-import { depositConfirmation, getPlatformAccountId, postTransaction } from '@sevendays/ledger';
+import { depositConfirmation, getPlatformAccountId, postTransaction, withdrawalFundLock } from '@sevendays/ledger';
 import { requestRecovery } from '@sevendays/settlement-engine';
 import { alertAdminsAfterBatch } from '../src/ops/admin-alerts.js';
 import {
@@ -838,6 +838,32 @@ describe('large-withdrawal admin review (Decisions 060, 064)', () => {
     const wallet = await call('GET', '/api/v1/wallet', asUser(user));
     // 5000 - 1500 (still locked, released for broadcast) + 1200 refunded
     expect((wallet.body as { available: string }).available).toBe('3500.00000000');
+  });
+
+  it('H-1: an admin cannot approve their own withdrawal request (self-approval guard)', async () => {
+    const adminA = await newAdmin('FINANCE_ADMIN');
+    const adminB = await newAdmin('SUPER_ADMIN');
+    await depositConfirmation(client, { userId: adminA, amount: Money.of('2000'), idempotencyKey: randomUUID() });
+    const lock = await withdrawalFundLock(client, { userId: adminA, amount: Money.of('1500'), idempotencyKey: `wdlock:${randomUUID()}` });
+    const wd = await client.query<{ id: string }>(
+      `insert into blockchain_withdrawals
+         (user_id, chain_id, token_contract, to_address, requested_amount, network_fee_amount, net_amount, status, ledger_transaction_id)
+       values ($1, 'POLYGON_POS', 'USDT', $2, '1500', 0, '1500', 'ADMIN_REVIEW', $3) returning id`,
+      [adminA, '0xcccccccccccccccccccccccccccccccccccccccc', lock.transactionId],
+    );
+    const wid = wd.rows[0]!.id;
+
+    // H-1: enriched の /admin/withdrawals にフラグ理由/文脈が乗ること(クエリ健全性)。
+    const listed = await call('GET', '/api/v1/admin/withdrawals', asAdmin(adminB, ['SUPER_ADMIN']));
+    const mine = (listed.body as { withdrawals: { id: string; user_email: string | null; user_withdrawals: number }[] }).withdrawals.find((x) => x.id === wid);
+    expect(mine).toBeTruthy();
+    expect(mine!.user_withdrawals).toBeGreaterThanOrEqual(1);
+
+    // 申請者本人(adminA)による承認は 403(自己申請ガード)。
+    const self = await call('POST', `/api/v1/admin/withdrawals/${wid}/approve`, asAdmin(adminA, ['FINANCE_ADMIN']), { body: { role: 'FINANCE_ADMIN' }, idempotencyKey: randomUUID() });
+    expect(self.status).toBe(403);
+    expect((self.body as { error: { message: string } }).error.message).toMatch(/own withdrawal/);
+    // (別人による承認=既存の dual-approval テストで担保済み)
   });
 });
 

@@ -297,16 +297,31 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
     auth: 'admin',
     handler: async (ctx) => {
       requireAdminRole(ctx);
+      // H-1(ADMIN_IMPROVEMENT_BRIEF): 審査が"盲目"だったのを解消。フラグ理由(audit_logs)+
+      // ユーザー文脈(識別/残高/過去出金/宛先クーリング状態)+承認者identity を1クエリで付す。
       const rows = await ctx.client.query(
         `select w.id, w.user_id, w.chain_id, w.to_address,
                 w.requested_amount::text as requested_amount,
                 w.status::text as status, w.requested_at::text as requested_at,
-                coalesce(json_agg(json_build_object('admin_user_id', a.admin_user_id, 'role', a.admin_role))
+                u.email as user_email,
+                coalesce(bal.balance, 0)::text as user_available,
+                (select count(*)::int from blockchain_withdrawals w2
+                   where w2.user_id = w.user_id and w2.status <> 'REJECTED') as user_withdrawals,
+                uw.withdrawable_at::text as address_withdrawable_at,
+                (select al.action from audit_logs al
+                   where al.reference_id = w.id and al.action like 'WITHDRAWAL_FLAGGED_SUSPICIOUS%'
+                   order by al.created_at desc limit 1) as flag_action,
+                coalesce(json_agg(json_build_object('admin_user_id', a.admin_user_id, 'role', a.admin_role, 'email', au.email))
                          filter (where a.id is not null), '[]') as approvals
          from blockchain_withdrawals w
+         left join users u on u.id = w.user_id
+         left join ledger_accounts la on la.owner_type = 'USER' and la.owner_id = w.user_id and la.account_type = 'USER_AVAILABLE'
+         left join ledger_account_balances bal on bal.account_id = la.id
+         left join user_wallets uw on uw.user_id = w.user_id and uw.wallet_address = lower(w.to_address)
          left join withdrawal_review_approvals a on a.withdrawal_id = w.id
+         left join users au on au.id = a.admin_user_id
          where w.status = 'ADMIN_REVIEW'
-         group by w.id
+         group by w.id, u.email, bal.balance, uw.withdrawable_at
          order by w.requested_at
          limit 100`,
       );
@@ -324,6 +339,15 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
       requireAdminRole(ctx);
       if (ctx.auth.kind !== 'admin' || !ctx.auth.roles.includes(input.role)) {
         throw new ApiError('FORBIDDEN', `Approver does not hold role ${input.role}`);
+      }
+      // H-1: 自己申請ガード。自分の出金申請は自分で承認できない(他フローには在るが
+      // 出金審査だけ欠けていた非対称)。二人承認の distinct 制約と別に、申請者=承認者を禁止。
+      const owner = await ctx.client.query<{ user_id: string }>(
+        `select user_id from blockchain_withdrawals where id = $1`,
+        [ctx.params.id!],
+      );
+      if (owner.rows[0]?.user_id === ctx.userId) {
+        throw new ApiError('FORBIDDEN', 'You cannot approve your own withdrawal request');
       }
       try {
         // Duplicate approvals replay idempotently inside approveWithdrawal;
