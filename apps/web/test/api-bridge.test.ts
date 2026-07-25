@@ -257,6 +257,12 @@ describe('dispatchBridge', () => {
 
     // POST body + Idempotency-Key plumbing: fund then withdraw.
     await depositConfirmation(client, { userId: uid, amount: Money.of('50'), idempotencyKey: randomUUID() });
+    // A3: 出金先を白リストに(解禁済み)。withdraw ゲートを通す。
+    await client.query(
+      `insert into user_wallets (user_id, wallet_address, withdrawable_at)
+       values ($1, $2, now() - interval '1 minute')`,
+      [uid, '0x4444444444444444444444444444444444444444'],
+    );
     const key = randomUUID();
     const withdraw = await dispatchBridge(
       client,

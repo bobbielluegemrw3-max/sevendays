@@ -38,6 +38,8 @@ export const NOTIFICATION_TYPES_V1 = [
   'AUTO_POOL_RESERVED',
   // 施策D (FUN_V3, Decision 114): 育成者クレジット — 育てた馬がチャンピオンに
   'BREEDER_CHAMPION',
+  // A3 (WALLET_HARDENING §3): 出金先アドレスが追加された(乗っ取り検知アラート)
+  'WITHDRAWAL_ADDRESS_ADDED',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES_V1)[number];
@@ -144,6 +146,10 @@ export const NOTIFICATION_TEMPLATES_V1: Record<NotificationType, NotificationTem
   BREEDER_CHAMPION: {
     title: 'あなたが育てた {horse_name} がチャンピオンになりました。',
     body: 'Day7を走破しました。この馬へのあなたの育成貢献は {pct}% でした。',
+  },
+  WITHDRAWAL_ADDRESS_ADDED: {
+    title: '出金先アドレスが追加されました。',
+    body: '{addr} が出金先に登録されました。心当たりがない場合はアカウント設定ですぐに解除してください。安全のため、この宛先への出金は {hours} 時間後に有効になります。',
   },
 };
 

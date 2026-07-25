@@ -16,10 +16,11 @@ type WalletCopy = AppDict['walletPage'];
  * The Idempotency-Key is generated once per form session so a double-click
  * can never create two withdrawals.
  */
-export function WithdrawForm({ t }: { t: WalletCopy }) {
+export function WithdrawForm({ t, wallets = [] }: { t: WalletCopy; wallets?: string[] }) {
   const router = useRouter();
   const [amount, setAmount] = useState('');
-  const [toAddress, setToAddress] = useState('');
+  // A3: 出金先は白リスト(連携ウォレット)から選ぶ。自由入力は廃止(タイプミス余地ゼロ)。
+  const [toAddress, setToAddress] = useState(wallets[0] ?? '');
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +105,17 @@ export function WithdrawForm({ t }: { t: WalletCopy }) {
     );
   }
 
+  // A3: 出金可能な連携ウォレットが無ければ、出金フォームは出さず /account へ誘導。
+  //     白リスト外への出金はサーバが拒否するため、ここで自由入力させても無意味。
+  if (wallets.length === 0) {
+    return (
+      <div className="stack">
+        <p className="muted">{t.wd_no_address}</p>
+        <a href="/account">{t.wd_manage_link}</a>
+      </div>
+    );
+  }
+
   return (
     <form className="stack" onSubmit={toReview}>
       <label>
@@ -118,13 +130,15 @@ export function WithdrawForm({ t }: { t: WalletCopy }) {
         />
       </label>
       <label>
-        {t.wd_address_label}
-        <input
-          value={toAddress}
-          onChange={(e) => setToAddress(e.target.value)}
-          placeholder="0x…"
-          required
-        />
+        {t.wd_pick_address}
+        {/* A3: 白リスト(出金可能な連携ウォレット)からのみ選択。自由入力なし。 */}
+        <select value={toAddress} onChange={(e) => setToAddress(e.target.value)} required>
+          {wallets.map((address) => (
+            <option key={address} value={address}>
+              {address}
+            </option>
+          ))}
+        </select>
       </label>
       {error ? <ErrorLine>{error}</ErrorLine> : null}
       <p className="muted">{t.wd_note}</p>

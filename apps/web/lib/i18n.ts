@@ -625,6 +625,8 @@ export interface AppDict {
     wd_confirm_title: string; wd_confirm_warn: string;
     wd_confirm_amount: string; wd_confirm_address: string; wd_confirm_network: string;
     wd_confirm_check: string; wd_confirm_submit: string; wd_confirm_back: string;
+    /** A3 出金先ホワイトリスト(連携ウォレットからのみ選択)。 */
+    wd_pick_address: string; wd_no_address: string; wd_manage_link: string;
     hist_label: string;
     /** 取引履歴(WalletHistory)。台帳の複式エントリを人間の1行に翻訳する。 */
     tx_lock_t: string; tx_lock_s_tpl: string;
@@ -1342,6 +1344,9 @@ const ja: AppDict = {
     wd_confirm_amount: '金額', wd_confirm_address: '送金先アドレス', wd_confirm_network: 'ネットワーク',
     wd_confirm_check: '宛先アドレスが正しいことを確認しました',
     wd_confirm_submit: '確定して送金', wd_confirm_back: '戻る',
+    wd_pick_address: '送金先(連携済みウォレットから選択)',
+    wd_no_address: '出金には連携済みウォレットが必要です。新しい宛先は安全のため登録から48時間後に出金可能になります。',
+    wd_manage_link: 'アカウント設定でウォレットを連携',
     hist_label: '履歴 · HISTORY',
     tx_lock_t: '購入予約 — 資金をロック', tx_lock_s_tpl: '予約1件ぶん({a})を利用可能残高からロック枠へ確保しました。資産は減っていません',
     tx_refund_t: 'ロックの余りが戻りました', tx_refund_s: '割当確定後、使わなかったロック分が利用可能残高に戻りました',
@@ -2111,6 +2116,9 @@ const en: AppDict = {
     wd_confirm_amount: 'Amount', wd_confirm_address: 'Destination address', wd_confirm_network: 'Network',
     wd_confirm_check: 'I have verified the destination address is correct',
     wd_confirm_submit: 'Confirm and send', wd_confirm_back: 'Back',
+    wd_pick_address: 'Destination (choose a linked wallet)',
+    wd_no_address: 'Withdrawals require a linked wallet. For your safety a newly added address becomes available 48 hours after it is linked.',
+    wd_manage_link: 'Link a wallet in account settings',
     hist_label: 'HISTORY',
     tx_lock_t: 'Purchase reservation — funds locked', tx_lock_s_tpl: '{a} moved from your available balance into the locked pool for one reservation. Nothing was spent',
     tx_refund_t: 'Unused lock returned', tx_refund_s: 'After allocation, the unused part of the lock returned to your available balance',
@@ -2880,6 +2888,9 @@ const zh: AppDict = {
     wd_confirm_amount: '金额', wd_confirm_address: '收款地址', wd_confirm_network: '网络',
     wd_confirm_check: '我已确认收款地址正确无误',
     wd_confirm_submit: '确认并发送', wd_confirm_back: '返回',
+    wd_pick_address: '收款地址(从已关联钱包中选择)',
+    wd_no_address: '提现需要已关联的钱包。为安全起见,新添加的地址将在关联48小时后方可提现。',
+    wd_manage_link: '在账户设置中关联钱包',
     hist_label: '记录 · HISTORY',
     tx_lock_t: '购买预约 — 资金锁定', tx_lock_s_tpl: '已将 {a} 从可用余额移入锁定额度(1笔预约)。资产并未减少',
     tx_refund_t: '锁定余额已返还', tx_refund_s: '分配确定后，未使用的锁定部分已返回可用余额',
@@ -3649,6 +3660,9 @@ const ko: AppDict = {
     wd_confirm_amount: '금액', wd_confirm_address: '받는 주소', wd_confirm_network: '네트워크',
     wd_confirm_check: '받는 주소가 정확함을 확인했습니다',
     wd_confirm_submit: '확인하고 송금', wd_confirm_back: '뒤로',
+    wd_pick_address: '받는 주소(연결된 지갑에서 선택)',
+    wd_no_address: '출금하려면 연결된 지갑이 필요합니다. 안전을 위해 새로 추가한 주소는 연결 48시간 후에 출금할 수 있습니다.',
+    wd_manage_link: '계정 설정에서 지갑 연결',
     hist_label: '내역 · HISTORY',
     tx_lock_t: '구매 예약 — 자금 잠금', tx_lock_s_tpl: '예약 1건분({a})을 사용 가능 잔액에서 잠금 한도로 확보했습니다. 자산이 줄어든 것은 아닙니다',
     tx_refund_t: '잠금 잔여분이 돌아왔습니다', tx_refund_s: '배정 확정 후 사용하지 않은 잠금분이 사용 가능 잔액으로 돌아왔습니다',
@@ -4418,6 +4432,9 @@ const ms: AppDict = {
     wd_confirm_amount: 'Jumlah', wd_confirm_address: 'Alamat penerima', wd_confirm_network: 'Rangkaian',
     wd_confirm_check: 'Saya telah mengesahkan alamat penerima adalah betul',
     wd_confirm_submit: 'Sahkan dan hantar', wd_confirm_back: 'Kembali',
+    wd_pick_address: 'Alamat penerima (pilih dompet terpaut)',
+    wd_no_address: 'Pengeluaran memerlukan dompet terpaut. Untuk keselamatan anda, alamat yang baru ditambah boleh digunakan 48 jam selepas dipaut.',
+    wd_manage_link: 'Pautkan dompet dalam tetapan akaun',
     hist_label: 'SEJARAH',
     tx_lock_t: 'Tempahan pembelian — dana dikunci', tx_lock_s_tpl: '{a} dipindahkan daripada baki tersedia ke kolam terkunci untuk satu tempahan. Tiada yang dibelanjakan',
     tx_refund_t: 'Baki kunci dikembalikan', tx_refund_s: 'Selepas pengagihan, bahagian kunci yang tidak digunakan kembali ke baki tersedia',

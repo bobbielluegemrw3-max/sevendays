@@ -35,7 +35,7 @@ export interface Wallet { available: string; locked: string }
 export interface DepositInfo { address: string; chain_id: string; asset: string; confirmations_required: number }
 
 export function WalletView({
-  wallet, deposit, history, stableValue, uncollected = 0, assetsCopy, t,
+  wallet, deposit, history, stableValue, uncollected = 0, withdrawableWallets = [], assetsCopy, t,
 }: {
   wallet: Wallet;
   deposit: DepositInfo | null;
@@ -44,6 +44,8 @@ export function WalletView({
   stableValue: number;
   /** 未回収(利確待ち)の上昇分 — A2(FUN_V2_PLAN §3)。 */
   uncollected?: number;
+  /** A3: 出金可能な連携ウォレット(白リスト・クーリング解禁済み)。出金フォームの選択肢。 */
+  withdrawableWallets?: string[];
   /** 総資産カードの文言(dashセクション共用)。 */
   assetsCopy: AppDict['dash'];
   /** /wallet 固有の文言(2026-07-22 i18n化)。 */
@@ -111,7 +113,7 @@ export function WalletView({
       {/* 出金(既存 WithdrawForm を内包) */}
       <section className={s.withdraw}>
         <div className={s.withdrawLabel}>{t.wd_label}</div>
-        <div className={s.withdrawForm}><WithdrawForm t={t} /></div>
+        <div className={s.withdrawForm}><WithdrawForm t={t} wallets={withdrawableWallets} /></div>
       </section>
 
       {/* 履歴 */}

@@ -4,6 +4,7 @@ import { Money, batchDateFor, addDays, mytWeekStart, insertNotification } from '
 import {
   MIN_WITHDRAWAL_AMOUNT,
   DEPOSIT_CONFIRMATION_BLOCKS,
+  WITHDRAWAL_NEW_ADDRESS_COOLING_HOURS,
   DEFAULT_CHAIN,
   TRAINING_TYPES,
   PURCHASE_MAX_PER_REQUEST,
@@ -278,6 +279,28 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       const amount = Money.of(input.amount);
       if (amount.lt(MIN_WITHDRAWAL_AMOUNT)) {
         throw new ApiError('WITHDRAWAL_BELOW_MINIMUM', `Minimum withdrawal is ${MIN_WITHDRAWAL_AMOUNT} USDT`);
+      }
+      // A3: 出金先ホワイトリスト + 新規宛先クーリング。
+      // to_address は user_wallets(連携済み・personal_sign証明あり)に属し、かつ
+      // withdrawable_at を過ぎている宛先にのみ許可する。fail-closed=見つからなければ拒否。
+      // (isAddress は checksum混在を許すので lower() で正規化して突合。)
+      const allowed = await ctx.client.query<{ withdrawable_at: string | null }>(
+        `select withdrawable_at from user_wallets
+         where user_id = $1 and wallet_address = lower($2)`,
+        [ctx.userId, input.to_address],
+      );
+      const listed = allowed.rows[0];
+      if (!listed) {
+        throw new ApiError(
+          'WITHDRAWAL_ADDRESS_NOT_ALLOWED',
+          'Withdrawals are only allowed to a linked wallet. Add this address in account settings first.',
+        );
+      }
+      if (!listed.withdrawable_at || new Date(listed.withdrawable_at).getTime() > Date.now()) {
+        throw new ApiError(
+          'WITHDRAWAL_ADDRESS_COOLING',
+          `This address was added recently. For your safety, withdrawals to a new address become available ${WITHDRAWAL_NEW_ADDRESS_COOLING_HOURS} hours after it is linked.`,
+        );
       }
       // replay: same idempotency key returns the original request
       const existing = await ctx.client.query<{ id: string; status: string }>(
@@ -765,8 +788,17 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
     path: '/api/v1/account/wallets',
     auth: 'user',
     handler: async (ctx) => {
-      const rows = await ctx.client.query(
-        `select wallet_address, created_at::text as created_at
+      // A3: withdrawable_at と、いま出金可能か(withdrawable)を返す。
+      // 出金フォームは withdrawable な宛先のみ選択肢に出す。
+      const rows = await ctx.client.query<{
+        wallet_address: string;
+        created_at: string;
+        withdrawable_at: string | null;
+        withdrawable: boolean;
+      }>(
+        `select wallet_address, created_at::text as created_at,
+                withdrawable_at::text as withdrawable_at,
+                (withdrawable_at is not null and withdrawable_at <= now()) as withdrawable
          from user_wallets where user_id = $1 order by created_at`,
         [ctx.userId],
       );
@@ -794,9 +826,12 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         throw new ApiError('WALLET_SIGNATURE_INVALID', `Wallet proof rejected: ${verified.reason}`);
       }
       try {
+        // A3: 新規宛先はクーリング後に出金可(withdrawable_at)。乗っ取りで足されても
+        // 解禁までにアラートを見た本人が unlink できる被害窓を作る。
         await ctx.client.query(
-          `insert into user_wallets (user_id, wallet_address) values ($1, $2)`,
-          [ctx.userId, verified.address],
+          `insert into user_wallets (user_id, wallet_address, withdrawable_at)
+           values ($1, $2, now() + make_interval(hours => $3))`,
+          [ctx.userId, verified.address, WITHDRAWAL_NEW_ADDRESS_COOLING_HOURS],
         );
       } catch (error) {
         if (/uq_user_wallet_address|duplicate key/i.test((error as Error).message)) {
@@ -807,6 +842,18 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         }
         throw error;
       }
+      // A3: 出金先追加は必ず本人へアラート(乗っ取り検知の生命線)。
+      const maskedAddr = `${verified.address.slice(0, 6)}…${verified.address.slice(-4)}`;
+      const addedNotif = renderNotification('WITHDRAWAL_ADDRESS_ADDED', {
+        addr: maskedAddr,
+        hours: WITHDRAWAL_NEW_ADDRESS_COOLING_HOURS,
+      });
+      await insertNotification(ctx.client, {
+        userId: ctx.userId,
+        type: 'WITHDRAWAL_ADDRESS_ADDED',
+        dedupeKey: `notif:WITHDRAWAL_ADDRESS_ADDED:${ctx.userId}:${verified.address}`,
+        payload: { ...addedNotif, address: verified.address },
+      });
       return { linked: verified.address };
     },
   });

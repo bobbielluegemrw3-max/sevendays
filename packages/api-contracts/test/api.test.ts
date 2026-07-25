@@ -408,6 +408,34 @@ describe('user flow through the API', () => {
     });
     expect(badChecksum.status).toBe(400);
 
+    // A3: 白リスト外の有効アドレスへの出金は拒否(WITHDRAWAL_ADDRESS_NOT_ALLOWED)。
+    const notAllowed = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '30', to_address: '0x5555555555555555555555555555555555555555' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(notAllowed.status).toBe(403);
+    expect((notAllowed.body as { error: { code: string } }).error.code).toBe('WITHDRAWAL_ADDRESS_NOT_ALLOWED');
+
+    // A3: 白リストに在るがクーリング中(withdrawable_at 未来)の宛先は拒否。
+    await client.query(
+      `insert into user_wallets (user_id, wallet_address, withdrawable_at)
+       values ($1, $2, now() + interval '48 hours')`,
+      [user, '0x6666666666666666666666666666666666666666'],
+    );
+    const cooling = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '30', to_address: '0x6666666666666666666666666666666666666666' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(cooling.status).toBe(403);
+    expect((cooling.body as { error: { code: string } }).error.code).toBe('WITHDRAWAL_ADDRESS_COOLING');
+
+    // A3: 白リストに在りクーリング解禁済み(grandfather相当)なら出金可。
+    await client.query(
+      `insert into user_wallets (user_id, wallet_address, withdrawable_at)
+       values ($1, $2, now() - interval '1 minute')`,
+      [user, '0x4444444444444444444444444444444444444444'],
+    );
+
     const key = randomUUID();
     const ok = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
       body: { amount: '30', to_address: '0x4444444444444444444444444444444444444444' },
@@ -648,10 +676,18 @@ describe('large-withdrawal admin review (Decisions 060, 064)', () => {
     expect(dust.status).toBe(400);
     expect((dust.body as { error: { code: string } }).error.code).toBe('VALIDATION_FAILED');
 
+    // A3: 出金先を白リストに(解禁済み)。以降の出金ゲートを通す。
+    // ※ uq_user_wallet_address はグローバル一意なので他テストと別アドレスを使う。
+    await client.query(
+      `insert into user_wallets (user_id, wallet_address, withdrawable_at)
+       values ($1, $2, now() - interval '1 minute')`,
+      [user, '0x7777777777777777777777777777777777777777'],
+    );
+
     // A large request locks normally; the broadcaster routes it to review
     // (simulated here — routing itself is covered in @sevendays/blockchain).
     const big = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
-      body: { amount: '1500', to_address: '0x4444444444444444444444444444444444444444' },
+      body: { amount: '1500', to_address: '0x7777777777777777777777777777777777777777' },
       idempotencyKey: randomUUID(),
     });
     const wid = (big.body as { id: string }).id;
@@ -711,7 +747,7 @@ describe('large-withdrawal admin review (Decisions 060, 064)', () => {
 
     // Rejection refunds the full locked amount.
     const second = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
-      body: { amount: '1200', to_address: '0x4444444444444444444444444444444444444444' },
+      body: { amount: '1200', to_address: '0x7777777777777777777777777777777777777777' },
       idempotencyKey: randomUUID(),
     });
     const wid2 = (second.body as { id: string }).id;
@@ -1094,9 +1130,30 @@ describe('wallet linking (Decision 072)', () => {
     expect((linked.body as { linked: string }).linked).toBe(wallet.address.toLowerCase());
 
     const list = await call('GET', '/api/v1/account/wallets', asUser(user));
-    expect(
-      (list.body as { wallets: { wallet_address: string }[] }).wallets.map((w) => w.wallet_address),
-    ).toEqual([wallet.address.toLowerCase()]);
+    const listed = (list.body as {
+      wallets: { wallet_address: string; withdrawable: boolean; withdrawable_at: string | null }[];
+    }).wallets;
+    expect(listed.map((w) => w.wallet_address)).toEqual([wallet.address.toLowerCase()]);
+    // A3: 新規連携はクーリング中 — 直後は withdrawable=false・解禁時刻は未来。
+    expect(listed[0]!.withdrawable).toBe(false);
+    expect(new Date(listed[0]!.withdrawable_at!).getTime()).toBeGreaterThan(Date.now());
+
+    // A3: 出金先追加アラート(WITHDRAWAL_ADDRESS_ADDED)が本人へ入る=乗っ取り検知の生命線。
+    const alert = await client.query<{ count: string }>(
+      `select count(*)::text as count from notifications
+       where user_id = $1 and notification_type = 'WITHDRAWAL_ADDRESS_ADDED'`,
+      [user],
+    );
+    expect(alert.rows[0]!.count).toBe('1');
+
+    // A3: クーリング中の宛先へは出金不可(WITHDRAWAL_ADDRESS_COOLING)。
+    await depositConfirmation(client, { userId: user, amount: Money.of('50'), idempotencyKey: randomUUID() });
+    const coolingWd = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '30', to_address: wallet.address },
+      idempotencyKey: randomUUID(),
+    });
+    expect(coolingWd.status).toBe(403);
+    expect((coolingWd.body as { error: { code: string } }).error.code).toBe('WITHDRAWAL_ADDRESS_COOLING');
 
     // One wallet = one account: a second account cannot claim it.
     const thief = await newUser();

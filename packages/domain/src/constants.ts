@@ -482,6 +482,12 @@ export const MIN_WITHDRAWAL_AMOUNT = '10.00';
 export const WITHDRAWAL_ADMIN_REVIEW_THRESHOLD = '1000';
 /** Decision 064: withdrawal API accepts at most 6 decimal places (USDT on-chain scale). */
 export const WITHDRAWAL_MAX_DECIMALS = 6;
+/**
+ * A3 (WALLET_HARDENING §3): 新規に連携した出金先は、この時間だけ出金不可(クーリング)。
+ * 乗っ取りで攻撃者が自アドレスを足しても、この窓の間にアラートを見た本人が取消できる。
+ * 既存の連携済みウォレットは grandfather(即時出金可・マイグレで created_at を解禁時刻に)。
+ */
+export const WITHDRAWAL_NEW_ADDRESS_COOLING_HOURS = 48;
 
 // ---------------------------------------------------------------------------
 // Purchase sessions (Decisions 043, 051; Decision 096 lifts the cap)
