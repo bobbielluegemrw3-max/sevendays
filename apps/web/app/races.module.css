@@ -256,3 +256,106 @@
 .diarySummary::-webkit-details-marker { display: none; }
 .diaryFold[open] .diarySummary { border-bottom: 1px solid var(--border); }
 .diaryBody { padding: 14px 15px 16px; }
+
+/* ============================================================
+   公開台帳「公平性の証明」リデザイン(仕様書.md)追加分 — 正典 Ledger.html 準拠。
+   ============================================================ */
+.lgStack { display: flex; flex-direction: column; gap: 15px; --sumCols: repeat(auto-fit, minmax(148px, 1fr)); --proofCols: 1fr 1fr; }
+@media (max-width: 720px) { .lgStack { --proofCols: 1fr; } }
+
+/* ③ 名乗り */
+.lgHeader { border: 1px solid var(--border-strong); border-radius: var(--radius); padding: clamp(15px,2.6vw,20px); background: radial-gradient(560px 220px at 8% 0%, rgba(0,234,255,.09), transparent 66%), var(--panel); box-shadow: var(--shadow); }
+.lgKicker { font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: .32em; color: var(--cyan); text-transform: uppercase; }
+.lgTitle { margin: 10px 0 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(24px,4vw,32px); line-height: 1.1; letter-spacing: .03em; color: var(--text); }
+.lgIntro { margin: 12px 0 0; max-width: 62ch; font-family: var(--font-jp, var(--font-sans)); font-size: 13px; line-height: 1.8; color: var(--muted); line-break: strict; word-break: keep-all; text-wrap: pretty; }
+.lgChips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.lgChip { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-jp, var(--font-sans)); font-weight: 500; font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 7px 12px; background: rgba(255,255,255,.015); }
+.lgChipDot { width: 5px; height: 5px; border-radius: 50%; background: var(--good); }
+
+/* ① COMMIT·REVEAL */
+.crSection { border: 1px solid rgba(53,208,127,.28); border-radius: var(--radius); padding: clamp(15px,2.6vw,20px); background: linear-gradient(150deg, rgba(53,208,127,.07), transparent 70%), var(--panel); box-shadow: var(--shadow); }
+.crHead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.crName { font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: .18em; color: var(--good-soft); }
+.crVerifiable { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-display); font-weight: 700; font-size: 11px; color: var(--good); border: 1px solid rgba(53,208,127,.45); border-radius: 999px; padding: 5px 12px; background: rgba(53,208,127,.1); }
+.crBeat { width: 6px; height: 6px; border-radius: 50%; background: var(--good); animation: lgBeat 2s ease-in-out infinite; }
+@keyframes lgBeat { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+.crHeadline { font-family: var(--font-jp, var(--font-sans)); font-weight: 800; font-size: clamp(17px,2.6vw,21px); line-height: 1.5; color: var(--text); margin-top: 13px; max-width: 40ch; line-break: strict; word-break: keep-all; text-wrap: pretty; }
+.crBody { margin: 11px 0 0; max-width: 60ch; font-family: var(--font-jp, var(--font-sans)); font-size: 13px; line-height: 1.85; color: var(--muted); line-break: strict; word-break: keep-all; text-wrap: pretty; }
+.crBody b { color: var(--text); }
+.crGood { color: var(--good-soft) !important; }
+.crSteps { display: grid; grid-template-columns: var(--sumCols, repeat(auto-fit,minmax(148px,1fr))); gap: 10px; margin-top: 15px; }
+.crStep { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 14px; background: rgba(255,255,255,.015); }
+.crStepWhen { font-family: var(--font-mono); font-weight: 500; font-size: 9.5px; letter-spacing: .16em; color: var(--faint); text-transform: uppercase; }
+.crStepTitle { font-family: var(--font-display); font-weight: 700; font-size: 13.5px; line-height: 1.3; color: var(--text); margin-top: 7px; }
+.crStepBody { font-family: var(--font-jp, var(--font-sans)); font-size: 11.5px; line-height: 1.65; color: var(--muted); margin-top: 7px; }
+.crCtaRow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 15px; }
+.crCta { font-family: var(--font-display); font-weight: 700; font-size: 12px; letter-spacing: .05em; color: #04141a; background: linear-gradient(100deg, var(--good), #7bf0b0); border-radius: 10px; padding: 11px 18px; box-shadow: 0 8px 20px -8px rgba(53,208,127,.6); }
+.crCtaNote { font-family: var(--font-jp, var(--font-sans)); font-size: 11px; line-height: 1.6; color: var(--faint); }
+.crDetails { margin-top: 13px; border-top: 1px solid var(--border); padding-top: 12px; }
+.crSummary { cursor: pointer; list-style: none; font-family: var(--font-jp, var(--font-sans)); font-weight: 600; font-size: 11.5px; color: var(--good-soft); display: inline-flex; align-items: center; gap: 6px; }
+.crSummary::-webkit-details-marker { display: none; }
+.crHowList { display: flex; flex-direction: column; gap: 9px; margin-top: 12px; }
+.crHowRow { display: flex; gap: 11px; align-items: baseline; }
+.crHowN { flex: 0 0 auto; font-family: var(--font-mono); font-weight: 700; font-size: 10px; line-height: 1.6; color: var(--faint); }
+.crHowText { font-family: var(--font-jp, var(--font-sans)); font-size: 12.5px; line-height: 1.75; color: var(--muted); }
+.crHowFoot { margin-top: 11px; font-family: var(--font-jp, var(--font-sans)); font-size: 10.5px; line-height: 1.7; color: var(--faint); }
+
+/* ② 全体の記録(累計 + 公表値↔計算値) */
+.lgTotals { border: 1px solid var(--border); border-radius: var(--radius); padding: clamp(15px,2.6vw,20px); background: linear-gradient(180deg, var(--panel-2), var(--panel)); box-shadow: var(--shadow); }
+.lgTotalsHead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.lgTotalsTitle { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 16px; line-height: 1.15; letter-spacing: .14em; color: var(--text); }
+.lgTotalsSub { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.lgPeriod { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.lgSumGrid { display: grid; grid-template-columns: var(--sumCols, repeat(auto-fit,minmax(148px,1fr))); gap: 9px; margin-top: 14px; }
+.lgSumBox { border: 1px solid var(--border); border-radius: 11px; padding: 9px 12px; background: rgba(255,255,255,.015); }
+.lgSumSrv { border-color: rgba(53,208,127,.4); background: rgba(53,208,127,.07); }
+.lgSumBurn { border-color: rgba(255,92,92,.4); background: rgba(255,92,92,.07); }
+.lgSumDay7 { border-color: rgba(240,200,110,.4); background: rgba(240,200,110,.07); }
+.lgSumTrade { border-color: rgba(0,234,255,.4); background: rgba(0,234,255,.06); }
+.lgSumN { font-family: var(--font-display); font-weight: 800; font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text); }
+.lgSumSrv .lgSumN { color: var(--good); }
+.lgSumBurn .lgSumN { color: var(--bad); }
+.lgSumDay7 .lgSumN { color: var(--gold-bright); }
+.lgSumTrade .lgSumN { color: var(--cyan); }
+.lgSumK { font-family: var(--font-mono); font-weight: 500; font-size: 9.5px; line-height: 1.4; letter-spacing: .08em; color: var(--muted); margin-top: 6px; display: block; }
+.lgProof { margin-top: 16px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: clamp(15px,2.6vw,20px); background: radial-gradient(420px 180px at 6% 0%, rgba(0,234,255,.07), transparent 70%), rgba(255,255,255,.012); }
+.lgProofKicker { font-family: var(--font-mono); font-weight: 500; font-size: 9.5px; letter-spacing: .2em; color: var(--cyan); text-transform: uppercase; }
+.lgProofLead { font-family: var(--font-jp, var(--font-sans)); font-weight: 700; font-size: 14px; line-height: 1.5; color: var(--text); margin-top: 9px; }
+.lgDerivedGrid { display: grid; grid-template-columns: var(--proofCols, 1fr 1fr); gap: 11px; margin-top: 14px; }
+.lgDerivedCard { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 15px; background: rgba(255,255,255,.015); }
+.lgDerivedLabel { font-family: var(--font-mono); font-weight: 500; font-size: 10px; letter-spacing: .14em; color: var(--faint); text-transform: uppercase; }
+.lgDerivedRow { display: flex; align-items: flex-end; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+.lgClaimedK { font-family: var(--font-mono); font-size: 9.5px; line-height: 1; color: var(--faint); }
+.lgClaimedV { font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 5px; }
+.lgArrow { font-family: var(--font-mono); font-size: 14px; line-height: 1; color: var(--faint); padding-bottom: 3px; }
+.lgCalcK { font-family: var(--font-mono); font-size: 9.5px; line-height: 1; color: var(--cyan); }
+.lgCalcV { font-family: var(--font-display); font-weight: 800; font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--cyan); margin-top: 5px; text-shadow: 0 0 18px rgba(0,234,255,.35); }
+.lgFormula { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 11px; line-height: 1.7; color: var(--faint); }
+.lgDerivedNote { margin: 13px 0 0; font-family: var(--font-jp, var(--font-sans)); font-size: 11.5px; line-height: 1.75; color: var(--faint); line-break: strict; word-break: keep-all; text-wrap: pretty; }
+
+/* 日ごとの記録: 2カラム(カレンダー | ダイジェスト) */
+.lgDaySection { border: 1px solid var(--border); border-radius: var(--radius); padding: clamp(15px,2.6vw,20px); background: linear-gradient(180deg, var(--panel-2), var(--panel)); box-shadow: var(--shadow); }
+.lgDayHead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.lgDayTitle { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 16px; line-height: 1.15; letter-spacing: .14em; color: var(--text); }
+.lgDaySub { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.lgDayGrid { display: grid; grid-template-columns: var(--proofCols, 1fr 1fr); gap: 14px; align-items: start; }
+
+/* 検証結果サマリ(ダイジェスト内) */
+.lgVerify { margin-top: 14px; border: 1px solid rgba(53,208,127,.28); border-radius: var(--radius-sm); padding: 13px 14px; background: linear-gradient(150deg, rgba(53,208,127,.06), transparent 70%); }
+.lgVerifyHead { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.lgVerifyKicker { font-family: var(--font-display); font-weight: 700; font-size: 10.5px; letter-spacing: .16em; color: var(--good-soft); }
+.lgVerifyOk { margin-left: auto; font-family: var(--font-display); font-weight: 700; font-size: 10.5px; color: var(--good); border: 1px solid rgba(53,208,127,.45); border-radius: 999px; padding: 4px 10px; background: rgba(53,208,127,.1); }
+.lgVerifyRows { display: flex; flex-direction: column; gap: 9px; margin-top: 12px; }
+.lgVRow { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
+.lgVK { flex: none; font-family: var(--font-mono); font-size: 10px; line-height: 1.5; color: var(--faint); }
+.lgVV { font-family: var(--font-mono); font-size: 10.5px; line-height: 1.5; color: var(--muted); word-break: break-all; text-align: right; }
+.lgVerifyFoot { margin-top: 11px; font-family: var(--font-jp, var(--font-sans)); font-size: 10px; line-height: 1.6; color: var(--faint); }
+
+/* ④ その日の成約(折りたたみ) */
+.lgTradesFold { border: 1px solid var(--border); border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-2), var(--panel)); box-shadow: var(--shadow); }
+.lgTradesSummary { display: flex; align-items: center; gap: 11px; padding: clamp(15px,2.6vw,20px); cursor: pointer; list-style: none; }
+.lgTradesSummary::-webkit-details-marker { display: none; }
+.lgTradesTitle { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 15px; line-height: 1.15; letter-spacing: .14em; color: var(--text); }
+.lgTradesSub { font-family: var(--font-jp, var(--font-sans)); font-size: 11px; color: var(--faint); margin-left: auto; }
+.lgTradesBody { padding: 0 clamp(15px,2.6vw,20px) clamp(15px,2.6vw,20px); }
+.lgTradesFoot { margin-top: 9px; font-family: var(--font-jp, var(--font-sans)); font-size: 10.5px; line-height: 1.7; color: var(--faint); }
