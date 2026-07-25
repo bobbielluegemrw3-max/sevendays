@@ -260,7 +260,7 @@ describe('dispatchBridge', () => {
     // A3: 出金先を白リストに(解禁済み)。withdraw ゲートを通す。
     await client.query(
       `insert into user_wallets (user_id, wallet_address, withdrawable_at)
-       values ($1, $2, now() - interval '1 minute')`,
+       values ($1, $2, now() - interval '2 hours')`,
       [uid, '0x4444444444444444444444444444444444444444'],
     );
     const key = randomUUID();

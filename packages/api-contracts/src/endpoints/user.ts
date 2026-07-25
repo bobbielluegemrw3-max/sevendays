@@ -312,14 +312,16 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       );
       if (existing.rows[0]) return existing.rows[0];
 
-      // B: 連射防止(5分以内の連続を拒否)。replay を返した後=新規リクエストのみ課す。
-      // 回数・日次総額の上限は無し(オーナー確定)。REJECTED は本人の責でないので除外。
-      const lastWd = await ctx.client.query<{ last_at: string | null }>(
-        `select max(created_at)::text as last_at from blockchain_withdrawals
-         where user_id = $1 and status <> 'REJECTED'`,
+      // B: 連射防止(5分以内の連続を拒否)+ バースト検知(60分の件数)。replay を返した
+      // 後=新規リクエストのみ課す。回数・日次総額の上限は無し(オーナー確定)。
+      // REJECTED は本人の責でないので除外。
+      const recent = await ctx.client.query<{ last_at: string | null; cnt_60m: number }>(
+        `select max(created_at)::text as last_at,
+                count(*) filter (where created_at > now() - interval '60 minutes')::int as cnt_60m
+         from blockchain_withdrawals where user_id = $1 and status <> 'REJECTED'`,
         [ctx.userId],
       );
-      const lastAt = lastWd.rows[0]?.last_at;
+      const lastAt = recent.rows[0]?.last_at;
       if (lastAt && Date.now() - new Date(lastAt).getTime() < WITHDRAWAL_MIN_INTERVAL_MINUTES * 60_000) {
         throw new ApiError(
           'WITHDRAWAL_TOO_FREQUENT',
@@ -327,20 +329,39 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         );
       }
 
+      // B suspicious(拒否でなくフラグ=ADMIN_REVIEW へ回送し人間判断に委ねる):
+      //  ①バースト = 直近60分で3回目以上の出金(既に2件以上ある)。
+      //  ②クーリング明け直後 = 宛先の解禁(withdrawable_at)から1時間以内の初出金
+      //    (乗っ取り→アドレス追加→48h待ち→一気に抜く、を捕らえる)。
+      const burst = (recent.rows[0]?.cnt_60m ?? 0) >= 2;
+      const freshAddress =
+        Date.now() - new Date(listed.withdrawable_at).getTime() < 60 * 60_000;
+      const flagReason = burst ? 'BURST' : freshAddress ? 'FRESH_ADDRESS' : null;
+
       // Ledger fund lock BEFORE any broadcast (01_CONSTITUTION.md).
       const lock = await withdrawalFundLock(ctx.client, {
         userId: ctx.userId,
         amount,
         idempotencyKey: `wdlock:${ctx.idempotencyKey}`,
       });
+      // フラグ付きは LOCKED でなく ADMIN_REVIEW で挿入=自動出金せず二人承認画面へ。
       const row = await ctx.client.query<{ id: string; status: string }>(
         `insert into blockchain_withdrawals
            (user_id, chain_id, token_contract, to_address, requested_amount, network_fee_amount, net_amount,
             status, ledger_transaction_id)
-         values ($1, $2, 'USDT', $3, $4, 0, $4, 'LOCKED', $5)
+         values ($1, $2, 'USDT', $3, $4, 0, $4, $6::withdrawal_status, $5)
          returning id, status::text as status`,
-        [ctx.userId, DEFAULT_CHAIN, input.to_address, amount.toFixed8(), lock.transactionId],
+        [ctx.userId, DEFAULT_CHAIN, input.to_address, amount.toFixed8(), lock.transactionId,
+         flagReason ? 'ADMIN_REVIEW' : 'LOCKED'],
       );
+      if (flagReason) {
+        // 管理者ページ(ADMIN_REVIEW一覧)に出るのが通知。理由は監査ログに残す。
+        await ctx.client.query(
+          `insert into audit_logs (actor_type, actor_id, action, reference_type, reference_id)
+           values ('SYSTEM', $1, $2, 'blockchain_withdrawal', $3)`,
+          [ctx.userId, `WITHDRAWAL_FLAGGED_SUSPICIOUS:${flagReason}`, row.rows[0]!.id],
+        );
+      }
       return row.rows[0]!;
     },
   });

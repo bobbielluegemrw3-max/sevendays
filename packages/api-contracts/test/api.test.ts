@@ -432,7 +432,7 @@ describe('user flow through the API', () => {
     // A3: 白リストに在りクーリング解禁済み(grandfather相当)なら出金可。
     await client.query(
       `insert into user_wallets (user_id, wallet_address, withdrawable_at)
-       values ($1, $2, now() - interval '1 minute')`,
+       values ($1, $2, now() - interval '2 hours')`,
       [user, '0x4444444444444444444444444444444444444444'],
     );
 
@@ -474,6 +474,60 @@ describe('user flow through the API', () => {
     });
     expect(broke.status).toBe(402);
     expect((broke.body as { error: { code: string } }).error.code).toBe('INSUFFICIENT_BALANCE');
+  });
+
+  it('B: flags a fresh-cooled destination to ADMIN_REVIEW (not auto-broadcast)', async () => {
+    const user = await newUser();
+    await depositConfirmation(client, { userId: user, amount: Money.of('500'), idempotencyKey: randomUUID() });
+    // 解禁(withdrawable_at)から1時間以内の新規宛先 → suspicious フラグ。
+    await client.query(
+      `insert into user_wallets (user_id, wallet_address, withdrawable_at)
+       values ($1, $2, now() - interval '5 minutes')`,
+      [user, '0x9999999999999999999999999999999999999999'],
+    );
+    const fresh = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '20', to_address: '0x9999999999999999999999999999999999999999' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(fresh.status).toBe(200);
+    // 拒否ではなく ADMIN_REVIEW へ回送(人間判断)。
+    expect((fresh.body as { status: string }).status).toBe('ADMIN_REVIEW');
+    const flagged = await client.query<{ action: string }>(
+      `select action from audit_logs where reference_id = $1 and action like 'WITHDRAWAL_FLAGGED_SUSPICIOUS%'`,
+      [(fresh.body as { id: string }).id],
+    );
+    expect(flagged.rows[0]?.action).toBe('WITHDRAWAL_FLAGGED_SUSPICIOUS:FRESH_ADDRESS');
+  });
+
+  it('B: flags a burst (3rd withdrawal within 60 min) to ADMIN_REVIEW', async () => {
+    const user = await newUser();
+    await depositConfirmation(client, { userId: user, amount: Money.of('500'), idempotencyKey: randomUUID() });
+    // 非freshな宛先(解禁2時間前)= burst のみを検証。
+    await client.query(
+      `insert into user_wallets (user_id, wallet_address, withdrawable_at)
+       values ($1, $2, now() - interval '2 hours')`,
+      [user, '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'],
+    );
+    const wd = async (): Promise<{ status: number; body: unknown }> =>
+      call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+        body: { amount: '20', to_address: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
+        idempotencyKey: randomUUID(),
+      });
+    // #1,#2 は通常出金(LOCKED)。5分間隔を跨ぐため created_at を過去(ただし60分以内)へ。
+    const w1 = await wd();
+    expect((w1.body as { status: string }).status).toBe('LOCKED');
+    await client.query(`update blockchain_withdrawals set created_at = now() - interval '50 minutes' where id = $1`, [(w1.body as { id: string }).id]);
+    const w2 = await wd();
+    expect((w2.body as { status: string }).status).toBe('LOCKED');
+    await client.query(`update blockchain_withdrawals set created_at = now() - interval '40 minutes' where id = $1`, [(w2.body as { id: string }).id]);
+    // #3: 直近60分で3件目 → burst フラグ → ADMIN_REVIEW。
+    const w3 = await wd();
+    expect((w3.body as { status: string }).status).toBe('ADMIN_REVIEW');
+    const flagged = await client.query<{ action: string }>(
+      `select action from audit_logs where reference_id = $1 and action like 'WITHDRAWAL_FLAGGED_SUSPICIOUS%'`,
+      [(w3.body as { id: string }).id],
+    );
+    expect(flagged.rows[0]?.action).toBe('WITHDRAWAL_FLAGGED_SUSPICIOUS:BURST');
   });
 });
 
@@ -694,7 +748,7 @@ describe('large-withdrawal admin review (Decisions 060, 064)', () => {
     // ※ uq_user_wallet_address はグローバル一意なので他テストと別アドレスを使う。
     await client.query(
       `insert into user_wallets (user_id, wallet_address, withdrawable_at)
-       values ($1, $2, now() - interval '1 minute')`,
+       values ($1, $2, now() - interval '2 hours')`,
       [user, '0x7777777777777777777777777777777777777777'],
     );
 
