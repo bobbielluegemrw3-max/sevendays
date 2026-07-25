@@ -5,6 +5,7 @@ import { Money } from '@sevendays/shared';
 import type { SqlClient } from '@sevendays/shared';
 import { depositConfirmation, getPlatformAccountId, postTransaction } from '@sevendays/ledger';
 import { requestRecovery } from '@sevendays/settlement-engine';
+import { alertAdminsAfterBatch } from '../src/ops/admin-alerts.js';
 import {
   buildApiRegistry,
   generateOpenApi,
@@ -2368,5 +2369,37 @@ describe('stable names (Decision 097)', () => {
     expect(cleared.status).toBe(200);
     const me2 = await call('GET', '/api/v1/me', asUser(user));
     expect((me2.body as { stable_name: string | null }).stable_name).toBeNull();
+  });
+});
+
+describe('C-2: admin ops alert after batch (ADMIN_IMPROVEMENT_BRIEF)', () => {
+  it('alerts admins on a FAILED batch, is idempotent per cycle, and stores an in-app notification', async () => {
+    const admin = await newUser(); // users.email is set by newUser
+    await client.query(`insert into admin_role_grants (user_id, role) values ($1, 'SUPER_ADMIN')`, [admin]);
+
+    const r1 = await alertAdminsAfterBatch(client, { batchDate: '2026-07-24', slot: 'NIGHT', batchStatus: 'FAILED' });
+    expect(r1.alerted).toBeGreaterThanOrEqual(1);
+    expect(r1.reasons.join(' ')).toContain('FAILED');
+
+    const notif = await client.query<{ n: number }>(
+      `select count(*)::int as n from notifications where user_id = $1 and notification_type = 'ADMIN_OPS_ALERT'`,
+      [admin],
+    );
+    expect(notif.rows[0]!.n).toBe(1);
+
+    // 冪等: 同じサイクル(batch_date × slot)の再実行では新規通知もメールも発生しない。
+    const r2 = await alertAdminsAfterBatch(client, { batchDate: '2026-07-24', slot: 'NIGHT', batchStatus: 'FAILED' });
+    expect(r2.alerted).toBe(0);
+    const notif2 = await client.query<{ n: number }>(
+      `select count(*)::int as n from notifications where user_id = $1 and notification_type = 'ADMIN_OPS_ALERT'`,
+      [admin],
+    );
+    expect(notif2.rows[0]!.n).toBe(1);
+  });
+
+  it('does not raise a batch-failure reason for a COMPLETED batch', async () => {
+    const r = await alertAdminsAfterBatch(client, { batchDate: '2026-07-11', slot: 'NIGHT', batchStatus: 'COMPLETED' });
+    // COMPLETED は失敗理由を足さない(経済/滞留の理由は当該データ次第なので、失敗理由の不在のみ検証)。
+    expect(r.reasons.some((x) => x.includes('FAILED') || x.includes('PARTIAL'))).toBe(false);
   });
 });

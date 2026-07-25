@@ -16,6 +16,7 @@ import type { ApiRegistry } from '../router.js';
 import { buildWebPushTransport } from '../push/webpush.js';
 import { hasBroadcast, raceReminderMessage, raceStartMessage, sendNightlyBroadcast, broadcastKeyFor } from '../push/broadcast.js';
 import { runMarketPostBatch } from '../market/post-batch.js';
+import { alertAdminsAfterBatch } from '../ops/admin-alerts.js';
 
 /**
  * Internal APIs (07_API.md) — Cloud Run service authentication ONLY.
@@ -71,6 +72,13 @@ export function registerInternalEndpoints(registry: ApiRegistry): void {
         slot: input.slot ?? 'NIGHT',
         handlers: buildProductionHandlers(),
       });
+      // C-2: 失敗の能動通知(バッチ失敗/経済WATCH以上/出金滞留 → 管理者へ メール+in-app)。
+      // ベストエフォート: 通知の失敗は精算バッチの成否に一切関与させない。
+      try {
+        await alertAdminsAfterBatch(ctx.client, { batchDate, slot, batchStatus: result.status });
+      } catch {
+        // 通知はベストエフォート
+      }
       return result;
     },
   });
