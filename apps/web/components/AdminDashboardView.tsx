@@ -50,16 +50,34 @@ export interface AdminCockpitData {
   maintenance: { enabled: boolean; message: string } | null;
 }
 
+/**
+ * 経済状態の色分け。実状態は enums.ts の NORMAL/WATCH/WINTER/EMERGENCY(status.ts)。
+ * C-1: 旧実装は WATCH/WINTER/EMERGENCY が無色デフォルトに落ち、EMERGENCYでも灰色で
+ * 気づけなかった(本物のバグ)。4状態を明示マップし、未知状態も無色で沈黙させず可視化する。
+ */
 function ecoMeta(status: string): { bar: string; val: string; note: string } {
   const u = (status || '').toUpperCase();
-  if (['HEALTHY', 'OK', 'NORMAL'].includes(u)) return { bar: s.ok!, val: s.gd!, note: '経済指標は正常範囲' };
-  if (['WARNING', 'DEGRADED', 'CAUTION'].includes(u)) return { bar: s.warn!, val: '', note: '一部指標が閾値に接近' };
-  if (['CRITICAL', 'HALTED', 'ERROR'].includes(u)) return { bar: s.bad!, val: '', note: '要対応: 経済指標が異常' };
-  return { bar: '', val: '', note: '' };
+  if (['NORMAL', 'HEALTHY', 'OK'].includes(u)) return { bar: s.ok!, val: s.gd!, note: '経済指標は正常範囲' };
+  if (['WATCH', 'WARNING', 'CAUTION', 'DEGRADED'].includes(u)) return { bar: s.warn!, val: '', note: '注意: 準備金カバレッジが低下 — 監視強化' };
+  if (['WINTER'].includes(u)) return { bar: s.bad!, val: '', note: '警告: 冬モード(準備金保全)が発動中 — 要確認' };
+  if (['EMERGENCY', 'CRITICAL', 'HALTED', 'ERROR'].includes(u)) return { bar: s.bad!, val: '', note: '🔴 緊急: 準備金が危機水準 — 即対応が必要' };
+  // 未知の状態も"無色で沈黙"させない(将来の新状態が見えなくなるのを防ぐ)。
+  return { bar: s.warn!, val: '', note: `未知の経済状態: ${status}` };
 }
 
+/** metrics のcamelCase生キーを画面表示名へ(C-1)。未知キーはそのまま。 */
+const METRIC_LABELS: Record<string, string> = {
+  cashCoverageRatio: '現金カバレッジ比', buybackCashCoverageRatio: '買戻し現金カバレッジ比',
+  buybackLiabilityRatio: '買戻し負債比', forecastedCashCoverage: '予測現金カバレッジ',
+  p2pMatchRate: 'P2P成約率', rebuyRate: '再購入率', gmvChangeRate: 'GMV変化率',
+  liquidReserves: '流動準備金', buybackReserve: '買戻し準備金', totalReserves: '総準備金',
+  scheduledNext30d: '30日以内の支払予定', unpaidLiability: '未払い負債', avgDailyMintsLast7d: '直近7日平均発行',
+};
+const metricLabel = (k: string): string => METRIC_LABELS[k] ?? k;
+
 function fmtVal(v: unknown): string {
-  if (typeof v === 'number') return v.toLocaleString('en-US');
+  // C-1: ゼロ除算等の非有限値(Infinity/NaN)を生表示しない。
+  if (typeof v === 'number') return Number.isFinite(v) ? v.toLocaleString('en-US') : '—';
   if (typeof v === 'string') return v;
   if (typeof v === 'boolean') return v ? 'true' : 'false';
   return JSON.stringify(v);
@@ -268,10 +286,12 @@ export function AdminDashboardView({ data }: { data: AdminCockpitData }) {
       {entries.length > 0 ? (
         <>
           <div className={s.sec}>経済メトリクス{latest_batch ? `(${latest_batch.batch_date} 時点)` : ''}</div>
+          {/* C-1: slice(0,8) を撤去 — buybackReserve/unpaidLiability/scheduledNext30d 等の
+              ソルベンシー核が画面外に切れていた。全指標を表示名(METRIC_LABELS)で出す。 */}
           <div className={s.statRow}>
-            {entries.slice(0, 8).map(([k, v]) => (
+            {entries.map(([k, v]) => (
               <div key={k} className={s.stat}>
-                <div className={s.statK}>{k}</div>
+                <div className={s.statK}>{metricLabel(k)}</div>
                 <div className={s.statV} style={{ fontSize: 17 }}>
                   {fmtVal(v)}
                 </div>
