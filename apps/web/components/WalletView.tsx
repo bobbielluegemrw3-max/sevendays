@@ -1,7 +1,7 @@
 import { WalletHistory, type HistoryEntry } from '@/components/WalletHistory';
 import { WithdrawForm } from '@/components/WithdrawForm';
 import { OnrampGuide } from '@/components/OnrampGuide';
-import { TotalAssetsCard } from '@/components/TotalAssetsCard';
+import { WalletMoneyCard } from '@/components/WalletMoneyCard';
 import { Stat } from '@/components/ui/Stat';
 import type { JSX } from 'react';
 import type { AppDict } from '@/lib/i18n';
@@ -31,22 +31,21 @@ function boldPart(tpl: string, value: string, cls?: string): JSX.Element {
  * 2026-07-15: テスターは信頼できる少人数のため誤送金の懸念なし)。
  * ========================================================================== */
 
-export interface Wallet { available: string; locked: string }
+export interface WalletReceivable { total: string; count: number; next_days: number | null }
+export interface Wallet { available: string; locked: string; receivable?: WalletReceivable }
 export interface DepositInfo { address: string; chain_id: string; asset: string; confirmations_required: number }
 
 export function WalletView({
-  wallet, deposit, history, stableValue, uncollected = 0, withdrawableWallets = [], assetsCopy, t,
+  wallet, deposit, history, stableValue, withdrawableWallets = [], assetsCopy, t,
 }: {
   wallet: Wallet;
   deposit: DepositInfo | null;
   history: HistoryEntry[];
-  /** 現役馬の評価額合計(公開価格テーブル基準)。総資産カード用。 */
+  /** 現役馬の評価額合計(公開価格テーブル基準)。参考価値の別枠で表示(現金に合算しない)。 */
   stableValue: number;
-  /** 未回収(利確待ち)の上昇分 — A2(FUN_V2_PLAN §3)。 */
-  uncollected?: number;
   /** A3: 出金可能な連携ウォレット(白リスト・クーリング解禁済み)。出金フォームの選択肢。 */
   withdrawableWallets?: string[];
-  /** 総資産カードの文言(dashセクション共用)。 */
+  /** ウォレット現金ビューの文言(dashセクション共用)。 */
   assetsCopy: AppDict['dash'];
   /** /wallet 固有の文言(2026-07-22 i18n化)。 */
   t: AppDict['walletPage'];
@@ -57,12 +56,17 @@ export function WalletView({
     <div className={s.wrap}>
       <div className={s.h1}>{t.h1}</div>
 
-      {/* 総資産(残高+評価額+ロック) — 「増えたか減ったか」への一目回答 */}
-      <TotalAssetsCard
+      {/* ウォレット現金ビュー(C・R1再フレーム): 今あるお金+これから入るお金。
+          馬の時価は純資産に合算せず参考価値の別枠。増減演出/損益ラベルなし。 */}
+      <WalletMoneyCard
         available={wallet.available}
         locked={wallet.locked}
+        receivable={{
+          total: Number(wallet.receivable?.total ?? 0),
+          count: wallet.receivable?.count ?? 0,
+          nextDays: wallet.receivable?.next_days ?? null,
+        }}
         stableValue={stableValue}
-        uncollected={uncollected}
         t={assetsCopy}
       />
 

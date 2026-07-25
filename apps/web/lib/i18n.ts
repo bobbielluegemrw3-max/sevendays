@@ -88,6 +88,10 @@ export interface AppDict {
     total_stable: string;
     total_locked: string;
     total_note: string;
+    /** C (WALLET_HARDENING §4): ウォレット現金ビュー(WalletMoneyCard)。 */
+    wm_title: string; wm_now_head: string; wm_avail_k: string; wm_locked_k: string;
+    wm_incoming_head: string; wm_receivable_k: string; wm_receivable_sub_tpl: string;
+    wm_receivable_none: string; wm_stable_k: string; wm_stable_note: string;
     buff_none: string;
     buff_active_s: string;
     buff_none_s: string;
@@ -784,6 +788,12 @@ const ja: AppDict = {
     total_stable: '厩舎の評価額',
     total_locked: 'ロック中',
     total_note: '評価額は現在の公開価格テーブル基準。馬はレースごとにBURN(消滅)する可能性があります。',
+    wm_title: 'ウォレット', wm_now_head: '今あるお金', wm_avail_k: '使える残高', wm_locked_k: 'ロック中',
+    wm_incoming_head: 'これから入るお金', wm_receivable_k: '受取予定',
+    wm_receivable_sub_tpl: 'チャンピオン買い取り・残り{count}回・次はあと{days}日',
+    wm_receivable_none: '受取予定はありません。',
+    wm_stable_k: '厩舎の馬（参考価値）',
+    wm_stable_note: '参考価値です。売却すれば現金になります。この価値はレースのBURNで変動します。',
     buff_none: 'なし',
     buff_active_s: '次回割当に自動で加点',
     buff_none_s: 'Burnで獲得する次走ボーナス',
@@ -1556,6 +1566,12 @@ const en: AppDict = {
     total_stable: 'Stable value',
     total_locked: 'Locked',
     total_note: 'Valuation follows the public price table. A horse may be BURNed (destroyed) in any race.',
+    wm_title: 'Wallet', wm_now_head: 'Money you have now', wm_avail_k: 'Available', wm_locked_k: 'Locked',
+    wm_incoming_head: 'Money coming in', wm_receivable_k: 'Scheduled to receive',
+    wm_receivable_sub_tpl: 'Champion buyback · {count} payments left · next in {days} days',
+    wm_receivable_none: 'Nothing scheduled to receive.',
+    wm_stable_k: 'Your horses (reference value)',
+    wm_stable_note: 'A reference value. Selling turns it into cash. This value changes with race BURNs.',
     buff_none: 'None',
     buff_active_s: 'Auto-added to your next assignment',
     buff_none_s: 'A next-race bonus earned from a Burn',
@@ -2328,6 +2344,12 @@ const zh: AppDict = {
     total_stable: '马房估值',
     total_locked: '锁定中',
     total_note: '估值基于公开价格表。马在每场比赛中都可能被BURN(消灭)。',
+    wm_title: '钱包', wm_now_head: '现有资金', wm_avail_k: '可用余额', wm_locked_k: '锁定中',
+    wm_incoming_head: '即将到账', wm_receivable_k: '待收款',
+    wm_receivable_sub_tpl: '冠军回购·剩余{count}次·下次还有{days}天',
+    wm_receivable_none: '暂无待收款。',
+    wm_stable_k: '马厩的马（参考价值）',
+    wm_stable_note: '这是参考价值。出售即可变现。此价值会随比赛BURN而变动。',
     buff_none: '无',
     buff_active_s: '下次分配自动加分',
     buff_none_s: 'Burn 时获得的下一场加成',
@@ -3100,6 +3122,12 @@ const ko: AppDict = {
     total_stable: '마구간 평가액',
     total_locked: '잠금 중',
     total_note: '평가액은 공개 가격표 기준. 말은 레이스마다 BURN(소멸)될 수 있습니다.',
+    wm_title: '지갑', wm_now_head: '지금 있는 돈', wm_avail_k: '사용 가능 잔액', wm_locked_k: '잠금 중',
+    wm_incoming_head: '앞으로 들어올 돈', wm_receivable_k: '받을 예정',
+    wm_receivable_sub_tpl: '챔피언 바이백 · 남은 {count}회 · 다음까지 {days}일',
+    wm_receivable_none: '받을 예정이 없습니다.',
+    wm_stable_k: '마구간의 말(참고 가치)',
+    wm_stable_note: '참고 가치입니다. 판매하면 현금이 됩니다. 이 가치는 레이스 BURN으로 변동합니다.',
     buff_none: '없음',
     buff_active_s: '다음 배정에 자동 가산',
     buff_none_s: 'Burn으로 얻는 다음 레이스 보너스',
@@ -3872,6 +3900,12 @@ const ms: AppDict = {
     total_stable: 'Nilai kandang',
     total_locked: 'Dikunci',
     total_note: 'Penilaian mengikut jadual harga awam. Kuda mungkin di-BURN (musnah) dalam mana-mana perlumbaan.',
+    wm_title: 'Dompet', wm_now_head: 'Wang yang ada sekarang', wm_avail_k: 'Baki tersedia', wm_locked_k: 'Terkunci',
+    wm_incoming_head: 'Wang yang akan masuk', wm_receivable_k: 'Akan diterima',
+    wm_receivable_sub_tpl: 'Belian balik juara · {count} bayaran lagi · seterusnya dalam {days} hari',
+    wm_receivable_none: 'Tiada yang dijadualkan untuk diterima.',
+    wm_stable_k: 'Kuda anda (nilai rujukan)',
+    wm_stable_note: 'Nilai rujukan. Menjualnya menjadikan ia tunai. Nilai ini berubah dengan BURN perlumbaan.',
     buff_none: 'Tiada',
     buff_active_s: 'Ditambah automatik pada penetapan seterusnya',
     buff_none_s: 'Bonus perlumbaan seterusnya daripada Burn',

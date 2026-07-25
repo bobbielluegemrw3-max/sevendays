@@ -212,10 +212,23 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         rows = (await readBalances()).rows;
       }
       const byType = new Map(rows.map((r) => [r.account_type, r.balance]));
+      // C (WALLET_HARDENING §4): 受取予定 = 既に勝った馬のチャンピオン買い取り残
+      // (buyback_schedule_payments の SCHEDULED 分)。投影値でなく確定スケジュールのみ。
+      const recv = await ctx.client.query<{ total: string; count: number; next_days: number | null }>(
+        `select coalesce(sum(p.amount), 0)::text as total,
+                count(*)::int as count,
+                (min(p.due_date) - current_date)::int as next_days
+         from buyback_schedule_payments p
+         join buyback_schedules s on s.id = p.buyback_schedule_id
+         where s.user_id = $1 and p.status = 'SCHEDULED'`,
+        [ctx.userId],
+      );
+      const r = recv.rows[0]!;
       return {
         available: byType.get('USER_AVAILABLE') ?? '0',
         locked: byType.get('USER_LOCKED') ?? '0',
         currency: 'USDT',
+        receivable: { total: r.total, count: r.count, next_days: r.next_days },
       };
     },
   });

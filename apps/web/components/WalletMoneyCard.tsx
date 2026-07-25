@@ -14,19 +14,20 @@ function money(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/** キー名は i18n の dash 辞書(wm_*)と一致=dash をそのまま渡せる(マッピング不要)。 */
 export interface WalletMoneyCopy {
   /** カード見出し(投資語を使わない・例「ウォレット」)。 */
-  title: string;
-  now_head: string; // 今あるお金
-  avail_k: string; // 使える残高
-  locked_k: string; // ロック中
-  incoming_head: string; // これから入るお金
-  receivable_k: string; // 受取予定
+  wm_title: string;
+  wm_now_head: string; // 今あるお金
+  wm_avail_k: string; // 使える残高
+  wm_locked_k: string; // ロック中
+  wm_incoming_head: string; // これから入るお金
+  wm_receivable_k: string; // 受取予定
   /** 受取予定サブライン。{count}=残り回数 {days}=次回まで日数。 */
-  receivable_sub_tpl: string; // 例「チャンピオン買い取り・残り{count}回・次はあと{days}日」
-  receivable_none: string; // 受取予定なし
-  stable_k: string; // 厩舎の馬(参考価値)
-  stable_note: string; // 「参考価値です。売却して現金化できます。価値はBURNで変動します。」
+  wm_receivable_sub_tpl: string;
+  wm_receivable_none: string; // 受取予定なし
+  wm_stable_k: string; // 厩舎の馬(参考価値)
+  wm_stable_note: string; // 参考価値の注記
 }
 
 export interface WalletReceivable {
@@ -60,21 +61,21 @@ export function WalletMoneyCard({
 
   return (
     <div className={s.card}>
-      <div className={s.label}>{t.title}</div>
+      <div className={s.label}>{t.wm_title}</div>
 
       {/* ① 今あるお金 */}
       <div className={s.group}>
-        <div className={s.groupHead}>{t.now_head}</div>
+        <div className={s.groupHead}>{t.wm_now_head}</div>
         <div className={s.rows}>
           <div className={`${s.row} ${s.hero}`}>
-            <span className={s.rowK}>{t.avail_k}</span>
+            <span className={s.rowK}>{t.wm_avail_k}</span>
             <span className={`${s.rowV} ${s.vAvail}`}>
               {money(bal)}
               <span className={s.rowU}>USDT</span>
             </span>
           </div>
           <div className={s.row}>
-            <span className={s.rowK}>{t.locked_k}</span>
+            <span className={s.rowK}>{t.wm_locked_k}</span>
             <span className={`${s.rowV} ${s.vLocked}`}>
               {money(lock)}
               <span className={s.rowU}>USDT</span>
@@ -85,10 +86,10 @@ export function WalletMoneyCard({
 
       {/* ② これから入るお金(受取予定) */}
       <div className={s.group}>
-        <div className={s.groupHead}>{t.incoming_head}</div>
+        <div className={s.groupHead}>{t.wm_incoming_head}</div>
         <div className={s.rows}>
           <div className={s.row}>
-            <span className={s.rowK}>{t.receivable_k}</span>
+            <span className={s.rowK}>{t.wm_receivable_k}</span>
             <span className={`${s.rowV} ${s.vReceivable}`}>
               {money(receivable.total)}
               <span className={s.rowU}>USDT</span>
@@ -97,12 +98,12 @@ export function WalletMoneyCard({
         </div>
         {hasReceivable ? (
           <div className={s.sub}>
-            {t.receivable_sub_tpl
+            {t.wm_receivable_sub_tpl
               .replace('{count}', String(receivable.count))
               .replace('{days}', receivable.nextDays === null ? '—' : String(receivable.nextDays))}
           </div>
         ) : (
-          <div className={`${s.sub} ${s.subNone}`}>{t.receivable_none}</div>
+          <div className={`${s.sub} ${s.subNone}`}>{t.wm_receivable_none}</div>
         )}
       </div>
 
@@ -111,13 +112,13 @@ export function WalletMoneyCard({
         <>
           <div className={s.divider} />
           <div className={s.stable}>
-            <span className={s.stableK}>{t.stable_k}</span>
+            <span className={s.stableK}>{t.wm_stable_k}</span>
             <span className={s.stableV}>
               {money(stableValue)}
               <span className={s.rowU}>USDT</span>
             </span>
           </div>
-          <div className={s.stableNote}>{t.stable_note}</div>
+          <div className={s.stableNote}>{t.wm_stable_note}</div>
         </>
       ) : null}
     </div>

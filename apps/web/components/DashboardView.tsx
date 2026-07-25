@@ -5,9 +5,8 @@ import { NftHorseArt } from '@/components/NftHorseArt';
 import { PwaSetupTile } from '@/components/PwaSetupTile';
 import { PromoRedeemForm } from '@/components/PromoRedeemForm';
 import { TradeAutoTile, TradeModeModal, type TradeSettings } from '@/components/TradeAutoControls';
-import { TotalAssetsCard } from '@/components/TotalAssetsCard';
+import { WalletMoneyCard } from '@/components/WalletMoneyCard';
 import { deriveNftLook } from '@/lib/nft-visual';
-import { uncollectedGain } from '@/components/stable-shared';
 import { APP_COPY, type Lang, type AppDict } from '@/lib/i18n';
 import { formatMonthDay } from '@/lib/i18n-shared';
 import s from '../app/dashboard.module.css';
@@ -43,7 +42,11 @@ export interface DashHorse {
   /** 総合値(A1/V2)。GET /horses がそのまま供給する。 */
   total_value?: number | null;
 }
-export interface DashWallet { available: string; locked: string }
+export interface DashWallet {
+  available: string;
+  locked: string;
+  receivable?: { total: string; count: number; next_days: number | null };
+}
 export interface DashBuff { buff_rarity: string; buff_bonus_score: string; status: string }
 export interface DashRace { id: string; status: string; participant_count: number | null; batch_date: string; slot?: string | null }
 export interface DashResult {
@@ -317,7 +320,17 @@ export function DashboardView({ data, lang = 'ja' }: { data: DashboardData; lang
       <section className={s.assets}>
         {wallet ? (
           <div className={s.totalRow}>
-            <TotalAssetsCard available={wallet.available} locked={wallet.locked} stableValue={stableValue} uncollected={horses.reduce((sum, h) => sum + uncollectedGain(h), 0)} t={t} />
+            <WalletMoneyCard
+              available={wallet.available}
+              locked={wallet.locked}
+              receivable={{
+                total: Number(wallet.receivable?.total ?? 0),
+                count: wallet.receivable?.count ?? 0,
+                nextDays: wallet.receivable?.next_days ?? null,
+              }}
+              stableValue={stableValue}
+              t={t}
+            />
           </div>
         ) : null}
         <Link href="/wallet" className={`${s.kpi} ${s.kpiBal}`}>

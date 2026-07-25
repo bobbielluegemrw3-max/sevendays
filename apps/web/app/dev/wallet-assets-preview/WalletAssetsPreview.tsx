@@ -9,16 +9,16 @@ import { WalletMoneyCard, type WalletMoneyCopy } from '@/components/WalletMoneyC
  */
 
 const COPY: WalletMoneyCopy = {
-  title: 'ウォレット',
-  now_head: '今あるお金',
-  avail_k: '使える残高',
-  locked_k: 'ロック中',
-  incoming_head: 'これから入るお金',
-  receivable_k: '受取予定',
-  receivable_sub_tpl: 'チャンピオン買い取り・残り{count}回・次はあと{days}日',
-  receivable_none: '受取予定はありません。',
-  stable_k: '厩舎の馬（参考価値）',
-  stable_note: '参考価値です。売却すれば現金になります。この価値はレースのBURNで変動します。',
+  wm_title: 'ウォレット',
+  wm_now_head: '今あるお金',
+  wm_avail_k: '使える残高',
+  wm_locked_k: 'ロック中',
+  wm_incoming_head: 'これから入るお金',
+  wm_receivable_k: '受取予定',
+  wm_receivable_sub_tpl: 'チャンピオン買い取り・残り{count}回・次はあと{days}日',
+  wm_receivable_none: '受取予定はありません。',
+  wm_stable_k: '厩舎の馬（参考価値）',
+  wm_stable_note: '参考価値です。売却すれば現金になります。この価値はレースのBURNで変動します。',
 };
 
 const wrap: React.CSSProperties = {

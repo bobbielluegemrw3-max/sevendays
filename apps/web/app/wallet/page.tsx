@@ -1,7 +1,7 @@
 import { serverApi, serverApiOrLogin } from '@/lib/server-api';
 import { WalletView, type Wallet, type DepositInfo } from '@/components/WalletView';
 import type { HistoryEntry } from '@/components/WalletHistory';
-import { horseValue, uncollectedGain } from '@/components/stable-shared';
+import { horseValue } from '@/components/stable-shared';
 import { APP_COPY } from '@/lib/i18n';
 import { getLang } from '@/lib/i18n-server';
 
@@ -27,15 +27,12 @@ export default async function WalletPage() {
   const stableValue = walletHorses
     .filter((h) => h.status === 'ACTIVE')
     .reduce((sum, h) => sum + Number(horseValue(h.current_day)), 0);
-  // 未回収(利確待ち)— A2の収穫の儀式(FUN_V2_PLAN §3)
-  const uncollected = walletHorses.reduce((sum, h) => sum + uncollectedGain(h), 0);
   return (
     <WalletView
       wallet={wallet}
       deposit={deposit.status === 200 ? deposit.body : null}
       history={history.status === 200 ? history.body.entries : []}
       stableValue={stableValue}
-      uncollected={uncollected}
       withdrawableWallets={withdrawableWallets}
       assetsCopy={APP_COPY[lang].dash}
       t={APP_COPY[lang].walletPage}
