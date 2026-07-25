@@ -1,0 +1,97 @@
+/* ============================================================================
+ * WalletMoneyCard — 総資産カードの後継(WALLET_HARDENING §4 C・R1再フレーム)。
+ * 「総資産/TOTAL/損益」の投資フレーミングを廃止。現金中心の中立ビュー:
+ *   今あるお金(使える残高+ロック中) + これから入るお金(受取予定=チャンピオン買取残)。
+ * 馬の時価は純資産に合算せず「参考価値」として別枠(売却で現金化)。増減演出なし。
+ * 部品言語は 1c(total-assets と同トーン)。
+ * ========================================================================== */
+
+.card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius, 16px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  padding: 16px 18px;
+}
+
+.label {
+  font-family: var(--font-display, Orbitron), sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: var(--gold, #c9a86a);
+  text-transform: uppercase;
+}
+
+/* お金のグループ(今あるお金 / これから入るお金) */
+.group { margin-top: 14px; }
+.groupHead {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted, #9aa);
+  margin-bottom: 6px;
+}
+
+.rows { display: flex; flex-direction: column; gap: 8px; }
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rowK {
+  font-size: 13px;
+  color: #d8dde6;
+}
+.rowV {
+  font-family: var(--font-mono), monospace;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rowU { font-size: 10px; color: var(--muted, #9aa); margin-left: 5px; letter-spacing: 0.06em; }
+
+/* 主役: 使える残高は大きく */
+.hero .rowV { font-size: 22px; }
+.vAvail { color: #a9f6ff; }
+.vLocked { color: var(--magenta-soft, #ff9ad0); }
+.vReceivable { color: var(--gold-bright, #f2e4bf); }
+
+/* 受取予定のサブライン(残り回数/次回まで) */
+.sub {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  color: var(--faint, #667);
+  margin-top: 4px;
+  line-height: 1.6;
+}
+.subNone { color: var(--faint, #667); }
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 16px 0;
+}
+
+/* 厩舎の馬 = 参考価値(現金に合算しない別枠) */
+.stable {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.stableK { font-size: 12px; color: var(--muted, #9aa); }
+.stableV {
+  font-family: var(--font-mono), monospace;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: #c9d0da;
+  white-space: nowrap;
+}
+.stableNote {
+  font-family: var(--font-mono), monospace;
+  font-size: 9px;
+  color: var(--faint, #667);
+  margin-top: 6px;
+  line-height: 1.6;
+}
