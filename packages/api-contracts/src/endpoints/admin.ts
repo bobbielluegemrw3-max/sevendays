@@ -448,12 +448,25 @@ export function registerAdminEndpoints(registry: ApiRegistry): void {
          where created_at > now() - interval '7 days'
          group by 1 order by 2 desc limit 20`,
       );
+      // H-2(ADMIN_IMPROVEMENT_BRIEF): "経済・準備金"ページにソルベンシー信号を結線。
+      // 生残高だけでなく 経済状態(NORMAL/WATCH/…) と カバレッジ比(実エンジン指標)を出す。
+      const batch = await ctx.client.query<{ id: string; batch_date: string }>(
+        `select id, batch_date::text as batch_date from batch_runs order by batch_date desc limit 1`,
+      );
+      const b = batch.rows[0] ?? null;
+      const economy_status = b ? await currentEconomyStatus(ctx.client, b.batch_date) : 'NORMAL';
+      const solvency = b
+        ? await computeEconomyMetrics(ctx.client, { asOfDate: b.batch_date, batchRunId: b.id })
+        : null;
       return {
         platform_accounts: platform.rows,
         user_totals: userTotals.rows,
         users: users.rows[0],
         horses: horses.rows[0],
         recent_transactions: recentTx.rows,
+        economy_status,
+        batch_date: b?.batch_date ?? null,
+        solvency,
       };
     },
   });

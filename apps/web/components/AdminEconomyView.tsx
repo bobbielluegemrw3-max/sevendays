@@ -10,6 +10,37 @@ export interface AdminEconomy {
   users: { total: number; active: number };
   horses: { total: number; active: number };
   recent_transactions: { transaction_type: string; count: number; last_at: string }[];
+  /** H-2: ソルベンシー信号(実エンジン指標)。取得失敗/バッチ未実行では null/NORMAL。 */
+  economy_status?: string;
+  batch_date?: string | null;
+  solvency?: {
+    cashCoverageRatio: number;
+    buybackCashCoverageRatio: number;
+    buybackLiabilityRatio: number;
+    forecastedCashCoverage: number;
+  } | null;
+}
+
+/** H-2: 経済状態の色(C-1 の AdminDashboardView.ecoMeta と同じ4状態マップ)。 */
+function statMeta(status: string): { bar: string; note: string } {
+  const u = (status || '').toUpperCase();
+  if (['NORMAL', 'HEALTHY', 'OK'].includes(u)) return { bar: s.ok ?? '', note: '経済指標は正常範囲' };
+  if (['WATCH', 'WARNING', 'CAUTION'].includes(u)) return { bar: s.warn ?? '', note: '注意: 準備金カバレッジが低下' };
+  if (['WINTER'].includes(u)) return { bar: s.bad ?? '', note: '警告: 冬モード(準備金保全)発動中' };
+  if (['EMERGENCY', 'CRITICAL', 'HALTED'].includes(u)) return { bar: s.bad ?? '', note: '🔴 緊急: 準備金が危機水準' };
+  return { bar: s.warn ?? '', note: `未知の経済状態: ${status}` };
+}
+
+/** カバレッジ比の表示(ゼロ除算は"十分"・大きい値は上限表記)。 */
+function ratioFmt(r: number): string {
+  if (!Number.isFinite(r)) return '十分';
+  if (r >= 10) return '10×+';
+  return `${r.toFixed(2)}×`;
+}
+/** カバレッジ比の色: 1.0以上=充足(緑)/0.8以上=注意/未満=不足(赤)。 */
+function coverageTone(r: number): string {
+  if (!Number.isFinite(r) || r >= 1.0) return s.gd ?? '';
+  return '';
 }
 
 const ACCOUNT_JA: Record<string, string> = {
@@ -40,6 +71,47 @@ export function AdminEconomyView({ data }: { data: AdminEconomy }) {
         <div>
           <h1 className={s.phTitle}>経済・準備金</h1>
         </div>
+      </div>
+
+      {/* H-2: ソルベンシー信号 — 生残高だけでなく状態とカバレッジ比(閉じた経済の不変量)。 */}
+      <div className={s.sec}>ソルベンシー信号{data.batch_date ? `(${data.batch_date} 時点)` : ''}</div>
+      <div className={s.statRow}>
+        <div className={`${s.stat} ${s.statBig} ${statMeta(data.economy_status ?? 'NORMAL').bar}`}>
+          <div className={s.statK}>経済状態</div>
+          <div className={s.statV} style={{ fontSize: 19 }}>{data.economy_status ?? 'NORMAL'}</div>
+          <div className={s.statSub}>{statMeta(data.economy_status ?? 'NORMAL').note}</div>
+        </div>
+        {data.solvency ? (
+          <>
+            <div className={s.stat}>
+              <div className={s.statK}>買戻し現金カバレッジ</div>
+              <div className={`${s.statV} ${coverageTone(data.solvency.buybackCashCoverageRatio)}`}>{ratioFmt(data.solvency.buybackCashCoverageRatio)}</div>
+              <div className={s.statSub}>チャンピオン報酬の現金手当</div>
+            </div>
+            <div className={s.stat}>
+              <div className={s.statK}>現金カバレッジ</div>
+              <div className={`${s.statV} ${coverageTone(data.solvency.cashCoverageRatio)}`}>{ratioFmt(data.solvency.cashCoverageRatio)}</div>
+            </div>
+            <div className={s.stat}>
+              <div className={s.statK}>予測現金カバレッジ</div>
+              <div className={`${s.statV} ${coverageTone(data.solvency.forecastedCashCoverage)}`}>{ratioFmt(data.solvency.forecastedCashCoverage)}</div>
+              <div className={s.statSub}>30日先の見通し</div>
+            </div>
+            <div className={s.stat}>
+              <div className={s.statK}>買戻し負債比</div>
+              <div className={s.statV}>{ratioFmt(data.solvency.buybackLiabilityRatio)}</div>
+            </div>
+          </>
+        ) : (
+          <div className={s.stat}>
+            <div className={s.statK}>カバレッジ比</div>
+            <div className={s.statV}>—</div>
+            <div className={s.statSub}>バッチ未実行(初回20:00後に算出)</div>
+          </div>
+        )}
+      </div>
+      <div className={s.note} style={{ marginTop: 6 }}>
+        BURN率・チャンピオン到達率(公開データからの計算)は <a href="/ledger">公開台帳 /ledger</a> で検証できます。
       </div>
 
       <div className={s.sec}>ユーザー資産(サマリー)</div>
