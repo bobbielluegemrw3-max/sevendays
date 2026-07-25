@@ -3,19 +3,16 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { refreshSoft } from '@/lib/deferred-refresh';
-import { Button } from '@/components/ui/Button';
 import { apiFetch, errorMessage } from '@/lib/client-api';
-import { AppSelect } from '@/components/AppSelect';
 import {
-  BAND_LABEL,
-  BAND_ORDER,
-  itemClassLabel,
   type ItemCopy,
-  TXN_META,
   effectSummary,
+  effectShort,
+  itemName,
   type CatalogItem,
   type DailyConditions,
   type InventoryData,
+  type ItemEffectV3,
   type ItemTransaction,
 } from '@/lib/items';
 import {
@@ -33,18 +30,36 @@ import { useLang } from '@/components/LangProvider';
 import { horseDisplayName } from '@/lib/horse-name';
 
 /**
- * /items — アイテムショップ+インベントリ+ギフト+履歴(Decision 078/079) リデザイン。
- * 効果は全て公開ルール。日替わり係数「設定(1〜6)」はレースシードから決まり、
- * レース後に公開される(誰にも事前に分からない)。
+ * /items — 道具部屋 2本柱リデザイン(ITEM_PAGE_IDENTITY_REVISION_SPEC.md)。
+ * デザイナー正典 Items.html を本番データへ結線。承認済みプレビュー(ItemsPreview)の見た目。
+ *   🔵 強くする(調教アイテム・item_class=TRAINING) — total_value に合流・購入=.primary(シアン)
+ *   🔴 今夜に賭ける(レースアイテム・item_class=RACE) — affinity 前面・的中↑/外れ↓・購入=ゴールド
+ *      ＋予報の手がかり(直近条件+「次は?」+出現確率コンパクト・フルカレンダーは折りたたみ §5-1)
+ *   マイアイテム＋BURN記念品(非売・購入外 ⑤)＋ギフト(折りたたみ従属 §5-3)＋履歴(折りたたみ)
  *
- * リデザイン: ①「今日の設定 1〜6」を確率+係数の可視バンドで説明 → ②マイアイテム
- * (絵つき) → ③ギフト(★個数を選べる=まとめ贈り) → ④帯フィルタつきカタログ
- * (★モバイルは2列・大きな画像) → ⑤アイテム履歴(★もらった/送った/使った/購入)。
- *
- * 変更点(API): ギフトは quantity を送る。履歴は transactions プロップ(任意)で受け、
- * GET /api/v1/items/transactions を page.tsx で結線する想定。それ以外の props/型/
- * buy の API・NftHorseArt・globals.css は不変。
+ * §9色: シアン=🔵 / ゴールド=🔴 / 赤=BURN専用。機構(buy/gift/inventory/conditions API・効果
+ * ルール)は不変=純情報設計。R1(実確率・「次は?」で断定しない)。globals.css のトークンを使う。
  */
+
+const fmtHM = (n: number): string => (n >= 0 ? '+' : '−') + Math.abs(n).toFixed(1);
+function raceHitMiss(effect?: ItemEffectV3): { hit: string; miss: string } {
+  if (!effect) return { hit: '', miss: '' };
+  if (effect.kind === 'GROUP_PREP' || effect.kind === 'PINPOINT_PREP' || effect.kind === 'DUAL_PREP') {
+    return { hit: fmtHM(effect.hit), miss: fmtHM(effect.miss) };
+  }
+  if (effect.kind === 'DUAL_FLOOR') return { hit: 'floor 0', miss: '—' };
+  return { hit: '', miss: '' };
+}
+const AFF_COLOR: Record<string, string> = {
+  雨系: '#7fb8ff', 晴れ系: '#f2e4bf', 道悪系: '#c9a86a', 良系: '#9dc7a8', 両軸: '#c9b3ff',
+  嵐: '#c9b3ff', 晴れ: '#f2e4bf', 不良: '#c9a86a', 高速: '#a9b6c8', 保険: '#8f8ac2',
+};
+const affColor = (a: string): string => AFF_COLOR[a] ?? '#8f8ac2';
+const WX_CHAR: Record<string, string> = { SUNNY: '晴', CLOUDY: '曇', RAIN: '雨', STORM: '嵐' };
+const WX_COLOR: Record<string, string> = { SUNNY: '#f2e4bf', CLOUDY: '#8f8ac2', RAIN: '#7fb8ff', STORM: '#c9b3ff' };
+
+const bar = (grad: string): React.CSSProperties => ({ width: 6, height: 38, borderRadius: 3, background: grad });
+
 export function ItemsView({
   catalog,
   inventory,
@@ -56,13 +71,9 @@ export function ItemsView({
 }: {
   catalog: CatalogItem[];
   inventory: InventoryData;
-  /** アイテム語彙の辞書(効果・分類の表示に使う)。 */
   itemsCopy: ItemCopy;
-  /** アイテム履歴(新規・任意)。未結線なら履歴セクションは非表示。 */
   transactions?: ItemTransaction[];
-  /** 公開済みの日々のレース条件(Decision 082)。空なら結果/カレンダーは非表示。 */
   conditionHistory?: DailyConditions[];
-  /** 基準日 ISO(YYYY-MM-DD)。省略時は履歴の最新日を今日とみなす。 */
   today?: string;
   preview?: boolean;
 }) {
@@ -74,60 +85,29 @@ export function ItemsView({
   const [giftEmail, setGiftEmail] = useState('');
   const [giftKey, setGiftKey] = useState('');
   const [giftQty, setGiftQty] = useState(1);
-  const [band, setBand] = useState<'ALL' | CatalogItem['band']>('ALL');
+  const [band, setBand] = useState<'ALL' | 'BASIC' | 'STANDARD' | 'PREMIUM'>('ALL');
 
-  const ownedByKey = useMemo(
-    () => new Map(inventory.available.map((e) => [e.item_key, e.n])),
-    [inventory],
-  );
   const byKey = useMemo(() => new Map(catalog.map((c) => [c.key, c])), [catalog]);
-  const giftable = inventory.available.filter((e) => byKey.get(e.item_key)?.giftable !== false);
+  const ownedByKey = useMemo(() => new Map(inventory.available.map((e) => [e.item_key, e.n])), [inventory]);
 
-  // カタログV2(Decision 109)は item_class を持つ — 帯の価格レンジも新カタログ準拠
-  const isV3 = catalog.some((c) => c.item_class !== undefined);
-  const BAND_RANGE: Record<string, string> = isV3
-    ? {
-        BASIC: '2〜3 USDT',
-        STANDARD: '4〜5 USDT',
-        PREMIUM: '6〜10 USDT',
-        BURN_DROP: 'Burn時にのみ授与',
-      }
-    : {
-        BASIC: '1〜2 USDT',
-        STANDARD: '3〜4 USDT',
-        PREMIUM: '5〜7 USDT',
-        BURN_DROP: 'Burn時にのみ授与',
-      };
+  // 🔵/🔴/記念品 を item_class・band で分類(価格帯でない=②の解)。BURN_DROP は購入棚から外す(⑤)。
+  const trainAll = catalog.filter((c) => c.item_class === 'TRAINING' && c.band !== 'BURN_DROP');
+  const train = band === 'ALL' ? trainAll : trainAll.filter((c) => c.band === band);
+  const race = catalog.filter((c) => c.item_class === 'RACE' && c.band !== 'BURN_DROP');
+  const burnDrops = catalog.filter((c) => c.band === 'BURN_DROP');
+  const burnKeys = new Set(burnDrops.map((c) => c.key));
 
-  const visibleBands = band === 'ALL' ? BAND_ORDER : [band];
-
-  // ギフト個数: 選択中アイテムの所持数を上限に
+  // マイアイテム: 記念品(BURN_DROP)は分けて表示、通常所持は棚に。
+  const ownedNormal = inventory.available.filter((e) => !burnKeys.has(e.item_key));
+  const ownedMementos = inventory.available.filter((e) => burnKeys.has(e.item_key));
+  const giftable = inventory.available.filter((e) => byKey.get(e.item_key)?.giftable !== false && !burnKeys.has(e.item_key));
   const giftMax = giftKey ? (ownedByKey.get(giftKey) ?? 1) : 1;
   const qty = Math.min(giftQty, Math.max(1, giftMax));
 
-  // ---- レース条件の結果(本日/昨日)+ カレンダー(Decision 082) ----
-  const WEATHER_CHAR: Record<string, string> = { SUNNY: '晴', CLOUDY: '曇', RAIN: '雨', STORM: '嵐' };
-  const WEATHER_COLOR: Record<string, string> = {
-    SUNNY: 'var(--gold-bright)', CLOUDY: 'var(--muted)', RAIN: 'var(--cyan)', STORM: 'var(--magenta-soft)',
-  };
-  // 条件ごとの意味色(オーナー指摘 2026-07-12「シアンばかりで単調」への対応)。
-  // 8桁hexのアルファ付きで枠/背景の淡色も同系で統一する。
-  const WEATHER_ACCENT: Record<string, string> = {
-    SUNNY: '#f2e4bf', CLOUDY: '#8f8ac2', RAIN: '#00eaff', STORM: '#ff8fe4',
-  };
-  const TRACK_ACCENT: Record<string, string> = {
-    FAST: '#00eaff', GOOD: '#35d07f', SOFT: '#e6b24a', HEAVY: '#ff8fe4',
-  };
-  const SURFACE_ACCENT: Record<string, string> = { TURF: '#35d07f', DIRT: '#c9a86a' };
-  /** settingCell のアクセント一式(枠・淡背景・見出し・バー)。 */
-  const cellAccent = (hex: string) => ({
-    borderColor: `${hex}40`,
-    background: `${hex}0d`,
-  });
+  // 予報の手がかり(直近条件 + 出現確率 + カレンダー)。実データ conditionHistory。
   const sortedHistory = [...conditionHistory].sort((a, b) => a.date.localeCompare(b.date));
   const latest = sortedHistory[sortedHistory.length - 1];
   const todayISO = today ?? latest?.date ?? '';
-  const todayRevealed = !!latest && latest.date === todayISO;
   const byDate = new Map(sortedHistory.map((e) => [e.date, e]));
   const calBase = todayISO ? new Date(`${todayISO}T00:00:00Z`) : null;
   const calYear = calBase ? calBase.getUTCFullYear() : 0;
@@ -135,30 +115,44 @@ export function ItemsView({
   const calFirstDow = calBase ? new Date(Date.UTC(calYear, calMonth0, 1)).getUTCDay() : 0;
   const calDays = calBase ? new Date(Date.UTC(calYear, calMonth0 + 1, 0)).getUTCDate() : 0;
   const calTodayD = calBase ? calBase.getUTCDate() : -1;
-  const calCells: Array<{ day: number; cond: DailyConditions | undefined; isToday: boolean } | null> = [];
-  for (let i = 0; i < calFirstDow; i++) calCells.push(null);
-  for (let d = 1; d <= calDays; d++) {
-    const iso = `${calYear}-${String(calMonth0 + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    calCells.push({ day: d, cond: byDate.get(iso), isToday: d === calTodayD });
-  }
-  while (calCells.length % 7 !== 0) calCells.push(null);
   const calLabel = calBase ? `${calYear}年${calMonth0 + 1}月` : '';
 
+  const probAxes: { label: string; rows: { name: string; pct: number; color: string }[] }[] = [
+    {
+      label: '天候',
+      rows: Object.entries(WEATHER_PROBABILITY_V1).map(([w, p]) => ({
+        name: WEATHER_JA[w as keyof typeof WEATHER_JA] ?? w,
+        pct: Number(p),
+        color: WX_COLOR[w] ?? '#8f8ac2',
+      })),
+    },
+    {
+      label: '馬場',
+      rows: Object.entries(TRACK_PROBABILITY_V1).map(([t, p]) => ({
+        name: TRACK_JA[t as keyof typeof TRACK_JA] ?? t,
+        pct: Number(p),
+        color: '#a9b6c8',
+      })),
+    },
+    {
+      label: 'コース',
+      rows: Object.entries(SURFACE_PROBABILITY_V1).map(([su, p]) => ({
+        name: SURFACE_JA[su as keyof typeof SURFACE_JA] ?? su,
+        pct: Number(p),
+        color: su === 'TURF' ? '#9dc7a8' : '#cbb089',
+      })),
+    },
+  ];
+
   async function buy(item: CatalogItem) {
-    if (preview) return;
+    if (preview) { setMessage(`${itemName(item, lang)} を購入しました（プレビュー）。`); return; }
     setBusyKey(item.key);
     setError(null);
     setMessage(null);
-    const r = await apiFetch('/api/v1/items/purchase', {
-      method: 'POST',
-      body: { item_key: item.key, quantity: 1 },
-    });
+    const r = await apiFetch('/api/v1/items/purchase', { method: 'POST', body: { item_key: item.key, quantity: 1 } });
     setBusyKey(null);
-    if (r.status !== 200) {
-      setError(errorMessage(r.body) ?? '購入に失敗しました');
-      return;
-    }
-    setMessage(`${item.name_ja} を購入しました。厩舎の馬詳細から使えます。`);
+    if (r.status !== 200) { setError(errorMessage(r.body) ?? '購入に失敗しました'); return; }
+    setMessage(`${itemName(item, lang)} を購入しました。厩舎の馬詳細から使えます。`);
     refreshSoft(router);
   }
 
@@ -168,373 +162,291 @@ export function ItemsView({
     setBusyKey('gift');
     setError(null);
     setMessage(null);
-    // ★ まとめ贈り: quantity を送る
-    const r = await apiFetch('/api/v1/items/gift', {
-      method: 'POST',
-      body: { recipient_email: giftEmail, item_key: giftKey, quantity: qty },
-    });
+    const r = await apiFetch('/api/v1/items/gift', { method: 'POST', body: { recipient_email: giftEmail, item_key: giftKey, quantity: qty } });
     setBusyKey(null);
-    if (r.status !== 200) {
-      setError(errorMessage(r.body) ?? 'ギフトの送付に失敗しました');
-      return;
-    }
+    if (r.status !== 200) { setError(errorMessage(r.body) ?? 'ギフトの送付に失敗しました'); return; }
     setMessage(`${byKey.get(giftKey)?.name_ja ?? giftKey} を ${qty}個 ${giftEmail} に送りました。`);
-    setGiftEmail('');
-    setGiftKey('');
-    setGiftQty(1);
+    setGiftEmail(''); setGiftKey(''); setGiftQty(1);
     refreshSoft(router);
   }
 
+  const buyStyle = (accent: 'cyan' | 'gold'): React.CSSProperties => ({
+    width: '100%', padding: 11, borderRadius: 'var(--radius-xs)', border: 'none', cursor: 'pointer',
+    font: '700 13px/1 var(--font-display)', letterSpacing: '.05em', color: accent === 'cyan' ? '#04141a' : '#1a1408',
+    background: accent === 'cyan'
+      ? 'linear-gradient(100deg,var(--cyan),#5ff5ff 60%,var(--cyan))'
+      : 'linear-gradient(100deg,var(--gold),var(--gold-bright) 60%,var(--gold))',
+    boxShadow: accent === 'cyan' ? '0 8px 20px -8px rgba(0,234,255,.6)' : '0 8px 20px -8px rgba(201,168,106,.55)',
+    opacity: busyKey === null || busyKey === undefined ? 1 : busyKey === 'gift' ? 1 : 0.85,
+  });
+  const shelfGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 12 };
+
   return (
-    <>
-      {/* ---- ① ヘッダ + 直近のレース条件(Decision 082) ---- */}
-      <section className="panel">
-        <h1>ITEMS</h1>
-        <p className={s.intro}>
-          アイテムは2分類 — <b>調教アイテム</b>は調教の確定ロールに上乗せ(確定後レース前まで1個使用可)、
-          <b>レースアイテム</b>は予報(的中率70%)への「備え」で、的中すれば適性が上限側へ、
-          外れれば下限側へ動きます。レースアイテムは1頭のレースに1個まで。効果はすべて公開ルールです。
-        </p>
-
-        {/* 条件の結果(本日/昨日) + 今夜は未確定 */}
-        {latest ? (
-          <div className={s.settingResult}>
-            {/* カード全体を当日の天候色でティント(嵐=マゼンタ/晴=金/雨=シアン/曇=紫灰) */}
-            <div
-              className={s.settingResultCard}
-              style={{
-                borderColor: `${WEATHER_ACCENT[latest.weather] ?? '#00eaff'}66`,
-                background: `linear-gradient(150deg, ${WEATHER_ACCENT[latest.weather] ?? '#00eaff'}17, transparent 68%)`,
-              }}
-            >
-              <div className={s.settingResultHead}>
-                <span
-                  className={s.settingResultLabel}
-                  style={{ color: WEATHER_COLOR[latest.weather] ?? 'var(--cyan)' }}
-                >
-                  {todayRevealed ? '直近のレース条件' : '前回のレース条件'}
-                </span>
-                <span className={s.settingResultDate}>{latest.date.slice(5).replace('-', '/')}</span>
-              </div>
-              <div className={s.settingResultBody}>
-                <span className={s.settingResultBig} style={{ color: WEATHER_COLOR[latest.weather] ?? 'var(--text)' }}>
-                  {latest.weather_ja}
-                </span>
-                <div>
-                  <div className={s.settingResultCoeff}>馬場: {latest.track_ja} / {latest.surface_ja}</div>
-                  <div className={s.settingResultTier}>{latest.night_name ?? '通常開催'}</div>
-                </div>
-              </div>
-              <div className={s.settingResultNote}>
-                {todayRevealed
-                  ? '直近のレースで公開された条件です。次のレースの条件は発走まで分かりません。'
-                  : '前回のレースで公開された条件(参考)。次のレースの条件は発走後に公開されます。'}
-              </div>
-            </div>
-            <div className={s.settingTonight}>
-              <div className={s.settingTonightK}>次のレースの条件</div>
-              <div className={s.settingTonightQ}>?</div>
-              <div className={s.settingTonightNote}>
-                発走(朝8:00/夜20:00 GMT+8)まで、本人にも運営にも分かりません。予報を読んで備えるかはあなた次第。
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {/* 条件のしくみ(公開分布 — レース後に判明・検証可能) */}
-        <div className={s.setting}>
-          <div className={s.settingHead}>
-            <span className={s.settingTitle}>レース条件のしくみ(レース後に判明)</span>
-            <span className={s.settingLead}>
-              天候・馬場・コースはレースシードから決まり、レース後に誰でも検証できます
-            </span>
-          </div>
-          <div className={s.settingGrid}>
-            {Object.entries(WEATHER_PROBABILITY_V1).map(([k, p]) => (
-              <div key={k} className={s.settingCell} style={cellAccent(WEATHER_ACCENT[k] ?? '#8f8ac2')}>
-                <div className={s.settingN} style={{ color: WEATHER_ACCENT[k] ?? 'var(--muted)' }}>
-                  {WEATHER_JA[k as keyof typeof WEATHER_JA]}
-                </div>
-                <div className={s.settingCoeff}>天候</div>
-                <div className={s.settingBar}>
-                  <span style={{ width: `${Number(p) * 250}%`, background: WEATHER_ACCENT[k] ?? 'var(--cyan)' }} />
-                </div>
-                <div className={s.settingProb}>出現 {Math.round(Number(p) * 100)}%</div>
-              </div>
-            ))}
-          </div>
-          <div className={s.settingGrid}>
-            {Object.entries(TRACK_PROBABILITY_V1).map(([k, p]) => (
-              <div key={k} className={s.settingCell} style={cellAccent(TRACK_ACCENT[k] ?? '#8f8ac2')}>
-                <div className={s.settingN} style={{ color: TRACK_ACCENT[k] ?? 'var(--muted)' }}>
-                  {TRACK_JA[k as keyof typeof TRACK_JA]}
-                </div>
-                <div className={s.settingCoeff}>馬場</div>
-                <div className={s.settingBar}>
-                  <span style={{ width: `${Number(p) * 250}%`, background: TRACK_ACCENT[k] ?? 'var(--cyan)' }} />
-                </div>
-                <div className={s.settingProb}>出現 {Math.round(Number(p) * 100)}%</div>
-              </div>
-            ))}
-          </div>
-          <div className={`${s.settingGrid} ${s.settingGridSurface}`}>
-            {Object.entries(SURFACE_PROBABILITY_V1).map(([k, p]) => (
-              <div key={k} className={s.settingCell} style={cellAccent(SURFACE_ACCENT[k] ?? '#8f8ac2')}>
-                <div className={s.settingN} style={{ color: SURFACE_ACCENT[k] ?? 'var(--muted)' }}>
-                  {SURFACE_JA[k as keyof typeof SURFACE_JA]}
-                </div>
-                <div className={s.settingCoeff}>コース</div>
-                <div className={s.settingBar}>
-                  <span style={{ width: `${Number(p) * 250}%`, background: SURFACE_ACCENT[k] ?? 'var(--cyan)' }} />
-                </div>
-                <div className={s.settingProb}>出現 {Math.round(Number(p) * 100)}%</div>
-              </div>
-            ))}
-          </div>
-          <div className={s.settingNote}>
-            レースアイテムは<b>備えた条件グループ</b>(晴れ系/雨系・良系/道悪系など)が実際の条件と
-            一致すると該当適性が上限側に置き換わり、外れると下限側に沈みます — 上がりも下がりも公開ルールです。
-            使った馬がBurnされた場合、アイテム代金は全額サポートボーナス(チャンピオン誕生のお祝い金)の財源になります。
-          </div>
+    <div className={s.wrap} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* ═══ HEADER ═══ */}
+      <header style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 'var(--padS,20px)', background: 'linear-gradient(180deg,var(--panel-2),var(--panel))', boxShadow: 'var(--shadow)' }}>
+        <div style={{ font: '700 11px/1 var(--font-mono)', letterSpacing: '.34em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 9 }}>ITEMS</div>
+        <h1 style={{ margin: 0, font: '800 clamp(24px,4vw,34px)/1.04 var(--font-display)', letterSpacing: '.05em', color: 'var(--text)' }}>道具部屋</h1>
+        <p style={{ margin: '11px 0 15px', maxWidth: '60ch', color: 'var(--muted)', fontSize: 13, fontFamily: 'var(--font-jp)', lineHeight: 1.75 }}>アイテムは2種類。効果はすべて公開ルールです。</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 11 }}>
+          <a href="#pillar-train" style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 15px', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', background: 'linear-gradient(150deg,rgba(0,234,255,.07),transparent 70%)' }}>
+            <span style={bar('linear-gradient(180deg,var(--cyan),var(--cyan-deep))')} />
+            <div><div style={{ font: '700 14px/1.2 var(--font-display)', letterSpacing: '.03em', color: 'var(--text)' }}>強くする</div><div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--font-jp)', marginTop: 4, lineHeight: 1.5 }}>調教アイテム。馬を永続的に強くする（総合値に合流）。</div></div>
+          </a>
+          <a href="#pillar-race" style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 15px', border: '1px solid rgba(201,168,106,.34)', borderRadius: 'var(--radius-sm)', background: 'linear-gradient(150deg,rgba(201,168,106,.08),transparent 70%)' }}>
+            <span style={bar('linear-gradient(180deg,var(--gold-bright),var(--gold))')} />
+            <div><div style={{ font: '700 14px/1.2 var(--font-display)', letterSpacing: '.03em', color: 'var(--text)' }}>今夜に賭ける</div><div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--font-jp)', marginTop: 4, lineHeight: 1.5 }}>レースアイテム。予報を読んで条件に備える（的中で適性↑・外れで↓）。</div></div>
+          </a>
         </div>
+      </header>
 
-        {/* 条件カレンダー */}
-        {calBase ? (
-          <div className={s.cal}>
-            <div className={s.calHead}>
-              <span className={s.calTitle}>レース条件カレンダー · {calLabel}</span>
-              <span className={s.calLegend}>
-                <span><b style={{ color: 'var(--gold-bright)' }}>晴</b></span>
-                <span><b style={{ color: 'var(--muted)' }}>曇</b></span>
-                <span><b style={{ color: 'var(--cyan)' }}>雨</b></span>
-                <span><b style={{ color: 'var(--magenta-soft)' }}>嵐</b></span>
-              </span>
-            </div>
-            <div className={s.calGrid}>
-              {['日', '月', '火', '水', '木', '金', '土'].map((w) => (
-                <div key={w} className={s.calDow}>{w}</div>
-              ))}
-              {calCells.map((c, i) =>
-                c === null ? (
-                  <div key={`e${i}`} className={s.calEmpty} />
-                ) : (
-                  <div key={c.day} className={`${s.calCell} ${c.isToday ? s.calToday : ''}`}>
-                    <span className={s.calDay}>{c.day}</span>
-                    <span
-                      className={s.calNum}
-                      style={{ color: c.cond ? WEATHER_COLOR[c.cond.weather] ?? 'var(--faint)' : 'var(--faint)' }}
-                      title={c.cond ? `${c.cond.weather_ja}・${c.cond.track_ja}・${c.cond.surface_ja}${c.cond.night_name ? `(${c.cond.night_name})` : ''}` : undefined}
-                    >
-                      {c.cond ? WEATHER_CHAR[c.cond.weather] ?? '' : c.isToday && !todayRevealed ? '?' : ''}
-                    </span>
-                  </div>
-                ),
+      {message && <p className="ok">{message}</p>}
+      {error && <ErrorLine>{error}</ErrorLine>}
+
+      {/* ═══ 🔵 強くする（調教アイテム）═══ */}
+      <section id="pillar-train" style={{ border: '1px solid var(--border-strong)', borderRadius: 'var(--radius)', padding: 'var(--padS,20px)', background: 'linear-gradient(180deg,rgba(0,234,255,.035),var(--panel))', boxShadow: 'var(--shadow)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <span style={bar('linear-gradient(180deg,var(--cyan),var(--cyan-deep))')} />
+          <div style={{ flex: '1 1 auto' }}><div style={{ font: '700 10px/1 var(--font-mono)', letterSpacing: '.24em', color: 'var(--cyan)' }}>STRENGTHEN</div><h2 style={{ margin: '4px 0 0', font: '800 20px/1 var(--font-display)', letterSpacing: '.04em', color: 'var(--text)' }}>強くする — 調教アイテム</h2></div>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)', fontFamily: 'var(--font-jp)', textAlign: 'right', maxWidth: '24ch' }}>馬を永続的に強くする（総合値に合流・ソフトキャップ85）</span>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, margin: '15px 0 14px' }}>
+          {(['ALL', 'BASIC', 'STANDARD', 'PREMIUM'] as const).map((b) => {
+            const on = band === b;
+            const label = { ALL: 'すべて', BASIC: 'ベーシック 2–3', STANDARD: 'スタンダード 4–5', PREMIUM: 'プレミアム 6–10' }[b];
+            return (
+              <button key={b} type="button" onClick={() => setBand(b)} style={{ font: '700 11.5px/1 var(--font-jp)', cursor: 'pointer', borderRadius: 999, padding: '6px 13px', border: `1px solid ${on ? 'var(--cyan)' : 'var(--border)'}`, background: on ? 'rgba(0,234,255,.08)' : 'rgba(10,8,22,.5)', color: on ? 'var(--cyan)' : 'var(--muted)' }}>{label}</button>
+            );
+          })}
+        </div>
+        <div style={shelfGrid}>
+          {train.map((it) => (
+            <div key={it.key} style={{ display: 'flex', flexDirection: 'column', border: '1px solid var(--border)', borderTop: '2px solid rgba(0,234,255,.5)', borderRadius: 'var(--radius-sm)', background: 'linear-gradient(165deg,rgba(0,234,255,.045),var(--panel-2))', overflow: 'hidden' }}>
+              <div style={{ padding: '13px 14px 0' }}><img src={`/items/${it.key}.webp`} alt="" loading="lazy" style={{ display: 'block', width: '100%', aspectRatio: '1', borderRadius: 10, objectFit: 'cover', border: '1px solid var(--border-strong)', background: 'radial-gradient(circle at 50% 40%,rgba(0,234,255,.13),rgba(10,8,22,.7))' }} /></div>
+              <div style={{ padding: '11px 14px 0', display: 'flex', justifyContent: 'space-between', gap: 9, alignItems: 'flex-start' }}>
+                <div style={{ minWidth: 0 }}><div style={{ font: '700 15px/1.2 var(--font-display)', color: 'var(--text)' }}>{itemName(it, lang)}</div><div style={{ font: '400 10.5px/1 var(--font-mono)', color: 'var(--faint)', marginTop: 5, letterSpacing: '.04em' }}>{it.name_en}</div></div>
+                <div style={{ flex: '0 0 auto', font: '800 18px/1 var(--font-display)', color: 'var(--gold-bright)', fontVariantNumeric: 'tabular-nums' }}>{it.price}<span style={{ font: '500 9px/1 var(--font-mono)', color: 'var(--faint)', marginLeft: 2 }}>USDT</span></div>
+              </div>
+              <div style={{ padding: '11px 14px 0', flex: '1 1 auto' }}><div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--muted)', fontFamily: 'var(--font-jp)' }}>{it.effect ? effectSummary(it.effect, itemsCopy) : it.description_ja}</div></div>
+              {it.effect && (
+                <div style={{ padding: '11px 14px 0', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <span style={{ font: '600 10px/1 var(--font-mono)', letterSpacing: '.04em', borderRadius: 5, padding: '4px 8px', whiteSpace: 'nowrap', color: 'var(--good-soft)', border: '1px solid rgba(53,208,127,.35)', background: 'rgba(53,208,127,.08)' }}>{effectShort(it.effect, itemsCopy)}</span>
+                </div>
               )}
+              <div style={{ padding: '13px 14px' }}><button type="button" disabled={busyKey === it.key} onClick={() => void buy(it)} style={buyStyle('cyan')}>{busyKey === it.key ? '購入中…' : '購入する'}</button></div>
             </div>
-            <div className={s.calNote}>
-              各レース(朝8:00/夜20:00)で公開された条件の履歴。天候の字色で一目、ホバーで馬場・コースも(抽選は毎回独立です)。
-            </div>
-          </div>
-        ) : null}
+          ))}
+        </div>
       </section>
 
-      {/* ---- ② マイアイテム ---- */}
-      <section className="panel">
-        <div className="section-head">
-          <h2>マイアイテム</h2>
-          <span className="muted">所持 {inventory.available.length}種 · 適用予定 {inventory.pending.length}件</span>
+      {/* ═══ 🔴 今夜に賭ける（レースアイテム）═══ */}
+      <section id="pillar-race" style={{ border: '1px solid rgba(201,168,106,.34)', borderRadius: 'var(--radius)', padding: 'var(--padS,20px)', background: 'linear-gradient(180deg,rgba(201,168,106,.04),var(--panel))', boxShadow: 'var(--shadow)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <span style={bar('linear-gradient(180deg,var(--gold-bright),var(--gold))')} />
+          <div style={{ flex: '1 1 auto' }}><div style={{ font: '700 10px/1 var(--font-mono)', letterSpacing: '.24em', color: 'var(--gold)' }}>BET ON TONIGHT</div><h2 style={{ margin: '4px 0 0', font: '800 20px/1 var(--font-display)', letterSpacing: '.04em', color: 'var(--text)' }}>今夜に賭ける — レースアイテム</h2></div>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)', fontFamily: 'var(--font-jp)', textAlign: 'right', maxWidth: '26ch' }}>予報を読んで条件に備える（的中で適性が上限側へ・外れで下限側へ）</span>
         </div>
-        {inventory.available.length === 0 && inventory.pending.length === 0 ? (
-          <p className="faint">まだアイテムを持っていません。下のカタログからどうぞ。</p>
-        ) : (
-          <>
-            <div className={s.invGrid}>
-              {inventory.available.map((e) => (
-                <div key={e.item_key} className={s.invCard}>
-                  <img className={s.thumb} src={`/items/${e.item_key}.webp`} alt="" width={46} height={46} loading="lazy" />
-                  <div className={s.invBody}>
-                    <div className={s.invName}>{byKey.get(e.item_key)?.name_ja ?? e.item_key}</div>
-                    <div className={s.invDesc}>{byKey.get(e.item_key)?.description_ja}</div>
+
+        {/* 予報の手がかり */}
+        {latest && (
+          <div style={{ marginTop: 15, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'rgba(10,8,22,.5)', padding: '14px 15px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 22px', alignItems: 'center' }}>
+              <div style={{ flex: '0 0 auto' }}>
+                <div style={{ font: '400 9.5px/1 var(--font-mono)', letterSpacing: '.16em', color: 'var(--faint)', textTransform: 'uppercase', marginBottom: 6 }}>直近のレース条件 · {latest.date.slice(5)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ font: '800 20px/1 var(--font-display)', color: WX_COLOR[latest.weather] ?? 'var(--text)' }}>{latest.weather_ja}</span><span style={{ font: '500 12px/1 var(--font-mono)', color: 'var(--muted)' }}>{latest.track_ja} / {latest.surface_ja}</span></div>
+              </div>
+              <div style={{ width: 1, height: 40, background: 'var(--border)' }} />
+              <div style={{ flex: '0 0 auto' }}>
+                <div style={{ font: '400 9.5px/1 var(--font-mono)', letterSpacing: '.16em', color: 'var(--faint)', textTransform: 'uppercase', marginBottom: 6 }}>次のレースの条件</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}><span style={{ font: '800 22px/1 var(--font-display)', color: 'var(--gold-bright)' }}>?</span><span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-jp)' }}>発走まで誰にも分かりません</span></div>
+              </div>
+            </div>
+            <div style={{ marginTop: 13, paddingTop: 13, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 11 }}>
+              {probAxes.map((ax) => (
+                <div key={ax.label}>
+                  <div style={{ font: '400 9.5px/1 var(--font-mono)', letterSpacing: '.14em', color: 'var(--faint)', textTransform: 'uppercase', marginBottom: 8 }}>{ax.label}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    {ax.rows.map((r) => (
+                      <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ flex: '0 0 42px', font: '600 11px/1 var(--font-jp)', color: r.color }}>{r.name}</span>
+                        <span style={{ flex: '1 1 auto', height: 5, borderRadius: 3, background: 'rgba(255,255,255,.07)', overflow: 'hidden' }}><span style={{ display: 'block', height: '100%', width: `${Math.round(r.pct * 100)}%`, background: r.color, borderRadius: 3 }} /></span>
+                        <span style={{ flex: '0 0 auto', font: '500 10px/1 var(--font-mono)', color: 'var(--faint)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(r.pct * 100)}%</span>
+                      </div>
+                    ))}
                   </div>
-                  <span className={s.invCount}>× {e.n}</span>
                 </div>
               ))}
             </div>
-            {inventory.pending.length > 0 && (
-              <div className={s.pendingList}>
-                {inventory.pending.map((p) => (
-                  <div key={p.usage_id} className={s.pendingRow}>
-                    <img className={s.pendingThumb} src={`/items/${p.item_key}.webp`} alt="" width={34} height={34} loading="lazy" />
-                    <span className={s.pendingBadge}>適用予定</span>
-                    <b>{byKey.get(p.item_key)?.name_ja ?? p.item_key}</b>
-                    <span className="muted">→ {horseDisplayName(p.horse_name, lang)}</span>
-                    <span className={s.pendingDate}>{p.effective_race_date} のレース</span>
-                  </div>
-                ))}
-              </div>
+            {calBase && (
+              <details style={{ marginTop: 12 }}>
+                <summary style={{ font: '600 11.5px/1 var(--font-jp)', color: 'var(--cyan)', display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>条件の履歴を見る（{calLabel}）<span style={{ fontSize: 9, color: 'var(--faint)' }}>▼</span></summary>
+                <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 5 }}>
+                  {['日', '月', '火', '水', '木', '金', '土'].map((d) => (<div key={d} style={{ textAlign: 'center', font: '600 9px/1 var(--font-mono)', color: 'var(--faint)', paddingBottom: 2 }}>{d}</div>))}
+                  {Array.from({ length: calFirstDow }).map((_, i) => (<div key={`e${i}`} style={{ aspectRatio: '1' }} />))}
+                  {Array.from({ length: calDays }).map((_, i) => {
+                    const d = i + 1;
+                    const iso = `${calYear}-${String(calMonth0 + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const cond = byDate.get(iso);
+                    const isToday = d === calTodayD;
+                    const mark = cond ? WX_CHAR[cond.weather] ?? '' : (isToday ? '?' : '');
+                    const color = cond ? WX_COLOR[cond.weather] ?? 'var(--faint)' : 'var(--faint)';
+                    return (
+                      <div key={d} style={{ aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, borderRadius: 7, border: `1px solid ${isToday ? 'rgba(201,168,106,.34)' : 'var(--border)'}`, background: isToday ? 'rgba(201,168,106,.08)' : 'rgba(255,255,255,.015)' }}>
+                        <span style={{ font: '400 8px/1 var(--font-mono)', color: 'var(--faint)' }}>{d}</span>
+                        <span style={{ font: '700 13px/1 var(--font-jp)', color }}>{mark}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ marginTop: 9, fontSize: 10.5, color: 'var(--faint)', fontFamily: 'var(--font-jp)', lineHeight: 1.6 }}>各レース（朝8:00／夜20:00 GMT+8）で公開された条件の履歴。抽選は毎回独立です。</div>
+              </details>
             )}
-          </>
+          </div>
         )}
 
-        {giftable.length > 0 ? (
-          <>
-            <h3 className={s.giftHead}>仲間に贈る</h3>
-            <form className={s.giftForm} onSubmit={(e) => void sendGift(e)}>
-              <label>
-                相手のメールアドレス
-                <input type="email" value={giftEmail} onChange={(e) => setGiftEmail(e.target.value)} placeholder="friend@example.com" required />
-              </label>
-              <label>
-                贈るアイテム
-                <AppSelect
-                  value={giftKey}
-                  onChange={(v) => { setGiftKey(v); setGiftQty(1); }}
-                  ariaLabel="贈るアイテム"
-                  options={[
-                    { value: '', label: '選択…' },
-                    ...giftable.map((e) => ({
-                      value: e.item_key,
-                      label: `${byKey.get(e.item_key)?.name_ja ?? e.item_key}(所持 ${e.n})`,
-                    })),
-                  ]}
-                />
-              </label>
-              {/* ★ まとめ贈り: 個数(所持数が上限) */}
-              <label className={s.giftQty}>
-                個数
-                <AppSelect
-                  value={String(qty)}
-                  onChange={(v) => setGiftQty(Number(v))}
-                  disabled={!giftKey}
-                  ariaLabel="個数"
-                  options={Array.from({ length: Math.max(1, giftMax) }, (_, i) => i + 1).map((n) => ({
-                    value: String(n),
-                    label: String(n),
-                  }))}
-                />
-              </label>
-              <Button
-                type="submit"
-                variant="primary"
-                busy={busyKey === 'gift'}
-                busyLabel="送付中…"
-                disabled={!giftKey || !giftEmail}
-              >
-                {giftKey && qty > 1 ? `${qty}個 贈る` : '贈る'}
-              </Button>
-            </form>
-            <div className={s.giftNote}>
-              送付は即時確定で取り消せません。登録済みのメールアドレス宛にのみ届きます(1日20回まで)。
-              同じアイテムをまとめて送るときは個数を選んでください。
-            </div>
-          </>
-        ) : null}
-        {error ? <ErrorLine>{error}</ErrorLine> : null}
-        {message ? <p className="ok">{message}</p> : null}
-      </section>
-
-      {/* ---- ④ カタログ(帯フィルタ・モバイル2列) ---- */}
-      <section className="panel">
-        <div className="section-head">
-          <h2>カタログ</h2>
-          <div className={s.bandTabs}>
-            <button type="button" className={band === 'ALL' ? s.bandTabOn : s.bandTab} onClick={() => setBand('ALL')}>すべて</button>
-            {BAND_ORDER.map((b) => (
-              <button key={b} type="button" className={band === b ? s.bandTabOn : s.bandTab} onClick={() => setBand(b)}>
-                {BAND_LABEL[b]}
-              </button>
-            ))}
-          </div>
+        {/* レースアイテム（賭ける条件を前面に） */}
+        <div style={{ ...shelfGrid, marginTop: 15 }}>
+          {race.map((it) => {
+            const aff = it.affinity_ja ?? it.affinity ?? '';
+            const c = affColor(aff);
+            const { hit, miss } = raceHitMiss(it.effect);
+            return (
+              <div key={it.key} style={{ display: 'flex', flexDirection: 'column', border: '1px solid var(--border)', borderTop: '2px solid rgba(201,168,106,.55)', borderRadius: 'var(--radius-sm)', background: 'linear-gradient(165deg,rgba(201,168,106,.05),var(--panel-2))', overflow: 'hidden' }}>
+                <div style={{ padding: '13px 14px 0', position: 'relative' }}>
+                  <img src={`/items/${it.key}.webp`} alt="" loading="lazy" style={{ display: 'block', width: '100%', aspectRatio: '1', borderRadius: 10, objectFit: 'cover', border: '1px solid rgba(201,168,106,.34)', background: 'radial-gradient(circle at 50% 40%,rgba(201,168,106,.15),rgba(10,8,22,.7))' }} />
+                  {aff && <span style={{ position: 'absolute', top: 20, left: 21, font: '700 11px/1 var(--font-jp)', borderRadius: 6, padding: '5px 9px', whiteSpace: 'nowrap', color: c, border: `1px solid ${c}66`, background: 'rgba(8,6,16,.82)', backdropFilter: 'blur(3px)', boxShadow: '0 2px 8px -2px #000' }}>{aff}</span>}
+                </div>
+                <div style={{ padding: '11px 14px 0', display: 'flex', justifyContent: 'space-between', gap: 9, alignItems: 'flex-start' }}>
+                  <div style={{ minWidth: 0 }}><div style={{ font: '700 14px/1.2 var(--font-display)', color: 'var(--text)' }}>{itemName(it, lang)}</div><div style={{ font: '400 10px/1 var(--font-mono)', color: 'var(--faint)', marginTop: 4 }}>{it.name_en}</div></div>
+                  <div style={{ flex: '0 0 auto', font: '800 18px/1 var(--font-display)', color: 'var(--gold-bright)', fontVariantNumeric: 'tabular-nums' }}>{it.price}<span style={{ font: '500 9px/1 var(--font-mono)', color: 'var(--faint)', marginLeft: 2 }}>USDT</span></div>
+                </div>
+                <div style={{ padding: '11px 14px 0', flex: '1 1 auto' }}><div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--muted)', fontFamily: 'var(--font-jp)' }}>{it.description_ja}</div></div>
+                {hit && (
+                  <div style={{ margin: '12px 14px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: 'var(--border)', borderRadius: 'var(--radius-xs)', overflow: 'hidden' }}>
+                    <div style={{ padding: '8px 10px', background: 'rgba(53,208,127,.08)', textAlign: 'center' }}><div style={{ font: '400 8.5px/1 var(--font-mono)', letterSpacing: '.1em', color: 'var(--good)', textTransform: 'uppercase', marginBottom: 4 }}>的中</div><div style={{ font: '800 15px/1 var(--font-display)', color: 'var(--good-soft)' }}>{hit}</div></div>
+                    <div style={{ padding: '8px 10px', background: 'rgba(143,138,194,.08)', textAlign: 'center' }}><div style={{ font: '400 8.5px/1 var(--font-mono)', letterSpacing: '.1em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 4 }}>外れ</div><div style={{ font: '800 15px/1 var(--font-display)', color: 'var(--muted)' }}>{miss}</div></div>
+                  </div>
+                )}
+                <div style={{ padding: '12px 14px' }}><button type="button" disabled={busyKey === it.key} onClick={() => void buy(it)} style={buyStyle('gold')}>{busyKey === it.key ? '購入中…' : '購入する'}</button></div>
+              </div>
+            );
+          })}
         </div>
-        {visibleBands.map((b) => {
-          const group = catalog.filter((c) => c.band === b);
-          if (group.length === 0) return null;
-          return (
-            <div key={b} className={s.bandGroup}>
-              <div className={`${s.bandTitle} ${s[`accent${b}`] ?? ''}`}>
-                {BAND_LABEL[b]}
-                <span className={s.bandRange}>{BAND_RANGE[b]}</span>
-              </div>
-              <div className={s.grid}>
-                {group.map((item) => {
-                  const owned = ownedByKey.get(item.key) ?? 0;
-                  return (
-                    <div key={item.key} className={`${s.card} ${s[`card${item.band}`] ?? ''}`}>
-                      <img className={s.cardArt} src={`/items/${item.key}.webp`} alt={item.name_ja} loading="lazy" />
-                      <div className={s.cardHead}>
-                        <div>
-                          <div className={s.cardName}>{item.name_ja}</div>
-                          {item.affinity && item.affinity !== 'ALL' && (
-                            <span className={s.affinityChip}>{item.affinity_ja}</span>
-                          )}
-                          {item.item_class && (
-                            <span className={s.affinityChip}>{itemClassLabel(item.item_class, itemsCopy)}</span>
-                          )}
-                          <div className={s.cardNameEn}>{item.name_en}</div>
-                        </div>
-                        {item.sellable ? (
-                          <div className={s.cardPrice}>{item.price}<span className="unit">USDT</span></div>
-                        ) : null}
-                      </div>
-                      <div className={s.cardDesc}>
-                        {item.effect ? effectSummary(item.effect, itemsCopy) : item.description_ja}
-                      </div>
-                      <div className={s.cardMeta}>
-                        {owned > 0 ? <span className={s.ownTag}>所持 {owned}</span> : null}
-                        {item.usable_day_min != null ? (
-                          <span className={s.dayTag}>Day{item.usable_day_min}〜{item.usable_day_max}限定</span>
-                        ) : null}
-                        {!item.sellable ? <span className={s.dropTag}>Burn時にのみ授与</span> : null}
-                      </div>
-                      {item.sellable ? (
-                        <div className={s.cardActions}>
-                          {/* グリッドの反復ボタンは静かに揃える(1画面1主アクションの原則)。
-                              主アクションはギフト送付側に置く */}
-                          <Button variant="ghost" busy={busyKey === item.key} busyLabel="購入中…" onClick={() => void buy(item)}>
-                            購入する
-                          </Button>
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
       </section>
 
-      {/* ---- ⑤ アイテム履歴 ---- */}
-      {transactions.length > 0 ? (
-        <section className="panel">
-          <div className="section-head">
-            <h2>アイテム履歴</h2>
-            <span className="muted">もらった · 送った · 使った · 購入</span>
-          </div>
-          <div className={s.txnList}>
-            {transactions.map((t) => {
-              const meta = TXN_META[t.kind];
-              const detail =
-                t.kind === 'USED' ? `→ ${horseDisplayName(t.horse_name ?? '', lang)}`
-                : t.kind === 'SENT' ? `${t.counterparty ?? ''} へ`
-                : t.kind === 'RECEIVED' ? `${t.counterparty ?? 'Burnドロップ'} から`
-                : 'ショップで購入';
+      {/* ═══ マイアイテム ＋ 記念品 ＋ ギフト ═══ */}
+      <section style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 'var(--padS,20px)', background: 'linear-gradient(180deg,var(--panel-2),var(--panel))', boxShadow: 'var(--shadow)' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+          <h2 style={{ margin: 0, font: '800 18px/1 var(--font-display)', letterSpacing: '.04em', color: 'var(--text)' }}>マイアイテム</h2>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>所持 {ownedNormal.length}種 · 適用予定 {inventory.pending.length}件</span>
+        </div>
+        {ownedNormal.length === 0 ? (
+          <p className="empty">所持アイテムはありません。上の棚から購入できます。</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 10 }}>
+            {ownedNormal.map((o) => {
+              const c = byKey.get(o.item_key);
+              const isTrain = c?.item_class === 'TRAINING';
               return (
-                <div key={t.id} className={s.txnRow}>
-                  <span className={`${s.txnChip} ${s[`txn${t.kind}`] ?? ''}`}>{meta.label}</span>
-                  <img className={s.txnThumb} src={`/items/${t.item_key}.webp`} alt="" width={30} height={30} loading="lazy" />
-                  <span className={s.txnName}>
-                    {byKey.get(t.item_key)?.name_ja ?? t.item_key}
-                    <span className={s.txnDetail}>{detail}</span>
-                  </span>
-                  <span className={`${s.txnQty} ${s[`txn${t.kind}`] ?? ''}`}>{meta.sign}{t.quantity}</span>
-                  <span className={s.txnTime}>{localDateTime(t.created_at)}</span>
+                <div key={o.item_key} style={{ display: 'flex', alignItems: 'center', gap: 11, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '11px 13px', background: 'rgba(255,255,255,.015)' }}>
+                  <span style={{ flex: '0 0 auto', width: 9, height: 30, borderRadius: 2, background: isTrain ? 'linear-gradient(180deg,var(--cyan),var(--cyan-deep))' : 'linear-gradient(180deg,var(--gold-bright),var(--gold))' }} />
+                  <img src={`/items/${o.item_key}.webp`} alt="" loading="lazy" style={{ flex: '0 0 auto', width: 38, height: 38, borderRadius: 9, objectFit: 'cover', border: '1px solid var(--border)', background: 'rgba(10,8,22,.6)' }} />
+                  <div style={{ flex: '1 1 auto', minWidth: 0 }}><div style={{ font: '700 13px/1.2 var(--font-display)', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c ? itemName(c, lang) : o.item_key}</div><div style={{ fontSize: 10.5, color: 'var(--faint)', fontFamily: 'var(--font-jp)', marginTop: 3 }}>{isTrain ? '調教アイテム' : 'レースアイテム'}</div></div>
+                  <span style={{ flex: '0 0 auto', font: '700 13px/1 var(--font-mono)', color: 'var(--gold-bright)' }}>×{o.n}</span>
                 </div>
               );
             })}
           </div>
-        </section>
-      ) : null}
-    </>
+        )}
+        {inventory.pending.length > 0 && (
+          <div style={{ marginTop: 11, display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {inventory.pending.map((p) => (
+              <div key={p.usage_id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 11px', border: '1px dashed var(--border)', borderRadius: 'var(--radius-xs)', padding: '9px 12px' }}>
+                <span style={{ font: '700 8.5px/1 var(--font-display)', letterSpacing: '.06em', color: 'var(--cyan)', border: '1px solid var(--border-strong)', borderRadius: 5, padding: '3px 7px' }}>適用予定</span>
+                <b style={{ font: '700 13px/1.2 var(--font-display)', color: 'var(--text)' }}>{byKey.get(p.item_key) ? itemName(byKey.get(p.item_key)!, lang) : p.item_key}</b>
+                <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-jp)' }}>→ {horseDisplayName(p.horse_name, lang)}</span>
+                <span style={{ marginLeft: 'auto', font: '500 11px/1 var(--font-mono)', color: 'var(--faint)' }}>{p.effective_race_date.slice(5)} のレース</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {ownedMementos.map((m) => {
+          const c = byKey.get(m.item_key);
+          return (
+            <div key={m.item_key} style={{ marginTop: 11, display: 'flex', alignItems: 'center', gap: 11, border: '1px solid rgba(255,92,92,.4)', borderRadius: 'var(--radius-sm)', padding: '11px 13px', background: 'linear-gradient(150deg,rgba(255,92,92,.1),transparent 72%)' }}>
+              <span style={{ flex: '0 0 auto', width: 9, height: 9, borderRadius: '50%', background: 'var(--bad)', boxShadow: '0 0 10px rgba(255,92,92,.7)' }} />
+              <div style={{ flex: '1 1 auto' }}><div style={{ font: '700 13px/1.2 var(--font-display)', color: 'var(--bad)' }}>{c ? itemName(c, lang) : m.item_key}</div><div style={{ fontSize: 10.5, color: 'var(--muted)', fontFamily: 'var(--font-jp)', marginTop: 3 }}>記念品 — Burnした馬の形見。買えません・譲れません。</div></div>
+              <span style={{ flex: '0 0 auto', font: '700 13px/1 var(--font-mono)', color: 'var(--bad)' }}>×{m.n}</span>
+            </div>
+          );
+        })}
+
+        {/* BURNで授与される記念品（買えない・参考一覧） */}
+        {burnDrops.length > 0 && (
+          <details style={{ marginTop: 11, border: '1px solid rgba(255,92,92,.34)', borderRadius: 'var(--radius-sm)', background: 'linear-gradient(150deg,rgba(255,92,92,.06),transparent 72%)' }}>
+            <summary style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 15px', font: '700 13px/1 var(--font-display)', letterSpacing: '.03em', color: 'var(--bad)', cursor: 'pointer' }}><span style={{ fontSize: 9, color: 'var(--faint)' }}>▶</span>BURNで授与される記念品<span style={{ font: '400 11px/1 var(--font-jp)', color: 'var(--faint)', marginLeft: 'auto' }}>買えません・譲れません（Burn時に1つ授与）</span></summary>
+            <div style={{ padding: '0 15px 15px', ...shelfGrid }}>
+              {burnDrops.map((b) => (
+                <div key={b.key} style={{ display: 'flex', flexDirection: 'column', border: '1px solid rgba(255,92,92,.24)', borderTop: '2px solid rgba(255,92,92,.6)', borderRadius: 'var(--radius-sm)', background: 'linear-gradient(165deg,rgba(255,92,92,.055),var(--panel-2))', overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 13px 0', position: 'relative' }}>
+                    <img src={`/items/${b.key}.webp`} alt="" loading="lazy" style={{ display: 'block', width: '100%', aspectRatio: '1', borderRadius: 10, objectFit: 'cover', border: '1px solid rgba(255,92,92,.28)', background: 'radial-gradient(circle at 50% 40%,rgba(255,92,92,.14),rgba(10,8,22,.7))' }} />
+                    <span style={{ position: 'absolute', top: 19, left: 20, font: '700 8.5px/1 var(--font-display)', letterSpacing: '.06em', color: 'var(--bad)', border: '1px solid rgba(255,92,92,.5)', borderRadius: 5, padding: '3px 7px', whiteSpace: 'nowrap', background: 'rgba(8,6,16,.82)', backdropFilter: 'blur(3px)' }}>非売品</span>
+                  </div>
+                  <div style={{ padding: '11px 13px 0' }}><div style={{ font: '700 14px/1.2 var(--font-display)', color: 'var(--text)' }}>{itemName(b, lang)}</div><div style={{ font: '400 10px/1 var(--font-mono)', color: 'var(--faint)', marginTop: 4 }}>{b.name_en}</div></div>
+                  <div style={{ padding: '8px 13px 13px', flex: '1 1 auto' }}><div style={{ fontSize: 11.5, lineHeight: 1.5, color: 'var(--muted)', fontFamily: 'var(--font-jp)' }}>{b.effect ? effectSummary(b.effect, itemsCopy) : b.description_ja}</div></div>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
+        {/* ギフト（従属・折りたたみ） */}
+        <details style={{ marginTop: 15, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,.012)' }}>
+          <summary style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 15px', font: '700 13px/1 var(--font-display)', letterSpacing: '.03em', color: 'var(--text)', cursor: 'pointer' }}><span style={{ fontSize: 9, color: 'var(--faint)' }}>▶</span>仲間に贈る<span style={{ font: '400 11px/1 var(--font-jp)', color: 'var(--faint)', marginLeft: 'auto' }}>所持アイテムをまとめて贈れます</span></summary>
+          <form onSubmit={(e) => void sendGift(e)} style={{ padding: '0 15px 15px', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+            <label style={{ flex: '1 1 200px', font: '500 10.5px/1 var(--font-jp)', color: 'var(--muted)' }}>相手のメールアドレス<input value={giftEmail} onChange={(e) => setGiftEmail(e.target.value)} placeholder="friend@example.com" style={{ display: 'block', width: '100%', marginTop: 6, font: '400 13px/1 var(--font-sans)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 11px', background: 'rgba(10,8,22,.5)' }} /></label>
+            <label style={{ flex: '1 1 160px', font: '500 10.5px/1 var(--font-jp)', color: 'var(--muted)' }}>贈るアイテム
+              <select value={giftKey} onChange={(e) => { setGiftKey(e.target.value); setGiftQty(1); }} style={{ display: 'block', width: '100%', marginTop: 6, font: '400 13px/1 var(--font-sans)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 11px', background: 'rgba(10,8,22,.5)' }}>
+                <option value="">選択…</option>
+                {giftable.map((g) => { const c = byKey.get(g.item_key); return (<option key={g.item_key} value={g.item_key}>{c ? itemName(c, lang) : g.item_key}（×{g.n}）</option>); })}
+              </select>
+            </label>
+            {giftMax > 1 && (
+              <label style={{ flex: '0 0 auto', font: '500 10.5px/1 var(--font-jp)', color: 'var(--muted)' }}>個数
+                <input type="number" min={1} max={giftMax} value={qty} onChange={(e) => setGiftQty(Number(e.target.value) || 1)} style={{ display: 'block', width: 72, marginTop: 6, font: '400 13px/1 var(--font-mono)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 11px', background: 'rgba(10,8,22,.5)' }} />
+              </label>
+            )}
+            <button type="submit" disabled={busyKey === 'gift' || !giftKey || !giftEmail} style={{ flex: '0 0 auto', padding: '11px 20px', borderRadius: 'var(--radius-xs)', border: '1px solid rgba(255,45,196,.5)', background: 'rgba(255,45,196,.1)', color: 'var(--magenta-soft)', font: '700 13px/1 var(--font-display)', letterSpacing: '.04em', cursor: 'pointer', opacity: !giftKey || !giftEmail ? 0.5 : 1 }}>{busyKey === 'gift' ? '送信中…' : '贈る'}</button>
+          </form>
+          <div style={{ padding: '0 15px 15px', fontSize: 10.5, color: 'var(--faint)', fontFamily: 'var(--font-jp)', lineHeight: 1.6 }}>送付は即時確定で取り消せません。登録済みのメールアドレス宛にのみ届きます（1日20回まで）。</div>
+        </details>
+      </section>
+
+      {/* ═══ アイテム履歴（折りたたみ）═══ */}
+      {transactions.length > 0 && (
+        <details style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', background: 'linear-gradient(180deg,var(--panel-2),var(--panel))', boxShadow: 'var(--shadow)' }}>
+          <summary style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 'var(--padS,20px)', cursor: 'pointer' }}><span style={{ fontSize: 10, color: 'var(--faint)' }}>▶</span><h2 style={{ margin: 0, font: '800 16px/1 var(--font-display)', letterSpacing: '.04em', color: 'var(--text)' }}>アイテム履歴</h2><span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-jp)', marginLeft: 'auto' }}>もらった · 送った · 使った · 購入</span></summary>
+          <div style={{ padding: '0 var(--padS,20px) var(--padS,20px)' }}>
+            {transactions.map((t) => {
+              const c = byKey.get(t.item_key);
+              const meta: Record<string, [string, string]> = { PURCHASED: ['購入', '+'], RECEIVED: ['受取', '+'], GIFTED: ['送付', '−'], USED: ['使用', '−'] };
+              const [label, sgn] = meta[t.kind] ?? [t.kind, ''];
+              const pos = sgn === '+';
+              const detail = t.horse_name ? `→ ${horseDisplayName(t.horse_name, lang)}` : t.counterparty ? `${t.counterparty}` : '';
+              return (
+                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 11, borderTop: '1px solid var(--border)', padding: '11px 2px' }}>
+                  <span style={{ flex: '0 0 auto', font: '700 9.5px/1 var(--font-display)', letterSpacing: '.06em', borderRadius: 5, padding: '4px 8px', color: pos ? 'var(--good-soft)' : 'var(--muted)', border: `1px solid ${pos ? 'rgba(53,208,127,.35)' : 'var(--border)'}`, background: pos ? 'rgba(53,208,127,.08)' : 'rgba(255,255,255,.03)' }}>{label}</span>
+                  <span style={{ flex: '1 1 auto', minWidth: 0, font: '700 13px/1.2 var(--font-display)', color: 'var(--text)' }}>{c ? itemName(c, lang) : t.item_key}<span style={{ font: '400 11px/1 var(--font-jp)', color: 'var(--faint)', marginLeft: 9 }}>{detail}</span></span>
+                  <span style={{ font: '700 13px/1 var(--font-mono)', color: pos ? 'var(--good-soft)' : 'var(--muted)' }}>{sgn}{t.quantity}</span>
+                  <span style={{ fontSize: 10.5, color: 'var(--faint)', fontFamily: 'var(--font-mono)' }}>{localDateTime(t.created_at).slice(5)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      )}
+
+      <div style={{ textAlign: 'center', font: '400 10.5px/1.6 var(--font-mono)', letterSpacing: '.08em', color: 'var(--faint)' }}>効果・価格・確率は公開ルール（V3カタログ）</div>
+    </div>
   );
 }
