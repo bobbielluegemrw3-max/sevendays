@@ -389,21 +389,35 @@ describe('user flow through the API', () => {
     });
 
     const tooSmall = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
-      body: { amount: '5', to_address: '0xabc123' },
+      body: { amount: '5', to_address: '0x4444444444444444444444444444444444444444' },
       idempotencyKey: randomUUID(),
     });
     expect(tooSmall.status).toBe(400);
 
+    // A1: 無効/短い宛先アドレスはリクエスト時に400で弾く(broadcaster任せにしない)。
+    const badAddress = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '30', to_address: '0xabc123' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(badAddress.status).toBe(400);
+
+    // A1: EIP-55 checksum不一致(混在ケースの1文字改ざん)も弾く。
+    const badChecksum = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
+      body: { amount: '30', to_address: '0xAbC4444444444444444444444444444444444444' },
+      idempotencyKey: randomUUID(),
+    });
+    expect(badChecksum.status).toBe(400);
+
     const key = randomUUID();
     const ok = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
-      body: { amount: '30', to_address: '0xabc123' },
+      body: { amount: '30', to_address: '0x4444444444444444444444444444444444444444' },
       idempotencyKey: key,
     });
     expect(ok.status).toBe(200);
     expect((ok.body as { status: string }).status).toBe('LOCKED');
 
     const replay = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
-      body: { amount: '30', to_address: '0xabc123' },
+      body: { amount: '30', to_address: '0x4444444444444444444444444444444444444444' },
       idempotencyKey: key,
     });
     expect((replay.body as { id: string }).id).toBe((ok.body as { id: string }).id);
@@ -413,7 +427,7 @@ describe('user flow through the API', () => {
 
     // insufficient balance surfaces the spec error code
     const broke = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
-      body: { amount: '100', to_address: '0xabc123' },
+      body: { amount: '100', to_address: '0x4444444444444444444444444444444444444444' },
       idempotencyKey: randomUUID(),
     });
     expect(broke.status).toBe(402);
@@ -628,7 +642,7 @@ describe('large-withdrawal admin review (Decisions 060, 064)', () => {
 
     // Decision 064: more than 6 decimal places fails validation.
     const dust = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
-      body: { amount: '10.1234567', to_address: '0xabc123' },
+      body: { amount: '10.1234567', to_address: '0x4444444444444444444444444444444444444444' },
       idempotencyKey: randomUUID(),
     });
     expect(dust.status).toBe(400);
@@ -637,7 +651,7 @@ describe('large-withdrawal admin review (Decisions 060, 064)', () => {
     // A large request locks normally; the broadcaster routes it to review
     // (simulated here — routing itself is covered in @sevendays/blockchain).
     const big = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
-      body: { amount: '1500', to_address: '0xabc123' },
+      body: { amount: '1500', to_address: '0x4444444444444444444444444444444444444444' },
       idempotencyKey: randomUUID(),
     });
     const wid = (big.body as { id: string }).id;
@@ -697,7 +711,7 @@ describe('large-withdrawal admin review (Decisions 060, 064)', () => {
 
     // Rejection refunds the full locked amount.
     const second = await call('POST', '/api/v1/wallet/withdraw', asUser(user), {
-      body: { amount: '1200', to_address: '0xabc123' },
+      body: { amount: '1200', to_address: '0x4444444444444444444444444444444444444444' },
       idempotencyKey: randomUUID(),
     });
     const wid2 = (second.body as { id: string }).id;

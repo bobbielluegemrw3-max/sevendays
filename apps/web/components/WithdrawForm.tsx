@@ -24,9 +24,19 @@ export function WithdrawForm({ t }: { t: WalletCopy }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  // A2: 金が動く操作は一発送信にしない。入力→確認(review)→送信 の2段階。
+  const [reviewing, setReviewing] = useState(false);
+  const [checked, setChecked] = useState(false);
 
-  async function submit(event: React.FormEvent) {
+  // 入力フォームの送信は「確認へ進む」だけ(実際の出金APIは confirm() で叩く)。
+  function toReview(event: React.FormEvent) {
     event.preventDefault();
+    setError(null);
+    setChecked(false);
+    setReviewing(true);
+  }
+
+  async function confirm() {
     setBusy(true);
     setError(null);
     const result = await apiFetch<{ id: string; status: string }>('/api/v1/wallet/withdraw', {
@@ -37,6 +47,7 @@ export function WithdrawForm({ t }: { t: WalletCopy }) {
     setBusy(false);
     if (result.status !== 200) {
       setError(errorMessage(result.body) ?? t.wd_fail);
+      setReviewing(false); // 修正できるよう入力へ戻す
       return;
     }
     setDone(true);
@@ -47,8 +58,54 @@ export function WithdrawForm({ t }: { t: WalletCopy }) {
     return <p className="ok">{t.wd_done}</p>;
   }
 
+  // ── 確認ステップ: 金額 + 宛先アドレス(全文) + ネットワークを提示し、
+  //    「確認した」チェック必須で初めて送信できる。宛先は改変不可(戻って直す)。
+  if (reviewing) {
+    return (
+      <div className="stack">
+        <p style={{ fontWeight: 700, margin: 0 }}>{t.wd_confirm_title}</p>
+        <dl className="stack" style={{ margin: 0 }}>
+          <div>
+            <dt className="muted">{t.wd_confirm_amount}</dt>
+            <dd style={{ margin: 0 }}>{amount} USDT</dd>
+          </div>
+          <div>
+            <dt className="muted">{t.wd_confirm_address}</dt>
+            <dd style={{ margin: 0, wordBreak: 'break-all' }}>{toAddress}</dd>
+          </div>
+          <div>
+            <dt className="muted">{t.wd_confirm_network}</dt>
+            <dd style={{ margin: 0 }}>Polygon PoS · USDT</dd>
+          </div>
+        </dl>
+        <p style={{ color: 'var(--warn)', fontSize: '0.9rem' }}>{t.wd_confirm_warn}</p>
+        <label className="row" style={{ gap: 8, alignItems: 'flex-start' }}>
+          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
+          <span>{t.wd_confirm_check}</span>
+        </label>
+        {error ? <ErrorLine>{error}</ErrorLine> : null}
+        <div className="row" style={{ gap: 8 }}>
+          <Button variant="ghost" type="button" onClick={() => setReviewing(false)} disabled={busy}>
+            {t.wd_confirm_back}
+          </Button>
+          <Button
+            variant="primary"
+            type="button"
+            onClick={() => void confirm()}
+            busy={busy}
+            busyLabel={t.wd_busy}
+            disabled={!checked}
+            sound="confirm"
+          >
+            {t.wd_confirm_submit}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <form className="stack" onSubmit={(e) => void submit(e)}>
+    <form className="stack" onSubmit={toReview}>
       <label>
         {t.wd_amount_label}
         <input
@@ -71,9 +128,8 @@ export function WithdrawForm({ t }: { t: WalletCopy }) {
       </label>
       {error ? <ErrorLine>{error}</ErrorLine> : null}
       <p className="muted">{t.wd_note}</p>
-      {/* UI基盤 1-2: 共有Buttonへ。送信中はシマー(btnRolling)が出て、
-          二度押しの不安が消える。金が動く操作なので最優先で配線した。 */}
-      <Button variant="primary" type="submit" busy={busy} busyLabel={t.wd_busy} sound="confirm">
+      {/* A2: 送信ではなく確認ステップへ進む。実際の出金は確認画面のチェック後。 */}
+      <Button variant="primary" type="submit" sound="nav">
         {t.wd_submit}
       </Button>
     </form>

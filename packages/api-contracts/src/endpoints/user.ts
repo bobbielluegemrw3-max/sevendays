@@ -1,7 +1,9 @@
 import { z } from 'zod';
+import { isAddress } from 'viem';
 import { Money, batchDateFor, addDays, mytWeekStart, insertNotification } from '@sevendays/shared';
 import {
   MIN_WITHDRAWAL_AMOUNT,
+  DEPOSIT_CONFIRMATION_BLOCKS,
   DEFAULT_CHAIN,
   TRAINING_TYPES,
   PURCHASE_MAX_PER_REQUEST,
@@ -249,7 +251,7 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
         // HD address provisioning is the Phase 12 deposit worker's job.
         throw new ApiError('DEPOSIT_ADDRESS_UNAVAILABLE', 'Deposit address not yet provisioned');
       }
-      return { ...address.rows[0], asset: 'USDT', confirmations_required: 128 };
+      return { ...address.rows[0], asset: 'USDT', confirmations_required: DEPOSIT_CONFIRMATION_BLOCKS };
     },
   });
 
@@ -263,7 +265,14 @@ export function registerUserEndpoints(registry: ApiRegistry): void {
       amount: z
         .string()
         .regex(/^\d+(\.\d{1,6})?$/, 'amount must be a decimal string with at most 6 decimal places'),
-      to_address: z.string().min(4),
+      // A1: EIP-55 checksum + 0x + length をリクエスト時に検証(broadcaster:334の
+      // 遅い検証に依存しない)。無効/checksum不一致は即400で弾く。混在ケースの
+      // typo は checksum で捕捉・全小文字/全大文字は checksum 不問(viem仕様)。
+      to_address: z
+        .string()
+        .refine((a) => isAddress(a, { strict: true }), {
+          message: 'to_address must be a valid EIP-55 checksummed 0x address',
+        }),
     }),
     handler: async (ctx, input) => {
       const amount = Money.of(input.amount);

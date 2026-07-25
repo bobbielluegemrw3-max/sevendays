@@ -621,6 +621,10 @@ export interface AppDict {
     dep_preparing: string;
     wd_label: string; wd_amount_label: string; wd_address_label: string;
     wd_note: string; wd_submit: string; wd_busy: string; wd_done: string; wd_fail: string;
+    /** A2 送信前確認ステップ(実マネー・一発送信にしない)。 */
+    wd_confirm_title: string; wd_confirm_warn: string;
+    wd_confirm_amount: string; wd_confirm_address: string; wd_confirm_network: string;
+    wd_confirm_check: string; wd_confirm_submit: string; wd_confirm_back: string;
     hist_label: string;
     /** 取引履歴(WalletHistory)。台帳の複式エントリを人間の1行に翻訳する。 */
     tx_lock_t: string; tx_lock_s_tpl: string;
@@ -1333,6 +1337,11 @@ const ja: AppDict = {
     wd_submit: '出金する', wd_busy: '送信中…',
     wd_done: '出金リクエストを受け付けました。ネットワーク手数料控除後の金額が送金されます。',
     wd_fail: '出金リクエストに失敗しました',
+    wd_confirm_title: 'この内容で出金します',
+    wd_confirm_warn: '送金は取り消せません。宛先アドレスを1文字ずつ確認してください。',
+    wd_confirm_amount: '金額', wd_confirm_address: '送金先アドレス', wd_confirm_network: 'ネットワーク',
+    wd_confirm_check: '宛先アドレスが正しいことを確認しました',
+    wd_confirm_submit: '確定して送金', wd_confirm_back: '戻る',
     hist_label: '履歴 · HISTORY',
     tx_lock_t: '購入予約 — 資金をロック', tx_lock_s_tpl: '予約1件ぶん({a})を利用可能残高からロック枠へ確保しました。資産は減っていません',
     tx_refund_t: 'ロックの余りが戻りました', tx_refund_s: '割当確定後、使わなかったロック分が利用可能残高に戻りました',
@@ -2097,6 +2106,11 @@ const en: AppDict = {
     wd_submit: 'Withdraw', wd_busy: 'Sending…',
     wd_done: 'Withdrawal request received. The amount after network fees will be sent.',
     wd_fail: 'The withdrawal request failed',
+    wd_confirm_title: 'Confirm this withdrawal',
+    wd_confirm_warn: 'Transfers cannot be reversed. Check the destination address character by character.',
+    wd_confirm_amount: 'Amount', wd_confirm_address: 'Destination address', wd_confirm_network: 'Network',
+    wd_confirm_check: 'I have verified the destination address is correct',
+    wd_confirm_submit: 'Confirm and send', wd_confirm_back: 'Back',
     hist_label: 'HISTORY',
     tx_lock_t: 'Purchase reservation — funds locked', tx_lock_s_tpl: '{a} moved from your available balance into the locked pool for one reservation. Nothing was spent',
     tx_refund_t: 'Unused lock returned', tx_refund_s: 'After allocation, the unused part of the lock returned to your available balance',
@@ -2861,6 +2875,11 @@ const zh: AppDict = {
     wd_submit: '提现', wd_busy: '发送中…',
     wd_done: '已受理提现申请。将发送扣除网络手续费后的金额。',
     wd_fail: '提现申请失败',
+    wd_confirm_title: '确认以此内容提现',
+    wd_confirm_warn: '转账无法撤销。请逐字核对收款地址。',
+    wd_confirm_amount: '金额', wd_confirm_address: '收款地址', wd_confirm_network: '网络',
+    wd_confirm_check: '我已确认收款地址正确无误',
+    wd_confirm_submit: '确认并发送', wd_confirm_back: '返回',
     hist_label: '记录 · HISTORY',
     tx_lock_t: '购买预约 — 资金锁定', tx_lock_s_tpl: '已将 {a} 从可用余额移入锁定额度(1笔预约)。资产并未减少',
     tx_refund_t: '锁定余额已返还', tx_refund_s: '分配确定后，未使用的锁定部分已返回可用余额',
@@ -3625,6 +3644,11 @@ const ko: AppDict = {
     wd_submit: '출금하기', wd_busy: '전송 중…',
     wd_done: '출금 요청을 접수했습니다. 네트워크 수수료를 뺀 금액이 송금됩니다.',
     wd_fail: '출금 요청에 실패했습니다',
+    wd_confirm_title: '이 내용으로 출금합니다',
+    wd_confirm_warn: '송금은 취소할 수 없습니다. 받는 주소를 한 글자씩 확인하세요.',
+    wd_confirm_amount: '금액', wd_confirm_address: '받는 주소', wd_confirm_network: '네트워크',
+    wd_confirm_check: '받는 주소가 정확함을 확인했습니다',
+    wd_confirm_submit: '확인하고 송금', wd_confirm_back: '뒤로',
     hist_label: '내역 · HISTORY',
     tx_lock_t: '구매 예약 — 자금 잠금', tx_lock_s_tpl: '예약 1건분({a})을 사용 가능 잔액에서 잠금 한도로 확보했습니다. 자산이 줄어든 것은 아닙니다',
     tx_refund_t: '잠금 잔여분이 돌아왔습니다', tx_refund_s: '배정 확정 후 사용하지 않은 잠금분이 사용 가능 잔액으로 돌아왔습니다',
@@ -4389,6 +4413,11 @@ const ms: AppDict = {
     wd_submit: 'Keluarkan', wd_busy: 'Menghantar…',
     wd_done: 'Permintaan pengeluaran diterima. Jumlah selepas yuran rangkaian akan dihantar.',
     wd_fail: 'Permintaan pengeluaran gagal',
+    wd_confirm_title: 'Sahkan pengeluaran ini',
+    wd_confirm_warn: 'Pemindahan tidak boleh dibatalkan. Semak alamat penerima aksara demi aksara.',
+    wd_confirm_amount: 'Jumlah', wd_confirm_address: 'Alamat penerima', wd_confirm_network: 'Rangkaian',
+    wd_confirm_check: 'Saya telah mengesahkan alamat penerima adalah betul',
+    wd_confirm_submit: 'Sahkan dan hantar', wd_confirm_back: 'Kembali',
     hist_label: 'SEJARAH',
     tx_lock_t: 'Tempahan pembelian — dana dikunci', tx_lock_s_tpl: '{a} dipindahkan daripada baki tersedia ke kolam terkunci untuk satu tempahan. Tiada yang dibelanjakan',
     tx_refund_t: 'Baki kunci dikembalikan', tx_refund_s: 'Selepas pengagihan, bahagian kunci yang tidak digunakan kembali ke baki tersedia',
