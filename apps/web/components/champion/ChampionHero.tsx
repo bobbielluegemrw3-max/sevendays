@@ -60,10 +60,30 @@ export function ChampionHero({ t }: { t: AppDict['champion'] }) {
         {soundOn ? '♪ SOUND ON' : '♪ SOUND OFF'}
       </button>
       <div className={s.heroOverlay}>
-        <div className={s.heroKicker}>WEEKLY COMPETITION</div>
-        <div className={s.heroTitle}>CHAMPION LEAGUE</div>
-        <div className={s.heroComing}>COMING SOON</div>
-        <div className={s.heroNote}>{t.hero_note}</div>
+        <div className={s.heroImm}>IMMORTALITY</div>
+        <h1 className={s.heroH1}>
+          {t.hero_title_a}
+          <br />
+          <span className={s.heroH1Gold}>{t.hero_title_b}</span>
+        </h1>
+        <div className={s.heroPill}>
+          <span className={s.heroPillName}>CHAMPION</span>
+          <span className={s.heroPillDiv} />
+          <span className={s.heroPillVal}>{t.pill_val}</span>
+        </div>
+        {/* 消滅(多くの馬が去る) → 不滅(一頭が残る) の対比。赤は危険色として最小限。 */}
+        <div className={s.heroContrast}>
+          <div className={s.heroColR}>
+            <div className={s.heroCKleave}>{t.leave_k}</div>
+            <div className={s.heroCVleave}>{t.leave_v}</div>
+          </div>
+          <span className={s.heroArrow}>→</span>
+          <div className={s.heroColL}>
+            <div className={s.heroCKstay}>{t.stay_k}</div>
+            <div className={s.heroCVstay}>{t.stay_v}</div>
+          </div>
+        </div>
+        <p className={s.heroSub}>{t.hero_sub2}</p>
       </div>
     </div>
   );

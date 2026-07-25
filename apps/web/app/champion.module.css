@@ -326,6 +326,100 @@
   vertical-align: middle;
 }
 
+/* ============================================================
+   憧れリデザイン(仕様書.md)追加分 — 正典 Champion.html 準拠。
+   ① HERO 新コピー(IMMORTALITY/消滅→不滅) ② THE PAYOFF ③ 空の玉座 ④ リーグ反転
+   ============================================================ */
+
+/* ① HERO 新オーバーレイ */
+.heroImm { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.42em; color: var(--faint); text-transform: uppercase; }
+.heroH1 {
+  margin: 12px auto 0; font-family: var(--font-jp, var(--font-sans)); font-weight: 900;
+  font-size: clamp(19px, 3.5vw, 30px); line-height: 1.4; letter-spacing: 0.02em; color: var(--text);
+  max-width: 34ch; line-break: strict; word-break: keep-all; text-wrap: pretty;
+}
+.heroH1Gold { background: linear-gradient(92deg, #f6ecd2, var(--gold-bright) 42%, #8a6d3b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.heroPill {
+  display: inline-flex; align-items: center; gap: 11px; margin-top: 16px; padding: 7px 16px 7px 18px;
+  border: 1px solid rgba(201, 168, 106, 0.5); border-radius: 999px; background: rgba(10, 8, 18, 0.6);
+}
+.heroPillName { font-family: var(--font-display); font-weight: 800; font-size: 12px; letter-spacing: 0.4em; text-indent: 0.4em; background: linear-gradient(92deg, #f6ecd2, var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.heroPillDiv { width: 1px; height: 12px; background: rgba(201, 168, 106, 0.35); }
+.heroPillVal { font-family: var(--font-jp, var(--font-sans)); font-weight: 700; font-size: 11px; color: var(--gold-bright); }
+.heroContrast { display: flex; align-items: center; justify-content: center; gap: clamp(10px, 3vw, 26px); margin-top: 20px; flex-wrap: wrap; }
+.heroColR { text-align: right; min-width: 120px; }
+.heroColL { text-align: left; min-width: 120px; }
+.heroCKleave { font-family: var(--font-mono); font-weight: 500; font-size: 9px; letter-spacing: 0.2em; color: rgba(255, 92, 92, 0.75); text-transform: uppercase; }
+.heroCVleave { font-family: var(--font-jp, var(--font-sans)); font-weight: 700; font-size: 14px; line-height: 1.4; color: rgba(255, 146, 146, 0.9); margin-top: 5px; }
+.heroCKstay { font-family: var(--font-mono); font-weight: 500; font-size: 9px; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; }
+.heroCVstay { font-family: var(--font-jp, var(--font-sans)); font-weight: 700; font-size: 14px; line-height: 1.4; color: var(--gold-bright); margin-top: 5px; }
+.heroArrow { font-family: var(--font-mono); font-size: 18px; color: var(--faint); }
+.heroSub { margin: 16px auto 0; max-width: 56ch; font-family: var(--font-jp, var(--font-sans)); font-size: 12.5px; line-height: 1.8; color: var(--muted); line-break: strict; word-break: keep-all; text-wrap: pretty; }
+
+/* ② THE PAYOFF */
+.payoff {
+  border: 1px solid rgba(201, 168, 106, 0.35) !important; border-radius: var(--radius);
+  background: radial-gradient(600px 260px at 12% 0%, rgba(201, 168, 106, 0.11), transparent 68%), var(--panel);
+}
+.payoffHead { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; }
+.payoffBar { width: 6px; height: 38px; border-radius: 3px; background: linear-gradient(180deg, var(--gold-bright), var(--gold)); box-shadow: 0 0 14px rgba(201, 168, 106, 0.45); }
+.payoffKicker { font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.24em; color: var(--gold); }
+.payoffTitle { margin: 4px 0 0; font-family: var(--font-display); font-weight: 800; font-size: 20px; line-height: 1.15; letter-spacing: 0.05em; color: var(--text); }
+.payoffLead { font-family: var(--font-jp, var(--font-sans)); font-size: 11.5px; line-height: 1.6; color: var(--muted); text-align: right; max-width: 34ch; line-break: strict; word-break: keep-all; }
+.payoffGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 12px; margin-top: 16px; }
+.payoffCard {
+  display: flex; flex-direction: column; border: 1px solid rgba(201, 168, 106, 0.35);
+  border-top: 2px solid rgba(201, 168, 106, 0.65); border-radius: var(--radius-sm); padding: 15px 16px;
+  background: radial-gradient(320px 180px at 50% 0%, rgba(201, 168, 106, 0.09), transparent 70%), rgba(255, 255, 255, 0.015);
+}
+.payoffCardHead { display: flex; align-items: baseline; justify-content: space-between; gap: 9px; }
+.payoffCK { font-family: var(--font-mono); font-weight: 500; font-size: 9px; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase; }
+.foreverBadge { font-family: var(--font-display); font-weight: 700; font-size: 8.5px; letter-spacing: 0.08em; color: var(--gold-bright); border: 1px solid rgba(201, 168, 106, 0.45); border-radius: 5px; padding: 3px 7px; white-space: nowrap; }
+.payoffCTitle { font-family: var(--font-display); font-weight: 800; font-size: clamp(19px, 2.4vw, 24px); line-height: 1.15; letter-spacing: 0.02em; margin-top: 11px; background: linear-gradient(92deg, #f6ecd2, var(--gold-bright) 48%, var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.payoffDesc { font-family: var(--font-jp, var(--font-sans)); font-size: 12.5px; line-height: 1.7; color: var(--muted); margin-top: 10px; flex: 1 1 auto; }
+.payoffFoot { font-family: var(--font-mono); font-weight: 500; font-size: 10.5px; line-height: 1.5; color: var(--faint); margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--border); }
+.payoffNote { margin: 14px 0 0; font-family: var(--font-jp, var(--font-sans)); font-size: 11.5px; line-height: 1.75; color: var(--faint); }
+
+/* ③ 空の玉座(R1: 架空チャンピオンなし) */
+.throne {
+  margin-top: 15px; border: 1px solid rgba(201, 168, 106, 0.35); border-radius: var(--radius-sm);
+  padding: clamp(20px, 4vw, 34px) clamp(15px, 2.6vw, 22px);
+  background: radial-gradient(520px 240px at 50% 4%, rgba(201, 168, 106, 0.12), transparent 68%), rgba(255, 255, 255, 0.012); text-align: center;
+}
+.throneKicker { font-family: var(--font-mono); font-weight: 500; font-size: 9.5px; letter-spacing: 0.28em; color: var(--gold); text-transform: uppercase; }
+.throneTitle {
+  font-family: var(--font-jp, var(--font-sans)); font-weight: 900; font-size: clamp(20px, 3.2vw, 27px); line-height: 1.4;
+  margin: 13px auto 0; max-width: 32ch; line-break: strict; word-break: keep-all; text-wrap: pretty;
+  background: linear-gradient(92deg, #f6ecd2, var(--gold-bright) 45%, #8a6d3b); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.throneDesc { margin: 12px auto 0; max-width: 48ch; font-family: var(--font-jp, var(--font-sans)); font-size: 12.5px; line-height: 1.8; color: var(--muted); line-break: strict; word-break: keep-all; text-wrap: pretty; }
+.throneSeats { display: flex; justify-content: center; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+.seat { width: clamp(58px, 9vw, 74px); aspect-ratio: 3 / 4; border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 6px; border: 1px dashed rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.012); }
+.seatFirst { border: 1px solid rgba(201, 168, 106, 0.55); background: radial-gradient(circle at 50% 30%, rgba(201, 168, 106, 0.16), rgba(10, 8, 19, 0.6)); }
+.seatLabel { font-family: var(--font-mono); font-weight: 500; font-size: 9px; letter-spacing: 0.1em; color: var(--faint); }
+.seatLabelFirst { color: var(--gold-bright); }
+.seatText { font-family: var(--font-jp, var(--font-sans)); font-weight: 700; font-size: 9.5px; line-height: 1.4; color: var(--faint); text-align: center; }
+.seatTextFirst { color: var(--gold-bright); }
+.throneFoot { margin-top: 20px; font-family: var(--font-jp, var(--font-sans)); font-size: 11px; line-height: 1.7; color: var(--faint); }
+
+/* 報酬 空状態 */
+.rewardsEmpty { margin-top: 13px; border: 1px dashed var(--border-strong); border-radius: 10px; padding: 15px 16px; font-family: var(--font-jp, var(--font-sans)); font-size: 12.5px; line-height: 1.7; color: var(--muted); }
+
+/* ④ リーグ反転 */
+.leagueStage { font-family: var(--font-mono); font-weight: 500; font-size: 9.5px; letter-spacing: 0.22em; color: var(--gold-bright); border: 1px solid rgba(201, 168, 106, 0.45); border-radius: 999px; padding: 4px 9px; }
+.leagueOnly {
+  margin-top: 13px; border: 1px solid rgba(201, 168, 106, 0.35); border-radius: var(--radius-sm); padding: 14px 15px;
+  background: radial-gradient(320px 160px at 50% 0%, rgba(201, 168, 106, 0.1), transparent 70%), rgba(255, 255, 255, 0.012);
+}
+.leagueOnlyT { font-family: var(--font-jp, var(--font-sans)); font-weight: 800; font-size: 15px; line-height: 1.5; color: var(--text); }
+.leagueOnlyGold { color: var(--gold-bright); }
+.leagueOnlyNote { margin: 9px 0 0; font-family: var(--font-jp, var(--font-sans)); font-size: 12.5px; line-height: 1.8; color: var(--muted); }
+.leaguePulseRow { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 9px; }
+.leaguePulse { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--gold); box-shadow: 0 0 9px rgba(201, 168, 106, 0.8); animation: chBeat 2s ease-in-out infinite; }
+.leaguePulseT { font-family: var(--font-mono); font-weight: 500; font-size: 10.5px; line-height: 1.5; color: var(--faint); }
+.leagueFoot { margin-top: 13px; font-family: var(--font-jp, var(--font-sans)); font-size: 10.5px; line-height: 1.7; color: var(--faint); }
+@keyframes chBeat { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
 @media (max-width: 620px) {
   /* モバイル: タイトルを上部へ — 中段の走路・馬と被らない(オーナー指示) */
   .heroOverlay {

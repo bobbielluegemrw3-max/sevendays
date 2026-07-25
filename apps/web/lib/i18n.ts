@@ -313,6 +313,18 @@ export interface AppDict {
   champion: {
     // ヒーロー
     hero_note: string;
+    /** 憧れリデザイン(仕様書.md)追加コピー。英語ブランド語(IMMORTALITY等)はJSX直書き。 */
+    hero_title_a: string; hero_title_b: string; pill_val: string;
+    leave_k: string; leave_v: string; stay_k: string; stay_v: string; hero_sub2: string;
+    payoff_title: string; payoff_lead: string; payoff_note: string;
+    po1_k: string; po1_d: string; po1_f: string;
+    po2_k: string; po2_t: string; po2_d: string; po2_f: string;
+    po3_k: string; po3_d: string; po3_f: string;
+    po4_k: string; po4_t: string; po4_d: string; po4_f: string;
+    throne_title: string; throne_desc: string; throne_seat1: string; throne_foot: string;
+    rewards_empty: string;
+    league_stage: string; league_only_a: string; league_only_b: string;
+    league_only_note: string; league_pulse: string; league_foot: string;
     sound_on_aria: string;
     sound_off_aria: string;
     // 報酬セクション見出し
@@ -1010,6 +1022,21 @@ const ja: AppDict = {
   },
   champion: {
     hero_note: 'アクティブユーザー 10,000人 到達で開幕',
+    hero_title_a: '7つのレースを生き抜いた馬だけが、', hero_title_b: 'チャンピオン馬になる。', pill_val: '不滅の証',
+    leave_k: '毎レース', leave_v: '多くの馬が途中で去っていく', stay_k: '7レース 走破', stay_v: 'ただ一頭、永遠に残る',
+    hero_sub2: 'あなたの馬を、この殿堂に永久に刻む。それがチャンピオンです。',
+    payoff_title: 'チャンピオンになると手に入るもの', payoff_lead: '7レースを走破した“あなたの”馬に起きること',
+    payoff_note: '7 レースを走破すると確定する報酬です（200 USDT は7回に分けて支払われます）。ゲームの達成に対する報酬で、投資リターンではありません。',
+    po1_k: '確定報酬', po1_d: '7 レースを走破すると確定で受け取れる現金報酬。', po1_f: '7回に分けて支払い',
+    po2_k: '永久の記念NFT', po2_t: '永遠に残る一頭', po2_d: 'あなたの馬が唯一の形で刻まれる記念NFT。走り切った証として、ずっと残ります。', po2_f: 'あなたの所有・譲渡不可の栄誉',
+    po3_k: '殿堂 永久掲載', po3_d: '7 レースを走り切った証として、馬の名が殿堂に永久に掲載されます。', po3_f: '誰でも見られる公開の栄誉',
+    po4_k: '独占参加権', po4_t: 'リーグの切符', po4_d: '未来の週次競技に入れるのはチャンピオンだけ。開幕前に資格を確保できます。', po4_f: 'CHAMPION LEAGUE — 10,000人到達で開幕',
+    throne_title: 'まだ王はいない — 最初の伝説になれ。', throne_desc: 'この殿堂はまだ空です。あなたの馬が 7 レースを走破すれば、最初の名がここに永久に刻まれます。',
+    throne_seat1: '最初の王', throne_foot: '最初の王の座は、まだ誰のものでもありません。',
+    rewards_empty: 'まだ走破した馬はいません。チャンピオンになると、ここに報酬の受け取り履歴が並びます。',
+    league_stage: '開幕前', league_only_a: 'リーグに入れるのは、', league_only_b: 'チャンピオンだけ。',
+    league_only_note: '10,000人到達で開幕します。開幕前にチャンピオンになって、その資格を確保してください。',
+    league_pulse: '今チャンピオンを取る ＝ 未来リーグの切符', league_foot: 'チャンピオンが解放する未来です。開幕時期は10,000人到達によります。',
     sound_on_aria: 'サウンドをオフ',
     sound_off_aria: 'サウンドをオン',
     rewards_sub: 'あなたのチャンピオン報酬',
@@ -1788,6 +1815,21 @@ const en: AppDict = {
   },
   champion: {
     hero_note: 'Opens when active users reach 10,000',
+    hero_title_a: 'Only a horse that survives all seven races', hero_title_b: 'becomes a Champion.', pill_val: 'Mark of Immortality',
+    leave_k: 'Every race', leave_v: 'many horses leave along the way', stay_k: 'All 7 races run', stay_v: 'one horse remains, forever',
+    hero_sub2: 'Etching your horse into this hall forever — that is what a Champion is.',
+    payoff_title: 'What you gain by becoming a Champion', payoff_lead: 'What happens to “your” horse after running all 7 races',
+    payoff_note: 'These rewards are locked in once your horse completes all 7 races (the 200 USDT is paid in 7 installments). They are rewards for a game achievement, not an investment return.',
+    po1_k: 'Guaranteed reward', po1_d: 'A cash reward you receive for certain once your horse completes all 7 races.', po1_f: 'Paid in 7 installments',
+    po2_k: 'Permanent commemorative NFT', po2_t: 'The one that remains forever', po2_d: 'A commemorative NFT engraved in a one-of-a-kind form for your horse. It stays as proof of running the whole way.', po2_f: 'Yours to hold · a non-transferable honor',
+    po3_k: 'Permanent hall listing', po3_d: 'As proof of completing all 7 races, your horse’s name is listed in the hall forever.', po3_f: 'A public honor anyone can see',
+    po4_k: 'Exclusive entry', po4_t: 'A ticket to the league', po4_d: 'Only Champions may enter the future weekly competition. Secure your place before it opens.', po4_f: 'CHAMPION LEAGUE — opens at 10,000 users',
+    throne_title: 'No king yet — become the first legend.', throne_desc: 'This hall is still empty. When your horse completes all 7 races, the first name will be engraved here forever.',
+    throne_seat1: 'The first king', throne_foot: 'The first throne belongs to no one yet.',
+    rewards_empty: 'No horse has completed the run yet. Once you become a Champion, your reward history will appear here.',
+    league_stage: 'Before launch', league_only_a: 'Entry is for ', league_only_b: 'Champions only.',
+    league_only_note: 'It opens when 10,000 users are reached. Become a Champion before then to secure your place.',
+    league_pulse: 'Win a championship now = a ticket to the future league', league_foot: 'A future that Champions unlock. The launch timing depends on reaching 10,000 users.',
     sound_on_aria: 'Turn sound off',
     sound_off_aria: 'Turn sound on',
     rewards_sub: 'Your Champion Rewards',
@@ -2566,6 +2608,21 @@ const zh: AppDict = {
   },
   champion: {
     hero_note: '活跃用户达到 10,000 人时开赛',
+    hero_title_a: '只有跑完七场比赛的马，', hero_title_b: '才能成为冠军马。', pill_val: '不灭之证',
+    leave_k: '每场比赛', leave_v: '许多马中途离场', stay_k: '跑完 7 场', stay_v: '唯有一匹，永远留下',
+    hero_sub2: '把你的马永久铭刻在这座殿堂——这就是冠军。',
+    payoff_title: '成为冠军能获得什么', payoff_lead: '跑完 7 场后，“你的”马会发生什么',
+    payoff_note: '这些是你的马跑完 7 场后确定获得的奖励（200 USDT 分 7 次支付）。这是对游戏成就的奖励，而非投资回报。',
+    po1_k: '确定奖励', po1_d: '跑完 7 场后确定可领取的现金奖励。', po1_f: '分 7 次支付',
+    po2_k: '永久纪念NFT', po2_t: '永远留下的一匹', po2_d: '以独一无二的形式为你的马铭刻的纪念NFT。作为跑完全程的证明，永远留存。', po2_f: '归你所有·不可转让的荣誉',
+    po3_k: '殿堂永久刊登', po3_d: '作为跑完 7 场的证明，马的名字将永久刊登在殿堂中。', po3_f: '任何人都能看到的公开荣誉',
+    po4_k: '专属参赛权', po4_t: '联赛的门票', po4_d: '未来的每周竞技只有冠军才能进入。可在开赛前确保资格。', po4_f: 'CHAMPION LEAGUE — 达到 10,000 人时开赛',
+    throne_title: '尚无王者 — 成为最初的传奇。', throne_desc: '这座殿堂仍是空的。当你的马跑完 7 场，第一个名字将永久铭刻于此。',
+    throne_seat1: '最初的王', throne_foot: '最初的王座，还不属于任何人。',
+    rewards_empty: '还没有马跑完全程。成为冠军后，这里会显示奖励的领取记录。',
+    league_stage: '开赛前', league_only_a: '能进入联赛的，', league_only_b: '只有冠军。',
+    league_only_note: '达到 10,000 人时开赛。请在开赛前成为冠军，确保你的资格。',
+    league_pulse: '现在夺冠 ＝ 未来联赛的门票', league_foot: '这是冠军解锁的未来。开赛时间取决于达到 10,000 人。',
     sound_on_aria: '关闭声音',
     sound_off_aria: '开启声音',
     rewards_sub: '你的冠军奖励',
@@ -3344,6 +3401,21 @@ const ko: AppDict = {
   },
   champion: {
     hero_note: '활성 사용자 10,000명 도달 시 개막',
+    hero_title_a: '일곱 번의 레이스를 살아남은 말만이,', hero_title_b: '챔피언 말이 됩니다.', pill_val: '불멸의 증표',
+    leave_k: '매 레이스', leave_v: '많은 말이 도중에 떠납니다', stay_k: '7레이스 완주', stay_v: '오직 한 마리, 영원히 남습니다',
+    hero_sub2: '당신의 말을 이 전당에 영원히 새깁니다. 그것이 챔피언입니다.',
+    payoff_title: '챔피언이 되면 얻는 것', payoff_lead: '7레이스를 완주한 “당신의” 말에게 일어나는 일',
+    payoff_note: '7레이스를 완주하면 확정되는 보상입니다(200 USDT는 7회로 나누어 지급). 게임 달성에 대한 보상이며, 투자 수익이 아닙니다.',
+    po1_k: '확정 보상', po1_d: '7레이스를 완주하면 확정으로 받는 현금 보상.', po1_f: '7회로 나누어 지급',
+    po2_k: '영구 기념 NFT', po2_t: '영원히 남는 한 마리', po2_d: '당신의 말이 유일한 형태로 새겨지는 기념 NFT. 완주의 증표로 계속 남습니다.', po2_f: '당신의 소유·양도 불가의 영예',
+    po3_k: '전당 영구 게재', po3_d: '7레이스 완주의 증표로, 말의 이름이 전당에 영구히 게재됩니다.', po3_f: '누구나 볼 수 있는 공개된 영예',
+    po4_k: '독점 참가권', po4_t: '리그의 티켓', po4_d: '미래의 주간 경기에 들어갈 수 있는 것은 챔피언뿐. 개막 전에 자격을 확보할 수 있습니다.', po4_f: 'CHAMPION LEAGUE — 10,000명 도달 시 개막',
+    throne_title: '아직 왕은 없습니다 — 최초의 전설이 되세요.', throne_desc: '이 전당은 아직 비어 있습니다. 당신의 말이 7레이스를 완주하면, 첫 이름이 여기에 영원히 새겨집니다.',
+    throne_seat1: '최초의 왕', throne_foot: '최초의 왕좌는 아직 누구의 것도 아닙니다.',
+    rewards_empty: '아직 완주한 말이 없습니다. 챔피언이 되면 여기에 보상 수령 내역이 표시됩니다.',
+    league_stage: '개막 전', league_only_a: '리그에 들어갈 수 있는 것은 ', league_only_b: '챔피언뿐입니다.',
+    league_only_note: '10,000명 도달 시 개막합니다. 개막 전에 챔피언이 되어 자격을 확보하세요.',
+    league_pulse: '지금 챔피언을 차지 ＝ 미래 리그의 티켓', league_foot: '챔피언이 여는 미래입니다. 개막 시기는 10,000명 도달에 따릅니다.',
     sound_on_aria: '사운드 끄기',
     sound_off_aria: '사운드 켜기',
     rewards_sub: '나의 챔피언 보상',
@@ -4122,6 +4194,21 @@ const ms: AppDict = {
   },
   champion: {
     hero_note: 'Dibuka apabila pengguna aktif mencapai 10,000',
+    hero_title_a: 'Hanya kuda yang bertahan tujuh perlumbaan', hero_title_b: 'menjadi Juara.', pill_val: 'Tanda Keabadian',
+    leave_k: 'Setiap perlumbaan', leave_v: 'ramai kuda pergi di tengah jalan', stay_k: 'Habis 7 perlumbaan', stay_v: 'hanya seekor, kekal selamanya',
+    hero_sub2: 'Mengukir kuda anda dalam dewan ini selama-lamanya — itulah Juara.',
+    payoff_title: 'Apa yang anda peroleh dengan menjadi Juara', payoff_lead: 'Apa yang berlaku kepada kuda “anda” selepas habis 7 perlumbaan',
+    payoff_note: 'Ganjaran ini disahkan setelah kuda anda menamatkan 7 perlumbaan (200 USDT dibayar dalam 7 ansuran). Ia ganjaran bagi pencapaian permainan, bukan pulangan pelaburan.',
+    po1_k: 'Ganjaran pasti', po1_d: 'Ganjaran tunai yang pasti anda terima setelah kuda anda habis 7 perlumbaan.', po1_f: 'Dibayar dalam 7 ansuran',
+    po2_k: 'NFT peringatan kekal', po2_t: 'Yang kekal selamanya', po2_d: 'NFT peringatan yang diukir dalam bentuk unik untuk kuda anda. Kekal sebagai bukti menamatkan seluruh perjalanan.', po2_f: 'Milik anda · penghormatan tak boleh dipindah',
+    po3_k: 'Penyenaraian dewan kekal', po3_d: 'Sebagai bukti menamatkan 7 perlumbaan, nama kuda anda disenaraikan dalam dewan selama-lamanya.', po3_f: 'Penghormatan awam yang boleh dilihat sesiapa sahaja',
+    po4_k: 'Kemasukan eksklusif', po4_t: 'Tiket ke liga', po4_d: 'Hanya Juara boleh masuk pertandingan mingguan masa depan. Amankan tempat anda sebelum ia dibuka.', po4_f: 'CHAMPION LEAGUE — dibuka pada 10,000 pengguna',
+    throne_title: 'Belum ada raja — jadilah legenda pertama.', throne_desc: 'Dewan ini masih kosong. Apabila kuda anda menamatkan 7 perlumbaan, nama pertama akan diukir di sini selama-lamanya.',
+    throne_seat1: 'Raja pertama', throne_foot: 'Takhta pertama belum menjadi milik sesiapa.',
+    rewards_empty: 'Belum ada kuda yang menamatkan larian. Setelah anda menjadi Juara, sejarah ganjaran anda akan muncul di sini.',
+    league_stage: 'Sebelum pelancaran', league_only_a: 'Yang boleh masuk liga hanyalah ', league_only_b: 'Juara sahaja.',
+    league_only_note: 'Ia dibuka apabila mencapai 10,000 pengguna. Jadilah Juara sebelum itu untuk mengamankan tempat anda.',
+    league_pulse: 'Menang kejuaraan sekarang = tiket ke liga masa depan', league_foot: 'Masa depan yang dibuka oleh Juara. Masa pelancaran bergantung pada pencapaian 10,000 pengguna.',
     sound_on_aria: 'Matikan bunyi',
     sound_off_aria: 'Hidupkan bunyi',
     rewards_sub: 'Champion Reward anda',
